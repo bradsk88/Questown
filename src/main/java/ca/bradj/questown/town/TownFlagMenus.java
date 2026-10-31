@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
@@ -19,6 +20,8 @@ import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import ca.bradj.questown.mc.RecipeRef;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
@@ -30,13 +33,14 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class TownFlagMenus {
 
@@ -50,12 +54,24 @@ public class TownFlagMenus {
         BlockPos flagPos = inputFlagInfo.flagPos();
         TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
         TownInterface flag = flagEntity;
+        if (OpenFlagMenuMessage.VILLAGERS.equals(type)) {
+            // Clear the villagers-tab red dot before building the info the screen renders.
+            flagEntity.markVillagersTabSeen();
+        }
+        if (OpenFlagMenuMessage.QUESTS.equals(type)) {
+            flagEntity.markQuestsSeen();
+        }
         FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")
         ImmutableList<AbstractMap.SimpleEntry<MCQuest, MCReward>> quests = flag.getQuestHandle()
                                                                                .getAllQuestsWithRewards();
-        List<UIQuest> uiQuests = UIQuest.fromLevel(sender.getLevel(), quests);
+        List<UIQuest> uiQuests = UIQuest.fromLevel(
+                sender.getLevel(),
+                quests,
+                flagEntity.getQuestHandle().openQuestProgress(),
+                flagEntity.lockedSkillQuestLevels()
+        );
 
         QuestScreenSummary summary = new QuestScreenSummary(
                 QuestCompletion.allComplete(uiQuests.stream().map(q -> q.status).toList()),
@@ -72,27 +88,26 @@ public class TownFlagMenus {
                             sender, (windowId, inv, p) -> new TownQuestsContainer(
                                     windowId, uiQuests, realFlagInfo, summary,
                                     () -> triggerAdvancement(flagPos, sender.getLevel())
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel())
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.getLevel()),
+                                () -> FlagMenus.resendStatuses(sender, entities, () -> flagEntity.hasVillagerArrivingInMorning())
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 ),
                 OpenFlagMenuMessage.ECONOMICS,
                 () -> {
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null))
-                    );
+                    QuestownNetwork.sendToPlayer(sender, new EconomicsUpdate(flag.getEconomicsHandle().getAggregatedItems(null),
+                            flag.getEconomicsHandle().getRecentItems(Util.getTick(sender.getLevel()))));
                     openMenu(
                             sender, (windowId, inv, p) -> new TownEconomicsMenu(
                                     windowId, realFlagInfo
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                 },
@@ -100,8 +115,8 @@ public class TownFlagMenus {
                 () -> {
                     openMenu(
                             sender, (windowId, inv, p) -> new TownBlockofProgressMenu(
-                                    windowId, realFlagInfo, blocksOfProgress
-                            ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                                    windowId, realFlagInfo, flagEntity.depositedBopRootJobs()
+                            ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                             () -> flagEntity.hasVillagerArrivingInMorning(), summary
                     );
                     AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopView);
@@ -110,15 +125,26 @@ public class TownFlagMenus {
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new FlagCraftingMenu(
                                 windowId, realFlagInfo
-                        ), uiQuests, realFlagInfo, entities, flag.getBlocksOfProgress(),
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
+                        () -> flagEntity.hasVillagerArrivingInMorning(), summary
+                ),
+                OpenFlagMenuMessage.SETTINGS,
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new FlagSettingsMenu(
+                                windowId, realFlagInfo
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 )
         );
 
         Runnable runnable = showers.get(type);
         if (runnable == null) {
-            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+            // The type comes from a client packet: reject an unknown one instead of throwing in the
+            // network handler (2026-10-21: a dev-tool "bop" for "blocks_of_progress").
+            QT.GUI_LOGGER.error("Unexpected menu type: \"{}\"", type);
+            return;
         }
+        QT.GUI_LOGGER.info("Opening flag menu: {}", type);
         runnable.run();
     }
 
@@ -127,10 +153,14 @@ public class TownFlagMenus {
             ServerPlayer p,
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
-        List<RoomRecipe> farmRecipes = p.level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).stream()
-                                              .filter(RoomRecipe::isFarmRecipe).toList();
-        for (Quest<?, ?> mcQuest : q) {
-            if (farmRecipes.stream().noneMatch(z -> z.getId().equals(mcQuest.getWantedId()))) {
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        // Eligibility = (holder-id match) AND (value is a farm recipe) - both, in that order.
+        for (Quest<ResourceLocation, ?> mcQuest : q) {
+            ResourceLocation wanted = mcQuest.getWantedId();
+            RecipeRef.RecipePair<RoomRecipe> pair = wanted == null
+                    ? null
+                    : RecipeRef.findById(p.getLevel().getRecipeManager(), RecipesInit.ROOM, wanted);
+            if (pair == null || !pair.value().isFarmRecipe()) {
                 continue;
             }
             AdvancementsInit.VISITOR_TRIGGER.trigger(p, VisitorTrigger.Triggers.FirstFarmQuest);
@@ -151,7 +181,7 @@ public class TownFlagMenus {
             List<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagPos,
             Iterable<? extends VisitorMobEntity> entities,
-            int bopCount,
+            com.google.common.collect.ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending,
             QuestScreenSummary summary
     ) {
@@ -170,9 +200,17 @@ public class TownFlagMenus {
                     ) {
                         return shower.apply(windowId, inv, p);
                     }
-                }, data -> FlagMenus.writeAndLink(
-                        data, quests, flagPos, sender, entities, bopCount, morningSpawnPending, summary
-                )
+                }, data -> {
+                    Map<UUID, String> displayNames = Map.of();
+                    if (sender.getLevel().getBlockEntity(flagPos.flagPos())
+                            instanceof TownFlagBlockEntity flag) {
+                        displayNames = flag.getVillagerHandle().displayNamesForAll();
+                    }
+                    FlagMenus.writeAndLink(
+                            data, quests, flagPos, sender, entities, bopRootJobs, morningSpawnPending,
+                            summary, displayNames
+                    );
+                }
         );
     }
 

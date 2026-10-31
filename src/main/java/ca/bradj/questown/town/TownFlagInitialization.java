@@ -49,9 +49,19 @@ public interface TownFlagInitialization {
 
     CompoundTag serializeChickenEverSpawned();
 
+    CompoundTag serializeBoardAutoRequest();
+
+    CompoundTag serializeVillagersTabSeen();
+
+    CompoundTag serializeQuestsSeen();
+
+    CompoundTag serializeBopWithdrawn();
+
     CompoundTag serializeChickenBeatState();
 
     CompoundTag serializeChickenFirstGatherWorldlySeedsFired();
+
+    CompoundTag serializeFirstHunterLootGuaranteeFired();
 
     CompoundTag serializeChickenArcForfeit();
 

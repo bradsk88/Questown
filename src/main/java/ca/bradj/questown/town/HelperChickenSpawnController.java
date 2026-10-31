@@ -73,6 +73,29 @@ public final class HelperChickenSpawnController {
         return (dx * dx + dy * dy + dz * dz) <= NEAR_PLAYER_RADIUS_SQR;
     }
 
+    /**
+     * Force the helper chicken to spawn for {@code flag}, bypassing the
+     * rotation-detection and 20-tick forfeit gates that {@link #tick} uses. For
+     * a hand-placed flag (one that was not placed in an empty_town structure,
+     * so no campfire was ever detected) the normal arc is inert - this makes it
+     * live. It clears any forfeit, reads the rotation once (a campfire at a beat
+     * offset if present, else {@link Rotation#NONE}), marks rotation detected,
+     * and spawns the chicken; the individual beats still need their real
+     * conditions, this only starts the arc. Returns whether the chicken spawned
+     * ({@code chickenEverSpawned} is set by {@link #spawn} only on success).
+     */
+    public static boolean forceSpawn(TownFlagBlockEntity flag) {
+        ServerLevel sl = flag.getServerLevel();
+        if (sl == null) {
+            return false;
+        }
+        flag.setChickenArcForfeit(false);
+        flag.setChickenStructureRotation(HelperChickenRotationDetector.detectRotationOnce(flag));
+        flag.setChickenRotationDetected(true);
+        spawn(sl, flag, flag.getTownFlagBasePos());
+        return flag.getChickenEverSpawned();
+    }
+
     private static void spawn(
             ServerLevel sl,
             TownFlagBlockEntity flag,

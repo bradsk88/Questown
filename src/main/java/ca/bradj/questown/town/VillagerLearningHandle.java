@@ -12,6 +12,13 @@ import java.util.function.*;
 
 public class VillagerLearningHandle<JOB_ID> {
 
+    /**
+     * Reveal every child of an unlocked job (dev playtest 2026-10-29: "For now, show all children -
+     * remember the education path we have planned for the future"). Pass a smaller count (the old
+     * {@code JobTreeGrowth} config) to go back to a random few, e.g. when education gates learning.
+     */
+    public static final int REVEAL_ALL = Integer.MAX_VALUE;
+
     private final Collection<JOB_ID> townKnownJobs = new ArrayList<>();
     private final BiPredicate<JOB_ID, JOB_ID> isParentOf;
     private final Supplier<ImmutableList<JOB_ID>> allShuffled;
@@ -74,7 +81,7 @@ public class VillagerLearningHandle<JOB_ID> {
                     break;
                 }
                 if (uniqueRoot.equals(jobId)) {
-                    continue; // TODO: Test for this condition missing
+                    continue; // a villager's own job is not one of its next awarenesses
                 }
                 if (isParentOf.test(uniqueRoot, jobId)) {
                     attemptsUsed++;

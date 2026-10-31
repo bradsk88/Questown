@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCContainer;
@@ -16,8 +17,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -28,7 +29,7 @@ import java.util.Objects;
 public class TownKnownBiomes {
     private final UnsafeTown town = new UnsafeTown(getClass());
 
-    private final ArrayList<Biome> nearbyBiomes = new ArrayList<>();
+    private final ArrayList<Holder<Biome>> nearbyBiomes = new ArrayList<>();
     private boolean initialized = false;
 
     public void initialize(TownFlagBlockEntity t) {
@@ -44,7 +45,7 @@ public class TownKnownBiomes {
             QT.FLAG_LOGGER.error("TownKnownBiomes is not connected to town. Fallback biome will be used");
         }
         nearbyBiomes.forEach(v -> {
-            ResourceLocation key = ForgeRegistries.BIOMES.getKey(v);
+            ResourceLocation key = Loader.biomeKeyOf(v);
             if (key == null) {
                 return;
             }
@@ -77,8 +78,8 @@ public class TownKnownBiomes {
         if (nearbyBiomes.isEmpty()) {
             computeNearbyBiomes(this);
         }
-        Biome biome = Util.getRandom(nearbyBiomes, town.getServerLevelUnsafe().getRandom());
-        return ForgeRegistries.BIOMES.getKey(biome);
+        Holder<Biome> biome = Util.getRandom(nearbyBiomes, town.getServerLevelUnsafe().getRandom());
+        return Loader.biomeKeyOf(biome);
     }
 
     public void tick() {
@@ -94,14 +95,11 @@ public class TownKnownBiomes {
         BlockPos blockPos = town.getBlockPos();
         ServerLevel level = e.town.getServerLevelUnsafe();
         ChunkPos here = new ChunkPos(blockPos);
-        Biome value = level.getBiome(blockPos).value();
-        e.nearbyBiomes.add(value);
+        e.nearbyBiomes.add(level.getBiome(blockPos));
         for (Direction d : Direction.Plane.HORIZONTAL) {
             for (int i = 0; i < Config.BIOME_SCAN_RADIUS.get(); i++) {
                 ChunkPos there = new ChunkPos(here.x + d.getStepX() * i, here.z + d.getStepZ() * i);
-                Biome biome = level.getBiome(there.getMiddleBlockPosition(blockPos.getY()))
-                                   .value();
-                e.nearbyBiomes.add(biome);
+                e.nearbyBiomes.add(level.getBiome(there.getMiddleBlockPosition(blockPos.getY())));
             }
         }
     }

@@ -61,20 +61,25 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
     }
 
     @Override
-    protected boolean hasBedAlready(MCQuestBatch mcQuestBatch) {
-        return mcQuestBatch.getAll().stream().anyMatch(v -> this.hasBeds(level, v));
+    protected int bedQuestCount(MCQuestBatch mcQuestBatch) {
+        return (int) mcQuestBatch.getAll().stream().filter(v -> isBedRoom(level, v.getWantedId())).count();
     }
 
-    private boolean hasBeds(
+    /** Whether the room recipe {@code roomId} contains a bed. */
+    public static boolean isBedRoom(
             ServerLevel level,
-            MCQuest quest
+            ResourceLocation roomId
     ) {
         Map<ResourceLocation, RoomRecipe> rr = RoomRecipes.hydrate(level.getRecipeManager(), true);
-        NonNullList<Ingredient> roomIngredients = rr.get(quest.getWantedId()).getIngredients();
-        return roomIngredients.stream().anyMatch(this::isBed);
+        RoomRecipe recipe = rr.get(roomId);
+        if (recipe == null) {
+            return false;
+        }
+        NonNullList<Ingredient> roomIngredients = recipe.getIngredients();
+        return roomIngredients.stream().anyMatch(QuestBatchSeed::isBed);
     }
 
-    private boolean isBed(Ingredient ing) {
+    private static boolean isBed(Ingredient ing) {
         String tag = Ingredients.getTag(ing);
         if (tag != null) {
             return ItemTags.BEDS.location().equals(new ResourceLocation(tag));
@@ -143,7 +148,9 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
             throw new IllegalStateException("No recipe found for ID " + qID);
         }
         int recipeWeight = RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
-        if (recipeWeight == 0) {
+        if (recipeWeight == 0 && !hydrated.get(qID).getIngredients().isEmpty()) {
+            // A zero-ingredient recipe (questown:empty_room - "any room") is intentionally
+            // weight 0; a NON-empty recipe that sums to 0 is the actual smell.
             QT.QUESTS_LOGGER.warn("Recipe weight is 0. This is probably a bug: {}", qID);
         }
         cachedCosts.put(qID, recipeWeight);

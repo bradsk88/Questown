@@ -29,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.Tags;
+import net.minecraft.tags.ItemTags;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,6 +45,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
     private @Nullable MultiLevelRoomDetector pendingRooms;
+    private boolean scannedSinceLoad = false;
     private final List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
@@ -62,6 +63,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Set<TownPosition> registeredDoors = new HashSet<>();
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
+
+    private static long kitchenDiagN = 0L;
 
     private void updateActiveFarms(
             ServerLevel level,
@@ -97,16 +100,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             BlockPos bPos
     ) {
         BlockState bs = level.getBlockState(bPos);
-        return Ingredient.of(Tags.Items.FENCES)
+        return Ingredient.of(ItemTags.FENCES)
                          .test(new ItemStack(
                                  bs.getBlock()
                                    .asItem(), 1
                          )) ||
-                Ingredient.of(Tags.Items.FENCE_GATES)
-                          .test(new ItemStack(
-                                  bs.getBlock()
-                                    .asItem(), 1
-                          ));
+                bs.is(net.minecraft.tags.BlockTags.FENCE_GATES);
     }
 
     private TownRooms getOrCreateRooms(int scanLevel) {
@@ -210,6 +209,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             boolean finished = pendingRooms.proceed(activeRooms::get);
             if (finished) {
                 this.pendingRooms = null;
+                this.scannedSinceLoad = true;
             }
             profileTick("PTR.proceed", start);
             return;
@@ -444,6 +444,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return this.activeRecipes.size();
     }
 
+    /**
+     * True once a full room-detection pass has finished in this session. Room recipe
+     * matches (and so the beds the town provides) are rebuilt by that pass after a load.
+     */
+    public boolean hasScannedSinceLoad() {
+        return scannedSinceLoad;
+    }
+
     public Collection<RoomRecipeMatch<MCRoom>> getAllMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
         Stream<RoomRecipeMatch<MCRoom>> objectStream = this.activeRecipes
                 .values()
@@ -563,7 +571,38 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 }
             }
         }
-        return b.build();
+        Collection<RoomRecipeMatch<MCRoom>> out = b.build();
+        // DEV-DIAG (2026-10-06, cook-soft-lock): for the kitchen recipe, break down WHY 0 (or few)
+        // match the (door-registered /& room-with-that-doorPos /& recipe) join. Gated + sampled (log
+        // always when empty, otherwise every 300th). Remove with the rest of the cook-soft-lock probes.
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null && recipeId.toString().contains("kitchen")) {
+            if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
+                int doors = registeredDoors.size() + registeredFenceGates.size();
+                int doorsWithRoom = 0;
+                for (TownPosition p : all) {
+                    Position pz = new Position(p.x, p.z);
+                    if (getOrCreateRooms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))
+                            || getOrCreateFarms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))) {
+                        doorsWithRoom++;
+                    }
+                }
+                int totalRooms = 0;
+                for (TownRooms tr : activeRooms.values()) {
+                    totalRooms += tr.getAll().size();
+                }
+                int roomsMatchingRecipe = 0;
+                for (var lvl : activeRecipes.values()) {
+                    for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : lvl.entrySet()) {
+                        if (m.getValue().getRecipeIDs().contains(recipeId)) {
+                            roomsMatchingRecipe++;
+                        }
+                    }
+                }
+                Questown.LOGGER.warn("[DEV-DIAG:kitchen] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
+                        recipeId, out.size(), doors, doorsWithRoom, totalRooms, roomsMatchingRecipe);
+            }
+        }
+        return out;
     }
 
     public Collection<MCRoom> getFarms() {

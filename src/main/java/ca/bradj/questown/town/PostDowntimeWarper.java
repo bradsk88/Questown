@@ -9,13 +9,14 @@ import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Warper for villagers who were in downtime when warp started.
@@ -55,8 +56,11 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private int cycleIndex = 0;
     private JobID cachedJob = null;
     private int stickyTicks = 0;
-    private @Nullable BlockPos assignedFurnace;
-    private boolean furnaceSearched = false;
+    private final WarpCycleBudget cycleBudget = new WarpCycleBudget();
+    // A job resolved while the budget could not yet afford it; kept so the tier rotation does
+    // not skip it while the villager "waits out" the time.
+    private @Nullable JobID unaffordedJob = null;
+    private final Map<JobID, @Nullable BlockPos> assignedWorkBlocks = new HashMap<>();
 
     public JobID resolveJob(long ticksPassed, boolean villagerHasItems) {
         if (cycleJobs == null) {
@@ -89,26 +93,38 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
         return resolveJob(ticksPassed, cachedJob != null);
     }
 
-    private @Nullable BlockPos findAssignedFurnace(ServerLevel level) {
-        if (furnaceSearched) {
-            return assignedFurnace;
+    /**
+     * Finds the room blocks the job's own block-identity check matches (the job's container
+     * block — a furnace for the cook family, the bread oven for the baker family). A job whose
+     * block does not occur in any room gets no assigned work block, and its warper works at a
+     * virtual position as before. The identity check is content-agnostic (no slot gate): the
+     * warp is what fills the slots, so gating the assignment on slot contents would leave a
+     * take-job like {@code baker/extract} unassigned for the whole warp. With several matching
+     * blocks the villager is round-robined onto one, matching the old furnace assignment.
+     * The value only matters for jobs with slot rules; {@code TimeWarpWorldInteraction
+     * .shouldUseRealWorkBlock()} gates on it.
+     */
+    @Nullable BlockPos findAssignedWorkBlock(ServerLevel level, JobID job) {
+        if (assignedWorkBlocks.containsKey(job)) {
+            return assignedWorkBlocks.get(job);
         }
-        furnaceSearched = true;
-        List<BlockPos> furnaces = new ArrayList<>();
+        List<BlockPos> matches = new ArrayList<>();
         for (BlockPos pos : roomPositions) {
-            if (level.getBlockEntity(pos) instanceof AbstractFurnaceBlockEntity) {
-                furnaces.add(pos);
+            if (ServerJobsRegistry.jobBlockAt(job, level, pos)) {
+                matches.add(pos);
             }
         }
-        if (furnaces.isEmpty()) {
-            return null;
+        @Nullable BlockPos found = matches.isEmpty()
+                ? null
+                : matches.get(villagerIndex % matches.size());
+        assignedWorkBlocks.put(job, found);
+        if (found != null) {
+            QT.FLAG_LOGGER.debug(
+                    "[PostDowntimeWarper] Assigned work block {} to villager {} for job {} (of {} matches)",
+                    found, villagerIndex, job, matches.size()
+            );
         }
-        assignedFurnace = furnaces.get(villagerIndex % furnaces.size());
-        QT.FLAG_LOGGER.debug(
-                "[PostDowntimeWarper] Assigned furnace {} to villager {} (of {} furnaces)",
-                assignedFurnace, villagerIndex, furnaces.size()
-        );
-        return assignedFurnace;
+        return found;
     }
 
     @Override
@@ -119,22 +135,24 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             long ticksPassed,
             int villagerNum
     ) {
+        cycleBudget.credit(ticksPassed);
         boolean villagerHasItems = liveState.villagers.get(villagerIndex).journal.items().stream()
                 .anyMatch(item -> !item.isEmpty());
-        JobID resolvedJob = resolveJob(ticksPassed, villagerHasItems);
+        JobID resolvedJob = unaffordedJob != null ? unaffordedJob : resolveJob(ticksPassed, villagerHasItems);
+        unaffordedJob = null;
 
         if (resolvedJob == null) {
             return liveState;
         }
 
-        @Nullable BlockPos furnace = findAssignedFurnace(level);
+        @Nullable BlockPos workBlock = findAssignedWorkBlock(level, resolvedJob);
 
         Warper<ServerLevel, MCTownState> jobWarper = ServerJobsRegistry.getWarper(
                 villagerIndex,
                 resolvedJob,
                 townFlagPos,
                 roomPositions,
-                furnace,
+                workBlock,
                 warpWorld
         );
 
@@ -142,7 +160,18 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             return liveState;
         }
 
+        // Duration is a property of the job, not its owner (ServerJobsRegistry.canFit also
+        // resolves it with a null villager).
+        long cycleDuration = work.getTotalDuration(resolvedJob, null);
+        if (!cycleBudget.canStart(cycleDuration)) {
+            unaffordedJob = resolvedJob;
+            return liveState;
+        }
+
         MCTownState result = runToCompletion(resolvedJob, jobWarper, level, liveState, currentTick, ticksPassed, villagerNum);
+        if (jobWarper.isCycleComplete()) {
+            cycleBudget.spend(cycleDuration);
+        }
         if (result == liveState) {
             stickyTicks = MAX_STICKY_TICKS;
         }

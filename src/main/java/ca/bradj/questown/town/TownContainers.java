@@ -2,10 +2,14 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.integration.minecraft.ChestTouches;
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
+import ca.bradj.questown.integration.minecraft.MCDisplayContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
-import ca.bradj.questown.jobs.declarative.DeclarativeJob;
+import ca.bradj.questown.jobs.InteractionSpots;
+import ca.bradj.questown.jobs.WalkTargets;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -16,6 +20,9 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -96,6 +103,69 @@ public class TownContainers {
         return Stream.concat(allChestsStream, entities).toList();
     }
 
+    /**
+     * Every container plus the displays (armor stands, item frames) in town rooms: what the town
+     * holds, for counting. Displays stay out of {@link #getAllContainers}, which picks deposit
+     * targets, supply sources and "is there space" answers.
+     */
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainersAndDisplays(
+            TownInterface town,
+            ServerLevel level
+    ) {
+        return Stream.concat(
+                getAllContainers(town, level).stream(),
+                getAllDisplaysStream(town.getRoomHandle(), level, x -> true)
+        ).toList();
+    }
+
+    /** Whether a container is a display (armor stand, item frame), {@link MCDisplayContainer}. */
+    public static boolean isDisplay(ContainerTarget<?, ?> target) {
+        return target.getContainer() instanceof MCDisplayContainer;
+    }
+
+    /**
+     * Armor stands and item frames standing in a town room, as storage (dev 2026-10-28: they "count
+     * as storage"). One entity query per room, over the room's scanned positions.
+     */
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllDisplaysStream(
+            RoomsHolder rooms,
+            ServerLevel level,
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom
+    ) {
+        return rooms.getMatches(includeRoom).stream().flatMap(m -> displaysIn(m, level));
+    }
+
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> displaysIn(
+            RoomRecipeMatch<MCRoom> match,
+            ServerLevel level
+    ) {
+        Set<BlockPos> positions = match.getContainedBlocks().keySet();
+        return BoundingBox.encapsulatingPositions(positions).map(AABB::of).stream()
+                    .flatMap(box -> level.getEntitiesOfClass(Entity.class, box, DisplaySlots::isDisplay).stream())
+                    .filter(e -> positions.contains(e.blockPosition()))
+                    .map(e -> fromDisplay(match.room, e));
+    }
+
+    private static ContainerTarget<MCContainer, MCTownItem> fromDisplay(
+            MCRoom room,
+            Entity e
+    ) {
+        BlockPos p = e.blockPosition();
+        Position position = Positions.FromBlockPos(p);
+        return new ContainerTarget<>(
+                position,
+                p.getY(),
+                position,
+                new MCDisplayContainer(DisplaySlots.of(e)),
+                () -> e.isAlive() && e.blockPosition().equals(p),
+                item -> {
+                },
+                REJECTS_EVERYTHING,
+                NO_BOOST,
+                room
+        );
+    }
+
     @NotNull
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllChestsStream(
             RoomsHolder townFlagBlockEntity,
@@ -172,8 +242,14 @@ public class TownContainers {
 
         BlockState blockState = level.getBlockState(p);
         if (room != null) {
-            Direction doorDirection = DeclarativeJob.getDoorDirectionFromCenter(room);
-            interactPos = Positions.FromBlockPos(p.relative(doorDirection));
+            // A standable neighbour, door side first: the bare door-side step put a chest
+            // whose door side is a wall's walk target INSIDE the wall, and the villager stood
+            // on the chest unable to use it (2026-10-17 playtest).
+            BlockPos spot = InteractionSpots.find(p, room, b -> WalkTargets.isStandable(level, b));
+            if (spot == null) {
+                spot = p.relative(InteractionSpots.doorDirectionFromCenter(room));
+            }
+            interactPos = Positions.FromBlockPos(spot);
         } else {
             Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
             if (facing.isPresent()) {
@@ -187,7 +263,8 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
@@ -203,7 +280,8 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
@@ -222,7 +300,7 @@ public class TownContainers {
         if (container == null) {
             throw new IllegalStateException("Container is null at " + p);
         }
-        MCContainer mcContainer = new MCContainer(container);
+        MCContainer mcContainer = new MCContainer(container, () -> ChestTouches.touch(level, p));
 
         return new ContainerTarget<>(
                 position,
@@ -232,7 +310,8 @@ public class TownContainers {
                 () -> level.getBlockState(p) == blockState,
                 item -> TownContainers.setWorkSpot(room, p, item),
                 ACCEPTS_ALL_ITEMS,
-                NO_BOOST
+                NO_BOOST,
+                room
         );
     }
 
@@ -302,7 +381,8 @@ public class TownContainers {
                 item -> {
                 }, // TODO: Allow players to put organizer requests in non-chest containers?
                 item -> ((ContainerTarget.Container) blockEntity).canAcceptIfSpaceAllows(item),
-                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value()
+                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value(),
+                null
         );
     }
 
@@ -336,7 +416,7 @@ public class TownContainers {
             TownFlagBlockEntity e,
             ServerLevel serverLevel
     ) {
-        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainers(e, serverLevel);
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainersAndDisplays(e, serverLevel);
         return cs.stream().map(ContainerTarget::getItems).flatMap(Collection::stream).filter(v -> !v.isEmpty())
                  .collect(ImmutableList.toImmutableList());
     }

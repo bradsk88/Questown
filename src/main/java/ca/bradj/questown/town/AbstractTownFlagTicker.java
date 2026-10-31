@@ -2,11 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.jobs.Signals;
-import ca.bradj.questown.town.quests.Completable;
-import ca.bradj.questown.town.quests.Reward;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +13,6 @@ import java.util.Stack;
 import java.util.function.Supplier;
 
 public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
-    private int ticksWithoutQuests;
     private boolean stopped;
     protected boolean everScanned = false;
     boolean debugMode;
@@ -44,11 +40,13 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             TICK_DATA data
     ) {
         if (runAnyInitializers(data)) {
+            // A flag that is initializing (after a reload) is alive: its sub-blocks self-destruct
+            // when not ticked, so keep them fed while the initializers run.
+            notifySubBlocksOfTick(data);
             return;
         }
 
         Collection<VILLAGERS> villagers = getVillagers(data);
-        ensureCompletableQuestsExist(data, villagers);
 
         boolean alreadyStopped = stopped;
         stopped = allPlayersLeftArea(data, !alreadyStopped);
@@ -97,6 +95,10 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         TickProfile.INSTANCE.phase("asapRewards", () -> tickASAPRewards(data));
         TickProfile.INSTANCE.phase("pois", () -> tickPOIs(data));
 
+        if (signals == Signals.NIGHT || signals == Signals.EVENING) {
+            tickEvening(data);
+        }
+
         if ((signals == Signals.NIGHT || signals == Signals.EVENING) && !villagers.isEmpty()) {
             triggerFirstNightAdvancement(data);
         }
@@ -124,6 +126,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     );
 
     protected abstract void triggerFirstNightAdvancement(TICK_DATA data);
+
+    protected abstract void tickEvening(TICK_DATA data);
 
     protected abstract void tickPOIs(TICK_DATA data);
 
@@ -156,8 +160,36 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         detectMorning(data, signals);
 
         if (!mornings.empty()) {
-            onMorning(data, mornings.pop());
+            runMorning(data, mornings.pop());
         }
+    }
+
+    /**
+     * Run the morning pass and mark this morning as consumed. The ticker's
+     * own detection (handleIfNewMorning) uses this; the campfire-sleep wake
+     * path (TownFlags.onSleepFinished) must use it too - calling the
+     * abstract onMorning directly leaves isMorning unset, so the ticker's
+     * detection re-runs the whole morning pass in the same window
+     * (duplicate BOP apply / duplicate jobs.changed broadcast, 2026-10-15
+     * playtest).
+     */
+    public void runMorning(
+            TICK_DATA data,
+            long newTime
+    ) {
+        isMorning = true;
+        onMorning(data, newTime);
+    }
+
+    /**
+     * The campfire-sleep wake's morning pass. It runs on {@link #getTick} (game time), the same
+     * clock as the ticker's own morning detection, never the wake event's new daytime: the morning
+     * pass stamps SLEEPLESS expiry and last-downtime ticks that are read against game time, and a
+     * sleep skip advances daytime but not game time (r16 #6: SLEEPLESS lasted ~44 500 ticks
+     * instead of 23 000). Pinned by {@code SleepMorningClockTest}.
+     */
+    public void runSleptMorning(TICK_DATA data) {
+        runMorning(data, getTick(data));
     }
 
     protected abstract void onMorning(
@@ -210,55 +242,12 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             boolean playersNearbyOnPrevTick
     );
 
-    private void ensureCompletableQuestsExist(
-            TICK_DATA data,
-            Collection<VILLAGERS> villagers
-    ) {
-        // We use a loop to ensure the more expensive "quests" check is only
-        // run if there is at least one villager in the town.
-        for (VILLAGERS villager : villagers) {
-            if (!isMissingCompletableQuests(data)) {
-                ticksWithoutQuests = 0;
-                break;
-            }
-            boolean allowingForBuffer = ticksWithoutQuests < 500;
-            if (allowingForBuffer) {
-                ticksWithoutQuests++;
-                break;
-            }
-            addQuests(data, villager);
-            ticksWithoutQuests = 0;
-            break; // We only want to add a quest batch for the first villager
-        }
-    }
-
     private void onMorningDetected(long newTime) {
         this.mornings.push(newTime);
         // IMPORTANT: DO NOTHING ELSE IN THIS FUNCTION
         // Adding logic here may cause the game to lock up.
         // Do morning logic via morningTick().
     }
-
-    protected abstract void addQuests(
-            TICK_DATA data,
-            VILLAGERS v
-    );
-
-    private boolean isMissingCompletableQuests(TICK_DATA e) {
-        Collection<Pair<Completable, Reward>> all = getAllQuestsWithRewards(e);
-        if (all.stream().anyMatch(v -> !v.a().isComplete())) {
-            return false;
-        }
-        Collection<Reward> rewards = getMorningRewards(e);
-        if (rewards.stream().anyMatch(Reward::addsQuestsWhenApplied)) {
-            return false;
-        }
-        return true;
-    }
-
-    protected abstract ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TICK_DATA e);
-
-    protected abstract ImmutableList<Reward> getMorningRewards(TICK_DATA e);
 
     protected abstract ImmutableList<VILLAGERS> getVillagers(TICK_DATA data);
 

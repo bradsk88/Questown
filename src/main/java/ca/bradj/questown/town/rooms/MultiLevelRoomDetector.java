@@ -1,11 +1,14 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.entity.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.logic.LevelRoomDetector;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
@@ -139,11 +142,59 @@ public class MultiLevelRoomDetector {
                         flagY + scanLevel
                 );
                 return mcRoom;
-            });
+            }).filter(r -> hasWalkableInterior(r, scanLevel));
             b.put(k, value);
             value.ifPresent(r -> roomsToScan.add(new RoomWithlevel(r, scanLevel)));
         });
         ImmutableMap<Position, Optional<MCRoom>> build = b.build();
         return build;
+    }
+
+    /**
+     * Rejects a detected room whose interior a two-block-tall villager cannot stand in.
+     * The 2D wall-walk treats a cell as interior when it is empty at the feet level OR the
+     * head level, so a room roofed only one block above its floor still "detects" — but no
+     * villager can enter it. This requires at least
+     * {@link Config#MIN_ROOM_WALKABLE_FRACTION} of the interior floor cells to be standable
+     * (passable at both feet and head), so a room with a low overhang over only part of its
+     * floor still counts while a fully low-roofed room is rejected (surfaces as no-room).
+     *
+     * <p>A cell <em>filled at the feet level</em> by a block (the chest in a 3x3 storeroom's
+     * single interior cell) is the room's contents, not a floor, so it is excluded from the
+     * denominator rather than counted against it. The low-roof case is air at the feet (so it
+     * still counts and still fails); a fully furnished interior has no open floor cells at all
+     * and is accepted. (day-1 playtest 2026-10-11: the 3x3 storeroom's chest cell read as
+     * unwalkable and the filter destroyed the room the moment it matched.)
+     */
+    private boolean hasWalkableInterior(
+            MCRoom room,
+            int scanLevel
+    ) {
+        double fraction = Config.MIN_ROOM_WALKABLE_FRACTION.get();
+        if (fraction <= 0.0) {
+            return true;
+        }
+        int y = flagY + scanLevel;
+        int floorCells = 0;
+        int walkable = 0;
+        for (InclusiveSpace space : room.getSpaces()) {
+            for (Position p : InclusiveSpaces.getPositions(
+                    space,
+                    InclusiveSpaces.PositionType.INTERIOR_ONLY
+            )) {
+                if (!WallDetection.IsFloorOpen(level, p, y)) {
+                    continue;
+                }
+                floorCells++;
+                if (WallDetection.IsWalkable(level, p, y)) {
+                    walkable++;
+                }
+            }
+        }
+        if (floorCells == 0) {
+            return true;
+        }
+        int required = Math.max(1, (int) Math.ceil(floorCells * fraction));
+        return walkable >= required;
     }
 }

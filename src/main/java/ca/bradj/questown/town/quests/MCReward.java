@@ -39,7 +39,7 @@ public abstract class MCReward extends Reward {
                 CompoundTag tag
         ) {
             ResourceLocation rewardType = new ResourceLocation(tag.getString(NBT_REWARD_TYPE));
-            RewardType<? extends MCReward> rType = Registry.REWARD_TYPES.getValue(rewardType);
+            RewardType<? extends MCReward> rType = Registry.REWARD_TYPES.get(rewardType);
             if (rType == null) {
                 rType = RewardsInit.VISITOR.get();
             }

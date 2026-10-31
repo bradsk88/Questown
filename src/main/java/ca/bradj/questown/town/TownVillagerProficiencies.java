@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.QT;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.HashMap;
@@ -60,7 +61,14 @@ public class TownVillagerProficiencies {
 
     public void initialize(Map<UUID, ? extends Map<String, Float>> init) {
         if (!levels.isEmpty()) {
-            throw new IllegalStateException("Attempting to initialize already active proficiencies");
+            // Idempotent. A second deserialization of the same flag's data (for example on a
+            // chunk re-load) must not throw; the values are the same, so the existing live
+            // values are kept. This used to throw and crash the server on a flag tick.
+            QT.VILLAGER_LOGGER.warn(
+                    "Villager proficiencies already initialized; ignoring re-initialization "
+                            + "and keeping existing values"
+            );
+            return;
         }
         init.forEach((k, v) -> levels.put(k, new HashMap<>(v)));
     }

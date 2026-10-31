@@ -1,13 +1,17 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.mc.Compat;
+
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.FalseWallBlock;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AbstractGlassBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -52,6 +56,39 @@ public class WallDetection {
         return false;
     }
 
+    /**
+     * True when a two-block-tall villager can stand at {@code dp}: the feet block (at
+     * {@code y}) and the head block (at {@code y + 1}) are both passable (air or no
+     * collision shape). This is the interior counterpart of {@link #IsWall}: a wall is
+     * solid at both levels, but a position that is merely empty at {@code y} OR
+     * {@code y + 1} is not necessarily standable — a one-block-tall gap (air at feet,
+     * solid roof at head) reads as "not a wall" yet cannot be walked into. Room
+     * detection uses this to reject rooms whose interior a villager cannot enter.
+     */
+    public static boolean IsWalkable(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y)) && isPassable(
+                level,
+                Positions.ToBlock(dp, y).above()
+        );
+    }
+
+    /**
+     * True when the feet-level block at {@code dp} (at {@code y}) is passable (air or no
+     * collision shape) — i.e. the cell is an open floor a villager could stand in, as opposed
+     * to being filled at the feet level by a block such as a chest. This is the feet half of
+     * {@link #IsWalkable}. Room detection uses it to separate "floor" interior cells (air at the
+     * feet, which may be sunk by a low roof) from cells filled at the feet by the room's own
+     * contents (a chest in a 3x3 storeroom's single interior cell), which are not floors.
+     */
+    public static boolean IsFloorOpen(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y));
+    }
+
+    private static boolean isPassable(ServerLevel level, BlockPos bp) {
+        BlockState bs = level.getBlockState(bp);
+        return bs.isAir() || bs.getCollisionShape(level, bp).isEmpty();
+    }
+
     public static boolean IsEmpty(ServerLevel level, Position dp, int y) {
         BlockPos bp = Positions.ToBlock(dp, y);
         BlockPos abp = bp.above();
@@ -68,12 +105,19 @@ public class WallDetection {
         return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 
+    // 1.20.6 dropped the vanilla glass tags; the community standard keeps them under c:
+    private static final TagKey<Block> C_GLASS_BLOCKS =
+            Compat.blockTag(new ResourceLocation("c", "glass_blocks"));
+    private static final TagKey<Block> C_GLASS_PANES =
+            Compat.blockTag(new ResourceLocation("c", "glass_panes"));
+
     public static boolean isSolid(
             BlockPos bp,
             Level level,
             BlockState blockState
     ) {
-        if (blockState.getBlock() instanceof AbstractGlassBlock || blockState.getBlock() instanceof IronBarsBlock) {
+        if (blockState.is(C_GLASS_BLOCKS) || blockState.is(C_GLASS_PANES)
+                || blockState.getBlock() instanceof IronBarsBlock) {
             return true;
         }
         if (blockState.getBlock() instanceof StairBlock) {

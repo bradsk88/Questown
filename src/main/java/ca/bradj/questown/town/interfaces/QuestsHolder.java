@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
@@ -32,14 +33,64 @@ public interface QuestsHolder {
 
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
+    /**
+     * Posts the day-one "empty room" batch (D#2: teach room building before the
+     * specific rooms). Called by {@link ca.bradj.questown.town.rewards.AddEmptyRoomBatchReward}
+     * when the welcome-mat gate quest completes; its reward posts the basics batch.
+     */
+    void addEmptyRoomBatch();
+
+    /**
+     * Discard the batch {@code batchID} the way the player's remove button does (a replacement
+     * batch or upgrade quest follows next morning). False when no such batch is open.
+     */
+    boolean removeBatch(UUID batchID);
+
+    /**
+     * Posts the day-one "basics" batch (job board + store room). Called by
+     * {@link ca.bradj.questown.town.rewards.AddBasicsBatchReward} when the
+     * empty-room quest completes (D#2 re-gated it on the room-building beat).
+     */
+    void addBasicsBatch();
+
+    /**
+     * Posts the day-2 "post your first work request" quest (F2). Posted when the
+     * basics batch completes (the board and store room exist by then); completes
+     * on the town's first posted work request while active.
+     */
+    void addFirstWorkRequestBatch();
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
-    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
+    /**
+     * Progress toward the count for open ITEM and LOOT quests: wantedId -> how close the
+     * town is (ITEM: matching items already in the town containers; LOOT: the quest's
+     * extraction total - the 2026-10-15 accumulation counter). The "(n/target)" numerator
+     * rendered on the quest card. Empty when no open ITEM/LOOT quest.
+     */
+    Map<ResourceLocation, Integer> openQuestProgress();
+
+    /**
+     * @param declinedFrom rooms whose upgrade the player just declined; the new upgrade skips them
+     */
+    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom);
 
     void addItemQuest(
             ResourceLocation itemId,
             int count
     );
+
+    // Post a LOOT-type quest (production-satisfiable, like the 2.5 raw-food gate). Unlike
+    // addItemQuest's ITEM quest, LOOT quests are matched by Quests.processLootQuests when a
+    // townie extracts loot; the caller chooses the quest type to match the completion path.
+    void addLootQuest(
+            ResourceLocation itemId,
+            int count
+    );
+
+    // LOOT quests complete on production: complete any open LOOT quest whose wanted item or
+    // tag matches the item a townie just extracted. The extracted item is not consumed.
+    void processLootQuests(MCTownItem extracted);
 
     Optional<JobID> overnightJobOverride();
 }

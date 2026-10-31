@@ -50,6 +50,11 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.batchUUID = batchUUID;
     }
 
+    /** The quest added most recently (the load replay's just-rebuilt quest). */
+    QUEST newestQuest() {
+        return this.quests.get(this.quests.size() - 1);
+    }
+
     public static <R extends Room, Q extends Quest<?, R>> Stream<Q> stream(QuestBatch<?, R, Q, ?> batch) {
         return batch.quests.stream();
     }
@@ -78,6 +83,26 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newJobQuest(id));
     }
 
+    public void addJobUnlockQuest(
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newJobUnlockQuest(id));
+    }
+
+    public void addSkillUnlockQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY treeRootId
+    ) {
+        this.quests.add(this.questFactory.newSkillUnlockQuest(dep(ownerId), treeRootId));
+    }
+
+    public void addVillagerLevelQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newVillagerLevelQuest(dep(ownerId), id));
+    }
+
     public void addNewUpgradeQuest(
             @Nullable VillagerUUID ownerId,
             KEY fromID,
@@ -92,6 +117,27 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             int count
     ) {
         this.quests.add(this.questFactory.newItemQuest(dep(ownerId), itemId, count));
+    }
+
+    public void addLootQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY itemId,
+            int count
+    ) {
+        this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
+    }
+
+    /**
+     * The day-2 "post your first work request" quest. Rebuild paths must use this -
+     * {@link #addNewQuest} would produce a ROOM-typed recipe quest with the raw id.
+     */
+    public void addFirstWorkRequestQuest(@Nullable VillagerUUID ownerId) {
+        this.quests.add(this.questFactory.newFirstWorkRequestQuest(dep(ownerId)));
+    }
+
+    /** A CONCURRENT_JOBS quest; the job list rides on the quest, not the wanted id. */
+    public void addConcurrentJobsQuest(@Nullable VillagerUUID ownerId, Collection<KEY> jobIds) {
+        this.quests.add(this.questFactory.newConcurrentJobsQuest(dep(ownerId), jobIds));
     }
 
     public ImmutableList<QUEST> getAll() {
@@ -115,7 +161,16 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             ROOM room,
             KEY recipe
     ) {
-        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        return markRecipeAsComplete(room, recipe, v -> true);
+    }
+
+    /** As {@link #markRecipeAsComplete(Object, Object)}, completing only a quest {@code which} accepts. */
+    public boolean markRecipeAsComplete(
+            ROOM room,
+            KEY recipe,
+            java.util.function.Predicate<QUEST> which
+    ) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId())).filter(which);
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
             return false;
@@ -131,6 +186,30 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             this.reward.claim();
             this.changeListener.questBatchCompleted(this);
         }
+        return true;
+    }
+
+    /**
+     * Load-time replay only. Re-mark a persisted completed quest complete without claiming the
+     * batch's reward. Completion and reward application are synchronous, so a completed quest
+     * read back from disk implies the reward is already applied (it is restored with its
+     * applied flag) - re-claiming through {@link #markRecipeAsComplete(ROOM, KEY)} would trip
+     * the once-guard on every load of a post-onboarding world (the 2026-10-13 "Refusing to
+     * apply reward more than once" load noise; ticket
+     * .scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md). No
+     * listener events fire either: the rebuild is pure state re-establishment, not a new
+     * completion (no chat broadcast, no batch-completion side effects on load).
+     */
+    public boolean markRecipeAsCompleteForReplay(@Nullable ROOM room, @Nullable KEY recipe) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
+        if (incomplete.isEmpty()) {
+            return false;
+        }
+        QUEST quest = incomplete.get();
+        this.quests.remove(quest);
+        QUEST updated = this.questFactory.completed(room, quest);
+        this.quests.add(updated);
         return true;
     }
 
@@ -223,7 +302,13 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     ) {
         QUEST foundQuest = null;
         for (QUEST q : quests) {
-            if (oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())) {
+            // A complete quest is perma-done (campfire semantics): re-typing its
+            // room (e.g. the empty room gains a chest and becomes a store room)
+            // must not lose it. 2026-10-14 playtest: the empty-room quest lost
+            // and re-completed in one tick, double-firing the batch reward.
+            if (oldRoom.equals(q.completedOn)
+                    && recipeID.equals(q.getWantedId())
+                    && !q.isComplete()) {
                 foundQuest = q;
                 break;
             }
@@ -237,6 +322,21 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             return true;
         }
         return false;
+    }
+
+    /**
+     * Withdraw a quest outright (no placeholder) and notify the listener. The JOB_UNLOCK
+     * path uses this when its stuck root stops mapping to a viable producer: the
+     * lost()-placeholder path re-typed the quest as an open room quest that no gate,
+     * UI or completion path ever cleared (the handle-accumulation half of the
+     * JOB_UNLOCK ping-pong, .scratch/mat-gated-arrival/job-unlock-quest-spam.md).
+     */
+    public boolean withdrawQuest(QUEST quest) {
+        if (!this.quests.remove(quest)) {
+            return false;
+        }
+        this.changeListener.questLost(quest);
+        return true;
     }
 
     public @Nullable VillagerUUID getUUID() {

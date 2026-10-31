@@ -1,5 +1,9 @@
 package ca.bradj.questown.town;
 
+import net.minecraft.server.packs.resources.ResourceManager;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.mc.LootTableDropsIndex;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
@@ -36,7 +40,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -53,7 +56,7 @@ public class TownVillagerUIs {
             FlagTabsEmbedding.FlagInfo townFlagBasePos,
             Collection<? extends LivingEntity> entities,
             Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            int bopCount,
+            com.google.common.collect.ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending
     ) {
         List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
@@ -74,7 +77,8 @@ public class TownVillagerUIs {
                         MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
                                 windowId,
                                 townFlagBasePos,
-                                this::triggerAdvancement
+                                this::triggerAdvancement,
+                                () -> FlagMenus.resendStatuses(player, es, morningSpawnPending)
                         );
                         return multiStatusMenu;
                     }
@@ -98,8 +102,14 @@ public class TownVillagerUIs {
                             QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
                             hasPendingMorningReward(player, townFlagBasePos)
                     );
+                    Map<UUID, String> displayNames = Map.of();
+                    if (player.getLevel().getBlockEntity(townFlagBasePos.flagPos())
+                            instanceof TownFlagBlockEntity flag) {
+                        displayNames = flag.getVillagerHandle().displayNamesForAll();
+                    }
                     FlagMenus.writeAndLink(
-                            data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending, summary
+                            data, quests, townFlagBasePos, player, es, bopRootJobs, morningSpawnPending,
+                            summary, displayNames
                     );
                 }
         );
@@ -138,17 +148,22 @@ public class TownVillagerUIs {
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
-        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getAllJobsThatProduce(
-                unsafeTown.getTownData(),
+        // Producers by what they produce (their results, knowledge-limited for loot jobs), not by
+        // their declared initial_request: cook/fuel, cook/stock_fuel, cook/stock_ingredients and
+        // baker/fuel declare #villager_food but only consume it (2026-10-19 playtest: the "8 food"
+        // quest's producers list showed only jobs that USE cooked food).
+        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getJobsKnownToProduce(
+                unsafeTown.getTownDataForDisplay(),
                 itemToShowJobsFor
         );
+        QT.GUI_LOGGER.info("[item-jobs] producers of {}: {}", Arrays.toString(itemToShowJobsFor.getItems()), jubz.keySet());
         for (JobID job : jubz.keySet()) {
             Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
             if (!(j instanceof DeclarativeJob dj)) {
                 continue;
             }
 
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownData(), job);
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownDataForDisplay(), job);
             ImmutableList<Ingredient> roomRecipe = getRoomIngredients(dj, rMap);
 
             b.add(new UIJob(
@@ -164,7 +179,33 @@ public class TownVillagerUIs {
             ));
         }
         Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
+    }
+
+    /**
+     * What a skill's details card lists under "Produces:". A loot job lists its default table's
+     * items, most likely first (dev 2026-10-30: a hunter's list was empty, since only loot the town
+     * has already found counted); any other job lists its results.
+     */
+    private static ImmutableList<ItemStack> skillResults(
+            TownFlagBlockEntity unsafe,
+            JobID job
+    ) {
+        String table = Works.isInitialized() && Works.ids().contains(job) ? Works.get(job).get().lootTableDefault() : null;
+        if (table == null) {
+            return ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job).stream()
+                                     .map(v -> v.get().getDefaultInstance())
+                                     .collect(ImmutableList.toImmutableList());
+        }
+        ResourceManager rm = unsafe.getServerLevel().getServer().getResourceManager();
+        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+        for (String id : LootTableDropsIndex.mostLikely(rm, table)) {
+            net.minecraft.world.item.Item item = Loader.itemFromId(new ResourceLocation(id));
+            if (item != null) {
+                b.add(item.getDefaultInstance());
+            }
+        }
+        return b.build();
     }
 
     private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
@@ -201,34 +242,81 @@ public class TownVillagerUIs {
         sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
+        // Day-1 playtest (villager-jobs-tooltip-shows-all-jobs.md): this list advertised the
+        // whole same-root catalogue. Filter to the jobs the town actually knows - the same
+        // town-wide "can anyone in town do this" gate the request board uses.
         ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
                                                       .stream()
                                                       .filter(v -> v.sameRoot(childJob))
+                                                      .filter(unsafe.getVillagerHandle()::isUnlocked)
                                                       .collect(ImmutableList.toImmutableList());
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : jubz) {
-            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
-            if (!(j instanceof DeclarativeJob dj)) {
-                continue;
+            UIJob card = uiJob(unsafe, vb, job, rMap);
+            if (card != null) {
+                b.add(card);
             }
-
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownData(), job);
-            RoomRecipe r = rMap.get(dj.location().baseRoom());
-            b.add(new UIJob(
-                    j.getId(),
-                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
-                    ImmutableList.copyOf(dj.initialIngredients.values()),
-                    ImmutableList.copyOf(dj.initialTools.values()),
-                    dj.location().baseRoom(),
-                    getRoomIngredients(dj, rMap),
-                    results.stream()
-                           .map(v -> v.get().getDefaultInstance())
-                           .collect(ImmutableList.toImmutableList())
-            ));
         }
 
         Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
+    }
+
+    /**
+     * One skill's details for the skill tree (dev playtest 2026-10-29: "Clicking on a skill ... should
+     * take the player to a variant of the existing 'who makes <item>' screen"): the job's card, sent
+     * back with the villager and whether the skill is still locked so the screen offers Unlock or
+     * Switch.
+     */
+    public static void showSkillDetailsUI(
+            ServerPlayer sender,
+            @NotNull TownFlagBlockEntity unsafe,
+            Collection<? extends LivingEntity> entities,
+            JobID job,
+            UUID villager,
+            boolean locked,
+            int flagBops
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (entity instanceof VisitorMobEntity vme) {
+                UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
+            }
+        }
+        UIJob card = uiJob(unsafe, vb, job, roomRecipes(sender));
+        if (card == null) {
+            QT.GUI_LOGGER.error("No details for skill {}", job);
+            return;
+        }
+        QuestownNetwork.sendToPlayer(sender, new ShowSkillDetailsMessage(card, unsafe.getTownFlagBasePos(), villager, locked, flagBops));
+    }
+
+    private static ImmutableMap<ResourceLocation, RoomRecipe> roomRecipes(ServerPlayer sender) {
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        return rMapB.build();
+    }
+
+    private static @Nullable UIJob uiJob(
+            TownFlagBlockEntity unsafe,
+            Map<JobID, List<UUID>> villagersByJob,
+            JobID job,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
+        if (!(j instanceof DeclarativeJob dj)) {
+            return null;
+        }
+        return new UIJob(
+                j.getId(),
+                ImmutableList.copyOf(villagersByJob.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                ImmutableList.copyOf(dj.initialIngredients.values()),
+                ImmutableList.copyOf(dj.initialTools.values()),
+                dj.location().baseRoom(),
+                getRoomIngredients(dj, rMap),
+                skillResults(unsafe, job)
+        );
     }
 
     public static void showUI(
@@ -239,6 +327,27 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs
     ) {
+        showUI(sender, entities, type, villagerId, unlockedJobs, unlockableJobs, true);
+    }
+
+    /**
+     * Management-only variant ({@code showInventoryTab=false}): the flag's villager-card
+     * click-through opens the menu without the inventory tab. A request for the inventory
+     * pane itself is redirected to the stats pane (the management view) so the player is
+     * not dropped into a pane whose tab no longer exists.
+     */
+    public static void showUI(
+            ServerPlayer sender,
+            Collection<? extends LivingEntity> entities,
+            String type,
+            UUID villagerId,
+            Map<UUID, ? extends Set<JobID>> unlockedJobs,
+            Set<JobID> unlockableJobs,
+            boolean showInventoryTab
+    ) {
+        if (!showInventoryTab && OpenVillagerMenuMessage.INVENTORY.equals(type)) {
+            type = OpenVillagerMenuMessage.STATS;
+        }
         Optional<VisitorMobEntity> f = entities.stream()
                                                .filter(VisitorMobEntity.class::isInstance)
                                                .map(v -> (VisitorMobEntity) v)
@@ -251,8 +360,11 @@ public class TownVillagerUIs {
         syncWorkToClient(sender);
 
         VisitorMobEntity e = f.get();
+        if (OpenVillagerMenuMessage.INITIAL.equals(type)) {
+            type = VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab);
+        }
 
-        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
 
         List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
                                    .map(v -> UIQuest.fromLevel(sender.getLevel(), v)).flatMap(List::stream).toList();
@@ -262,7 +374,10 @@ public class TownVillagerUIs {
 
         Consumer<ShowerData> runnable = menuShow.get(type);
         if (runnable == null) {
-            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+            // The type comes from a client packet: reject an unknown one instead of throwing in the
+            // network handler (2026-10-21: a dev-tool "bop" for "blocks_of_progress").
+            QT.GUI_LOGGER.error("Unexpected menu type: \"{}\"", type);
+            return;
         }
         ShowerData d = new ShowerData(
                 sender,
@@ -274,13 +389,18 @@ public class TownVillagerUIs {
                 unlockedJobs,
                 unlockableJobs,
                 villagerId,
-                flag.getVillagerHandle().isJobChangePending(e.getVUID())
+                flag.getVillagerHandle().isJobChangePending(e.getVUID()),
+                showInventoryTab,
+                flag.getVillagerHandle().displayNameFor(villagerId)
         );
         runnable.accept(d);
     }
 
-    private static void syncWorkToClient(ServerPlayer sender) {
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
+    /**
+     * Sends every job's parent and icon (the skill tree and job names read them). On join too
+     * (Outfitter #19): a quest card's item-named skill reads the icon before any villager menu opens.
+     */
+    public static void syncWorkToClient(ServerPlayer sender) {
         Map<JobID, @Nullable JobID> b = new HashMap<>();
         Map<JobID, ResourceLocation> b2 = new HashMap<>();
         Works.values().forEach(w -> {
@@ -288,7 +408,7 @@ public class TownVillagerUIs {
             b.put(work.id, work.parentID);
             b2.put(work.id, Compat.getItemId(work.icon.getItem()));
         });
-        QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
+        QuestownNetwork.sendToPlayer(sender, new SyncVillagerAdvancementsMessage(b, b2));
     }
 
     record ShowerData(
@@ -297,7 +417,10 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs,
             UUID villagerId,
-            boolean jobChangePending
+            boolean jobChangePending,
+            boolean showInventoryTab,
+            /** "Villager N" display name (empty when unassigned - screens fall back to the UUID). */
+            String villagerDisplayName
     ) {
     }
 
@@ -318,11 +441,13 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     e.getJobId(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
@@ -335,12 +460,17 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     d.quests(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             ),
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -349,17 +479,26 @@ public class TownVillagerUIs {
                     VisitorMobEntity e = d.entity();
                     openMenu(
                             d.sender(),
-                            (windowId, inv, p) -> new VillagerStatsMenu(
-                                    windowId,
-                                    e,
-                                    e.getFlagPos(),
-                                    d.stats(),
-                                    e.hasBlockOfProgress()
-                            ),
+                            (windowId, inv, p) -> {
+                                VillagerStatsMenu m = new VillagerStatsMenu(
+                                        windowId,
+                                        e.getUUID(),
+                                        e.getFlagPos(),
+                                        d.stats(),
+                                        e.hasBlockOfProgress(),
+                                        !d.unlockableJobs().isEmpty(),
+                                        d.showInventoryTab()
+                                );
+                                m.attach(e);
+                                return m;
+                            },
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -377,9 +516,16 @@ public class TownVillagerUIs {
                             vUnlocked,
                             d.unlockableJobs,
                             d.entity().getJobId(),
-                            d.entity().hasBlockOfProgress()
+                            d.entity().hasBlockOfProgress(),
+                            // Management-only sessions (opened from the flag menu)
+                            // keep the inventory tab hidden on the skills pane too -
+                            // the advancements screen's tab embedding used to return
+                            // VillagerTabs.all(), resurrecting the tab (2026-10-15
+                            // playtest: "the flag menu -> villager menu screen still
+                            // shows the inventory tab").
+                            d.showInventoryTab()
                     );
-                    QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(d::sender), msg);
+                    QuestownNetwork.sendToPlayer(d.sender(), msg);
                 }
         );
         b.put(
@@ -396,26 +542,29 @@ public class TownVillagerUIs {
                                 d.entity.getUUID(),
                                 d.entity.getJobId(),
                                 d.entity().getFlagPos(),
-                                d.jobChangePending()
-                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                d.jobChangePending(),
+                                !d.unlockableJobs().isEmpty(),
+                                d.showInventoryTab(),
+                                promisedRoot(d.sender(), d.entity()),
+                                JobChangeConfirmMenu.FlagBop.NONE
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
                                     windowId,
-                                    d.entity(),
+                                    d.entity().getUUID(),
                                     d.entity().getFlagPos(),
                                     d.econ(),
-                                    d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );
@@ -423,16 +572,16 @@ public class TownVillagerUIs {
                 OpenVillagerMenuMessage.BOP, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerBlockofProgressMenu(
                                     windowId,
                                     d.entity().getUUID(),
-                                    d.entity().getFlagPos()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().getFlagPos(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab(),
+                                    d.villagerDisplayName()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );
@@ -447,13 +596,52 @@ public class TownVillagerUIs {
     }
 
 
+    private static boolean wantsJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        return flag != null && flag.wantsJobChangeFrom(e.getJobId());
+    }
+
+    /** The flag's Blocks of Progress for a panel opened from the flag (management-only). */
+    private static JobChangeConfirmMenu.FlagBop flagBop(ServerPlayer sender, VisitorMobEntity e) {
+        TownFlagBlockEntity flag = e.getFlagPos() == null ? null : TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        if (flag == null) {
+            return JobChangeConfirmMenu.FlagBop.NONE;
+        }
+        return new JobChangeConfirmMenu.FlagBop(flag.getBopCount());
+    }
+
+    private static boolean hidesJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        return flag != null && flag.hidesJobChangeFrom(e.getJobId());
+    }
+
+    private static String promisedRoot(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return "";
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        if (flag == null) {
+            return "";
+        }
+        return flag.promisedJobChange(e.getUUID()).map(JobID::rootId).orElse("");
+    }
+
     private static void openMenu(
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,
             List<UIQuest> quests,
             VisitorMobEntity e,
             VillagerStatsData stats,
-            boolean isJobChangePending
+            boolean isJobChangePending,
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            String villagerDisplayName
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {
@@ -479,7 +667,14 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
-                        isJobChangePending
+                        showSkillsTab,
+                        showInventoryTab,
+                        isJobChangePending,
+                        villagerDisplayName,
+                        wantsJobChange(sender, e),
+                        promisedRoot(sender, e),
+                        !hidesJobChange(sender, e),
+                        showInventoryTab ? JobChangeConfirmMenu.FlagBop.NONE : flagBop(sender, e)
                 )
         );
         if (e.getFlagPos() != null) {

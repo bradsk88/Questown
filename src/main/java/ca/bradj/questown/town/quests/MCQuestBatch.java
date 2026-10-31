@@ -15,10 +15,12 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.UUID;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
 public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> {
@@ -56,8 +58,48 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newLootQuest(
+                    @Nullable UUID ownerId,
+                    ResourceLocation itemId,
+                    int count
+            ) {
+                return MCQuest.loot(batchUUID, dep(ownerId), itemId, count);
+            }
+
+            @Override
             public MCQuest newJobQuest(ResourceLocation id) {
                 return MCQuest.jobChange(batchUUID, null, id);
+            }
+
+            @Override
+            public MCQuest newJobUnlockQuest(ResourceLocation id) {
+                return MCQuest.jobUnlock(batchUUID, null, id);
+            }
+
+            @Override
+            public MCQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
+                return MCQuest.firstWorkRequest(batchUUID, dep(ownerId));
+            }
+
+            @Override
+            public MCQuest newSkillUnlockQuest(@Nullable UUID ownerId, ResourceLocation treeRootId) {
+                // A named skill keeps its name: rebuilding it as the any-skill form on load let any
+                // crafter skill close "Unlock Wooden Shovel".
+                return MCQuest.namedSkill(treeRootId)
+                              .map(s -> MCQuest.namedSkillUnlock(batchUUID, dep(ownerId), s))
+                              .orElseGet(() -> MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId)));
+            }
+
+            @Override
+            public MCQuest newVillagerLevelQuest(@Nullable UUID ownerId, ResourceLocation id) {
+                VillagerLevelQuests.Target t = VillagerLevelQuests.target(id).orElseThrow(
+                        () -> new IllegalArgumentException("Not a villager-level quest id: " + id));
+                return MCQuest.villagerLevel(batchUUID, dep(ownerId), t.root(), t.level());
+            }
+
+            @Override
+            public MCQuest newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<ResourceLocation> jobIds) {
+                return MCQuest.concurrentJobs(batchUUID, jobIds);
             }
 
             @Override
