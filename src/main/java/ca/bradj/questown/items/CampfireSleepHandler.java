@@ -10,8 +10,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
-import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,6 +43,12 @@ public class CampfireSleepHandler {
             BlockPos campfirePos,
             TownFlagBlockEntity parent
     ) {
+        // A second use while asleep (a double-click lands before the sleep screen opens) would
+        // overwrite this sleeper's records, then its failed sleep clears them: the first temp
+        // bed stays in the world and the wake no longer counts as a campfire sleep.
+        if (player.isSleeping()) {
+            return;
+        }
         BlockState campfireState = level.getBlockState(campfirePos);
         if (!campfireState.hasProperty(CampfireBlock.LIT) || !campfireState.getValue(CampfireBlock.LIT)) {
             Util.onScreenText(() -> player, "message.wand.campfire.not_lit");
@@ -52,7 +60,7 @@ public class CampfireSleepHandler {
         // breaks worlds that legitimately have more than one campfire within the
         // flag's search radius.
 
-        BlockPos headPos = findSafeSleepPosition(level, campfirePos);
+        BlockPos headPos = findSafeSleepPosition(level, campfirePos, player.position());
         if (headPos == null) {
             Util.onScreenText(() -> player, "message.wand.campfire.no_safe_position");
             return;
@@ -68,8 +76,7 @@ public class CampfireSleepHandler {
         campfireSleepers.add(uuid);
         tempBedPositions.put(uuid, headPos);
         tempBedFacings.put(uuid, facing);
-        campfirePositions.put(uuid, campfirePos);
-        sleepingFlagPositions.put(uuid, parent.getBlockPos());
+        campfirePositions.put(uuid, campfirePos);        sleepingFlagPositions.put(uuid, parent.getBlockPos());
 
         placeTempBed(level, headPos, facing);
 
@@ -83,7 +90,11 @@ public class CampfireSleepHandler {
                     "[campfire-sleep] startSleepInBed returned LEFT for player={} problem={}",
                     player.getGameProfile().getName(), problem
             );
-            if (problem != null) {
+            // 1.20.6 BedSleepingProblem.getMessage() is null for OTHER_PROBLEM,
+            // NOT_POSSIBLE_NOW, TOO_FAR_AWAY and NOT_SAFE; displayClientMessage(null)
+            // sends a system_chat packet with a null component and NPEs the
+            // connection on encode (kicks every connected client).
+            if (problem != null && problem.getMessage() != null) {
                 player.displayClientMessage(problem.getMessage(), true);
             }
             campfireSleepers.remove(uuid);
@@ -99,15 +110,38 @@ public class CampfireSleepHandler {
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
+        // No-player overload (test seams): the campfire centre is equidistant from every
+        // candidate head, so strict-< keeps the first safe direction in iteration order -
+        // the pre-player-aware behavior.
+        return findSafeSleepPosition(level, campfirePos, Vec3.atCenterOf(campfirePos));
+    }
+
+    /**
+     * Pick the safe bed spot CLOSEST to the player (campfire-sleep-feels-close-enough.md).
+     * Vanilla's startSleepInBed rejects the bed with TOO_FAR_AWAY when the head/foot blocks
+     * are more than 3 blocks (x/z) / 2 (y) from the player (ServerPlayer.isReachableBedBlock);
+     * with the bed on the far side of the campfire that distance grows to 4-6 and every
+     * sleep attempt fails even though the player is standing right next to the fire. Scoring
+     * candidates by distance to the player puts the bed on the player's side of the fire,
+     * which is reachable from any position the player could have right-clicked the
+     * campfire from (4.5-block interact reach).
+     */
+    static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos, Vec3 playerPos) {
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
         for (Direction dir : Direction.Plane.HORIZONTAL) {
             BlockPos footCandidate = campfirePos.relative(dir);
             BlockPos headCandidate = footCandidate.relative(dir);
             if (!isSafeToLieOn(level, footCandidate) || !isSafeToLieOn(level, headCandidate)) {
                 continue;
             }
-            return headCandidate;
+            double distSq = playerPos.distanceToSqr(Vec3.atCenterOf(headCandidate));
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                best = headCandidate;
+            }
         }
-        return null;
+        return best;
     }
 
     private static boolean isSafeToLieOn(Level level, BlockPos pos) {
@@ -120,17 +154,17 @@ public class CampfireSleepHandler {
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        Material mat = state.getMaterial();
         // The temp bed is placed with an unconditional setBlock, so the spot must be air or an
         // otherwise-replaceable block. Without this guard a solid block (e.g. the town flag) counted
         // as "clear" and the bed overwrote it — destroying the block and, on teardown, leaving air.
-        if (!mat.isReplaceable()) {
+        if (ca.bradj.questown.mc.Compat.isSolid(state)) {
             return false;
         }
         if (!level.isUnobstructed(state, pos, CollisionContext.empty())) {
             return false;
         }
-        return !mat.isLiquid() && mat != Material.FIRE;
+        FluidState fluidState = state.getFluidState();
+        return !fluidState.is(FluidTags.WATER) && !fluidState.is(FluidTags.LAVA) && !state.is(Blocks.FIRE);
     }
 
     private static @Nullable Direction findBedFacing(BlockPos headPos, BlockPos campfirePos) {
@@ -194,33 +228,23 @@ public class CampfireSleepHandler {
         ca.bradj.questown.QT.JOB_LOGGER.info(
                 "[campfire-sleep] onWake fired player={} dayTime={} isDay={}",
                 player.getGameProfile().getName(),
-                player.level.getDayTime() % 24000L, player.level.isDay()
+                player.getLevel().getDayTime() % 24000L, player.getLevel().isDay()
         );
         campfireSleepers.remove(uuid);
         BlockPos headPos = tempBedPositions.remove(uuid);
         Direction facing = tempBedFacings.remove(uuid);
         if (headPos != null && facing != null) {
-            removeTempBed(player.level, headPos, facing);
+            removeTempBed(player.getLevel(), headPos, facing);
         }
-        BlockPos firePos = campfirePositions.remove(uuid);
-        if (firePos != null) {
-            extinguishCampfire(player.level, firePos);
-        }
+        // The campfire stays lit after the night (r17, dev 2026-10-25: it guides the player back
+        // to the village). It used to be put out on wake (0eb1191c, 2026-04-08), which only made
+        // the player relight it before every sleep; sleeping still needs it lit.
+        campfirePositions.remove(uuid);
         BlockPos flagPos = sleepingFlagPositions.remove(uuid);
         if (flagPos != null
-                && player.level.getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+                && player.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
             flag.setChickenObservedSleepSinceSunset(true);
         }
     }
 
-    private static void extinguishCampfire(Level level, BlockPos pos) {
-        BlockState state = level.getBlockState(pos);
-        if (!state.hasProperty(CampfireBlock.LIT)) {
-            return;
-        }
-        if (!state.getValue(CampfireBlock.LIT)) {
-            return;
-        }
-        level.setBlockAndUpdate(pos, state.setValue(CampfireBlock.LIT, false));
-    }
 }

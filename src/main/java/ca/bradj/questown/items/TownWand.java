@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import ca.bradj.questown.logic.CampfireRange;
 import ca.bradj.questown.logic.TownCycle;
 import org.jetbrains.annotations.Nullable;
 
@@ -110,10 +111,7 @@ public class TownWand extends Item {
         int radius = ca.bradj.questown.mc.Compat.configGet(
                 ca.bradj.questown.core.Config.CAMPFIRE_SEARCH_RADIUS
         ).get();
-        int dx = Math.abs(clickedPos.getX() - flagPos.getX());
-        int dz = Math.abs(clickedPos.getZ() - flagPos.getZ());
-        boolean registered = clickedPos.getY() == flagPos.getY()
-                && dx < radius && dz < radius;
+        boolean registered = CampfireRange.contains(flagPos, clickedPos, radius);
         if (!registered) {
             Util.onScreenText(player, "message.wand.campfire.not_registered");
             return;
@@ -162,13 +160,13 @@ public class TownWand extends Item {
     @Override
     public void appendHoverText(
             ItemStack item,
-            @Nullable Level level,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level ctx,
             List<Component> p_41423_,
             TooltipFlag p_41424_
     ) {
-        super.appendHoverText(item, level, p_41423_, p_41424_);
+        super.appendHoverText(item, ctx, p_41423_, p_41424_);
         BlockPos parent = TownFlagBlock.GetParentPosFromNBT(item);
-        Style color = Style.EMPTY.withColor(TextColor.parseColor("GRAY"));
+        Style color = Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY);
 
         if (parent == null) {
             String key = "tooltips.items.wand.inactive";

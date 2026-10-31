@@ -7,6 +7,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RelocationChoiceMessage;
 import ca.bradj.questown.town.entity.TownRelocation;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -21,7 +22,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -47,7 +47,7 @@ public class RelocationDeedItem extends Item {
 
     public RelocationDeedItem() {
         // Fresh Properties (not the shared DEFAULT_ITEM_PROPS) so stacksTo(1) doesn't mutate it.
-        super(new Item.Properties().tab(ModItemGroup.QUESTOWN_GROUP).stacksTo(1));
+        super(new Item.Properties().stacksTo(1));
     }
 
     /**
@@ -64,7 +64,11 @@ public class RelocationDeedItem extends Item {
         ref.putUUID(NBT_TOWN_UUID, townUuid);
         ref.putLong(NBT_FLAG_POS, flagPos.asLong());
         ref.putString(NBT_DIM, dimension.toString());
-        stack.getOrCreateTag().put(NBT_ROOT, ref);
+        {
+            CompoundTag t = Compat.itemDataTag(stack);
+            t.put(NBT_ROOT, ref);
+            Compat.setItemDataTag(stack, t);
+        }
         return stack;
     }
 
@@ -86,8 +90,8 @@ public class RelocationDeedItem extends Item {
 
         int farFixtures = TownRelocation.farFixturesFor(level, deed, targetPos).size();
         if (farFixtures > 0 && ctx.getPlayer() instanceof ServerPlayer player) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> player),
+            QuestownNetwork.sendToPlayer(
+                    player,
                     new OpenRelocationConfirmMessage(targetPos, farFixtures)
             );
             // Deed stays in hand; RelocationChoiceMessage will place + consume it once they choose.
@@ -129,7 +133,7 @@ public class RelocationDeedItem extends Item {
     @Override
     public void appendHoverText(
             ItemStack stack,
-            @Nullable Level level,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level ctx,
             List<Component> tooltip,
             TooltipFlag flag
     ) {
@@ -170,10 +174,10 @@ public class RelocationDeedItem extends Item {
         if (!isDeed(stack)) {
             return null;
         }
-        CompoundTag tag = stack.getTag();
-        if (tag == null || !tag.contains(NBT_ROOT)) {
+        CompoundTag data = Compat.itemDataTag(stack);
+        if (data.isEmpty() || !data.contains(NBT_ROOT)) {
             return null;
         }
-        return tag.getCompound(NBT_ROOT);
+        return data.getCompound(NBT_ROOT);
     }
 }

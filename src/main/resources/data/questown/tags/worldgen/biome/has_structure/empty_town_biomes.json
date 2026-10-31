@@ -1,8 +1,10 @@
 {
   "replace": false,
   "values": [
-    "#forge:is_plains",
     "#minecraft:is_savanna",
-    "minecraft:desert"
+    "minecraft:desert",
+    "minecraft:plains",
+    "minecraft:sunflower_plains",
+    "minecraft:flower_forest"
   ]
 }

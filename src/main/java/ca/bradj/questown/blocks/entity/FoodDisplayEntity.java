@@ -15,7 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Collection;
 
@@ -36,7 +35,7 @@ public class FoodDisplayEntity extends BlockEntity implements MCContainerInterfa
         ContainerHelper.loadAllItems(p_155349_, this.items);
         for (int i = 0; i < this.items.size(); i++) {
             SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), this.items.get(i), i);
-            QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+            QuestownNetwork.sendToAll(level, message);
         }
     }
 
@@ -53,7 +52,7 @@ public class FoodDisplayEntity extends BlockEntity implements MCContainerInterfa
         for (int i = 0; i < items.size(); i++) {
             if (doSetItem(i, MCTownItem.fromMCItemStack(itemStack))) {
                 SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), itemStack, i);
-                QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+                QuestownNetwork.sendToAll(level, message);
                 return true;
             }
         }
@@ -65,7 +64,7 @@ public class FoodDisplayEntity extends BlockEntity implements MCContainerInterfa
             MCTownItem removed = removeItem(i);
             if (removed != null && !removed.isEmpty()) {
                 SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), ItemStack.EMPTY, i);
-                QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+                QuestownNetwork.sendToAll(level, message);
                 return removed.toMCItemStack();
             }
         }
@@ -90,7 +89,7 @@ public class FoodDisplayEntity extends BlockEntity implements MCContainerInterfa
         boolean didSet = doSetItem(index, item);
         if (didSet) {
             SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), item.toQTItemStack(), index);
-            QuestownNetwork.CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+            QuestownNetwork.sendToAll(level, message);
         }
         return didSet;
     }

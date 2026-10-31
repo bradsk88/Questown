@@ -16,6 +16,16 @@ import java.util.stream.Stream;
 
 public class UtilClean {
 
+    /**
+     * {@code a + b}, capped at {@code Integer.MAX_VALUE}. Room recipe weights use MAX_VALUE for
+     * "never recommend" items, and a plain sum of four of them overflowed to -4 (r16 #5: the
+     * dining room outweighed by the empty room). Pinned by {@code SaturatingAddTest}.
+     */
+    public static int saturatingAdd(int a, int b) {
+        return (int) Math.min(Integer.MAX_VALUE, (long) a + b);
+    }
+
+
     public static <X> List<Pair<Integer, X>> enumerate(List<X> list) {
         ImmutableList.Builder<Pair<Integer, X>> b = ImmutableList.builder();
         for (int i = 0; i < list.size(); i++) {
@@ -29,6 +39,25 @@ public class UtilClean {
             apply.run();
             return null;
         };
+    }
+
+    /**
+     * Forge-free extraction of the "all special rules pass" decision that
+     * {@code ResourceJobLoader.trySpecialRuleIsJobBlock} makes, so the freshness gate of
+     * {@code isJobBlock} can be unit-tested without Forge. {@code ruleResults} is each global
+     * special rule's {@code postJobBlockCheckPassed(ctx)} result, in order.
+     *
+     * <p>Semantics: every declared rule must pass; an EMPTY rule set means "no rules declared" and
+     * must NOT block a fresh job block. Per CONTEXT.md, global special rules are job-wide behavior
+     * flags / warp effects, not job-block qualification gates - so a job declaring none has no gate.
+     */
+    public static boolean specialRulesAllPass(List<Boolean> ruleResults) {
+        for (Boolean rule : ruleResults) {
+            if (!Boolean.TRUE.equals(rule)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static <X, Y> Map<X, ImmutableList<Y>> deepCopy(Map<X, ? extends Collection<Y>> items) {

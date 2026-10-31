@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks.entity;
+import ca.bradj.questown.loader.Holder;
 
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.TownFlagBlock;
@@ -13,7 +14,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.RegistryObject;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,9 +34,9 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static <B extends RoomBlock> RegistryObject<Block> register(RegistryObject<B> register) {
+    public static <B extends RoomBlock> Holder<Block> register(Holder<B> register) {
         ALL.add(register::get);
-        return (RegistryObject) register;
+        return (Holder) register;
     }
 
     @Override
@@ -55,7 +55,9 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     private Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
-        ItemStack toDrop = getBlockState().getBlock().asItem().getDefaultInstance();
+        Block b = getBlockState().getBlock();
+        ItemStack toDrop = b instanceof RoomBlock rb ? rb.getOrphanDropItem().getDefaultInstance()
+                : b.asItem().getDefaultInstance();
         TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
         return ImmutableList.of(toDrop);
     }

@@ -28,9 +28,19 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, OnOrphaned> runOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
+    // Set when the owning flag's chunk unloads. A sub-block whose chunk stayed loaded keeps its
+    // tick listener on THIS instance, but the reloaded flag is a new block entity with a new
+    // TownFlagSubBlocks: nothing would ever reset this instance's counters again, and the
+    // sub-block would remove itself ~20 ticks after the town came back (day1, 2026-10-18). The
+    // reloaded flag re-registers its sub-blocks on its own instance.
+    private boolean retired;
 
     public TownFlagSubBlocks(BlockPos blockPos) {
         this.flagPos = blockPos;
+    }
+
+    public void retire() {
+        this.retired = true;
     }
 
     public void parentTick(ServerLevel sl,
@@ -76,6 +86,17 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pos
     ) {
+        if (retired) {
+            return;
+        }
+        if (!sl.shouldTickBlocksAt(flagPos)) {
+            // A flag whose chunk is unloaded, or loaded but not ticking block entities (the
+            // edge of the loaded area, e.g. as the player walks back), is away, not destroyed.
+            // Counting those ticks as "stopped ticking" removed live job boards (day1 overnight
+            // absence, 2026-10-18). Also avoids getBlockState force-loading the flag's chunk.
+            ticksWithoutParent.put(pos, 0);
+            return;
+        }
         BlockState flagState = sl.getBlockState(flagPos);
         if (!flagState.hasProperty(TownFlagBlock.INACTIVE)) {
             return;
@@ -92,7 +113,7 @@ public final class TownFlagSubBlocks {
         }
         ticksWithoutParent.put(pos, twop + 1);
         if (twop >= Compat.configGet(Config.FLAG_SUB_BLOCK_RETENTION_TICKS).get()) {
-            QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {} on tick {}", pos, Util.getTick(sl));
+            QT.BLOCK_LOGGER.info("Parent has stopped ticking. Entity removed at {} on tick {}", pos, Util.getTick(sl));
             sl.removeBlock(pos, true);
             OnOrphaned remove = runOnOrphaned.remove(pos);
             if (remove != null) {
@@ -117,6 +138,11 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pop
     ) {
+        if (!sl.isLoaded(pop)) {
+            // Not loaded yet (town reload): waiting is not a failed detection.
+            QT.FLAG_LOGGER.debug("Sub block at {} is in an unloaded chunk; waiting", pop);
+            return false;
+        }
         BlockEntity e = sl.getBlockEntity(pop);
         if (e instanceof TownFlagSubEntity s) {
             ticksWithoutParent.put(pop, 0);

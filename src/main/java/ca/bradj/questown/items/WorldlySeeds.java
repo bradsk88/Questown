@@ -1,6 +1,5 @@
 package ca.bradj.questown.items;
 
-import ca.bradj.questown.core.init.ModItemGroup;
 import net.minecraft.world.item.Item;
 
 /**
@@ -13,6 +12,6 @@ public class WorldlySeeds extends Item {
     public static final String ITEM_ID = "worldly_seeds";
 
     public WorldlySeeds() {
-        super(new Item.Properties().stacksTo(64).tab(ModItemGroup.QUESTOWN_GROUP));
+        super(new Item.Properties().stacksTo(64));
     }
 }

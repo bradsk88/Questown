@@ -131,3 +131,32 @@ flowchart TD
   *before* `setBlock`, so a null parent aborts the whole placement (returns
   FAIL, the item is not consumed). `TownDoor` places via the block's own `useOn`
   first, so the door block is set regardless and only registration is skipped.
+
+## A use while asleep does nothing (2026-10-22 agent playtest)
+
+`beginCampfireSleep` returns at once when the player is already sleeping. A second wand use
+that lands before the sleep screen opens (a double-click; the agent's two `clickheld` calls)
+used to run the whole path again: it overwrote the sleeper's records with a second temp bed,
+`startSleepInBed` failed with `OTHER_PROBLEM`, and the failure path cleared the records. The
+first temp bed then stayed in the world, the campfire stayed lit, and `onWake` no longer saw a
+campfire sleeper, so `first_campfire_sleep` was never granted and the "Your camp is ready" toast
+came back every evening (`TownFlagBlockEntity.showCampReadyToastIfDue`). Pinned by
+`CampfireSleepReentryTest`.
+
+## Each night's first wand click only lights the fire (2026-10-22, r9)
+
+`onWake` extinguishes the campfire, so the next night `TownWand.handleCampfireClick` sees it unlit,
+lights it (flint sound) and returns: the first click lights, the second sleeps. The crosshair hint
+(`CampfireSleepClientEvents`) is what tells the player: unlit -> `message.wand.campfire.not_lit`,
+lit at night -> `sleep_hint`. The unlit copy said "The campfire must be lit", which reads as "go
+find flint and steel" while the wand itself lights it; it now says "Right-click to light the
+campfire". (An agent driving `_qtdev clickheld` without aiming sees only a silent PASS on that
+first click: it is the lighting, not a failure.)
+
+## The campfire stays lit after a campfire sleep (r17, dev 2026-10-25)
+
+`CampfireSleepHandler.onWake` used to put the sleeper's campfire out (`extinguishCampfire`,
+0eb1191c, 2026-04-08: "requires lit state to sleep and extinguishes on wake"), so the player
+relit it before every night. Dev: it should stay lit, because the smoke is how the player finds
+the way back to the village. `onWake` now only forgets the fire's position. Sleeping still
+requires a lit campfire.

@@ -1,5 +1,8 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -9,11 +12,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
 
 import java.util.List;
 
@@ -31,9 +32,9 @@ public class OreProcessingBlock extends Block implements StatefulJobBlock {
     public OreProcessingBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .strength(1.0F, 10.0F)
+                Compat.P
+                        .of().mapColor(MapC.COLOR_BROWN)
+                        .strength(1.0F, 10.0F).impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(PROCESSING_STATE, 0)

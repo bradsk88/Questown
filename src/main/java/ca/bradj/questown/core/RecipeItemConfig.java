@@ -1,5 +1,11 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.loader.ConfigBuilder;
+import ca.bradj.questown.loader.ConfigSpec;
+import ca.bradj.questown.loader.ConfigValue;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.SmallSoupPotBlock;
 import ca.bradj.questown.blocks.SoupPotBlock;
@@ -12,9 +18,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -22,12 +25,12 @@ import java.util.Map;
 
 public class RecipeItemConfig {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ConfigBuilder BUILDER = Loader.configBuilder();
+    public static final ConfigSpec SPEC;
 
     public static final String ITEM_WEIGHTS = "Item weights";
     private static final Config defaultItemWeights = Config.of(InMemoryFormat.defaultInstance());
-    public static final ForgeConfigSpec.ConfigValue<String> itemWeights;
+    public static final ConfigValue<String> itemWeights;
 
     private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.TORCH_INGREDIENTS, false
@@ -107,6 +110,27 @@ public class RecipeItemConfig {
     );
 
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
+    // The iron recipe; the Block of Progress recipes (dev playtest 2026-10-28) have no resource to
+    // score, and the armorer's table is the same table recoloured.
+    private static final int WORK_TABLE = RecipeItemScore.canCraftInFourGrid(
+            ImmutableList.of(
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.CRAFTING_TABLE,
+                    CraftedResources.CRAFTING_TABLE
+            ), false
+    );
+    private static final int ITEM_FRAME = RecipeItemScore.requiresCraftingTable(
+            Collections.nCopies(8, CraftedResources.STICK),
+            false
+    );
+    private static final int ARMOR_STAND = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.<Resource>builder()
+                    .addAll(Collections.nCopies(6, CraftedResources.STICK))
+                    .add(MinedResources.COBBLESTONE)
+                    .build(),
+            false
+    );
 
     public static final int SMALL_SOUP_POT = RecipeItemScore.canCraftInFourGrid(
             ImmutableList.of(
@@ -155,6 +179,13 @@ public class RecipeItemConfig {
                     CraftedResources.FURNACE
             ), false
     );
+    // A crafter makes plates from planks (crafter/plate, dev 2026-10-24); the plate had no source
+    // before, so it carried "never recommend".
+    public static final int PLATE = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    CraftedResources.PLANKS
+            ), false
+    );
     public static final int FOOD_DISPLAY = RecipeItemScore.requiresCraftingTable(
             ImmutableList.of(
                     CraftedResources.PLANKS,
@@ -181,7 +212,15 @@ public class RecipeItemConfig {
         add(assumePresent(Items.LANTERN), LANTERN);
         add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
         add(assumePresent(Items.CHEST), CHEST);
-        add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
+        add(
+                String.format(
+                        "#%s",
+                        Compat.itemTag(
+                                new net.minecraft.resources.ResourceLocation("minecraft:chests")
+                        ).location()
+                ),
+                CHEST
+        );
         add(assumePresent(Items.FURNACE), FURNACE);
         add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
         add(assumePresent(Items.BOOKSHELF), BOOKSHELF);
@@ -190,23 +229,28 @@ public class RecipeItemConfig {
         add(assumePresent(Items.TARGET), TARGET);
         add(assumePresent(Items.CAULDRON), CAULDRON);
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
-        add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
+        // Namespaced like the small pot: room recipes name it questown:soup_pot, and the bare key
+        // never matched, so the big pot weighed the default 100 (r17 #2).
+        add(Questown.ResourceLocation(SoupPotBlock.ITEM_ID), BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
-        // TODO: Bring back hunger/dining and reduce this cost to represent plate recipe
-        add(ItemsInit.PLATE_BLOCK.getId(), Integer.MAX_VALUE);
+        add(ItemsInit.PLATE_BLOCK.id(), PLATE);
         add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);
         // TODO: Add a crafter job for building bowl racks (should probably upgrade job board so we can make "one time" requests)
-        add(ItemsInit.BOWL_RACK_BLOCK.getId(), Integer.MAX_VALUE);
-        add(ItemsInit.ORE_PROCESSING_BLOCK.getId(), ORE_PROCESSING_BLOCK);
-        add(ItemsInit.BREAD_OVEN_BLOCK.getId(), BREAD_OVEN_BLOCK);
-        add(ItemsInit.FOOD_DISPLAY_BLOCK.getId(), FOOD_DISPLAY);
+        add(ItemsInit.BOWL_RACK_BLOCK.id(), Integer.MAX_VALUE);
+        add(ItemsInit.ORE_PROCESSING_BLOCK.id(), ORE_PROCESSING_BLOCK);
+        add(ItemsInit.BREAD_OVEN_BLOCK.id(), BREAD_OVEN_BLOCK);
+        add(ItemsInit.FOOD_DISPLAY_BLOCK.id(), FOOD_DISPLAY);
+        add(ItemsInit.BLACKSMITHS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(ItemsInit.ARMORERS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(assumePresent(Items.ARMOR_STAND), ARMOR_STAND);
+        add(assumePresent(Items.ITEM_FRAME), ITEM_FRAME);
         add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
 
     @SuppressWarnings("DataFlowIssue")
     private static @NotNull ResourceLocation assumePresent(Item item) {
-        return ForgeRegistries.ITEMS.getKey(item);
+        return Compat.getItemId(item);
     }
     private static void add(
             ResourceLocation itemOrTagKey,

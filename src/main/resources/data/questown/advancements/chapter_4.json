@@ -8,7 +8,7 @@
       "text": "Complete 20 procedural quest batches"
     },
     "icon": {
-      "item": "questown:town_flag_block"
+      "item": "questown:flag_base"
     },
     "frame": "challenge",
     "show_toast": true,
