@@ -90,17 +90,33 @@ public final class TownVillagerHandle {
                     VisitorMobEntity f,
                     boolean announce
             ) {
-                f.setJob(ServerJobsRegistry.getInitializedJob(
+                var job = ServerJobsRegistry.getInitializedJob(
                         town.getServerLevelUnsafe(),
                         newJob,
                         f.getJobJournalSnapshot().items(),
                         villagerUUID
-                ));
+                );
                 @NotNull TownFlagBlockEntity t = town.getUnsafe();
+                startFlagJobFresh(t, villagerUUID, job);
+                f.setJob(job);
                 t.setChanged();
                 if (announce) {
                     String label = displayNameFor(villagerUUID);
                     t.messages.jobChanged(newJob, label.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerUUID) : label);
+                }
+            }
+
+            /**
+             * The flag jobs share one work-state record per villager at the flag, each numbering its
+             * states its own way, so a record left by an interrupted one is foreign to the next.
+             * Downtime's state 1 read to a diner as a half-eaten meal: it walked "to the job" with
+             * nowhere to go until it timed out, twice, with food in storage (2026-10-31
+             * hunter/sword [sleep_mid_trip]; the dev's "stuck going to eat"). No flag job resumes
+             * another's cycle, so each starts on a fresh record.
+             */
+            private void startFlagJobFresh(TownFlagBlockEntity t, UUID villagerUUID, Object job) {
+                if (job instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && dj.worksAtTheFlag()) {
+                    t.getWorkStatusHandle(villagerUUID).clearState(t.getBlockPos());
                 }
             }
 

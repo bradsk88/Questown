@@ -21,14 +21,20 @@ class DeclarativeJobsTerminalStateWorkTest {
 
     private static final int DINER_MAX_STATE = 2;
 
+    /** dining_no_table's CONSUME_FOOD state: the food ingredient goes in here. */
+    private static final int DINER_CONSUME_FOOD = 1;
+
     private static Collection<Integer> unfinished(State flagSpot) {
         Collection<Supplier<Collection<String>>> rooms = ImmutableList.of(() -> ImmutableList.of("flag"));
         return DeclarativeJobs.getStatesWithUnfinishedWork(
                 rooms,
                 pos -> flagSpot,
                 pos -> true,
-                // The diner declares (zero) work at every state, DONE included.
-                state -> DeclarativeJobs.declaresUnfinishedWork(state, DINER_MAX_STATE, true)
+                // The diner declares (zero) work at every state, DONE included, and wants its food
+                // ingredient at CONSUME_FOOD.
+                state -> DeclarativeJobs.declaresUnfinishedWork(
+                        state, DINER_MAX_STATE, true, state == DINER_CONSUME_FOOD
+                )
         );
     }
 
@@ -43,9 +49,17 @@ class DeclarativeJobsTerminalStateWorkTest {
     }
 
     @Test
+    void mealLeftAtConsumeFood_withoutFood_isNotUnfinishedWork() {
+        // 2026-10-31 hunter/sword [sleep_mid_trip]: a diner pulled away at state 1 came back to
+        // "itemless work" there and sat in GOING_TO_JOB with no job site until it timed out.
+        assertEquals(ImmutableList.of(), unfinished(State.freshAtState(DINER_CONSUME_FOOD)));
+    }
+
+    @Test
     void declaresUnfinishedWork_rules() {
-        assertTrue(DeclarativeJobs.declaresUnfinishedWork(1, 2, true));
-        assertFalse(DeclarativeJobs.declaresUnfinishedWork(2, 2, true));
-        assertFalse(DeclarativeJobs.declaresUnfinishedWork(1, 2, false));
+        assertTrue(DeclarativeJobs.declaresUnfinishedWork(1, 2, true, false));
+        assertFalse(DeclarativeJobs.declaresUnfinishedWork(2, 2, true, false));
+        assertFalse(DeclarativeJobs.declaresUnfinishedWork(1, 2, false, false));
+        assertFalse(DeclarativeJobs.declaresUnfinishedWork(1, 2, true, true));
     }
 }

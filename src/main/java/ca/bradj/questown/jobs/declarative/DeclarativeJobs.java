@@ -690,9 +690,22 @@ public class DeclarativeJobs {
      * declare {@code DONE: 0} work at their terminal state, and counting it sent a diner whose
      * meal was ready "to the job site" instead of eating it (playtest 2026-10-17;
      * eating/eat_direct).
+     * <p>
+     * A state that needs an ingredient isn't work-only either: until the ingredient arrives there
+     * is nothing to do at the block. The diners declare {@code CONSUME_FOOD: 0} work beside their
+     * food ingredient, so a meal left at state 1 (the villager was pulled away mid-meal) read as
+     * itemless work and sent the diner "to the job site", where {@code findJobSite} (rightly)
+     * found nothing without food in hand: GOING_TO_JOB with no walk target until the job timed
+     * out, again in the next diner (2026-10-31, hunter/sword [sleep_mid_trip]; the dev's
+     * "stuck going to eat" 10-28 / 10-29).
      */
-    public static boolean declaresUnfinishedWork(int state, int maxState, boolean workDeclared) {
-        return workDeclared && state < maxState;
+    public static boolean declaresUnfinishedWork(
+            int state,
+            int maxState,
+            boolean workDeclared,
+            boolean ingredientRequired
+    ) {
+        return workDeclared && state < maxState && !ingredientRequired;
     }
 
     public static <POS> Collection<Integer> getStatesWithUnfinishedWork(

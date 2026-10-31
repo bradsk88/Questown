@@ -4993,6 +4993,16 @@ public class TestBlueprintRegistry {
                     net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                             (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
                                 if (slept[0]) {
+                                    // Where each villager is and what it walks to, every 500 ticks after
+                                    // the sleep: a failing run's hunter sat in GOING_TO_JOB with no nav log.
+                                    if (level.getGameTime() % 500 == 0 && !town.isRemoved()) {
+                                        for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                            if (e instanceof VisitorMobEntity v) {
+                                                output.msg("hunter sleep: nav " + v.getUUID() + " job=" + v.getJobId()
+                                                        + " status=" + v.getStatusForServer() + " " + v.describeNav());
+                                            }
+                                        }
+                                    }
                                     return;
                                 }
                                 if (sleepTick[0] < 0) {

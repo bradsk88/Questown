@@ -358,6 +358,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         return rni;
     }
 
+    private static boolean requiresItems(@Nullable PredicateCollection<?, ?> items) {
+        return items != null && !items.isEmpty();
+    }
+
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work,
@@ -381,7 +385,8 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                         deps::item,
                         deps::tools,
                         state -> DeclarativeJobs.declaresUnfinishedWork(
-                                state, maxState, deps.getWorkForStep(state) != null
+                                state, maxState, deps.getWorkForStep(state) != null,
+                                requiresItems(deps.item(state))
                         ),
                         deps::stringify,
                         maxState,

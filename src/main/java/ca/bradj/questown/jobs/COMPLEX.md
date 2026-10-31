@@ -436,6 +436,19 @@ warning in `DeclarativeJobs.rooms`):
   `flag/bop_deposit_at_night`: 0/4 before, 3/3 after; unit
   `DeclarativeJobsRoomsForeignStateTest.inRange_*`.
 
+**In-range foreign records: flag jobs start fresh (2026-10-31).** Normalizing only catches a
+foreign state *above* the reader's maxState. Downtime's 1 is in range for a diner (0-2): in
+`hunter/sword [sleep_mid_trip]` a hunter relaxed before the sleep (downtime wrote
+`state=1, workLeft=0.3` at the flag), and after it the diner read that as its own meal in
+progress. `workLeft > 0` made it unfinished itemless work, the status went GOING_TO_JOB, and
+`findJobSite` (state 1 wants food in hand) answered "No job sites": no walk target until
+`dining_no_table` timed out, then `dining_raw_food` likewise (both hunters at once in one run).
+No flag job resumes another's cycle, so `TownVillagerHandle`'s `setJob` clears the villager's
+record at the flag when the new job `worksAtTheFlag()` (downtime, the diners, BOP depositing).
+Found by logging `findJobSite`'s reason, the itemless states and the admitted `State` in a
+failing run; registry-bound, so the autotest is the pin (`hunter/sword` repeats; see the
+`declaresUnfinishedWork` ingredient-state bullet for the first cause of the same symptom).
+
 **One spot per position across matches.** `DeclarativeJobs.rooms` folds every
 job-site match into one per-position spot map. Overlapping job sites put the
 same block in two matches, and the old `ImmutableMap.Builder` threw "Multiple
@@ -676,6 +689,20 @@ same reason. Two causes in the usual-routine circuit, both fixed:
   "work without items" root is skipped and a town with food in storage always wins the
   collect-supplies branch. No unit seam (the diner classes' `<clinit>` touches tag registries);
   verified by the `eating/` autotests.
+- **An ingredient state is not itemless work (2026-10-31).** The diners also declare
+  `CONSUME_FOOD: 0` work at state 1, where their food ingredient goes in. A diner pulled away
+  mid-meal (work-state records are per villager, so the flag spot stays at state 1 across diner
+  jobs) came back to "unfinished itemless work" at state 1: the itemless root answered
+  GOING_TO_JOB, `findJobSite` skipped the state-1 spot for want of food in hand ("No job sites"),
+  and the villager stood with no walk target until `dining_no_table` timed out, then the same in
+  `dining_raw_food`, with 5 cooked beef in the chest. That is `hunter/sword [sleep_mid_trip]`
+  (~2 in 8 runs of the hunter set) and most likely the dev's "stuck going to eat" (tickets
+  `hunter-stuck-going-to-eat`, `cook-stuck-going-to-eat`, `dining-going-to-job-stall`; the 10-28
+  `_qtdev nav` read `GOING_TO_JOB walkTarget=none`, as here). `declaresUnfinishedWork` takes
+  `ingredientRequired` and the work-declared admission skips ingredient states; `workLeft > 0`
+  still counts. Found with a `findJobSite` reason probe and the scenario's 500-tick nav sampler.
+  Test: `DeclarativeJobsTerminalStateWorkTest.mealLeftAtConsumeFood_withoutFood_isNotUnfinishedWork`
+  (red before: `[1]`).
 
 Verification: `eating/` 4/4; full suite 70/73 (only the known roof_gatherer, skip_chicken_command,
 farmer-parity failures).

@@ -935,6 +935,11 @@ public class DeclarativeJob extends
         );
     }
 
+    /** The job works at the town flag (downtime, the diners, BOP depositing), whose record it shares. */
+    public boolean worksAtTheFlag() {
+        return ca.bradj.questown.town.special.SpecialQuests.TOWN_FLAG.equals(location.baseRoom());
+    }
+
     @Override
     public JobName getJobName() {
         return new JobName("jobs." + jobId);

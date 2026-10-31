@@ -647,7 +647,9 @@ public class TimeWarpWorldInteraction extends
                         () -> ImmutableList.of(() -> ImmutableList.of(
                                 roomBlock)), bp -> workStates, (bp) -> true,
                         state -> DeclarativeJobs.declaresUnfinishedWork(
-                                state, maxState, checks.getWorkForStep(state) != null
+                                state, maxState, checks.getWorkForStep(state) != null,
+                                checks.getIngredientsForStep(state) != null
+                                        && !checks.getIngredientsForStep(state).isEmpty()
                         )
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();

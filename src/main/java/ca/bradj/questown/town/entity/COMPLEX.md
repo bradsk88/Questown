@@ -1921,3 +1921,12 @@ appends in saved (top-first) order. `TownWorkHandleRequestWorkTest`
   world can be recovered (unblessed).
 Seen: a right-click on the flag with a BOP gave "... (4 there now)"; a use on the ground did
 nothing.
+
+## A flag job starts on a fresh work-state record (2026-10-31)
+
+`TownVillagerHandle`'s delegator `setJob` clears the villager's per-owner record at the flag
+(`getWorkStatusHandle(uuid).clearState(flagPos)`) before starting a job whose location is the
+flag (`DeclarativeJob.worksAtTheFlag`: downtime, the diners, BOP depositing). They share that one
+record with different state numbering, and downtime's in-range state 1 read to a diner as a meal
+in progress: the "stuck going to eat" stall. See `jobs/COMPLEX.md` "Foreign work-state records".
+
