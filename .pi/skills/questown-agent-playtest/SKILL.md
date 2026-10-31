@@ -67,6 +67,9 @@ relights the campfire", which the Acting section already said.
   arrivals) plus every townie's stats and the clock, then moves the mark;
   `sleep.sh <campfire x y z> <stand x y z> [wand slot=3]` uses the wand until the night skips
   (exit 1 with the likely cause if not).
+- `_qtdev inspect <flag>` marks the chicken's "Look at the flag" beat itself
+  (`QtDevInspectCommand` calls `markFlagUiOpened`). While you test that beat, inspect only after it
+  (r23 #6: an inspect moved a stuck beat on a minute after a real right-click had not).
 - `_qtdev villager_stats <flag x y z>` logs each townie's server-side level, xp, fullness, mood
   and effects: check a screen against it before calling a number wrong.
 - Read a command's output with `tools/ffeed.sh feed "<cmd>" --capture run/logs/latest.log
