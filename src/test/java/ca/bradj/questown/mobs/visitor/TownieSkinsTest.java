@@ -19,36 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TownieSkinsTest {
 
-    /** The exact slim-variant set the 1.20.6 client jar ships. */
-    private static final Set<String> VANILLA_1_20_6 = Set.of(
-            "alex", "ari", "efe", "kai", "makena", "noor", "steve", "sunny", "zuri"
-    );
-
     @Test
-    void pool_is_nine_vanilla_slim_plus_six_custom() {
+    void pool_is_the_vanilla_skins_plus_six_custom() {
         List<ResourceLocation> pool = TownieSkins.pool();
-        assertEquals(9 + 6, pool.size());
+        assertEquals(ca.bradj.questown.mc.Compat.vanillaCharacterSkins().size() + 6, pool.size());
     }
 
     @Test
-    void vanilla_entries_are_the_1206_slim_character_skins() {
-        List<ResourceLocation> pool = TownieSkins.pool();
-        Set<String> vanillaPaths = pool.stream()
+    void vanilla_entries_are_the_versions_character_skins() {
+        List<ResourceLocation> vanilla = TownieSkins.pool().stream()
                 .filter(l -> l.getNamespace().equals("minecraft"))
-                .map(l -> {
-                    // textures/entity/player/slim/<name>.png
-                    int slash = l.getPath().lastIndexOf('/');
-                    String file = l.getPath().substring(slash + 1);
-                    return file.substring(0, file.length() - ".png".length());
-                })
-                .collect(Collectors.toSet());
-        assertEquals(VANILLA_1_20_6, vanillaPaths,
-                "vanilla pool entries must match the 1.20.6 slim character skins");
-        // Every vanilla entry uses the slim variants (the model is PLAYER_SLIM).
-        pool.stream()
-                .filter(l -> l.getNamespace().equals("minecraft"))
-                .forEach(l -> assertTrue(l.getPath().contains("/slim/"),
-                        "slim variant expected: " + l));
+                .toList();
+        assertEquals(ca.bradj.questown.mc.Compat.vanillaCharacterSkins(), vanilla);
     }
 
     @Test

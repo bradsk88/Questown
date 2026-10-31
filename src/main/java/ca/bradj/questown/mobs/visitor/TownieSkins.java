@@ -11,26 +11,14 @@ import java.util.UUID;
  * per-UUID pick. Pure (no client/Forge state) so the pool and the pick are
  * unit-testable without instantiating the renderer.
  *
- * <p>The vanilla 1.20.6 character skins (added alongside Steve/Alex in
- * 1.20.5) live under {@code minecraft:textures/entity/player/slim/}; the
- * townie model is baked from {@code PLAYER_SLIM}, so the slim variants are
- * the matching textures. The mod's own {@code textures/entity/1-6.png} skins
- * stay in the pool alongside them.
+ * <p>The vanilla character skins come from {@code Compat.vanillaCharacterSkins()} (nine slim
+ * skins on 1.20.6, Steve and Alex on 1.19.2). The mod's own {@code textures/entity/1-6.png}
+ * skins stay in the pool alongside them.
  */
 final class TownieSkins {
 
-    /** The vanilla 1.20.6 character skins (slim variants). */
-    static final List<ResourceLocation> VANILLA_SKINS = ImmutableList.of(
-            new ResourceLocation("textures/entity/player/slim/alex.png"),
-            new ResourceLocation("textures/entity/player/slim/ari.png"),
-            new ResourceLocation("textures/entity/player/slim/efe.png"),
-            new ResourceLocation("textures/entity/player/slim/kai.png"),
-            new ResourceLocation("textures/entity/player/slim/makena.png"),
-            new ResourceLocation("textures/entity/player/slim/noor.png"),
-            new ResourceLocation("textures/entity/player/slim/steve.png"),
-            new ResourceLocation("textures/entity/player/slim/sunny.png"),
-            new ResourceLocation("textures/entity/player/slim/zuri.png")
-    );
+    /** The vanilla character skins this Minecraft version ships ({@link ca.bradj.questown.mc.Compat}). */
+    static final List<ResourceLocation> VANILLA_SKINS = ca.bradj.questown.mc.Compat.vanillaCharacterSkins();
 
     /** The mod's custom townie skins (kept on top of the vanilla pool). */
     static final List<ResourceLocation> CUSTOM_SKINS = ImmutableList.of(

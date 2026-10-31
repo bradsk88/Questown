@@ -403,3 +403,10 @@ after the job has asked to disappear for `HIDE_AFTER_TICKS` (20) ticks in a row.
 the first tick. Showing still waits `SHOW_AFTER_TICKS` (2). The hunter's one-tick DROPPING_LOOT
 gap between hidden states resets the hide count, so the villager stays drawn and hides once, with
 no flicker. `TripVisibilityTest` (6).
+
+## Villager skins come from Compat (2026-10-31, 1.19 merge)
+
+`TownieSkins.VANILLA_SKINS` is `Compat.vanillaCharacterSkins()`: the nine 1.20.5 slim character
+skins on this branch, Steve and Alex (`textures/entity/`) on 1.19.2, which has no others; with the
+1.20.6 list a 1.19.2 villager rendered the missing texture (`player/slim/noor.png`, seen in the
+first 1.19.2 client run). `TownieSkinsTest` compares against `Compat` so it holds on both.

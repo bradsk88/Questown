@@ -223,6 +223,25 @@ public class Compat {
         return ItemStack.parseOptional(level.registryAccess(), tag);
     }
 
+    /**
+     * The vanilla character skins a townie may wear. 1.20.5 added seven alongside Steve and Alex,
+     * under {@code textures/entity/player/slim/}; the townie model is {@code PLAYER_SLIM}, so the
+     * slim variants are the matching textures. (1.19.2 has only Steve and Alex.)
+     */
+    public static java.util.List<ResourceLocation> vanillaCharacterSkins() {
+        return ImmutableList.of(
+                new ResourceLocation("textures/entity/player/slim/alex.png"),
+                new ResourceLocation("textures/entity/player/slim/ari.png"),
+                new ResourceLocation("textures/entity/player/slim/efe.png"),
+                new ResourceLocation("textures/entity/player/slim/kai.png"),
+                new ResourceLocation("textures/entity/player/slim/makena.png"),
+                new ResourceLocation("textures/entity/player/slim/noor.png"),
+                new ResourceLocation("textures/entity/player/slim/steve.png"),
+                new ResourceLocation("textures/entity/player/slim/sunny.png"),
+                new ResourceLocation("textures/entity/player/slim/zuri.png")
+        );
+    }
+
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
