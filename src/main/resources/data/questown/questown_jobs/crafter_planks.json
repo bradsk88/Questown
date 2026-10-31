@@ -26,7 +26,7 @@
   ],
   "cooldown_ticks": 5,
   "sound": {
-    "id": "minecraft:item.axe.scrape",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
   },

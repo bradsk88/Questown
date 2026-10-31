@@ -27,7 +27,7 @@
   ],
   "cooldown_ticks": 20,
   "sound": {
-    "id": "minecraft:block.wood.hit",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
   },

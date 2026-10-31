@@ -23,7 +23,7 @@
   ],
   "cooldown_ticks": 100,
   "sound": {
-    "id": "minecraft:block.metal.hit",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
   },

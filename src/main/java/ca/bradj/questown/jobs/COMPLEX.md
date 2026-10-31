@@ -1202,3 +1202,10 @@ meal. Pinned by `DiningWorkDurationTest`. `eating/` autotests: 7/8, and the fail
 `dine_at_time` also fails with this change reverted (the villager takes the bread as gather trip
 food and never dines; it passed at 922d118c and nothing behavioural has landed since), so it's not
 caused by this.
+
+## Crafters sound like an anvil (dev playtest 2026-10-30)
+
+"Crafter should make anvil sounds when they work." Every `crafter/*` job JSON with a work sound (34
+of 36) now plays `minecraft:block.anvil.use`. Most were `item.axe.scrape`; a few were wood/metal
+hits or a sweep. The chance and duration fields are unchanged. `JobSoundIdsDataTest`. Not heard
+in game.
