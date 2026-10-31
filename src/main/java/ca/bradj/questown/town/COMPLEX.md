@@ -908,7 +908,7 @@ stock, display) are skipped too: the first autotest run showed cook:fuel and coo
   answers paused requests too, so `satisfied != null` can't mean "open") and `answersStocked`
   (`answersPaused`, checked only when no open request is answered) and the per-job `GateReason`s (now computed for every scored job, cached
   in `refreshUnmetNeeds`) feed it.
-- `refreshUnmetNeeds` runs it for an idle villager (seeking work or downtime), clears an
+- `refreshUnmetNeeds` runs it for a villager seeking work, clears an
   UNMET_ITEM / MISSING_ROOM need and records the villager in `requestsDone`; any other pass for
   that villager removes it. Server-side only: `ServerJobsRegistry.getStatusText(job, status,
   townie)` swaps the need line for `message.questown.townie_status.requests_done` when
@@ -917,4 +917,6 @@ stock, display) are skipped too: the first autotest run showed cook:fuel and coo
   need is still tracked for the town, just not shown on the villager.
 - Autotest `cook/fuel [requests_done]`: cooked mutton 10 at limit 4, an open cooked-porkchop
   request, raw mutton + coal; asserts need NONE and the done line on the first done tick (4000
-  ticks: the cook fuels the furnace first). 3/3 green.
+  ticks: the cook fuels the furnace first). 3/3 green alone; in the full suite the cook ate and
+  relaxed first, and a downtime villager keeps downtime's own status lines, so the done line never
+  showed. Done is now for seeking work only (downtime already hides needs).

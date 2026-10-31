@@ -324,7 +324,7 @@ public class TownPossibleWork {
             for (VisitorMobEntity villager : townies) {
                 boolean shownItemOrRoom = villager.getNeed() == TownieNeed.UNMET_ITEM
                         || villager.getNeed() == TownieNeed.MISSING_ROOM;
-                if (isIdle(villager.getJobId()) && hasDoneAllRequests(t, villager.getUUID(), unfilteredJobs, reasons)) {
+                if (WorkSeekerJob.isSeekingWork(villager.getJobId()) && hasDoneAllRequests(t, villager.getUUID(), unfilteredJobs, reasons)) {
                     requestsDone.add(villager.getUUID());
                     if (shownItemOrRoom) {
                         villager.setNeed(TownieNeed.NONE);
@@ -368,10 +368,6 @@ public class TownPossibleWork {
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to refresh unmet needs for root: {}", root, e);
         }
-    }
-
-    private static boolean isIdle(JobID job) {
-        return WorkSeekerJob.isSeekingWork(job) || DowntimeWork.matches(job);
     }
 
     /** {@link RequestsDone} over the jobs this villager has unlocked. */
