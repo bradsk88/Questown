@@ -255,3 +255,12 @@ most mines have stone walls". `models/block/mineshaft.json` texture `#2` and the
 `questown:light_sources` is gone from `smithy`, `smithy_stocked`, `weapon_display` and
 `grand_smithy` (the tiers stay nested: `WorkTableRecipesTest.smithyTiers_eachContainTheTierBefore`).
 Other room recipes still list light sources (bedroom, library, inn, ...): not ruled on.
+
+## No room recipe needs light (dev ruling 2026-10-30)
+
+After the smithy change, the dev ruled "Drop it everywhere": `questown:light_sources` is gone from
+the other 14 room recipes (bedroom, big_bedroom, library, big_library, inn, range, big_range,
+workshop, brewing_room, potions_room, forge_room, enchanting_room, huge_enchanting_room,
+maxed_enchanting_room). The tag itself stays (TagsInit). Room matching for these rooms now hangs
+on their remaining blocks (a bedroom is just a bed); the full autotest suite covers room
+detection.

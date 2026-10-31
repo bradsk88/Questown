@@ -4,9 +4,6 @@
   "farm": false,
   "ingredients": [
     {
-      "tag": "questown:light_sources"
-    },
-    {
       "tag": "minecraft:beds"
     },
     {

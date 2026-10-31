@@ -4,12 +4,6 @@
   "farm": false,
   "ingredients": [
     {
-      "tag": "questown:light_sources"
-    },
-    {
-      "tag": "questown:light_sources"
-    },
-    {
       "item": "minecraft:crafting_table"
     },
     {
