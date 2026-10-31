@@ -1,5 +1,13 @@
 # Rendering a 3D model for a block entity (1.19.2 / Forge 43.3.0)
 
+> **First in-world look, 2026-10-30 (1.20.6 branch, agent playtest r23):** the statue rendered as a
+> magenta/black missing-texture cube. Four faults, all fixed then, and none visible to a boot check:
+> the "empty" block model was `cube_all` with the non-existent texture `minecraft:particle` (an empty
+> model is `parent: minecraft:block/block` with only a `particle` texture); the renderer's texture
+> was 1.12's `textures/blocks/stone.png`; the model was drawn without the entity flip (upside down);
+> and the NeoForge port never registered the renderer (`QuestownClient` now does). The snippet below
+> carries the fixes. "Verified" for a renderer means a screenshot, not a boot.
+
 Use this when a block must render a 3D model (e.g. a mob/animal model) instead
 of a cube. The helper-chicken onboarding trophy (`StoneChickenStatue`) is the
 first example: a block whose cube is empty and whose block entity draws the
@@ -28,14 +36,16 @@ layer builder and apply your colour at render time via `renderType`:
 
 ```java
 private static final ResourceLocation STATUE_TEXTURE =
-        new ResourceLocation("minecraft", "textures/blocks/stone.png");
+        new ResourceLocation("minecraft", "textures/block/stone.png"); // "block", not 1.12's "blocks"
 private final ChickenModel<Chicken> model;
 public ChickenStatueBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
     this.model = new ChickenModel<>(ChickenModel.createBodyLayer().bakeRoot());
 }
 // render():
+pose.translate(0.5D, 1.501D * SCALE, 0.5D);   // entity models are authored upside down,
+pose.scale(-SCALE, -SCALE, SCALE);             // feet at y 1.501: flip + lift as LivingEntityRenderer
 RenderType renderType = this.model.renderType(STATUE_TEXTURE);   // colour
-this.model.renderToBuffer(pose, buffer.getBuffer(renderType), packedLight, 0, 1F,1F,1F,1F);
+this.model.renderToBuffer(pose, buffer.getBuffer(renderType), packedLight, packedOverlay, 1F,1F,1F,1F);
 ```
 
 `ChickenModel.createBodyLayer()` is a static `LayerDefinition`; `LayerDefinition

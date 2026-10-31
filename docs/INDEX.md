@@ -1,5 +1,11 @@
 # Questown Documentation Index
 
+## Design principles
+
+- **[design-principles.md](design-principles.md)** — Standing design rules: unlock ≠ workability (`NO_SUPPLIES`/`NO_JOBSITE`/`NO_SPACE` are distinct), quests are division-of-labor pedagogy (coal = player supplies, mutton = town produces), the self-sufficiency test seeds player-inputs and must not read a missing-player-input as a bug, and onboarding communicates roles + trims aids that don't change the player's next action. Read before diagnosing townie stalls or before adding onboarding beats.
+
+- **[ui-principles.md](ui-principles.md)** — What a Questown UI feels like: ten rules (vanilla look, town-first/menus-as-ledger, always say why, plain next-action copy, Gestalt grouping, fit-never-overflow, attention budget, big stable targets, few choices, prevent then reverse), each with its why, real playtest examples and a check. Read before building or changing any screen, tooltip, chat line or bubble.
+
 ## Architecture & Decisions
 
 - **[special-rules-decoupling.md](special-rules-decoupling.md)** — Plan for decoupling special rules from Minecraft code to support time warp simulation and testing. Lists jobs using special rules and proposes QTWorldAccess methods.
@@ -9,7 +15,7 @@
 - **[decision-qttoolaction-closed-enum.md](decision-qttoolaction-closed-enum.md)** — QTToolAction is a compile-time-safe closed enum limited to vanilla tool actions.
 - **[decision-silent-world-access.md](decision-silent-world-access.md)** — Warp uses a silent world access variant that suppresses sound effects while keeping other interactions real.
 - **[sequence-diagrams.md](sequence-diagrams.md)** — Mermaid sequence diagrams for complex systems.
-- **[project-qa.md](project-qa.md)** — AI-conducted interview documenting unspoken design decisions.
+- **[project-qa.md](project-qa.md)** — AI-conducted interview documenting unspoken design decisions. Includes: **villagers cannot stack items in containers** (one slot per deposited item, by design; see CONTEXT.md "Unstacked deposit"), and cooks really insert into furnace slots a player can take from.
 
 ## Resolved bugs (verify before beta cut)
 
@@ -28,6 +34,11 @@
 
 - **[conventions/realtime-job-cycling.md](conventions/realtime-job-cycling.md)** — How villagers cycle through jobs in real-time using shuffled selection (and the "cycle drag" players sometimes observe with cook).
 
+## Build environment & version migration
+
+- **`../AGENTS.md` ("Build environment" section)** — the JDK-17 Gradle pin, `jar tf` (not `unzip`) to locate classes in a jar, the javap caveats, and the compile-loop migration discipline. Read before running `./gradlew` or porting the mod to a new MC version.
+- **skill `questown-mc-version-migration`** — the ordered loop to migrate Questown + RoomRecipes to a new MC version (probe deps -> RoomRecipes -> publish -> Questown -> compile loop) and how the strangler/`Compat` seam keeps the change centralised.
+
 ## Solutions
 
 `docs/solutions/` — documented solutions to past problems (bugs, conventions, design patterns, best practices), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`, `component`, `severity`). Relevant when implementing or debugging in documented areas.
@@ -36,6 +47,7 @@
 - **[solutions/conventions/gui-layout-flow-and-linter.md](solutions/conventions/gui-layout-flow-and-linter.md)** — Building screens: use flow layout (compute each block's Y from the real wrapped-text height above it, never hardcode), give wrapped text its full width, prefer tooltips for descriptions. Verify with the dev-only `gui-lint` oracle — open the screen and confirm `[gui-lint] <Screen> — OK, no layout violations`. Read this before touching any `gui/` screen.
 - **[solutions/conventions/setblockandupdate-side-effect-bypass-2026-04-24.md](solutions/conventions/setblockandupdate-side-effect-bypass-2026-04-24.md)** — `Level.setBlockAndUpdate` bypasses item-use side-effects (welcome-mat registration, sign→job-board conversion, 2-high door upper half). When test harness code places these blocks, mirror the side-effect manually or place the target block directly.
 - **[solutions/conventions/spread-heavy-work-across-ticks.md](solutions/conventions/spread-heavy-work-across-ticks.md)** — When one computation costs more than a game tick, spread it across ticks with the idiom: resumable queue + per-tick pump + occupy-the-tick-while-in-progress + a *bound*. The two instances (`LevelRoomDetector`/`MultiLevelRoomDetector` count-bound vs `TownPossibleWork` time-bound) share the concept, not a mechanism — do not extract a shared abstraction. Read before adding a third variant; choose the bound (count vs time) by whether one unit's cost is roughly constant.
+- **[solutions/conventions/deprecate-then-delete-triplet.md](solutions/conventions/deprecate-then-delete-triplet.md)** — A `@Deprecated(forRemoval = true)` method is safe to delete only when the triplet holds: terminal marker + javadoc pointer to the successor + a live test already exercising *that successor* (call target, not test name). Missing any leg → not delete-me. The deletion-side sibling of AGENTS' "don't call forRemoval methods in new code." Read before removing deprecated code.
 - **[solutions/design-patterns/cross-scenario-entity-pollution-two-layer-fix-2026-04-24.md](solutions/design-patterns/cross-scenario-entity-pollution-two-layer-fix-2026-04-24.md)** — Sequential autotest scenarios sharing one `ServerLevel` need both a wide `discard()`-based teardown sweep AND an `ownerFlagPos` filter on read-side queries to prevent cross-scenario entity pollution. Either layer alone is insufficient.
 - **[solutions/best-practices/verify-brigadier-arg-order-and-flag-bit-semantics-2026-04-24.md](solutions/best-practices/verify-brigadier-arg-order-and-flag-bit-semantics-2026-04-24.md)** — Verify `RunCommand` strings against the actual Brigadier `register()` chain (left-to-right traversal) before authoring blueprints. Verify flag-bit semantics against the production handler, not the bit name — bits can be repurposed as gates.
 
@@ -43,3 +55,4 @@
 
 - **[todo/special_rule_result.md](todo/special_rule_result.md)** — Support special result values in job JSON instead of `minecraft:air` for jobs fully dependent on special rules.
 - **[todo/test-command-improvement.md](todo/test-command-improvement.md)** — ~~Use existing flag position as origin for `/qt test` command instead of player position.~~ DONE
+- **[todo/room-walkable-vs-reachable.md](todo/room-walkable-vs-reachable.md)** — Deferred: count a room's interior by whether a villager can *reach* a cell (not just stand in it), so a room over half floating furniture at head height would pass. We kept the 0.5 fraction and pinned it with two regression tests instead.

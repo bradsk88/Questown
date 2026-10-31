@@ -52,12 +52,21 @@ Optional frontmatter the skills may add:
 - `assignee` — `human` or `agent` (only meaningful once status is `ready-for-*`).
 - `parent` — slug of a parent issue, when this is a sub-task.
 
+**Title quoting:** single-quote any `title:` value that contains a colon
+(`: `) or that starts with a quote mark, so the frontmatter parses as a plain
+string (an unquoted leading `"` or an embedded `:` can otherwise break the
+YAML). E.g. `title: '"Take a Block of Progress" decrements the flag count...'`.
+
 ## Skill behavior
 
 - **`to-issues`** — given a plan or PRD, splits it into vertical-slice issues. Creates the feature directory under `.scratch/` and writes one file per slice. New issues default to `status: needs-triage`.
 - **`triage`** — reads issues, evaluates them, and updates the `status:` field in frontmatter. Adds a `## Triage notes` section with the reasoning. Does not delete issues; `wontfix` is just a status.
 - **`to-prd`** — writes the PRD to `.scratch/<feature>/PRD.md` (uppercase) so it sorts above the per-issue files. PRD files have no `status` frontmatter.
 - **`qa`** — discovers issues by walking `.scratch/` and reading frontmatter. Filters by `status` to find work ready for review or ready for an agent.
+- **On-the-fly play-test logging** — during a live from-zero play-test the user
+drives, their in-game chat feedback is logged to a ticket *as it comes in*
+(`.scratch/<feature>/<slug>.md`), not batched at the end. This is owned by the
+`questown-playtest-watch` skill (`.pi/skills/questown-playtest-watch/`).
 
 ## Git tracking
 

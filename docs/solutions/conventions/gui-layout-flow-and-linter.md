@@ -11,7 +11,11 @@ concern, not a cosmetic one.
 
 1. **Flow layout — never hardcode Y positions for text blocks.** Compute each block's
    position from the *actual* rendered height of the block above it:
-   `font.split(component, width).size() * lineHeight + padding`. Advance a running `y`
+   `font.split(component, width).size() * lineHeight + padding`, where `lineHeight` is the
+   spacing the draw call uses: `RenderContext.darkTextWrap` / `Compat.drawTextWrap` advance
+   `(int) (font.lineHeight * 1.5)` per line, not `font.lineHeight` (2026-10-23: sizing
+   `DormantFlagScreen` with `font.lineHeight` made gui-lint report its text overlapping the first
+   button). Advance a running `y`
    cursor and size the panel to the total. Then a longer string (or a translation) just
    pushes everything down — it can't overlap. `gui/FlagCraftingScreen.java` is the
    reference example (`computeLayout()` shared by `init()` for widgets and `render()` for

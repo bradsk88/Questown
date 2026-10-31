@@ -109,7 +109,7 @@ and **visitor (up-to-10) seeding** are deferred to their own work (#268).
 - Proficiency levels bake into save NBT (per-uuid holder + `VillagerData`), so a
   later change to the leveling semantics or storage shape needs a migration —
   hence this record.
-- Timer jobs (gatherer/baker) and no-proficiency jobs are inert by construction.
+- Timer jobs (gatherer) and no-proficiency jobs are inert by construction. (At decision time the baker family was also timer-driven; the 2026-10-10 cook-shape migration took it off timed states, so bakers now reach the seam.)
   If a timer job ever needs proficiency, it needs a **separate, explicit**
   mechanism (there is no work-action to hang leveling on).
 - Test coverage: JUnit for the curve, leveling/decay clamps, and seed

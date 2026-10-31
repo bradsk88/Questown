@@ -126,6 +126,7 @@ an exception if it does not.
 
 **Jobs affected:**
 - `baker/stock_coal`, `baker/stock_wheat` - uses `add_item_to_container`
+- `baker/extract`, `baker/fuel`, `baker/bread` - uses `insert_into_slot_0/1`, `questown:take_from_slot_2` (cook-shape migration 2026-10-10)
 - `cook/stock_fuel`, `cook/stock_ingredients` - uses `add_item_to_container`
 - `cook/fuel`, `cook/fish`, `cook/simple_furnace_food` - uses `insert_into_slot_*`
 - `cook/extract` - uses `questown:take_from_slot_2`
@@ -402,7 +403,7 @@ public interface QTWorldAccess {
 | farmer/till | till_workspot | Tier 1 | applyToolTransformation |
 | farmer/weed | destroy_bush | Tier 1 | getBlockDrops, removeBlock |
 | farmer/compost | compost_at_workspot | Tier 1 | processing level methods |
-| baker/* | add_item_to_container | Tier 1 | insertIntoContainer |
+| baker/* | insert_into_slot_0/1, take_from_slot_2, add_item_to_container | Tier 1 | container slot methods / insertIntoContainer |
 | cook/* | insert_into_slot_*, take_from_slot_* | Tier 1 | container slot methods |
 | arborist/plant_sapling | check_tree_plantable, use_item | Tier 1 | canTreeGrowAt, useItemOnBlock |
 | arborist/cut_trees | chop_down_tree | Tier 1 | chopTreeAt |
