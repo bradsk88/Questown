@@ -279,6 +279,7 @@ public class TestBlueprintRegistry {
         jobs.add(eatingEntryDirect("eat_storage_full", eatWithStorageFullBlueprint()));
         jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
         jobs.add(eatingEntryDirect("no_raw_meal_after_eating", noRawMealAfterEatingBlueprint()));
+        jobs.add(eatingEntryDirect("food_arrives_after_give_up", foodArrivesAfterGiveUpBlueprint()));
 
         // Worldgen tests
         jobs.add(emptyTownStructureCheck());
@@ -5117,6 +5118,81 @@ public class TestBlueprintRegistry {
                     });
             return true;
         });
+    }
+
+    /**
+     * Agent playtest r23 #10 (2026-10-30): a starving gatherer gave up on raw food 5 s before the
+     * town's 20 free carrots reached the chest, then waited out "gave up waiting for different work"
+     * and the food give-up buffer without looking again, and ate ~2 minutes later. Starts on
+     * dining_no_table with empty storage in the evening (as in r23: no work fits in the day, so the
+     * board has nothing else for it); once dining_raw_food has given up, carrots arrive. The
+     * villager must eat them.
+     * <p>
+     * XFAIL until fixed: carrots are villager_food, not villager_raw_food, so only the no-table
+     * diner can eat them, and nothing restarts the chain once raw food has given up (ticket
+     * .scratch/agent-playtest-2026-10-30-overnight/starving-villager-ignores-food-after-give-up.md).
+     */
+    private static TestBlueprint foodArrivesAfterGiveUpBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of());
+        float[] maxFullness = {0f};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(), base.supplyDoorOffset(), null, null, null, true, 1600,
+                true, true,
+                null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    long[] rawSince = {-1};
+                    boolean[] delivered = {false};
+                    boolean[] moved = {false};
+                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                                // The realtime monitor pins the clock to 1000 (see no_raw_meal_after_eating).
+                                if (!moved[0] && level.getDayTime() % 24000 == 1000) {
+                                    moved[0] = true;
+                                    level.setDayTime(level.getDayTime() - 1000 + 10800);
+                                    output.msg("food-after-give-up: clock moved to evening (10800)");
+                                }
+                                for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                    if (!(e instanceof VisitorMobEntity v)) {
+                                        continue;
+                                    }
+                                    maxFullness[0] = Math.max(maxFullness[0],
+                                            town.getVillagerHandle().getStats(v.getUUID()).fullnessPercent());
+                                    if (rawSince[0] < 0 && "dining_raw_food".equals(v.getJobId().jobId())) {
+                                        rawSince[0] = level.getGameTime();
+                                    }
+                                }
+                                // dining_raw_food gives up after ~200 ticks without supplies.
+                                if (!delivered[0] && rawSince[0] >= 0 && level.getGameTime() - rawSince[0] > 260) {
+                                    delivered[0] = true;
+                                    int put = addToTownStorage(level, town, new ItemStack(Items.CARROT, 8));
+                                    output.msg("food-after-give-up: delivered " + put + " carrots at " + level.getGameTime());
+                                }
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("food-after-give-up: max fullness seen=" + maxFullness[0]);
+                    return maxFullness[0] > 0.2f;
+                })
+                .withExpectedFailure(true);
+    }
+
+    private static int addToTownStorage(ServerLevel level, TownFlagBlockEntity town, ItemStack stack) {
+        for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+            if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                continue;
+            }
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (c.getItem(i).isEmpty()) {
+                    c.setItem(i, stack.copy());
+                    return stack.getCount();
+                }
+            }
+        }
+        return 0;
     }
 
     // --- Worldgen checks ---

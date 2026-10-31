@@ -1055,3 +1055,15 @@ persistent oak leaves in the two cells outside its door (the setup hook). A serv
 records the first room a villager's CANT_REACH need names; PASS = `questown:kitchen_small`. The
 realtime cooked-mutton expectation is dropped (`TestBlueprint.withRealtimeExpectation`): the cook
 cannot get in.
+
+## Food arrives after a give-up (2026-10-30, XFAIL)
+
+`eating/food_arrives_after_give_up` (`foodArrivesAfterGiveUpBlueprint`): starts on `dining_no_table`
+with empty storage, and once the monitor pins the clock at 1000 it moves it to the evening (10800),
+so no work fits in the day, as in r23 #10. 260 ticks after the villager enters `dining_raw_food`
+(past its 201-tick give-up), 8 carrots go into a free town-chest slot (`addToTownStorage`). PASS =
+fullness rose above 20%. It is XFAIL for now: carrots are `villager_food`, so the raw diner can't
+eat them, and nothing restarts the diner chain (ticket
+`.scratch/agent-playtest-2026-10-30-overnight/starving-villager-ignores-food-after-give-up.md`).
+Without the clock move the carrots make `gather` possible, and the board sends the starving
+villager on a trip with a carrot as trip food: the same bug, by day.
