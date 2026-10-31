@@ -73,6 +73,8 @@ TEXT_RULES = [
     # ItemStack.isSameItem (1.20: same item, any data)
     (re.compile(r'\bItemStack\.isSameItem\('), 'ca.bradj.questown.mc.Compat.isSameItem('),
     (re.compile(r'"minecraft:short_grass"'), '"minecraft:grass"'),
+    # Tests reading a crafting result: "id" (1.20.5) is "item" in 1.19.2's recipe JSON
+    (re.compile(r'getAsJsonObject\("result"\)\.get\("id"\)'), 'getAsJsonObject("result").get("item")'),
     # NeoForge common tags named in code (tests, tag lookups) -> Forge 1.19.2 tags
     (re.compile(r'"(#?)c:(chests|mushrooms)"'), r'"\1forge:\2"'),
     # @OnlyIn(Dist.CLIENT): same annotation, Forge package
@@ -238,6 +240,27 @@ def _dedupe_imports(s: str) -> str:
     return '\n'.join(out)
 
 
+SUBSCRIBE_INSTANCE = re.compile(r'(@(?:[\w.]*\.)?SubscribeEvent(?:\([^)]*\))?\s+public void )(\w+)\(')
+
+
+def unique_subscriber_names(s: str, path: pathlib.Path) -> str:
+    """Forge 1.19.2's EventBus generates one handler class per package + method name + event type
+    (`___onTick_ServerTickEvent`) for @SubscribeEvent instance methods, so two listener classes in
+    a package with the same handler name share it and the second registration fails with a
+    ClassCastException at the first event (anonymous `new Object() {...}` listeners in
+    TestBlueprintRegistry, 2026-10-31). NeoForge's bus uses lambdas and has no such limit. Give
+    every instance handler a name unique to its file and line."""
+    tag = ''.join(c for c in path.stem if c.isupper()).lower() or path.stem[:4].lower()
+
+    def rename(m):
+        name = m.group(2)
+        if '_q' in name:
+            return m.group(0)
+        line = s.count('\n', 0, m.start()) + 1
+        return f'{m.group(1)}{name}_q{tag}{line}('
+    return SUBSCRIBE_INSTANCE.sub(rename, s)
+
+
 def text_pass(root: pathlib.Path) -> int:
     changed = 0
     for p in root.rglob('*.java'):
@@ -248,6 +271,7 @@ def text_pass(root: pathlib.Path) -> int:
         for rx, rep in TEXT_RULES:
             t = rx.sub(rep, t)
         t = structural_pass_one(t)
+        t = unique_subscriber_names(t, p)
         t = _dedupe_imports(t)
         if t != s:
             p.write_text(t)
