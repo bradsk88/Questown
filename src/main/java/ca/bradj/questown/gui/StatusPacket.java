@@ -20,8 +20,20 @@ public record StatusPacket(
          */
         long leaverReturnTick,
         /** Total declared ticks of that trip (the bar's denominator). */
-        int leaverReturnTotal
+        int leaverReturnTotal,
+        /** The current step's work done, 0..1, or -1 for no work bar (dev playtest 2026-10-30). */
+        float workProgress
 ) {
+    public StatusPacket(
+            JobID jobId,
+            ImmutableList<Component> texts,
+            ResourceLocation image,
+            long leaverReturnTick,
+            int leaverReturnTotal
+    ) {
+        this(jobId, texts, image, leaverReturnTick, leaverReturnTotal, -1);
+    }
+
     /** Screens without leaver-return info (e.g. the inventory status row) use this. */
     public StatusPacket(
             JobID jobId,
@@ -39,6 +51,7 @@ public record StatusPacket(
         b.writeResourceLocation(statusPacket.image);
         b.writeVarLong(statusPacket.leaverReturnTick);
         b.writeVarInt(statusPacket.leaverReturnTotal);
+        b.writeFloat(statusPacket.workProgress);
     }
 
     public static StatusPacket fromNetwork(FriendlyByteBuf b) {
@@ -47,7 +60,8 @@ public record StatusPacket(
         ResourceLocation img = b.readResourceLocation();
         long leaverReturnTick = b.readVarLong();
         int leaverReturnTotal = b.readVarInt();
-        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img, leaverReturnTick, leaverReturnTotal);
+        float workProgress = b.readFloat();
+        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img, leaverReturnTick, leaverReturnTotal, workProgress);
     }
 
     @Override

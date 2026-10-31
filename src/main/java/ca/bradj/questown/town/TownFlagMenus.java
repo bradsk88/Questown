@@ -95,7 +95,8 @@ public class TownFlagMenus {
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.serverLevel())
+                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.serverLevel()),
+                                () -> FlagMenus.resendStatuses(sender, entities, () -> flagEntity.hasVillagerArrivingInMorning())
                         ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 ),

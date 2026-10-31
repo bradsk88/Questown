@@ -104,6 +104,18 @@ public class FlagMenus {
         TownBlockofProgressMenu.write(buf, flagInfo, bopRootJobs);
     }
 
+    /**
+     * Re-sends the villagers tab's statuses. The open menu calls it about once a second, since
+     * work progress moves without a status change (dev playtest 2026-10-30, the work bar).
+     */
+    public static void resendStatuses(
+            ServerPlayer player,
+            Iterable<? extends VisitorMobEntity> es,
+            Supplier<Boolean> morningSpawnPending
+    ) {
+        QuestownNetwork.sendToPlayer(player, new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get())));
+    }
+
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(
             Iterable<? extends VisitorMobEntity> es,
             boolean morningSpawnPending
@@ -148,7 +160,8 @@ public class FlagMenus {
                 texts,
                 tex,
                 leaverReturn == null ? 0L : leaverReturn.returnTick(),
-                leaverReturn == null ? 0 : leaverReturn.totalTicks()
+                leaverReturn == null ? 0 : leaverReturn.totalTicks(),
+                v.getWorkProgress()
         );
         return value;
     }

@@ -1437,6 +1437,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getStatus();
     }
 
+    /** The current step's work done, 0..1, or -1 for no work bar (see DeclarativeJob#getWorkProgress). */
+    public float getWorkProgress() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgress(town);
+        }
+        return -1;
+    }
+
     /**
      * The job's current work-site progress (processing state, work/time left),
      * for the inspect command's eyes-level readout. Null when the job is not a

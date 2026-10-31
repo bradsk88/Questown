@@ -379,6 +379,28 @@ public class DeclarativeJob extends
      * counting down) from one whose trip was cut short. Returns null when the
      * job has no current work spot (e.g. it is not yet assigned a job block).
      */
+    /**
+     * How far the current step's work is done, 0..1, or -1 when the job is not working off a
+     * work count right now (dev playtest 2026-10-30: "Crafters should have a progress bar on
+     * their status icon too. Or any work-based job"). The work left can exceed the declared work
+     * (proficiency scaling), so the larger of the two is the denominator.
+     */
+    public float getWorkProgress(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return -1;
+        }
+        State state = ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+        ).getJobBlockState(spot.jobBlock());
+        if (state == null || !state.hasWorkLeft()) {
+            return -1;
+        }
+        Integer declared = checks.getWorkForStep(state.processingState());
+        int total = Math.max(declared == null ? 0 : declared, state.workLeft());
+        return WorkProgress.fraction(state.workLeft(), total);
+    }
+
     public @Nullable String getWorkProgressDebug(TownInterface town) {
         WorkPosition<BlockPos> spot = ticker.workSpot();
         if (spot == null || spot.jobBlock() == null) {

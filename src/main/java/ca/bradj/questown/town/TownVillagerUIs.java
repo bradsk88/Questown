@@ -77,7 +77,8 @@ public class TownVillagerUIs {
                         MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
                                 windowId,
                                 townFlagBasePos,
-                                this::triggerAdvancement
+                                this::triggerAdvancement,
+                                () -> FlagMenus.resendStatuses(player, es, morningSpawnPending)
                         );
                         return multiStatusMenu;
                     }

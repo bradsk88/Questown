@@ -1696,3 +1696,17 @@ same gates and arm-then-confirm, and with no villager yet it says "Nothing to se
 after each step (to show the new limit), and the new `WorkScreen` started on page 1.
 `WorkScreen.sendLimitStep` records `pageAfterReopen`, and the next `WorkScreen` starts there
 (clamped to its last page). Not seen in game (my test town has one request).
+
+## Work bar on the status icon (dev playtest 2026-10-30)
+
+"Crafters should have a progress bar on their status icon too. Or any work-based job." The villagers
+tab's status icon draws a bar in the leaver bar's spot when the villager is working off a work
+count: `StatusPacket.workProgress` (0..1, -1 none; new network float) comes from
+`VisitorMobEntity.getWorkProgress` -> `DeclarativeJob.getWorkProgress`, the current step's work done
+(`WorkProgress.fraction(left, max(declared, left))`). A leaver's trip bar wins when both apply
+(`renderLeaverReturnBar` returns whether it drew). Work moves without a status change, so the
+server-side `MultiStatusMenu` re-sends the statuses every 20 ticks while open
+(`broadcastChanges` -> `FlagMenus.resendStatuses`), wired in both open paths (`TownFlagMenus`
+and `TownVillagerUIs.showMultiStatusUI`). `StatusSmoother`'s equality ignores the new field, so
+it keeps the newest progress. `WorkProgressTest`. Not seen in game (my test town only had a
+hunter).
