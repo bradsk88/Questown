@@ -2,24 +2,19 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import vazkii.patchouli.api.TriPredicate;
+import ca.bradj.questown.loader.TriPredicate;
 
 import java.util.Collection;
 import java.util.List;
@@ -39,7 +34,7 @@ public final class PagedCardScreen<D> {
 
     public interface CardRenderer<D> {
         List<Component> renderAndReturnTooltip(
-                PoseStack poseStack,
+                RenderContext ctx,
                 Card<D> card,
                 Coordinate mousePosition
         );
@@ -169,51 +164,47 @@ public final class PagedCardScreen<D> {
     }
 
     protected void renderBg(
-            PoseStack stack,
+            RenderContext ctx,
             float v,
             int i,
             int i1
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
         int bgY = (this.height.get() - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
     public @Nullable List<Component> afterRender(
-            PoseStack poseStack,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
             List<D> cardsData,
             boolean drawCardBg
     ) {
-        renderButtons(poseStack, font, mouseX, mouseY, partialTicks, cardsData);
-        return renderCards(poseStack, mouseX, mouseY, drawCardBg);
+        renderButtons(ctx, mouseX, mouseY, partialTicks, cardsData);
+        return renderCards(ctx, mouseX, mouseY, drawCardBg);
     }
 
     public void renderButtons(
-            PoseStack poseStack,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
             List<D> cardsData
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
-        renderPageNum(
-                poseStack, font, bgX, cardsData, (s, pos, size) -> GuiComponent.fill(
-                        poseStack, pos.a(), pos.b(), size.a(), size.b(), 0x30000000
-                )
-        );
+        int totalPages = Pages.count(cardsData.size(), MAX_CARDS_PER_PAGE);
+        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+        drawSelectorStrip(ctx, previousPage, nextPage, bgX + backgroundWidth, pageString);
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        this.previousPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
+        this.nextPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
     }
 
     private @Nullable List<Component> renderCards(
-            PoseStack poseStack,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             boolean drawCardBg
@@ -226,10 +217,10 @@ public final class PagedCardScreen<D> {
                 setRenderColorForCard.accept(card.data());
                 int x2 = card.coords().leftX();
                 int y2 = card.coords.topY();
-                this.cardBackground.draw(poseStack, x2, y2, CARD_WIDTH, cardHeight);
+                ctx.drawNineNine(this.cardBackground, x2, y2, CARD_WIDTH, cardHeight);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            List<Component> tt = renderCardContent.renderAndReturnTooltip(poseStack, card, mousePosition);
+            List<Component> tt = renderCardContent.renderAndReturnTooltip(ctx, card, mousePosition);
             if (tt == null) {
                 continue;
             }
@@ -253,33 +244,32 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    private void renderPageNum(
-            PoseStack poseStack,
-            Font font,
-            int x,
-            List<D> cardsData,
-            TriConsumer<PoseStack, Pair<Integer, Integer>, Pair<Integer, Integer>> fill
+    /**
+     * The page selector's look: a dark strip from the previous button to {@code rightX}, with the
+     * text centred between the two arrow buttons. Also the economics tab's view toggle (dev
+     * playtest 2026-10-30: "should have the same style as the page selector").
+     */
+    static void drawSelectorStrip(
+            RenderContext ctx,
+            GuiIconButtonSmall previous,
+            GuiIconButtonSmall next,
+            int rightX,
+            String text
     ) {
-        // Draw page numbers
-        int xx = x + borderPadding + buttonWidth;
-        int y = nextPage.y;
-        int width = xx + backgroundWidth - borderPadding - buttonWidth;
-        int height = nextPage.y + buttonHeight;
-        fill.accept(
-                poseStack,
-                new Pair<>(xx, y),
-                new Pair<>(width, height)
-        );
-        int totalPages = (int) Math.ceil((double) cardsData.size() / MAX_CARDS_PER_PAGE);
-        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+        int y = next.y;
+        ctx.fill(previous.x + buttonWidth, y, rightX, y + buttonHeight, 0x30000000);
+        ImmutableRect2i area = MathUtil.union(previous.getArea(), next.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(area, ctx.font(), text);
+        ctx.lightText(text, textArea.getX(), textArea.getY());
+    }
 
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+    /** Back to page 1, for a screen whose card list just changed (QuestsScreen's open/completed toggle). */
+    public void firstPage() {
+        currentPage = 0;
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) cardsData.get().size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(cardsData.get().size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }

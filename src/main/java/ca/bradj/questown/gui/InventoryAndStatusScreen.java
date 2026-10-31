@@ -5,25 +5,17 @@ import ca.bradj.questown.core.network.OpenJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
-import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
 
 import static ca.bradj.questown.gui.InventoryAndStatusMenu.TE_INVENTORY_FIRST_SLOT_INDEX;
 
-public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryAndStatusMenu> {
+public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAndStatusMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -66,53 +58,36 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     protected void init() {
         super.init();
         ClientAccess.dismissTutorialToast();
-        int maybeX = (this.width / 2) + 32;
-        int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
-
-        this.addRenderableWidget(
-                new Button(
-                        maybeX, maybeY,
-                        48, 20,
-                        Compat.translatable("menu.quests"),
-                        (p_96776_) -> {
-                            openQuestsScreen();
-                        }
-                )
-        );
-    }
-
-    private void openQuestsScreen() {
-//        this.minecraft.setScreen(questScreen);
+        // No "Quests" button: it did nothing (an empty handler), and the dev removed quests from
+        // the villager UI (r17 #20).
     }
 
     @Override
-    public void render(
-            PoseStack stack,
+    protected void renderScreenContent(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
-        this.renderTooltip(stack, mouseX, mouseY);
+        renderTooltips(mouseX, mouseY);
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        renderInventory(stack);
-        status.render(stack);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, bgX, bgY);
+        renderInventory(ctx);
+        status.render(ctx);
     }
 
-    private void renderInventory(PoseStack stack) {
+    private void renderInventory(RenderContext rc) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord = 0;
@@ -120,39 +95,15 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
-            this.slot.draw(stack, xCoord, yCoord);
+            this.slot.draw(rc.gui(), xCoord, yCoord);
         }
         int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            this.ingredientRenderer.render(itemRenderer, i, iconX += 16, yCoord + 32);
+            this.ingredientRenderer.render(rc, i, iconX += 16, yCoord + 32);
         }
     }
 
-    private void renderSlotStatus(
-            PoseStack stack,
-            DataSlot dataSlot,
-            int x,
-            int y
-    ) {
-        if (dataSlot.get() == 0) {
-            return;
-        }
-        if (dataSlot.get() != 1) {
-            throw new IllegalStateException("Slot status should only be 0 or 1");
-        }
-        RenderSystem.setShaderTexture(0, lockTex);
-        int srcX = 0;
-        int srcY = 0;
-        int drawWidth = 16;
-        int drawHeight = 8;
-        int texWidth = 16;
-        int texHeight = 8;
-        blit(stack, x, y, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
-    }
-
-    @Override
-    protected void renderTooltip(
-            @NotNull PoseStack stack,
+    private void renderTooltips(
             int mouseX,
             int mouseY
     ) {
@@ -161,14 +112,14 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         if (this.tabs.renderTooltip(
                 x, y, mouseX, mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
 
         if (status.renderTooltip(
                 mouseX, mouseY,
-                key -> super.renderTooltip(stack, key, Optional.empty(), mouseX, mouseY)
+                key -> this.showTooltip(key.stream().map(Compat::componentText).toList())
         )) {
             return;
         }
@@ -179,7 +130,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             if (i >= TE_INVENTORY_FIRST_SLOT_INDEX) {
-                if (renderLocksTooltip(stack, xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
+                if (renderLocksTooltip(xCoord + 1, yCoord + 16 + 2, mouseX, mouseY)) {
                     return;
                 }
             }
@@ -187,12 +138,10 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
 
         int iconX = x - 12;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {
-            if (renderNeedsTooltip(stack, iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
+            if (renderNeedsTooltip(iconX += 16 + 4, yCoord + 32, mouseX, mouseY, i)) {
                 return;
             }
         }
-
-        super.renderTooltip(stack, mouseX, mouseY);
     }
 
     @Override
@@ -207,14 +156,13 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
             return true;
         }
         if (status.mouseClicked((int) mouseX, (int) mouseY)) {
-            QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(menu.flagPos, menu.jobId));
+            QuestownNetwork.sendToServer(new OpenJobMessage(menu.flagPos, menu.jobId));
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
     }
 
     private boolean renderLocksTooltip(
-            @NotNull PoseStack stack,
             int leftX,
             int topY,
             int mouseX,
@@ -227,7 +175,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.inventory.locked"
                 );
-                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                this.showTooltip(component);
                 return true;
             }
         }
@@ -235,7 +183,6 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
     }
 
     private boolean renderNeedsTooltip(
-            @NotNull PoseStack stack,
             int leftX,
             int topY,
             int mouseX,
@@ -250,7 +197,7 @@ public class InventoryAndStatusScreen extends AbstractContainerScreen<InventoryA
                 Component component = Compat.translatable(
                         "tooltips.villagers.job.needs", jPart, Ingredients.getName(item)
                 );
-                super.renderTooltip(stack, ImmutableList.of(component), Optional.empty(), mouseX, mouseY);
+                this.showTooltip(component);
                 return true;
             }
         }

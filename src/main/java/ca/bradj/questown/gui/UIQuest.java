@@ -1,11 +1,13 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.*;
@@ -16,15 +18,15 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,10 +43,25 @@ public class UIQuest implements Comparable<UIQuest> {
             null,
             null,
             null,
+            null,
             null
     );
     public final Quest.QuestStatus status;
     private final ResourceLocation wantedId;
+
+
+    /**
+     * The LOOT quest's name key by what it wants: the hunter's raw-food quest is "Raw Food",
+     * any other (the cook's #questown:villager_food) is "Food" (2026-10-15/17 playtest calls).
+     */
+    /** A LOOT quest's name: its tag's name, or the wanted item's own name ({@link LootQuestNames}). */
+    public static MutableComponent lootName(ResourceLocation wantedId) {
+        String key = LootQuestNames.key(wantedId);
+        if (key == null) {
+            return Compat.getItemName(wantedId).copy();
+        }
+        return Compat.translatable(key);
+    }
     private final Quest.QuestType type;
     private final ImmutableList<Ingredient> ingredients;
     public final ResourceLocation fromRecipe;
@@ -53,6 +70,22 @@ public class UIQuest implements Comparable<UIQuest> {
     private final String jobName;
     @Nullable
     private final String flavorText;
+    /**
+     * Progress toward the quest's count: for ITEM quests, how many of the wanted
+     * item the town containers already hold; for LOOT quests, how much has been
+     * extracted so far (the 2026-10-15 accumulation counter). Rendered as
+     * "(progress/target)" on the card, capped at the target. Null for every
+     * other quest type and for ITEM/LOOT quests whose progress was not
+     * computed.
+     */
+    @Nullable
+    private final Integer deposited;
+    /**
+     * For a named-skill quest no villager in the skill's job is levelled for yet: the level it
+     * needs. The card then names neither the skill nor its item (Outfitter #20). Null otherwise.
+     */
+    @Nullable
+    private final Integer lockedUntilLevel;
     public final boolean isBroken;
 
     public UIQuest(
@@ -64,8 +97,27 @@ public class UIQuest implements Comparable<UIQuest> {
             @Nullable ResourceLocation fromRecipe,
             @Nullable VillagerUUID jobRecipientUUID,
             @Nullable String jobName,
-            @Nullable String flavorText
+            @Nullable String flavorText,
+            @Nullable Integer deposited
     ) {
+        this(batchUUID, wantedId, type, ingredients, status, fromRecipe, jobRecipientUUID, jobName, flavorText,
+                deposited, null);
+    }
+
+    public UIQuest(
+            UUID batchUUID,
+            ResourceLocation wantedId,
+            Quest.QuestType type,
+            @Nullable Collection<Ingredient> ingredients,
+            Quest.QuestStatus status,
+            @Nullable ResourceLocation fromRecipe,
+            @Nullable VillagerUUID jobRecipientUUID,
+            @Nullable String jobName,
+            @Nullable String flavorText,
+            @Nullable Integer deposited,
+            @Nullable Integer lockedUntilLevel
+    ) {
+        this.lockedUntilLevel = lockedUntilLevel;
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
         this.wantedId = wantedId;
         this.type = type;
@@ -76,6 +128,7 @@ public class UIQuest implements Comparable<UIQuest> {
         this.jobName = jobName;
         this.flavorText = flavorText;
         this.batchUUID = batchUUID;
+        this.deposited = deposited;
     }
 
     public static List<UIQuest> fromLevel(
@@ -91,14 +144,51 @@ public class UIQuest implements Comparable<UIQuest> {
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ
     ) {
-        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        return fromLevel(level, aQ, java.util.Map.of());
+    }
+
+    /**
+     * Same as the two-arg form, but each open ITEM or LOOT quest whose wanted
+     * id appears in {@code questProgress} carries its progress count (ITEM:
+     * deposits so far; LOOT: extractions so far - the card renders
+     * "(n/target)").
+     */
+    public static List<UIQuest> fromLevel(
+            Level level,
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
+            Map<ResourceLocation, Integer> questProgress
+    ) {
+        return fromLevel(level, aQ, questProgress, java.util.Map.of());
+    }
+
+    /**
+     * Same as the three-arg form, and each quest id in {@code lockedSkillLevels} (the flag's
+     * {@code lockedSkillQuestLevels}) shows as a blank skill card needing that level.
+     */
+    public static List<UIQuest> fromLevel(
+            Level level,
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
+            Map<ResourceLocation, Integer> questProgress,
+            Map<ResourceLocation, Integer> lockedSkillLevels
+    ) {
+        java.util.Map<ResourceLocation, RoomRecipe> rMapB = new java.util.LinkedHashMap<>();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
         BlockAsRoomEntity.ALL.forEach(v -> {
             RoomBlock vv = v.get();
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+        // The basics-batch board quest carries the legacy blueprint room recipe id
+        // (questown:job_board = sign + log room); the card should show the block the
+        // player actually crafts and places - the job board block itself, not a sign
+        // (job-board-quest-card-shows-sign.md). Override after the level recipes and
+        // keep the last write for this one deliberate duplicate (no other id is
+        // duplicated across the three sources).
+        rMapB.put(SpecialQuests.JOB_BOARD, RoomRecipes.standard(
+                SpecialQuests.JOB_BOARD,
+                NonNullList.withSize(1, Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()))
+        ));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = ImmutableMap.copyOf(rMapB);
 
         return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();
@@ -118,7 +208,7 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
             return new UIQuest(
-                    v.getBatchUUID(),
+                    removableBatch(v),
                     v.getWantedId(),
                     v.getType(),
                     ingredientz,
@@ -126,7 +216,9 @@ public class UIQuest implements Comparable<UIQuest> {
                     v.fromRecipeID().orElse(null),
                     jobRecipientUUID,
                     job,
-                    v.getFlavorText()
+                    v.getFlavorText(),
+                    QuestCardProgress.shown(v.getType(), v.getStatus(), v.getCountNeeded(), questProgress.get(v.getWantedId())),
+                    v.isComplete() ? null : lockedSkillLevels.get(v.getWantedId())
             );
         }).toList();
     }
@@ -135,12 +227,16 @@ public class UIQuest implements Comparable<UIQuest> {
             Quest<ResourceLocation, MCRoom> v,
             ImmutableMap<ResourceLocation, RoomRecipe> rMap
     ) {
-        IForgeRegistry<Item> reg = ForgeRegistries.ITEMS;
         return switch (v.getType()) {
             case ROOM -> getRoomIngredients(v, rMap);
-            case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
+            case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(Loader.itemFromId(v.getWantedId())));
+            case LOOT -> Collections.nCopies(v.getCountNeeded(), Ingredients.asIngredient(v.getWantedId()));
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case JOB_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case FIRST_WORK_REQUEST -> ImmutableList.of();
+            case SKILL_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case VILLAGER_LEVEL -> ImmutableList.of();
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -199,11 +295,54 @@ public class UIQuest implements Comparable<UIQuest> {
     public Component getName() {
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
-            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
-            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
+            case ITEM -> {
+                MutableComponent name = Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+                if (deposited != null) {
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
+            case LOOT -> {
+                // The card is "Raw Food"/"Food" + "(extracted/count)": the extraction
+                // progress the 2026-10-15 accumulation ruling made real.
+                MutableComponent name = lootName(wantedId);
+                if (deposited != null) {
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractRootJobName());
+            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
+            case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
+            case SKILL_UNLOCK -> lockedUntilLevel != null
+                    ? Compat.translatable("menu.quests.skill_unlock.hidden")
+                    : MCQuest.namedSkill(wantedId)
+                    .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
+                    .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
+                            Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
+            case VILLAGER_LEVEL -> villagerLevelName(wantedId, deposited);
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    /** "Train a Crafter to level 3 (1/3)": the progress is the root's highest villager level. */
+    public static MutableComponent villagerLevelName(ResourceLocation wantedId, @Nullable Integer highestLevel) {
+        Optional<VillagerLevelQuests.Target> t = VillagerLevelQuests.target(wantedId);
+        if (t.isEmpty()) {
+            return Compat.literal("ERROR").copy();
+        }
+        MutableComponent name = Compat.translatable("menu.quests.villager_level",
+                Compat.translatable("jobs." + t.get().root()), t.get().level());
+        if (highestLevel != null) {
+            name.append(Compat.literal(" (" + Math.min(highestLevel, t.get().level()) + "/" + t.get().level() + ")"));
+        }
+        return name;
+    }
+
+    /** The level a blank (locked) skill card needs, or null when the card shows its skill. */
+    public @Nullable Integer getLockedUntilLevel() {
+        return lockedUntilLevel;
     }
 
     @Nullable
@@ -211,8 +350,10 @@ public class UIQuest implements Comparable<UIQuest> {
         return flavorText;
     }
 
-    private String extractJobName() {
-        return JobID.fromRL(wantedId).jobId();
+    // Root jobs carry a localized name (jobs.<root> in the lang files); the bare root id
+    // read as a raw key to players.
+    private Component extractRootJobName() {
+        return Compat.translatable("jobs." + JobID.fromRL(wantedId).rootId());
     }
 
     public String jobName() {
@@ -223,12 +364,25 @@ public class UIQuest implements Comparable<UIQuest> {
         return VillagerUUID.getStringUUID(villagerUUID);
     }
 
+    /**
+     * The batch the card's "Remove request" x would discard, or null for no x: only a discardable
+     * (procedurally generated) quest offers removal. The card's batch id is used for nothing else.
+     */
+    public static @Nullable UUID removableBatch(Quest<?, ?> quest) {
+        return quest.isDiscardable() ? quest.getBatchUUID() : null;
+    }
+
     public UUID getBatchUUID() {
         return batchUUID;
     }
 
     public Quest.QuestType getType() {
         return type;
+    }
+
+    @Nullable
+    public Integer getDeposited() {
+        return deposited;
     }
 
     public static class Serializer {
@@ -254,6 +408,8 @@ public class UIQuest implements Comparable<UIQuest> {
             buf.writeUtf(jobName);
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
             buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
+            buf.writeInt(p_44102_.deposited == null ? -1 : p_44102_.deposited);
+            buf.writeInt(p_44102_.lockedUntilLevel == null ? -1 : p_44102_.lockedUntilLevel);
         }
 
         @Nullable
@@ -281,7 +437,10 @@ public class UIQuest implements Comparable<UIQuest> {
             if (flavorText.isEmpty()) {
                 flavorText = null;
             }
-            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText);
+            int deposited = buf.readInt();
+            int locked = buf.readInt();
+            return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText,
+                    deposited < 0 ? null : deposited, locked < 0 ? null : locked);
         }
     }
 }

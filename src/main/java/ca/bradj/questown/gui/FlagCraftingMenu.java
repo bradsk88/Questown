@@ -1,5 +1,9 @@
 package ca.bradj.questown.gui;
 
+import net.minecraft.resources.ResourceLocation;
+
+import com.google.common.collect.ImmutableList;
+
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import net.minecraft.network.FriendlyByteBuf;
@@ -23,9 +27,29 @@ public class FlagCraftingMenu extends AbstractContainerMenu implements FlagTabsE
         return menus.craftingMenu;
     }
 
+    /** Ids of the town's posted quests (open or completed): which gated rows show (r17 #1). */
+    private final ImmutableList<ResourceLocation> postedQuests;
+
+    /** The flag's Blocks of Progress when the menu opened: whether a BOP recipe can be crafted. */
+    private final int flagBops;
+
     public FlagCraftingMenu(int windowId, FlagInfo flagInfo) {
+        this(windowId, flagInfo, ImmutableList.of(), 0);
+    }
+
+    public FlagCraftingMenu(int windowId, FlagInfo flagInfo, Collection<ResourceLocation> postedQuests, int flagBops) {
         super(MenuTypesInit.FLAG_CRAFTING.get(), windowId);
         this.flagInfo = flagInfo;
+        this.postedQuests = ImmutableList.copyOf(postedQuests);
+        this.flagBops = flagBops;
+    }
+
+    public int getFlagBops() {
+        return flagBops;
+    }
+
+    public ImmutableList<ResourceLocation> getPostedQuests() {
+        return postedQuests;
     }
 
     @Override

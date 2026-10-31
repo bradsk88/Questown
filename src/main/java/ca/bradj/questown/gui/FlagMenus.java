@@ -5,6 +5,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.gui.town.status.MultiStatusScreenSyncMessage;
 import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.LeaverReturn;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.StatusListener;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
@@ -16,12 +17,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
+import ca.bradj.questown.jobs.JobID;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -32,6 +35,7 @@ public class FlagMenus {
     TownEconomicsMenu econMenu;
     TownBlockofProgressMenu bopMenu;
     FlagCraftingMenu craftingMenu;
+    FlagSettingsMenu settingsMenu;
 
     public FlagMenus() {
     }
@@ -46,18 +50,20 @@ public class FlagMenus {
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
             QuestScreenSummary summary = new QuestScreenSummary(buf.readBoolean(), buf.readBoolean());
+            Map<UUID, String> villagerDisplayNames = AbstractQuestsContainer.readVillagerNames(buf);
             TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
-            int blocksOfProgress = bopResult.blocksOfProgress();
             FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();
 
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary);
+            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary, villagerDisplayNames);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
-            menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
-            menus.initCrafting(windowId, flagInfo);
+            menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
+            menus.initCrafting(windowId, flagInfo, quests.stream().map(UIQuest::getWantedId).filter(java.util.Objects::nonNull).toList(),
+                    bopResult.bopRootJobs().size());
+            menus.settingsMenu = new FlagSettingsMenu(windowId, flagInfo);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -71,13 +77,14 @@ public class FlagMenus {
             FlagTabsEmbedding.FlagInfo flagInfo,
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,
-            int bopCount,
+            ImmutableList<String> bopRootJobs,
             Supplier<Boolean> morningSpawnPending,
-            QuestScreenSummary summary
+            QuestScreenSummary summary,
+            Map<UUID, String> villagerDisplayNames
     ) {
-        TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary);
+        TownQuestsContainer.write(buf, quests, flagInfo.flagPos(), summary, villagerDisplayNames);
         MultiStatusScreenSyncMessage msg = new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get()));
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg);
+        QuestownNetwork.sendToPlayer(player, msg);
         for (VisitorMobEntity e : es) {
             e.addStatusListener(new StatusListener() {
                 @Override
@@ -88,14 +95,25 @@ public class FlagMenus {
                 @Override
                 public void statusChanged(IStatus<?> newStatus) {
                     MultiStatusScreen.SyncedData data1 = makeSyncData(es, morningSpawnPending.get());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> player),
+                    QuestownNetwork.sendToPlayer(player,
                             new MultiStatusScreenSyncMessage(data1)
                     );
                 }
             });
         }
-        TownBlockofProgressMenu.write(buf, flagInfo, bopCount);
+        TownBlockofProgressMenu.write(buf, flagInfo, bopRootJobs);
+    }
+
+    /**
+     * Re-sends the villagers tab's statuses. The open menu calls it about once a second, since
+     * work progress moves without a status change (dev playtest 2026-10-30, the work bar).
+     */
+    public static void resendStatuses(
+            ServerPlayer player,
+            Iterable<? extends VisitorMobEntity> es,
+            Supplier<Boolean> morningSpawnPending
+    ) {
+        QuestownNetwork.sendToPlayer(player, new MultiStatusScreenSyncMessage(makeSyncData(es, morningSpawnPending.get())));
     }
 
     private static MultiStatusScreen.@NotNull SyncedData makeSyncData(
@@ -104,7 +122,16 @@ public class FlagMenus {
     ) {
         HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
+        HashSet<UUID> pending = new HashSet<>();
+        HashMap<UUID, JobID> afterTrip = new HashMap<>();
         for (VisitorMobEntity v : es) {
+            if (v.getTown() != null && v.getTown().getVillagerHandle().isJobChangePending(v.getVUID())) {
+                pending.add(v.getUUID());
+            }
+            JobID becomes = v.getTown() == null ? null : v.getTown().getVillagerHandle().getSwitchAfterTrip(v.getVUID());
+            if (becomes != null) {
+                afterTrip.put(v.getUUID(), becomes);
+            }
             if (b.containsKey(v.getUUID()) || b2.containsKey(v.getUUID())) {
                 QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
             }
@@ -118,7 +145,7 @@ public class FlagMenus {
                                .toList();
             b2.put(v.getUUID(), ImmutableList.copyOf(list));
         }
-        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending);
+        return new MultiStatusScreen.SyncedData(b, b2, morningSpawnPending, pending, afterTrip);
     }
 
     private static @NotNull StatusPacket createStatusPacket(
@@ -126,8 +153,16 @@ public class FlagMenus {
             IStatus<?> vStatus
     ) {
         ResourceLocation tex = ServerJobsRegistry.getTexture(v.getJobId(), vStatus);
-        ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus);
-        StatusPacket value = new StatusPacket(v.getJobId(), texts, tex);
+        ImmutableList<Component> texts = ServerJobsRegistry.getStatusText(v.getJobId(), vStatus, v);
+        LeaverReturn leaverReturn = v.getLeaverReturn();
+        StatusPacket value = new StatusPacket(
+                v.getJobId(),
+                texts,
+                tex,
+                leaverReturn == null ? 0L : leaverReturn.returnTick(),
+                leaverReturn == null ? 0 : leaverReturn.totalTicks(),
+                v.getWorkProgress()
+        );
         return value;
     }
 
@@ -135,11 +170,11 @@ public class FlagMenus {
             int windowId,
             Collection<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flag,
-            QuestScreenSummary summary
+            QuestScreenSummary summary,
+            Map<UUID, String> villagerDisplayNames
     ) {
         questsMenu = new TownQuestsContainer(
-                windowId, quests, flag, summary, () -> {
-        }
+                windowId, quests, flag, summary, () -> {}, villagerDisplayNames
         );
     }
 
@@ -163,15 +198,17 @@ public class FlagMenus {
     private void initBlocksOfProgress(
             int windowId,
             FlagTabsEmbedding.FlagInfo flagPos,
-            int blocksOfProgress
+            ImmutableList<String> bopRootJobs
     ) {
-        bopMenu = new TownBlockofProgressMenu(windowId, flagPos, blocksOfProgress);
+        bopMenu = new TownBlockofProgressMenu(windowId, flagPos, bopRootJobs);
     }
 
     private void initCrafting(
             int windowId,
-            FlagTabsEmbedding.FlagInfo flagInfo
+            FlagTabsEmbedding.FlagInfo flagInfo,
+            Collection<ResourceLocation> postedQuests,
+            int flagBops
     ) {
-        craftingMenu = new FlagCraftingMenu(windowId, flagInfo);
+        craftingMenu = new FlagCraftingMenu(windowId, flagInfo, postedQuests, flagBops);
     }
 }

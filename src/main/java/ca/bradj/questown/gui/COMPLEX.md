@@ -30,6 +30,373 @@ flowchart TD
   (`@Mod.EventBusSubscriber(value = Dist.CLIENT)`). `GuiLayoutCapture` holds no client types
   so the shared `Compat` layer can call it safely.
 
+## 1.19.2 render-layering parity (1.20.6)
+
+In 1.20.6 `GameRenderer.render` draws the HUD layers (hearts, hunger, XP,
+hotbar, chat) **before** the current screen; in 1.19.2 the HUD was drawn
+**after** the screen, so the 1.19.2 menus show the HUD on top of their
+background. The vanilla 1.20.6 container background is an opaque full-canvas
+gradient, which therefore hides the HUD entirely on 1.20.6.
+
+Two cooperating pieces restore the 1.19.2 look for the screen families that
+match the 1.19.2 golden captures (`tools/porttest/`):
+
+```mermaid
+flowchart TD
+    GR["GameRenderer.render (1.20.6)"] --> HUD["Gui.render - HUD layers"]
+    HUD --> Render["screen.render()"]
+    Render --> RB["renderBackground (overridden)"]
+    RB -->|paged + container families| Blur["renderBlurredBackground + renderBg"]
+    RB -->|parent / stats / skills| Blur["renderBlurredBackground + renderBg"]
+    Render --> Post["ScreenEvent.Render.Post"]
+    Post -->|QuestownHudEvents, one of the 4 base classes| Redraw["Minecraft.getInstance().gui.render(...) - HUD again, on top"]
+```
+
+- `AbstractPagedCardScreen.renderBackground` and `CompatContainerScreen.renderBackground`
+  both draw `renderBlurredBackground` + `renderBg`: the 1.19.2 golden blurs the
+  world behind *every* container/paged window (its `Screen.renderBackground` is
+  the blur path when a level is present). Before the 2026-10-01 fix the paged
+  family skipped the blur (`renderBg` only) and the container family inherited
+  the 1.20.6 vanilla opaque gray gradient (`renderTransparentBackground`) - the
+  "some tabs blur, some are flat gray" split the oracle caught.
+- `InventoryAndStatusScreen` / `VillagerStatsScreen` / `VillagerAdvancementsScreen`
+  override `renderBackground` to the blurred world (the 1.19.2 default-blur
+  look) instead of the opaque gradient / menu texture.
+- `QuestownHudEvents` re-renders the HUD after the screen for those four base
+  classes, restoring the 1.19.2 layering where the HUD sits above the menu
+  background. The blur is semi-transparent, so the HUD drawn *before* the screen
+  also stays visible through it - which is why the container family needs no
+  `QuestownHudEvents` entry of its own.
+  - **The crosshair is suppressed in that re-render.** The re-render calls the
+    full `Gui` layer stack, and in 1.20.6 the crosshair is a layer gated only by
+    `!hideGui` (vanilla does *not* skip it for open screens), so re-rendering the
+    HUD would pop the crosshair back on top of the menu (the day-1 playtest's
+    "crosshair renders above menus"). `QuestownHudEvents` sets a `reRenderingHud`
+    flag around the pass and cancels just the `VanillaGuiLayers.CROSSHAIR` layer
+    via `RenderGuiLayerEvent.Pre` during it; the normal pre-screen pass is
+    untouched (flag false → the crosshair renders as vanilla would, then the
+    opaque/blur background covers it).
+- The two `*ConfirmScreen` keep their own flat gray `renderBackground`: their
+  golden equivalents are opaque gray, so matching them is correct - do not
+  "unify" them onto the blur.
+- Verified with the `tools/porttest/` capture oracle on 2026-10-01 (work =
+  container family, quests = paged family): both captures show the out-of-focus
+  world at the screen edges; the six golden-bank screens are gated and banked
+  post-fix, heart/hotbar rows matching via `run.sh diff`.
+
+## 1.20.6 blit UV: the 7-arg `GuiGraphics.blit` divides by 256
+
+1.20.6 changed the GUI blit pipeline to normalized UV: the quad's UVs are
+`u / maxU`, `v / maxV`. The 7-arg `blit(rl, x, y, u, v, w, h)` overload
+**defaults maxU/maxV to 256**, so a 16x16 texture blit samples only the
+texture's top-left 1/16 (one pixel) and stretches it across the tile. In
+1.19.2 the equivalent `PoseStack.blit` used raw texture-pixel UVs, so the
+ported call that looked identical renders as a solid color on 1.20.6.
+
+Caught in the port-test oracle: the skills-pane background
+(`VillagerAdvancementsContent.drawContents` tiles `stone.png`) rendered as one
+solid 0x8F gray (stone.png pixel (0,0)) instead of the mottled texture.
+Fix: pass the texture dimensions, the way vanilla's own 1.20.6
+`AdvancementTab.drawContents` does -
+`blit(rl, x, y, 0.0F, 0.0F, 16, 16, 16, 16)` (9-arg form). In this 7-arg form
+blits into 256x256 atlas textures are correct as-is because maxU/maxV default
+to 256. A different overload normalizes differently: the
+`VillagerStatsScreen` bar fix below was a 10-arg call with the bar height
+landing in the maxU slot.
+
+## 1.20.6 `Util.blitFace`: display size is a gui-pose scale, not a blit argument
+
+The 1.19.2 `blitFace` passed `faceWidth * scale` as the blit draw size - the
+8x8 face region sampled and *stretched* to 8*scale. In 1.20.6 the
+`GuiGraphics.blit` width/height arguments are the **source region blitted 1:1**
+(see the 7-arg section above): passing `faceWidth * scale` there samples
+`scale`x more of the 64x64 skin and squishes the face into the box (the port
+regression - a smeared, shifted head, not a magnified one).
+
+The 1.20.6 equivalent of "display at 8*scale" is a gui-pose scale around the
+blit: `pose().translate(x, y); pose().scale(scale, scale, 1); blit(tex, 0, 0,
+8, 8, faceWidth, faceWidth, 64, 64)` (nearest-neighbor keeps the pixel blocks
+distinct). Same seam rule as every other 1.20.6 pose note in this file: gui
+pose only, never the global modelview stack.
+
+Oracle check (2026-10-01, economics screen "Food" row face icon vs the 1.19.2
+golden bank): same left/top origin (canvas 246,294 on both), same 12x9
+non-flat footprint, same 8x8 source structure magnified - wip 12x9 at 2x
+nearest-neighbor blocks, matching the golden; the wider wip mask in a naive
+bbox probe is the row's item icon to the right, not the face.
+
+## 1.20.6 Ingredient: `CODEC_NONEMPTY` throws on an empty ingredient
+
+`gui/Ingredients.toJson` serializes an `Ingredient` to the `{"items":[...]}`
+shape the job-request and work-request readers (`isTag`, `getName`, `toString`)
+parse. On 1.19.2 the built-in `Ingredient.toJson()` returned `{"items":[]}`
+for an empty ingredient; 1.20.6 only exposes the validating `CODEC_NONEMPTY`,
+which throws (`IllegalStateException`, "Item array cannot be empty") on the same
+input. So an empty ingredient in a work job took the whole card down
+(`putRequestedItemFirst -> isTag`, the skills pane). `toJson` now guards
+`item.isEmpty()` and returns the golden's `{"items":[]}` shape, so those readers
+fall through as on 1.19.2 instead of throwing.
+
+## VillagerStatsScreen stat bars: the two half-bands and the 10-arg blit trap
+
+Each stat bar (EXP, HUNGER) is two 82px half-bands, 0-50% and 50-100%, drawn
+as a 5px track with a 5px green fill over it. The golden (1.19.2) art carries
+one half-band at u0 and a second at u100 with a capped right end; the wip rebake had only the u0 band (u100 onward transparent in `bars.png`) and a
+10-arg `gui.blit` whose maxU slot held the bar height (5), so the right half
+drew as a bare repeat of the left band and the track span read about 80px
+short: pre-fix capture, track x236..299 + x315..378 against the golden's
+x236..395 with a dark #09100c column at its right end.
+
+Fix (2026-10-13, dev-accepted):
+
+- rebaked `bars.png` with both half-bands: left at u0..94, right at u100..181
+  with its 1px dark end column at u181; track rows v64..68, fill rows v69..73
+  (v74 down is the purple bands; the fill sits at v69 like the golden, not
+  v70, which would bleed a purple row in).
+- `renderBar` now calls `Util.blit` (maxU/maxV fixed at 256, the shape the
+  verified tab-icon fix uses) at u1/u100 for the track (v64) and the fill
+  (v69), with the existing leftWidth/rightWidth split: left half 0-50%, right
+  half 50-100%.
+- Live pixel check (grim capture of the 1.20.6 client window, 2026-10-13):
+  band spans 5 rows, green fill from the bar's left edge, stripe track across
+  the rest, a dark #09100c column at the right end, then the window background
+  #c6c6c6.
+- Accepted deviation: the right end renders as a squared 1px cap, not the
+  golden's rounded corner (dev-accepted on the same date; not re-baked).
+
+## 1.20.6 scissor clip: `enableScissor(x, y, right, bottom)`
+
+In 1.19.2 the advancement pane was clipped per-class (the z+-950 / colorMask
+juggling around the translate); the 1.20.6 port removed that hack and added no
+replacement, so `VillagerAdvancementsContent`'s 16x16 stone-tile loop
+(`i1 -1..15`, `j1 -1..8`) draws well past the 234x113 pane: the pre-fix
+capture shows the right band x444-470 86% stone-grey and the bottom band
+y408-424 93%, against 0% on the 1.19.2 golden.
+
+The 1.20.6 clip is `GuiGraphics.enableScissor`, and its last two arguments
+are the absolute canvas RIGHT and BOTTOM edges, **not** width/height: the
+bytecode builds `ScreenRectangle(x, y, p3 - x, p4 - y)`. Passing
+width/height (the natural reading) makes a 34x-172 degenerate rect and the
+scissor swallows the pane content entirely: the frame and tabs still draw,
+and the pane interior shows the dimmed world straight through. A capture like
+that looks like the bleed was fixed (the bleed pixels are indeed gone), but
+the pane is empty; check the interior stone fraction against the golden
+(about 0.86) before trusting it.
+
+Applied in `VillagerAdvancementsScreen.renderInside`, around the pose
+push/translate block: `enableScissor(bgX + 9, bgY + 18, bgX + 9 + 234,
+bgY + 18 + 113)` then `disableScissor()`. Verified on a fresh creative-mode
+capture: pane interior stone fraction 0.788 (pre-fix bank 0.905, golden
+0.864), both bleed bands 0.000, and the tile to window-frame to world
+transitions clean on the right, bottom and top edges.
+
+## 1.19.2 to 1.20.6 `blit` port: the z argument vanishes, the rest shift
+
+The 1.19.2 golden tab icons call
+`GuiComponent.blit(PoseStack, x, y, int z, float u, float v, int w, int h,
+texW, texH)`: the all-int 10-arg form resolves to the float u/v overload
+(pinned from the 1.19.2 mapped-jar bytecode), and `z` is depth, which has no
+slot in the 1.20.6 `GuiGraphics.blit`. The port dropped `z` but misread the
+surviving arguments, and the two affected icons rendered blank (the other
+four tabs drew, so it read like a texture-load issue at first):
+
+- stats: golden `(x+13, y+11, 0, 0, 0, 9, 9, 256, 256)` = u=0, v=0, 9x9;
+  the wip call had v=9, a transparent atlas row.
+- skills: golden `(adjX, adjY, 0, 17, 7, 30, 30, 256, 256)` = u=17, v=7,
+  30x30 at 50% scale; the wip call had u=0, v=17, 7x30.
+
+menu.png is byte-identical in both repos, so only the UV region is in play.
+Pixel evidence (tab cells on the capture): pre-fix bank 0 colored pixels in
+both cells (pure tab-base grey); post-fix 27 green icon px (stats, menu.png
+(0,0)-(9,9)) and 36 white/shaded px (skills, menu.png (17,7)-(47,37)).
+
+## Render-argument absorption (CompatScreen / CompatContainerScreen)
+
+The strangler's standing goal: a version switch should touch the seam family, not the 29 gui
+screens. The render pipeline was the part the seam could not absorb before. Each leaf still
+overrode `render(GuiGraphics, ...)` (1.19.2: `render(PoseStack, ...)`) directly, so every screen
+named the render-argument type. Two base classes now own those version-bound override signatures,
+and the leaves express the draw order through version-neutral hooks over `RenderContext`.
+
+`RenderContext` (record: `font`, `itemRenderer`, `gui`) is the faithful pass-through handle: each
+method invokes the exact 1.20.6 `GuiGraphics`/JEI/widget method with the same arguments, so
+rendering is preserved by construction (`ctx.fill` → `gui.fill`, `ctx.drawNineNine` →
+`NineNine.draw(gui, ...)`, `ctx.renderWidget(button)` → `button.render(gui, ...)`, `ctx.centered` →
+`gui.drawCenteredString`). A two-arg constructor fills `font` from the running client so the eleven
+pre-existing `new RenderContext(itemRenderer, gui)` call sites keep compiling unchanged.
+
+The hooks reproduce the decompiled 1.20.6 chain. `Screen.render` = `renderBackground(virtual)` +
+widgets; `AbstractContainerScreen.render` = `renderBackground(→renderBg) + widgets + slots +
+renderLabels`. So both bases reduce to `renderPrologue → super.render → renderScreenContent`, with
+the per-screen background/labels folded into the vanilla hooks the base already overrides:
+
+- **`CompatScreen`** (plain `Screen` leaves): `renderPrologue` (a full-canvas fill) → `super.render`
+  (which calls `renderBackground` → `renderScreenSurface` — the panel, e.g. `ctx.drawNineNine` — then
+  the renderable widgets) → `renderScreenContent` (text, item icons).
+- **`CompatContainerScreen`** (`AbstractContainerScreen` leaves): `renderPrologue` (per-frame state,
+  e.g. the button active flag) → `super.render` (which calls `renderBackground` → `renderBgContent`
+  — the NineNine panel + inventory slots — then the widgets, the slots, and `renderLabelsContent`)
+  → `renderScreenContent` (the screen-specific content).
+
+`super.render` already re-invokes the version-bound `renderBackground`/`renderBg`, so a leaf's
+direct `this.renderBackground(...)` / `super.render(...)` calls are dropped. The original drew the
+NineNine panel a second time there; folding to once is pixel-identical.
+
+`showTooltip(Component | List<Component>)` on both bases exposes the 1.20.6
+`setTooltipForNextRenderPass` (its single-`Component` overload is `protected`, so a screen in another
+package cannot call it — only a `Screen` subclass can; that is why a base class, not a static
+`Compat` method, carries this). `Compat.button(...)` and `Compat.componentText(...)` are the
+remaining render-side seams (the `Button.builder` construction and the `getVisualOrderText()` call,
+each named only in the seam family, not the leaves).
+
+`tools/strangler-check` admits the two base classes (`gui/CompatScreen`, `gui/CompatContainerScreen`)
+to the seam family alongside the existing `gui/RenderUtil` and `gui/RenderContext`.
+
+Proven on the `fillGradient` + NineNine pattern by migrating one screen of each tier
+(RelocationConfirmScreen → `CompatScreen`, JobUnlockConfirmScreen → `CompatContainerScreen`) plus
+WorkRequestConfirmScreen, and the **paged cluster** (2026-10-13): `AbstractPagedCardScreen`
+(added to the gate's `SEAM_FILES` - its `renderTooltip(GuiGraphics,int,int)` hook is the one spot that
+carries the render argument to `ctx.gui()`) with its four leaves `QuestsScreen`, `TownEconomicsScreen`,
+`VillagerEconomicsScreen`, `MultiStatusScreen` onto `CompatContainerScreen` - paged surface via
+`renderBgContent`/`renderScreenContent`, leaf extras via `renderScreenExtras`. All marker-free, `./gradlew
+stranglerCheck` green, grandfather set 113 → 108; gui-lint OK on Quests/MultiStatus/TownEconomics via the
+`qtdiag flagtab` hook (the console FIFO was a dead pipe on that launch), and the `Util.blit` 8→10-arg fix
+verified by vision (the "flat grey box" status-icon bug the 8-arg form reintroduces - see the 10-arg
+javadoc in `mc/Util.java` and the AGENTS.md blit note).
+WorkRequestConfirmScreen also fixes the
+idiom for the seam helper that still takes the render argument: `Ingredients.render`
+takes a `RenderContext` and reaches the raw graphics through `ctx.gui()` (so the leaf
+names `RenderContext`, never `GuiGraphics`), while `RenderUtil.highlight` keeps taking
+the argument as `ctx.gui()` (a record accessor, no type named in the leaf; `RenderUtil`
+itself is a gate seam file), and `Compat.drawDarkText` collapses to `ctx.darkText`.
+
+`Ingredients` de-grandfathered (2026-10-13): `render` takes `RenderContext`, and the
+three `Registries.ITEM` tag constructions route through `Compat.itemTag(ResourceLocation)`
+(the `net.minecraft.core.registries` seam keeps the registry access; the helper name dodges
+the gate's package marker). `QuestsScreen`, `WorkRequestConfirmScreen` and `ItemJobsScreen`
+pass `ctx`/`rc` directly. `compileJava --rerun-tasks` green; `strangler-check` green, the
+grandfather set 85 → 84; held run gui-lint OK on `ItemJobsScreen`; vision confirmed the
+`Jobs:` panel, card rows with real item art (no flat boxes), and the title/nav/button row.
+Bank drive (fresh fixture world) against `goldens/1.19.2/`: all six screens in
+fixture-drift range, `quests` at 0.83% (the prior round's pass line was 0.89%). The
+`check` content gate's "active tab" heuristic misfires on this fixture's `quests`
+(world-state dependent: which quest category is active shifts with the world); the pixel
+diff is the parity signal here, and it clears.
+
+`VillagerAdvancementsScreen` + `VillagerAdvancementsContent` + `VillagerAdvancementsWidget`
+de-grandfathered (2026-10-13, 84 → 81): the screen is now a `CompatScreen` and the
+1.19.2 `render` sandwich decomposes onto the compat hooks - `renderBlurredBackground`
+in `renderScreenSurface` (the surface runs where `Screen.renderBackground` used to
+paint, so the HUD-over-blur layering `QuestownHudEvents` depends on is unchanged),
+window + pane + tooltips in `renderScreenContent`. All three files name
+`RenderContext`, never `GuiGraphics`: `fill`/`drawString(int)` through `ctx.fill`/
+`ctx.text`, blits through `ctx.gui().blit` (the 256×256 `widgets.png` and vanilla
+`window.png` are both byte-identical in the 1.19.2 and 1.20.6 client jars, so the
+7-arg blits sample the same UV in both), pose blocks through `ctx.pose()`, and the
+scissor clip through `ctx.gui().enableScissor`/`disableScissor` (absolute canvas
+edges, verified from the `ScreenRectangle` ctor). One naming trap survived the port:
+`renderTooltips`'s 3rd/4th params are the pane origin (i, j), not the mouse, and the
+tooltip translate is pane-based - it now reads `paneX`/`paneY`, so the swap is
+obvious instead of a latent bug. `QuestownHudEvents` matches by class name and
+stays unharmed. Evidence: `compileJava --rerun-tasks` green, gate green at 81,
+`[gui-lint] VillagerAdvancementsScreen (634x675) — OK`, `check.sh` content gate PASS
+on all seven canonical screens (active tab vision-confirmed), and `run.sh diff` with
+every screen in fixture-drift range (`skills` - the screen rendered by this leaf - at
+0.51% full-frame).
+
+The render-layering family is resolved (2026-10-13, 81 → 79): `QuestownHudEvents`
+(the HUD-over-blur redraw this package's screens depend on) and
+`GuiLayoutCheckClientEvents` (the dev gui-lint) are both `@EventBusSubscriber`
+neoforged wiring and now live in `loader/neo` (the seam package - the same home
+`ItemsInteract` and `NeoMouseScrollDispatch` already hold). A package move of
+the wiring only: the bus is package-independent, so both still register
+(verified live - the gui-lint line fires and the porttest content gate confirms
+the HUD-over-blur layering on the affected screens). Neither file's logic
+changed; the layering it keeps is still the one `run.sh` diffs against
+`tools/porttest/goldens/`. The only `gui/` neoforged files (81 → 79) are resolved, and `gui/` is now
+leak-free (2026-10-13, 79 → 77). `AbstractVillagerMenu` no longer wraps its
+inventories in a neoforged `InvWrapper` or builds `SlotItemHandler`s:
+both were the item-handler surface, and the three neoforged imports
+(`IItemHandler`/`SlotItemHandler`/`InvWrapper`) are gone. The menus hold the
+original vanilla `Container`/`Inventory` directly and build plain vanilla
+`Slot(container, index, x, y)` slot boxes; this is provably equivalent because
+the menu's custom `quickMoveStack`/`moveItemStackTo` only use
+`Slot.set/get/mayPlace` and never the handler's `insertItem`/`extractItem`
+(verified with `jmembers`: `Slot(Container,int,int,int)` and
+`Container.getContainerSize()` are the 1.20.6 vanilla API; `Container` is not
+a strangler marker). `LockableInventoryWrapper` was **deleted**: a neoforged
+`InvWrapper` subclass with zero references in main or test (dead code that
+could only be de-grandfathered by removing it). Evidence: `compileJava` +
+`compileTestJava --rerun-tasks` green; 968 tests (only the deliberate
+`ChickenArcHintsTest.todo_` marker red); strangler-check green at 77;
+gui-lint OK on every affected menu (InventoryAndStatus, Quests,
+VillagerStats, VillagerEconomics, VillagerBlockofProgress, Work); and the
+slot-rendering `parent` (inventory) tab pixel-diffing against the 1.19.2
+golden at a 0.0447% center-rect (slot region) delta - the slots render
+identically to the golden branch.
+The SAFE-tier confirm screens (VillagerBlockofProgressScreen,
+TownBlockofProgressScreen, CreateStockRequestScreen, WorkScreen, AddWorkScreen,
+FlagCraftingScreen, JobChangeConfirmScreen)
+and the render-argument helpers `IngredientRenderer` / `StatusGraphic` / `Tabs` are done,
+as is `VillagerStatsScreen` (2026-10-13: onto `CompatContainerScreen` - the stat bars and
+two-half-band art are verbatim `Util.blit`/`ctx.darkText` calls - gui-lint OK, vision
+confirmed the bars + HUD-over-blur layering, bank diff in fixture-drift range), and
+`InventoryAndStatusScreen` (2026-10-13: `render`/`renderBg` onto the base hooks, the
+`Button.builder` quest-button onto `Compat.button`, the status-tooltip
+`Component::getVisualOrderText` lambda onto a `Compat::componentText` map into
+`showTooltip(List<FormattedCharSequence>)` - gui-lint OK, vision confirmed tabs/status
+icon/slots/Quests button + HUD over blur, bank diff in drift range), and `ItemJobsScreen`
+(2026-10-13, below).
+
+`PagedCardScreen` + `ItemJobsScreen` onto `RenderContext` (2026-10-13): the delegate's
+public surface now takes `RenderContext` (`renderBg`, `afterRender` - dropped its `Font`
+parameter, `renderButtons`, the per-card `CardRenderer` interface, and the page-number
+`fill` consumer), so the composing `ItemJobsScreen` leaf names no render-argument type at
+all (onto `CompatScreen`: panel in `renderScreenSurface`, content + `Compat.button` + the
+`Compat.componentText` tooltip in the neutral hooks) - **fixing a live 1.20.6 draw-order
+regression in the process**: a vanilla 1.20.6 `Screen.render` draws its background *inside
+`render`*, so the leaf's old sandwich (background, panel, `super.render`→background again)
+painted the paged panel under the second background; in 1.19.2 `Screen.render` draws no
+background at all, so the golden never hit it. The compat base makes the panel sit between
+surface and renderables - the golden's relative order - and that is why this leaf's
+verification is a fresh held run (gui-lint OK; vision confirmed the panel, `Jobs:` title,
+Page 1/14 nav, Add-To-Work-Requests button and the card rows) rather than a bank diff -
+there is no correct 1.20.6 pixels to compare against. The four Abstract leaves are
+re-verified intact in the same run (gui-lint OK on Quests/TownEconomics/VillagerEconomics/
+MultiStatus; bank diffs in fixture-drift range). Opener added for the headless drive:
+`_qtdev show_item_jobs` (thin wrapper over the `OpenJobMessage` owner call; see
+`commands/COMPLEX.md`).
+
+Render-argument helpers taking `RenderContext` (2026-10-13): `IngredientRenderer.render`,
+`StatusGraphic.render`, and `Tabs.draw` (plus the inlined notification-dot `fill`) now take
+`RenderContext` directly instead of `GuiGraphics` - the version-neutral record is the same
+admitted type the screens use, so no new seam API. Callers (`TownEconomicsScreen`,
+`VillagerEconomicsScreen`, `InventoryAndStatusScreen`) pass `ctx` rather than `ctx.gui()`.
+Every draw call underneath is verbatim (`Compat.renderItemAndDecorations`, the 10-arg
+`ClientAccess`/32×32 `blit`, the 4×4 notification dot), so these landed without a fresh
+held-run gui-lint - the same rationale as the player-head item (pass-through, not layout).
+Grandfather set 93 → 89; the gate also stopped counting `.md` files (their prose names
+markers on purpose), which dropped `gui/COMPLEX.md` from the list. The carried-over live pass
+on `VillagerEconomicsScreen` was done in the same run: gui-lint OK + vision (real item art in
+the ingredient grid) on 2026-10-13.
+
+FlagCraftingScreen (flow layout + craft tooltips + tabs) and JobChangeConfirmScreen (early-
+return + tabs tooltip + centered text) are the two remaining SAFE-tier leaves with non-trivial
+toobar/tooltip interaction; both are done via the same two-tier pattern.
+
+## Player-head profile: `Compat.resolvablePlayerHead` (components, not NBT)
+
+A player head whose face resolves to a villager's UUID is a version surgery, and *where it is
+named* is the trap. The component stack builds it as `head.set(DataComponents.PROFILE, new
+ResolvableProfile(...))`; both `DataComponents` and `net.minecraft.world.item.component.
+ResolvableProfile` are strangler markers, so a leaf must not name them. `QuestRemoveConfirmScreen`
+(the one screen that needed it, now a `CompatContainerScreen` leaf) calls `Compat.resolvablePlayerHead(UUID)`, and the exact 3-arg construction `ResolvableProfile(Optional.empty(),
+Optional.of(uuid), new PropertyMap())` plus `new ItemStack(Items.PLAYER_HEAD)` lives in `mc/Compat`
+- the seam family the gate admits. Off the grandfather list (108 -> 107), `strangler-check` green,
+`compileJava` executed; the layout is inherited from the base-class migration and the sibling
+confirm screens (already gui-linted), and the only pixel delta is a verbatim item construction
+rather than a new layout, so this landed without a fresh held-run capture.
+
 ## Flow layout (FlagCraftingScreen)
 
 `computeLayout()` stacks blocks top-to-bottom, advancing the `y` cursor past each block's
@@ -38,3 +405,1321 @@ panel to the total. `init()` (widgets) and `render()` (text) both read the same 
 offsets, so a longer/translated string pushes everything down instead of overlapping —
 overlap-proof by construction. This replaced hardcoded Y positions + a 56px wrap width that
 overran their rows.
+
+## Villager menu wire: `VillagerMenusPayload` carries UUID + slot locks
+
+Opening any villager menu (quests / stats / economics / BOP / job-change) goes
+server → `VillagerMenus.write` → `openScreen` → client
+`VillagerMenus.fromNetwork`, where **one payload decodes into all six menus**.
+The payload carries the villager's **UUID and slot locks**: the client builds
+purely from wire data and must never need the local entity. Before this, the
+client resolved the townie by raw entity id and read the UUID/slot locks off
+it — a townie despawned between the packet send and the read NPE'd the screen
+open ("Failed to open a screen") and disconnected the client (`.scratch/
+work-board-request/quests-menu-null-townie-client-crash.md`). `entityId` still
+rides the wire as a **best-effort** pointer: `VillagerStatsMenu.attach(e)` wires
+live stats updates when the local entity happens to still be present; without
+it the menu degrades to the wire's static stats data instead of crashing.
+
+- `entityId` (best-effort pointer) → `attach` if present, else static wire data.
+- Payload layout: id, uuid, jobId, invSize, quests, flagPos, stats, 2 booleans,
+  slot locks — read order must match write; econ is wire-dead (`none()` both ends).
+- `VillagerMenusPayloadTest` pins the round-trip; the menu-construction half is
+  not unit-testable (registry-bound menu types).
+
+## Skills-tab level gate: `showSkillsTab` rides the same wire (2026-10-13)
+
+The third boolean on `VillagerMenusPayload` is `showSkillsTab` - false when the
+townie's level has unlocked no job yet (`Work.getAvailableAtLevel` vs
+`SimpleVillagerHandle.getLevel`, the gate's job-side half is documented in
+`jobs/COMPLEX.md` "available_at_level"). Every tabbed villager menu
+(InventoryAndStatus / Stats / Economics / BOP / JobChangeConfirm / Quests)
+carries the flag; `getEnabledTabs()` returns `VillagerTabs.hideSkills(tabs)`
+when it is false, and `VillagerTabs.forMenu` **also** gates the SKILLS screen
+fn on `menu.showSkillsTab()` - the double gate is deliberate (a menu that
+forgets the `getEnabledTabs` conditional still loses the tab at `forMenu`).
+Flag menus (not per-townie) keep the default `VillagerTabsEmbedding.
+showSkillsTab() = true`. The SKILLS menuShow consumer in
+`TownVillagerUIs` never opens a tabbed menu (it sends
+`OpenVillagerAdvancementsMenuMessage` with the already-filtered unlockable set),
+so no flag change there.
+
+## Lit-dead tabs: `selected` is the current-pane marker, gated tabs are hidden (2026-10-14)
+
+`Tab.selected` (the lit highlight) is set to `fn == null` in `VillagerTabs.build`: a menu
+excludes its OWN pane from `getEnabledTabs()` (`VillagerTabs.except(ownTab)`), so the current
+pane's tab renders lit and no-op = "you are here" (the 1.19.2 golden's mechanism, unchanged).
+Two defects made three tabs lit-and-dead on a level-1 townie's inventory pane (user report,
+playtest 2026-10-14): (1) the skills gate made `skillFn` null for EVERY tab, so the skills
+tab rendered lit like the current pane instead of being absent - `build()` now omits the
+skills tab entirely when `showSkillsTab` is false (the BOP pattern: conditional `b.add`, the
+row reflows left); the skills pane's own menu keeps the tab lit via `showSkillsTab()==true`
+there. (2) Pre-existing since the 1.20.1 migration (also in the golden): the change_root tab
+borrowed `skillScreenFn == null` for its selected flag, so any null skills fn lit change_root
+too - now `changeRootScreenFn == null`, lit only when the change-root pane is open.
+
+**2026-10-29 (dev playtest: "the inventory tab is shown co-highlighted with the stats tab when
+opening villager Ui from flag"):** the same lit-dead defect for the inventory tab. A
+management-only session drops INVENTORY from `getEnabledTabs()`, so `forMenu` passed a null
+inventory fn, and `build()` still added the tab, lit. `build()` now takes `showInventoryTab`
+and omits the tab when false, like the skills tab. Pinned in `VillagerTabsRowTest`.
+
+**Change-job tab during onboarding (2026-10-29, dev playtest: "During onboarding, the change-job
+screen should be hidden for all non-gatherer villagers"):** the server computes
+`TownQuests.hidesJobChangeFrom(job)` (not a gatherer, an onboarding quest exists, the trunk has not
+reached `atTheFork`) and sends `VillagerMenusPayload.showChangeRootTab`; the client records it per
+villager (`VillagerTabs.recordShowChangeRootTab`, the same channel as the red dot) and `build()`
+omits the tab. Onboarding ends at the fork because curated path quests are onboarding-flagged too.
+Server-side the CHANGE_ROOT route is not blocked. Pinned in `TownQuestsJobChangeAttentionTest`,
+`VillagerTabsRowTest`, `VillagerMenusPayloadTest`.
+
+**Locked skills tab and dimmed skill nodes (2026-10-29, dev playtest: "show the skills TAB but not
+allow it to be opened until the villager is leveled at least once"; "Locked skills should be dimmed
+until hovered"):** the skills tab is no longer omitted when `showSkillsTab` is false. It is drawn at
+0.35 grey (`Util.blitShaded`), its click is a no-op, it is never lit, and its tooltip is
+`tooltips.skills.locked`. In the skill tree, `VillagerAdvancementsWidget.draw` tints a node that is
+not unlocked to 0.45 grey; `drawHover` redraws the hovered node at full colour. Note
+`Util.blit`/`blitState` reset the shader colour to white, so a tint set before them is lost: tint
+inside the blit (`blitShaded`). Tab row pinned in `VillagerTabsRowTest`; the tints are **not yet
+verified on screen** (no capture taken).
+
+**Skills pane lights its own tab (2026-10-29, dev playtest: "When viewing the skill tab, the tab
+itself should be highlighted. Currently it shows no tabs highlighted"):** the skills screen's
+embedding returned `VillagerTabs.all()`, so SKILLS had an open fn and rendered unlit, unlike every
+other pane, which excludes its own tab. It now returns `VillagerTabs.skillsPaneTabs(showInventoryTab)`
+(all but SKILLS, minus INVENTORY when management-only). `VillagerTabsRowTest`.
+
+**A villager on a timed trip keeps its own status lines (2026-10-29, dev playtest: "The 'they need
+food to work' tooltip on the longer job statuses is weird"):** the live hunter on
+`hunter:sword_full_day` was WAITING_FOR_TIMED_STATE with an unmet Food need (the next full-day trip
+wants food), and its tooltip's second line became "They need Food to work." while it was out
+working. `StatusNeedLine.isWorking` (moved from `ServerJobsRegistry`) now counts
+WAITING_FOR_TIMED_STATE as working, so `keepsOwnLines` keeps the trip's lines. `StatusNeedLineTest`.
+
+## MultiStatusScreen: full-card click opens the villager UI in management-only mode (2026-10-14)
+
+The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon
+sent `OpenJobMessage` (present since the 1.19.2 golden; the "click a card to open that
+villager" ask predates it). `mouseClicked` now falls through, after the status-icon check,
+to a whole-card hit-test (same pattern as `QuestsScreen.openLessonForClickedCard` on the
+quest tab - user's reference) that sends `OpenVillagerMenuMessage(STATS, showInventoryTab=false)`
+for that townie: the opened menu hides its inventory tab and lands on the stats pane
+(management view, not the inventory; user ruling, `villager-card-opens-management-only-screen`).
+Right-clicking the townie itself still opens the full menu (inventory included) via
+`Jobs.openInventoryAndStatusScreen` -> `showUI(., ., .)` (3-arg default, inventory on).
+
+The `showInventoryTab` flag rides the same wire as `showSkillsTab`: `OpenVillagerMenuMessage`
+carries it to `VillagerHolder.showUI(., ., ., showInventoryTab)` (the 4-arg overload; the
+3-arg form defaults true) -> `TownVillagerUIsHandle` -> `TownVillagerUIs.showUI` (INVENTORY
+type requests are redirected to STATS when the flag is false, so a management-only session
+never lands on a pane whose tab no longer exists) -> `ShowerData` -> the six tabbed menus'
+`getEnabledTabs()` return `VillagerTabs.hideInventory(tabs)` when it is false. The flag
+also crosses the server->client payload (`VillagerMenusPayload.showInventoryTab`, written
+in `VillagerMenus.write`) so re-opened panes keep the same tab set, and
+`VillagerTabs.makeOpenFn` threads it into every tab click so a management-only session
+stays management-only across pane navigation. Pinned in
+`VillagerTabsHideInventoryTest` (the hideInventory helper) and `VillagerMenusPayloadTest`
+(payload round-trip); the menu-ctor filtering is registry-bound, held-run-covered.
+
+The status icon keeps its `OpenJobMessage` (smaller box wins the overlap).
+
+## Day-1 playtest: quest deep-links, localized job names, arrival copy
+
+- **Welcome-mat quest → crafting tab.** `QuestsScreen.openLessonForClickedCard`
+  branches on `SpecialQuests.TOWN_GATE.equals(quest.getWantedId())` and fires
+  `Tabs.openTab("tooltips.crafting")` before falling back to the book lesson.
+  `Tabs.openTab(titleKey)` looks the tab up by its tooltip key and runs its
+  `onClick` (the same `OpenFlagMenuMessage` a tab click sends); returns false
+  when the tab is absent (e.g. the villager-scoped menu) so the book fallback
+  still runs. Hardcoded per the playtest ask; the follow-up "tell me more about
+  this quest" logic generalizes it.
+- **JOB_UNLOCK/JOB_CHANGE cards no longer print bare ids.** `UIQuest.getName`
+  (JOB_UNLOCK) and `QuestsScreen.renderJobUnlockTooltip`/`renderJobQuestTooltip`
+  now pass `translatable("jobs." + rootId)` instead of the raw `jobId`/`rootId`
+  strings — the root jobs carry lang keys (`jobs.baker` = "Baker"). The flavor
+  text on `TownQuests.postUnlockQuest` still inlines raw ids (it is a stored
+  String, not a Component).
+- **First-arrival copy.** `MultiStatusScreen`'s morning-arrival sentinel picks
+  `gui.status.villager_arriving_morning.first` ("A new villager arrives in the
+  morning") when `syncedData.villagerStatuses` is empty, else the existing
+  "...and one more in the morning".
+- **Flag-craft mat carries parent NBT.** `FlagCraftMessage.craftWelcomeMat`
+  stamps `TownFlagBlock.StoreParentOnNBT(mat, flagPos)` before handing the item
+  over: `WelcomeMatBlock` placement reads the parent from that NBT and drops an
+  unstamped mat as unregistered. `WelcomeMatParentNbtTest` pins the stamp
+  round-trip.
+- **Job board crafts in the same menu (2026-10-12, `job-board-should-be-roomblock`).**
+  The board was a `RoomBlock` all along; the friction was acquisition (the only
+  path was build a walled sign-room so room detection could convert it). The flag
+  crafting menu now has a third row: `FlagCraftMessage` recipe index 2
+  (`craftJobBoard`) consumes any `#minecraft:signs` item (mirroring the
+  `#questown:job_board_inputs` recipe tag) and hands a stamped
+  `ItemsInit.JOB_BOARD_BLOCK` — placement (`JobBoardBlock.getStateForPlacement`)
+  resolves the parent flag from the stamped NBT and self-registers the one-block
+  room, no radius check (the NBT binds it to the flag it was crafted at, same
+  contract as the mat). The sign→board room path stays as an optional
+  alternative. The screen change is one extra `ICON_ROW_HEIGHT` in
+  `FlagCraftingScreen.computeLayout()` (flow layout, overlap-proof by
+  construction); button-greying uses `countMatching(ItemTags.SIGNS)` like its
+  siblings.
+
+## Day-1 playtest batch 2: dead tooltip override, BOP "earned by", empty job board
+
+- **Status-card tooltips never rendered (two playtest items, one root).** In
+  1.20.6 `AbstractContainerScreen.render` no longer calls the `renderTooltip`
+  override — the 1.19.2 hook is a dead path — so `AbstractPagedCardScreen`
+  overrode a method nothing calls and the per-card hover text (the status
+  cards in the villager menu, and the `?`-status cards) never drew. Fix: the
+  dead `renderTooltip` override is gone; `renderScreenContent` ends with
+  `this.renderTooltipContent(ctx, mouseX, mouseY)`, which feeds
+  `setTooltipForNextRenderPass` — still drawn by the final `Screen.renderWithTooltip`.
+  Items: `villager-menu-status-icons-no-tooltips`,
+  `hover-text-missing-question-mark-status`.
+- **The BOP screen says why the block is there.** The flag-menu payload's
+  `int bopCount` is now `ImmutableList<String> bopRootJobs` (the deposited BOP's
+  job roots, e.g. `[baker, baker]`), threaded `TownFlagBlockEntity.depositedBopRootJobs()`
+  → `FlagMenus`/`TownBlockofProgressMenu` → `TownBlockofProgressScreen`, which
+  renders an "Earned by: Baker x2" line under the block (`menu.block_of_progress.earned_by`,
+  roots as `jobs.<root>` keys, counts collapsed to `xN`).
+
+# Flag tab selection: the open tab is now highlighted (2026-10-11 evening)
+
+The flag menu tabs were never highlighted: `FlagTabs.build` set the `Tab.selected`
+field to `(fn == null)` (i.e. "is this tab disabled"), which is `false` for every
+enabled tab, so `Tabs.draw` (which picks the highlight art from `selected()`) never
+highlighted anything. Now `FlagTabs` takes an `activeTabKey` and sets
+`selected = activeTabKey.equals(titleKey)`; each of the 5 flag screens passes its
+own key via a new `FlagTabs.forMenu(menu, activeTabKey)` overload
+(`tooltips.quests` / `.villagers` / `.economics` / `.blocks_of_progress` / `.crafting`),
+so the open tab is highlighted. `QuestsScreen.forTown` marks quests; `forVillager`
+uses `VillagerTabs` (untouched).
+
+First-open tab: `TownFlagBlock`'s right-click path now opens the **QUESTS** tab when
+`getInfo().hasIncompleteQuests()` (after the BOP-full branch, before the BOP
+pre-select), so a fresh flag opens on the quests the player can see instead of the
+empty multi-status overview.
+- **Empty job board is no longer a blank pane.** `WorkScreen` draws two wrapped
+  lines (`job_board.empty.1`/`job_board.empty.2`) when `work.isEmpty()`,
+  replacing the empty scroll area with an explanation of what requests do.
+- **Free-food claim on the economics tab.** The `#questown:villager_food`
+  unmet-need card in `TownEconomicsScreen` shows a red "Free food →" line while
+  `FlagInfo.bonusFoodAvailable()` is set (the full sentence is a third tooltip
+  line); clicking anywhere on that card sends `ClaimFreeFoodMessage`. The
+  economics tab's red dot is driven by the same flag
+  (`FlagTabs` passes `fi.bonusFoodAvailable()` to both the tab and
+  `computeTabDecisions`). `FlagInfo` gained the `bonusFoodAvailable` boolean
+  (wire position: after `bopFull`).
+
+## Day-1 playtest batch 3 (2026-10-13): room-block tooltips, board empty state, crafting tooltips
+
+- **Room-block quests get a place-verb tooltip.** `QuestsScreen.renderCardTooltip`
+  handles `TOWN_GATE` and `EMPTY_ROOM` in a fixed two-line branch placed
+  **BEFORE the flavor-text check** (the flavor is set server-side at post time
+  and shadows the switch below it - that shadowing is exactly why the
+  empty-room card first shipped showing the generic `room_quest` line, user
+  report 2026-10-14): line 1 = `menu.quests.roomblock.welcome_mat` / `menu.
+  quests.roomblock.empty_room`, line 2 = grey `menu.quests.roomblock.
+  click_crafting` via `Compat.translatableStyled`. Both cards deep-link to the
+  crafting tab on click (`openLessonForClickedCard`), which is what the grey
+  line promises - the empty-room card needs the Town Wand, which is crafted
+  there. Remaining room blocks fall through the ROOM switch:
+  `JOB_BOARD` or `RoomBlock.isBlockRoom(id)` → `menu.quests.roomblock.town` with
+  `RoomRecipes.getName(wantedId)` (free placement: "in your town"); campfire keeps
+  its own branch. The quest is about *placing a functional block*, not holding an
+  item.
+- **Job-board quest card joined the mat format (2026-10-14 playtest).** User chat:
+  "Job board quest's tooltip should use the same format as the welcome mat's
+  (click to see crafting)." `JOB_BOARD` moved INTO the fixed two-line branch above
+  (key `menu.quests.roomblock.job_board` + grey click-crafting line) and into the
+  crafting deep-link in `openLessonForClickedCard`; the now-dead server-side flavor
+  text in `addBasicsBatch` was retired so the lang key is the single source of
+  copy. The `roomblock.town` fallback now serves only the remaining block rooms.
+- **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
+  the `SpecialQuests.JOB_BOARD` rMap entry with
+  `RoomRecipes.standard(JOB_BOARD, NonNullList.withSize(1, Ingredient.of(JOB_BOARD_BLOCK)))`
+  (the blueprint recipe `questown:job_board.json` is a sign-room recipe and leaked its
+  ingredient onto the card); the builder uses `buildKeepingLast()` for the deliberate
+  duplicate.
+- **The board's empty state points at the top unmet need.**
+  `TownFlagBlockEntity.topUnmetNeedName()` (economics aggregate, max timesNeeded,
+  resolved through `Ingredients.fromString`/`getName` so tag keys like
+  `#minecraft:coals` read as "Coal"); `TownWorkHandle.openMenuRequested` writes it as
+  a trailing `writeUtf` slot when `requestedResults` is empty; `WorkScreen`'s empty
+  state renders `job_board.empty.top_need` ("A townie in town needs %s...Use the +
+  button") instead of the generic teaser when non-empty. Testable without mod-load:
+  only the Utf slot + constructor contract (`TownWorkContainerTopNeedTest`) — the
+  full ForClientSide round trip pushes Ingredients through Neo's registry ID codec,
+  which refuses a registry Neo has not marked synced (vanilla `BuiltInRegistries.ITEM`
+  is never synced outside a running mod-load).
+- **Flag-crafting tab: shared border + item tooltips.** `FlagCraftingScreen.background`
+  switched to `JEI.getRecipeGuiBackground()` (the darker `getRecipeBackground()`
+  was crafting-tab-only and read as a faded border mismatch); 1.20.6 gives free
+  tooltips only to container slots, so `renderRecipeRow` now calls
+  `showTooltip(Compat.getItemName(stack))` when the cursor is inside the 16x16 input
+  (`x + MARGIN`) or output (`x + 50`) icon box.
+- **Campfire sleep: the bed lands on the player's side.** Vanilla's
+  `ServerPlayer.startSleepInBed` → `bedInRange` → `isReachableBedBlock` rejects a bed
+  >3 blocks (x/z) / >2 (y) from the player (`TOO_FAR_AWAY`); the old
+  `findSafeSleepPosition` picked the first safe direction in
+  `Direction.Plane.HORIZONTAL` order (always NORTH), so a player on the opposite
+  side of the fire saw the bed 4-6 blocks away and every attempt failed. Now it
+  scores all safe candidates by `playerPos.distanceToSqr(head)` and takes the closest;
+  the 2-arg overload (test seam `placeTempBedForTest`) delegates with the campfire
+  centre → first-safe-side, preserving the autotest scenario. `CampfireSleepSideTest`
+  pins the side choice on a mocked open-air level.
+- **The empty-room card shows an oak door (2026-10-13 night, user call).**
+  `empty_room` has zero ingredients, so `renderRecipeCardIcons` drew an empty
+  strip. When the strip is empty and the wanted id is `SpecialQuests.EMPTY_ROOM`,
+  it now renders a single `Ingredient.of(Items.OAK_DOOR)` — the block you point
+  the Town Wand at.
+- **The welcome-mat card tooltip names the click action (2026-10-13 night, user copy).**
+  Re-worded `menu.quests.roomblock.welcome_mat` ("Craft a welcome mat and place
+  it where you'd like people to enter/exit your village.") with the grey
+  click-to-craft line; 1.20.6's `Component` interface has no `withStyle` —
+  only `MutableComponent` does, and `Compat.literal` returns the interface —
+  hence `translatableStyled` + `Style.EMPTY.applyFormat(ChatFormatting.GRAY)`
+  (the FlagCraftingScreen grey-line pattern).
+
+## Leaver-return progress bar (G3, 2026-10-12): the payload carries an absolute tick
+
+The villagers-menu leaver-return bar (`MultiStatusScreen.renderLeaverReturnBar`)
+is driven **without a push channel**: `StatusPacket` gained
+`leaverReturnTick` (absolute server tick at which the leaver's timed trip
+ends; 0 = not away on a timed trip) + `leaverReturnTotal` (the trip's
+declared duration). The server stamps it in
+`FlagMenus.createStatusPacket` → `VisitorMobEntity.getLeaverReturn()` →
+`DeclarativeJob.getLeaverReturn` (gate-mat timer read, see jobs/COMPLEX.md).
+The client re-derives the fraction every frame from
+`Minecraft.getInstance().level.getGameTime()` (container screens re-render
+continuously, so the bar ticks down live; LAN clock skew of a few ticks is
+harmless — clamped). A status-change re-sync then drops the bar when the
+trip ends. `StatusPacket.equals/hashCode` deliberately exclude the two new
+fields so the smoothing queue's majority vote is unaffected. The 3-arg
+convenience constructor keeps the inventory-status call site
+(`InventoryAndStatusMenu`) leaver-free. The bar is a 30×3 fill under the
+32×32 status art (inside the art's footprint — no new card geometry, so no
+layout change; gui-lint check rides the user's first menu open).
+
+**Stale bar on an open page (fixed 2026-10-22, playtest finding #25).** The
+smoothing window lives in `StatusSmoother` (one per screen, 5 frames per
+villager). It used to be rebuilt every frame through
+`UtilClean.getOrDefaultCollection(..., mutable=true)`, which copies into an
+unbounded `ArrayList`. Only the first frame was bounded, so the "majority
+vote" became the most frequent status since the page opened. Because
+`equals` ignores the leaver fields, the next trip's packet also collapsed onto
+the oldest equal one, so the bar kept the expired trip's tick and stayed full
+until a tab toggle built a new screen. Now the window is a real
+`EvictingQueue`, and the winner is the **newest** packet equal to the mode, so
+it carries the current trip. Pinned by `StatusSmootherTest` (red on the old
+algorithm: the next-trip tick and the new status both failed to show; the
+one-frame flicker guard passes either way).
+
+## Status tooltips: unauthored keys fall back, never render raw (2026-10-14)
+
+`JobTooltips.buildStandardTooltipKeys` builds
+`tooltips.villagers.job.<cat>.status_N.<STATUS>` keys, but en_us.json only
+authores some category × status pairs (the diner has just NO_SUPPLIES /
+NO_JOBSITE; the fisher has none at all). A missing pair surfaced the **raw
+i18n key** to the player (2026-10-14 playtest, user chat 04:02:30: "Diner
+tooltip is showing i18n key").
+
+The fix is the vanilla `Component.translatableWithFallback(key, fallback,
+args)` (seam: `Compat.translatableWithFallback`): when the specific key is
+absent the client renders the `JobTooltips.FALLBACK_LINE_1/2` last-resort
+lines instead of the key. The fallback is resolved client-side at render
+time, so no `I18n.has` probing is needed (server-side I18n state would
+differ). Pinned by `JobTooltipsFallbackTest` (red-verified: pre-fix the
+components carry no fallback and the equals-assertion fails). New statuses
+or jobs still get specific copy by adding lang keys — the fallback is only
+the last resort.
+
+## Economics pane's enabled-tab list omitted change_root (2026-10-14)
+
+A tab renders selected when its open-fn is null (the `selected = fn == null`
+marker, section above), and a tab's fn is null exactly when the open pane's
+`getEnabledTabs()` omits that tab's type. Every villager pane builds its list
+as `VillagerTabs.except(ownTab)` EXCEPT `VillagerEconomicsMenu`, which used a
+hand-rolled `ImmutableList.of(INVENTORY, STATS, QUESTS, SKILLS, BOP)` — no
+`CHANGE_ROOT`. With the economics pane open, the "switch job" tab therefore
+rendered selected alongside the economics tab (2026-10-14 playtest: "the
+'switch job' tab also appears selected").
+
+Fix: `ENABLED_TABS = VillagerTabs.except(ECONOMICS)` like every sibling.
+Pinned by `VillagerEconomicsMenuEnabledTabsTest` — the list is a private
+static on a registry-bound menu (the constructor needs a Forge harness), so
+the test reads the field reflectively; the initializer is pure string math,
+safe in a unit JVM. Red-verified by stash: pre-fix code fails the
+change_root-presence and sibling-invariant cases.
+
+## Item- and loot-quest cards show progress (n/target) (2026-10-14, LOOT 2026-10-15)
+
+2026-10-14 playtest (in-game chat 04:26:16): "The 'Create N items' Quests
+should probably show an indication like (3/8)".
+
+The card (`UIQuest.getName()`, ITEM and LOOT cases) appends "(deposited/target)"
+capped at the target when the snapshot carries `deposited` (new nullable
+field; wire: `writeInt` with -1 == null). `deposited` is only ever set for
+open ITEM or LOOT quests.
+
+Server side: `TownQuests.openQuestProgress()` returns wantedId -> progress
+for both types: ITEM = matching-item count across
+`TownContainers.getAllStacks(...)`, using the same ingredient matching as
+the completion path (`questMatchesStack`) so the displayed count is the one
+that completes the quest; LOOT = the quest's own extraction total (the
+2026-10-15 accumulation counter - containers are irrelevant, the extracted
+food may have been eaten or cooked since). Wired into the two surfaces that
+render the main quest card list: `TownFlagMenus.showUI` (flag QUESTS tab) and
+`TownQuestsHandle.showQuestsUI`, via the new `QuestsHolder.openQuestProgress()`.
+The secondary villager/visitor surfaces (`TownVillagerUIs` batch cards) use the
+two-arg `fromLevel` and stay progress-less. Pinned by `UIQuestItemProgressTest`
+(wire round-trip + capped name; red is by-construction - the field did not
+exist pre-fix, so the test cannot compile against it) and
+`UIQuestLootProgressTest` (the "(n/8)" shape on the LOOT card, capped at the
+target).
+
+## Flag quest-card tooltips carry "Villager N" (2026-10-15)
+
+The `quests.job_owner` tooltip on the flag quest cards (`QuestsScreen`,
+`QuestRemoveConfirmScreen`) shows "Villager N" instead of the truncated UUID.
+The UUID->name map rides the flag-menu wire: `TownVillagerHandle.
+displayNamesForAll()` (exposed on the `VillagerHolder` seam via
+`TownVillagerHandles`) is appended by `TownQuestsContainer.write` (after the
+two summary booleans) and `TownRemoveQuestsContainer.write` (after the batch
+UUID) via `AbstractQuestsContainer.writeVillagerNames` (varInt count, then
+UUID+Utf pairs), and read back in `FlagMenus.fromNetwork` /
+`TownRemoveQuestsContainer.read` via `AbstractQuestsContainer.
+readVillagerNames`. `VillagerMenusPayload` (the single-villager BOP payload)
+was NOT touched - it already carries the one name it needs. Resolution:
+`AbstractQuestsContainer.villagerLabelFor(names, uuidString)` - map hit ->
+the display name, miss or malformed owner string -> `UtilClean.truncateMiddle`
+(the historical form). The server-side `createMenu` containers also take the
+map (server menus never render the tooltip, but the shape stays symmetric).
+Codec order + resolution pinned in `FlagMenusVillagerNamesTest` (a drift in
+the append position would corrupt the whole menu-open payload, not just the
+tooltip). No gui-lint impact: tooltip text only, zero layout change.
+
+## Quest card titles: single-line, no fit guard (2026-10-15)
+
+`QuestsScreen.renderCardContent` draws the card title as ONE line —
+`ctx.text(recipeName.getString(), idX, card.coords().topYPadded(), …)` — with
+no width check; the card is fixed-height (`UNSCALED_CARD_HEIGHT = 42`), so the
+only overflow escape is to keep the title short. The budget:
+`PagedCardScreen.CARD_WIDTH = 156` px, `BIG_PADDING = 10` per side, and the
+top-right removal button claims the last 13 px of the top row → ~121 px usable
+for a title. The 2026-10-15 first-work-request card reported "text bleeding
+past the card boundaries" (`.scratch/playtest-2026-10-15/
+first-work-request-card-text-overflow.md`): its title lang key
+`menu.quests.first_work_request` was 45 chars (~215 px). Fix was the string,
+not the renderer: the card title is now "Post a work request"; the full
+sentence stays on the hover tooltip (the quest flavor, `MCQuest.firstWorkRequest`)
+and the post-time chat broadcast. Follow-up candidate (deferred): a small
+ellipsis-fit helper at the draw site for data-driven titles
+(`RoomRecipes.getName` room names, `quests.upgrade` "%s -> %s").
+ (Same day, second user call: the LOOT quest name `menu.quests.food` is now
+"Raw Food" — user chat 03:23:24, after a LOOT completion broadcast read
+"Quest complete: Food"; the key drives the card title and the
+post/complete/lost broadcasts, `.scratch/playtest-2026-10-15/
+loot-quest-named-raw-food.md`.)
+
+**Superseded 2026-10-17:** one key could not name both LOOT quests (user: "The first
+loot quest should be entitled Raw Food ... but the second loot quest (which asks for 8x)
+should be titled 'Food'"). `UIQuest.lootNameKey(wantedId)` picks by the quest's wanted
+tag: `questown:villager_simple_furnace_food_raw` (the hunter's 1x quest) →
+`menu.quests.raw_food` "Raw Food"; anything else (the cook's 8x `#questown:villager_food`)
+→ `menu.quests.food` "Food". The card and `TownMessages.questCompleted/questLost` use it.
+Pinned by `UIQuestLootCardNameTest.raw_food_loot_card_name_is_raw_food_key`.
+
+## Card progress suffix spacing: " (" not "(" (2026-10-15)
+
+`UIQuest.getName` appended the ITEM/LOOT progress suffix with no leading
+space ("Carrots(0/4)", "Raw Food(0/4)" - user report 03:07:06: "needs a
+space before its (0/4) indicator"). The literal now starts with a space in
+both the ITEM and LOOT cases. Pure render text; no layout change.
+
+(The spacing commit itself missed the two card-shape test suites -
+`UIQuestItemProgressTest.card_name_appends_progress_capped_at_target` and
+`UIQuestLootProgressTest` asserted the old no-space literal and went red.
+Fixed to pin the spaced form: "menu.common.quantity (3/8)",
+"menu.quests.food (3/8)", "(8/8)".)
+
+## Playtest 2026-10-15: JOB_CHANGE cards hide the BOP icon
+
+User ruling ("we can just not render the BOP"): `QuestsScreen.renderRecipeCardIcons`
+and `QuestRemoveConfirmScreen.renderRecipeCardIcons` set `ingredients` to
+`ImmutableList.of()` before the empty-room check when
+`recipe.getType() == Quest.QuestType.JOB_CHANGE` — the card keeps its title
+and the 32x32 job art, and only the grey BOP square disappears. The
+ingredients still gate the quest's completeness (`quest.canComplete` /
+`quest.complete` consult `recipe.getIngredients()` directly), so hiding them
+on screen does not unblock the card.
+
+## Playtest 2026-10-15: skills pane respects showInventoryTab
+
+The management-only flag now rides the whole skills-pane chain. Every
+other tabbed villager menu filters `getEnabledTabs()` on it, but
+`VillagerAdvancementsScreen`'s embedding returned `VillagerTabs.all()` —
+a flag-menu session that navigated to the skills tab saw the inventory tab
+resurrect (2026-10-15: "the flag menu -> villager menu screen still shows
+the inventory tab"). `TownVillagerUIs` SKILLS router passes
+`d.showInventoryTab()` into `OpenVillagerAdvancementsMenuMessage` (new wire
+field, appended after `showBlockOfProgressTab`) ->
+`ClientAccess.openVillagerAdvancements` -> screen ctor -> embedding's
+`getEnabledTabs()` returns `VillagerTabs.hideInventory(VillagerTabs.all())`
+when false.
+
+## Playtest 2026-10-15: wide hit region for the board auto-request toggle
+
+The 03:04 playtest report ("no tooltip / checkbox doesn't toggle") turned
+out to be a hit-area problem, not a wiring one: the server log proves the
+round-trip works (03:55: "Board auto-request set to false/true by Dev"),
+and the toggle was reachable only inside a 16x17 box around the 9px glyph —
+hovering the label did nothing. `WorkScreen` now measures the label
+(`font.width`) and registers the whole glyph+label span in a `wideRegions`
+map (same per-frame dedupe style as `removes`); the hover highlight +
+tooltip and `mouseClicked` both use the wide region (checked before the
+16x17 `removes` loop).
+
+**Tick colour (agent playtest 2026-10-22 r3):** the ON tick was filled with
+`0xFFFFFF`. `RenderContext.fill` hands the int straight to `GuiGraphics.fill`,
+which reads it as ARGB, so alpha 0 drew nothing: the tooltip said "Auto-post is
+ON" over an empty box. Now `0xFFFFFFFF`. Any `ctx.fill` colour needs the alpha
+byte. Still open: the row sits on the panel's bottom border (r3 findings #4).
+
+## Tutorial toast lifetime: shown at evening, hidden on sleep (2026-10-15 → 2026-10-17)
+
+Vanilla's `TutorialToast` is a *persistent* toast: it stays on screen until
+something calls `hide()`. "Your camp is ready" (`tutorial.campfire_ready`,
+"Use wand on campfire") is an evening instruction, and two playtests broke it
+from opposite sides: 10-15 it was still up after the first campfire sleep;
+10-17 a 20 s wall-clock cap (the 10-15 fix) let it fire on the afternoon quest
+completion and vanish unseen. Now:
+
+- **When it shows (server):** `TownFlagBlockEntity.showCampReadyToastIfDue()`
+  runs on every evening/night flag tick (`AbstractTownFlagTicker` →
+  `tickEvening` → `TownFlagTicker`) and from `CampfireReadyReward` (a quest
+  completed after dusk). It sends the toast per player
+  (`TownMessages.sendTutorialToast`) when the campfire quest is complete
+  (`TownQuests.isCampfireQuestComplete`), the player is awake, has not yet
+  been shown it this session (`campReadyToastShown`, transient), and has not
+  completed `questown:first_campfire_sleep` (`Compat.hasCompletedAdvancement`
+  — the advancement is the persisted "already slept" bit, so a restart
+  re-shows it only to players who still need it). It waits for vanilla's sleep
+  gate, `!level.isDay()` (~12542 in clear weather), not the EVENING signal (11500):
+  in that gap the toast's "Use wand on campfire" failed with `NOT_POSSIBLE_NOW`
+  (2026-10-23 r10).
+- **When it hides (client):** `ClientAccess.tickTutorialToasts()` (called from
+  `CampfireSleepClientEvents.onClientTick`) hides the active toast once
+  `mc.player.isSleeping()`, and hides the camp-ready one once daylight comes
+  (`CampReadyToast.hideNow`: MORNING or NOON by `Signals`; a campfire sleep can't
+  start then, so the ask is void; 2026-10-22 r3 #17, it stayed up all the next
+  day). A new show replaces the old one; the flag-menu `dismissTutorialToast()`
+  path is unchanged. No wall-clock cap.
+- **Re-armed each morning (server):** the morning pass clears `campReadyToastShown`,
+  so a player who still hasn't campfire-slept gets it again the next evening.
+  Verified live 2026-10-22 (r8): evening shows it, skipping the sleep, the next
+  morning hides it, the evening after shows it again. A `/time add` jump can race
+  the client's clock sync and hide the toast on arrival; natural time can't.
+
+## Quest-card and villager-tab deep links (2026-10-17 playtest round 2)
+
+Four chat requests, one theme: a card or tab should take the player to where its
+ask is answered.
+
+- **JOB_CHANGE card → villagers tab.** `QuestsScreen.openLessonForClickedCard`
+  opens `tooltips.villagers` via `Tabs.openTab` (falls back to the BOP lesson when
+  the tab is absent — the flag menu hides it before the first villager). The tooltip
+  (`jobChangeTooltip`, static; `renderCardTooltip` takes `villagersTabShown` from
+  `Tabs.hasTab`) is the card's flavor/job line plus a grey
+  `menu.quests.job_change.click_villagers` hint only while the tab exists.
+- **ITEM/LOOT card icon → "jobs that make this item".** `renderRecipeCardIcons`
+  records each icon's top-left → `Ingredient` in `itemIconClicks` (cleared at the top
+  of `renderBgContent`, so a page change leaves no stale targets); `mouseClicked`
+  checks those boxes (same ±4 px hover box as the strip's highlight) and calls the
+  container's owner method `AbstractQuestsContainer.sendOpenItemJobs` →
+  `OpenItemJobsMessage` → `TownVillagerUIs.showItemJobsUI` (the work-request
+  screen's existing path). A tag icon (raw food) resolves producers for the tag.
+  Icon tooltip gains `menu.quests.item.click_item_jobs`. (Closes the
+  `RenderUtil.stripOfRequestableItems` "handle clicks" TODO for quest cards.)
+- **Change-profession tab red dot.** Rule: `TownQuests.wantsJobChangeFrom(job)` —
+  an incomplete JOB_CHANGE quest exists AND the villager is on the `gatherer` root
+  (pinned by `TownQuestsJobChangeAttentionTest`). Server: `TownVillagerUIs.openMenu`
+  computes it (`wantsJobChange`) into the new trailing
+  `VillagerMenusPayload.changeRootAttention` (round-trip in
+  `VillagerMenusPayloadTest`). Client: `VillagerMenus.doFromNetwork` records it in
+  `VillagerTabs.CHANGE_ROOT_ATTENTION` (per villager UUID; each tab click re-opens the
+  menu, so it refreshes on every open) and `VillagerTabs.forMenu` sets the
+  `change_root` tab's `hasNotification`. Only the client renders tabs, so the flag
+  rides the payload rather than all five tabbed menu constructors.
+- **Pending-change text font.** `JobChangeConfirmScreen`'s "This villager will change
+  profession in the morning" was a white shadowed `drawCenteredString` (same in the
+  1.19.2 golden — a design change, not a port regression); it now uses
+  `RenderContext.centeredDark` (0x404040, no shadow), the body-text look of the rest
+  of the screen.
+
+## Job names reach the player as the profession, not the id (2026-10-17)
+
+The JOB_CHANGE card read "Villager job: simple_furnace_food" / "Villager job: sword"
+(`UIQuest` passed the bare `jobId`) and the `messages.jobs.changed` broadcast carried
+`JobID.toNiceString()` ("cook:simple_furnace_food"). Both now use the profession's
+`jobs.<root>` key: the card via `extractRootJobName` (the JOB_UNLOCK card already did),
+the broadcast via `Jobs.getRootNameComponent`. Pinned by `UIQuestJobChangeCardNameTest`.
+The onboarding cook quest also names a registered job now
+(`TownQuests.ONBOARDING_COOK_JOB` = cook/extract), so the job change no longer hits
+`ServerJobsRegistry`'s "No work found" ERROR fallback.
+
+## Villagers-tab red dot until first opened (2026-10-17 playtest round 5)
+
+The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.getInfo`,
+`showVillagers`), and from then until a player opens it, it carries a red dot.
+
+- State: `TownFlagBlockEntity.villagersTabSeen`, persisted via `TownFlagTileData`
+  (`villagers_tab_seen`). The field defaults **true** so a town saved before it existed shows
+  no dot; `onFlagPlace` sets it false for a new flag.
+- Decision: `FlagInfo.villagersTabAttention(showVillagersTab, villagersTabSeen)` (pure), sent
+  as the trailing `FlagInfo` wire boolean; `FlagTabs.build` / `computeTabDecisions` use it as
+  the villagers tab's `hasNotification`.
+- Clear: `TownFlagMenus.showUI` calls `markVillagersTabSeen()` for the VILLAGERS type *before*
+  `getInfo()`, so the screen that opens is already dot-free.
+- Town-level, not per-player: any player opening the tab clears it for all.
+- Test: `VillagersTabAttentionTest`. Ticket:
+  `.scratch/playtest-2026-10-17/villagers-tab-red-dot-until-first-open.md`.
+
+## BOP tab: initial focus and a dot that clears on first withdrawal (2026-10-17 round 5)
+
+- **Initial focus** is the pure `FlagTabs.initialFlagTab(bopFull, villagersDot, bopTabUnseen,
+  questsDot, economicsDot)`, called by `TownFlagBlock.use`: a full flag opens BOP (its warning);
+  otherwise the red-dotted tab wins in the user's order Villagers > BOP > Quests > Economics
+  (round 6 revision), else the multi-status overview. Economics' dot is
+  `showEconTab && bonusFoodAvailable`. "Unseen" is
+  `FlagInfo.bopTabAttention()` AND no `first_bop_view` advancement
+  (`TownFlagBlock.shouldPreSelectBopTab`). Before this, incomplete quests outranked the unseen
+  BOP tab.
+- **Dot**: `FlagInfo.bopTabAttention` (trailing wire boolean) = `!TownFlagBlockEntity.bopWithdrawn`;
+  replaces the hardcoded `true`. `bopWithdrawn` is set by `TownFlagBOPItemHandler.eject` (a
+  player's take; spending a BOP on a job change is not a withdrawal) and persisted via
+  `TownFlagTileData` (`bop_withdrawn`). Town-level: any player's take clears it for everyone.
+  `FlagInfo.dumb` / `withQuestNotification` keep `true` (the old behaviour) for their callers.
+- Test: `BopTabAttentionTest`. Ticket:
+  `.scratch/playtest-2026-10-17/bop-tab-focus-and-dot-clears-on-withdraw.md`.
+
+## Villager menu initial tab: change-job while dotted (2026-10-17 round 5)
+
+The two player entry points into a villager menu — right-click (`Jobs.openInventoryAndStatusScreen`)
+and the flag's villager card (`MultiStatusScreen.mouseClicked`) — send the pseudo-type
+`OpenVillagerMenuMessage.INITIAL` instead of a concrete tab. `TownVillagerUIs.showUI` resolves it
+after finding the entity with `VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab)`:
+CHANGE_ROOT while the change-profession red dot would show (same predicate,
+`TownFlagBlockEntity.wantsJobChangeFrom`), else INVENTORY (right-click) or STATS (management view)
+— the defaults the entry points used before. Tab clicks keep their explicit types, so switching
+tabs is unaffected. `INITIAL` is not in `VillagerTabs.all()`, so the `menuShow` coverage check in
+`TownVillagerUIs.staticInit` does not demand a shower for it.
+Test: `VillagerInitialTabTest`.
+
+## Job board empty state: blank line between headline and hint (2026-10-17 round 5)
+
+`WorkScreen`'s empty state draws "No work requests yet." at `emptyTop`, then the hint
+(`job_board.empty.2` or `.top_need`) at `emptyTop.y() + headlineHeight + lineStep`, where
+`lineStep = (int) (font.lineHeight * 1.5)` (the `Compat.drawTextWrap` step) — a blank line. Before,
+the hint used `y + 8` after advancing `y` from the un-padded origin, ~2px under the headline.
+Ticket: `.scratch/playtest-2026-10-17/job-board-empty-state-needs-blank-line.md`.
+
+## First-arrival line does not name villagers (2026-10-17 round 6)
+
+`MultiStatusScreen` shows `gui.status.villager_arriving_morning.first` when the town has no
+villagers yet and an arrival is queued. Its copy is "A reward will be granted in the morning": the
+player may not know about villagers yet, so the first arrival is not telegraphed. Once villagers
+exist, `gui.status.villager_arriving_morning` ("...and one more in the morning") still names them.
+Hovering that card shows `gui.status.villager_arriving_morning.tooltip` ("For completing your
+quests, a new villager will join your town in the morning"; dev playtest 2026-10-29). The `.first`
+card stays without a tooltip, so the first arrival is still not telegraphed
+(`MultiStatusScreen.renderTooltipContent`, `isOverCard`). Not unit-tested (screen code).
+The arrival card now comes first (`ArrivalCard.order`, `ArrivalCardTest`): appended after every
+villager it sat on page 2 once the first page was full, and the dev was surprised by a villager
+(dev playtest 2026-10-29: "Maybe it should always be shown on page 1 - pushing other villagers
+down"). The screen finds the card by its sentinel UUID, never by position.
+
+## Economics card tooltip wraps like the other card screens (2026-10-17 round 6)
+
+The paged card screens wrap tooltips with `AbstractPagedCardScreen.renderTooltipWithDynamicWrapping`
+(width = the background's right edge minus the cursor x, min 80). `TownEconomicsScreen` draws its
+card tooltip from `renderScreenExtras`, outside that path, and used to hand `showTooltip`
+unwrapped `FormattedCharSequence`s (the free-food line ran wide). It now builds `Component`s and
+calls the (now protected) wrapping helper.
+
+## Playtest 2026-10-19 UI rulings
+
+- **Upgrade quest tooltip.** A ROOM quest that names a from-recipe (an upgrade) reads "Upgrade
+  an existing room by adding the blocks shown here" (`menu.quests.room_upgrade_quest`), not
+  "Build a room containing ..." (`RoomQuestTooltipKeys.forQuest`, `RoomQuestTooltipKeysTest`).
+- **Villager menu BOP tab from the flag.** Opened through the flag's villagers click-through
+  (the management view, no inventory tab), the villager menu always shows a BOP tab that
+  re-opens the flag UI on its BOP tab (`FlagTabs.makeOpenFn(..., OpenFlagMenuMessage.BOP)`).
+  Opened by interacting with the villager, the tab is the villager's own earned-BOP screen when
+  it has one; otherwise (since 2026-10-23, agent playtest r10 #5, a dev *trial* that reverses
+  the 10-19 "not visible via villager interaction" ruling) it also leads to the flag UI's BOP
+  tab, so the change-job panel's "Insert a Block of Progress" has a visible path. There is no
+  distance gate on `OpenFlagMenuMessage`, so this reaches the flag's BOPs from anywhere; that
+  remote reach is what the trial is feeling out (`VillagerBopTab.decide`, `VillagerBopTabTest`).
+  **Tab capacity** (dev worry, 2026-10-23): tabs sit at a 24 px pitch from a 6 px offset on the
+  176 px card, so 7 tabs reach the right edge. Seen in-world: 6 (inventory, economics, stats,
+  change job, quests, BOP); with the skills tab it is 7, the last that fits. An 8th needs a
+  second row or a scrolling strip.
+- **Pending job change on the villagers page.** `MultiStatusScreen.SyncedData.pendingJobChange`
+  (server: `VillagerHolder.isJobChangePending`) puts an asterisk on the job title
+  (`PendingJobChangeMark`) and a hover tooltip "This villager will change profession in the
+  morning" (`menu.unlock_root.already_pending`). The wire field is not unit-pinned: a
+  `RegistryFriendlyByteBuf` test trips the strangler gate (1.20+ type outside the seam).
+- **Crafting tab.** Rows come from `core/network/FlagCraftRecipes.ALL` (wand, welcome mat, job
+  board, mineshaft, fishing station); flow layout grows the panel per row. Five rows not yet
+  checked in a client (gui-lint / pagination still open).
+Not yet seen in a client: the gui-lint pass for these screens is pending a client run.
+
+## Skills pane hover was drawn behind the pane (2026-10-19)
+
+Dev: "The hover tooltips on the skills UI do not show the job names". `VillagerAdvancementsScreen
+.renderTooltips` translated the tooltip pass by z 0 where the 1.19.2 golden uses +400;
+`VillagerAdvancementsContent.drawTooltips` shifts its content to -200, so the hover box, the job
+title and the pane dim sat at z -200, behind the pane background. Restored +400 on the gui pose
+(no modelview stack). Verified by capture (`tools/porttest` hook on a worktree server): before,
+hovering a node showed nothing; after, the pane dims and the title ("gather") shows. gui-lint OK
+for VillagerAdvancementsScreen and for the five-row FlagCraftingScreen (no pagination needed).
+
+## Plain screens close on the inventory key (2026-10-20 playtest)
+
+Container screens close on [E] through vanilla `AbstractContainerScreen.keyPressed`; questown's
+plain `CompatScreen` leaves (ItemJobsScreen, WorkRequestConfirmScreen, RelocationConfirmScreen,
+VillagerAdvancementsScreen) never did. `CompatScreen.keyPressed` now applies the same rule: the
+screen and its focused widget get the key first (a focused text box keeps typing), then the
+inventory key closes. Not autotestable (the client hook cannot press keys); confirmed by the dev.
+
+## Room quest cards show one icon per bed (2026-10-22)
+
+A bed is two blocks and room recipes count both, so a recipe lists two `#minecraft:beds` per bed
+(`commands/test/COMPLEX.md` "A bed is two blocks"). `RoomRecipes.filterSpecialBlocks` drops the
+ingredient after each bed, so `QuestsScreen` and `QuestRemoveConfirmScreen` show one bed icon per
+bed: the Bedroom card shows one bed, the Big Bedroom two. Commit `f6097a58` removed the filter on
+the mistaken reading that each ingredient is a physical bed (RoomRecipes `deb6333`, since
+reverted), and the Bedroom card showed two beds for a one-bed room. The filter is restored.
+
+## Crafting-tab icon tooltips use the plain item name (2026-10-22 playtest)
+
+The input/output icon tooltips used `Compat.getItemName`, the chat form, which vanilla wraps in
+square brackets ("[Oak Pressure Plate]"). They now use `Compat.getHoverName`, the name an item
+tooltip shows.
+
+## Paged screens count at least one page (2026-10-22 playtest)
+
+The empty job board read "Page 1 / 0". The five paged screens (`PagedCardScreen`, `WorkScreen`,
+`AddWorkScreen`, `CreateStockRequestScreen`, `QuestRemoveConfirmScreen`) each computed
+`ceil(size / perPage)`; they now share `Pages.count`, which floors the total at 1 (`PagesTest`).
+The next-page checks use the same count, and stay closed on a single page either way.
+
+**The request picker pages grid slots (r16 #2, 2026-10-24).** `AddWorkScreen` sized its pages for
+42-px cards (3 per page) but draws an 8-wide icon grid, and it computed the page's range without
+using it, so every page drew the whole list (4 items read "Page 1 / 2" with both pages identical).
+It now flattens the requests into grid slots once (`RequestSlot`: a category is one slot, a
+multi-item ingredient one slot plus one per member), pages them by `SLOTS_PER_PAGE` (8 x 7) and
+draws only `Pages.slice(slots, page, perPage)` (`PagesTest`). Live on the r16 world: "Page 1 / 1",
+each item once, gui-lint OK, a click opens that item's confirm. `CreateStockRequestScreen` (the
+deprecated fetcher's clipboard) still has the unused range, latent below its 81-slot page.
+
+**A tag product is its category's tile, not one tile per member (r16 #18, 2026-10-24).** The cook
+and baker jobs declare `"initial_request": "#questown:villager_food"` (their `result` is
+`uses_special_rules`: the furnace decides the cooked item). `ServerJobsRegistry.getAllOutputs`
+added every member of that tag as its own product, so the picker offered carrot, apple and the
+other 14 foods though no job makes most of them (the confirm said "0 known jobs"). It now keeps a
+tag request as one tag ingredient (`RequestOutputs.of`, `RequestOutputsTest`), and
+`TownWorkHandle.openMenuRequested` drops a product that is an offered category
+(`RequestCategories.withoutCategories`, `RequestCategoriesTest`): the category slot (one cycling
+icon, one tag request) already stands for it. The categories are still computed from the full
+product set, so "Food" stays offered. The stock-request clipboard (`StockRequestClipboardItem`)
+gets the kept-whole tag too; its screen draws a multi-item ingredient as a cycling slot plus one
+per member, so it still lists the members.
+
+## Request confirm title names the item (2026-10-22 playtest)
+
+`WorkRequestConfirmScreen` titled itself `Compat.translatable(Ingredients.toString(requested))`.
+For an item that is the raw id ("Requesting minecraft:wheat_seeds", which also ran past the
+panel edge), since an item id is no lang key. It now uses `Ingredients.getName`, as the cards do.
+
+## Villagers page job title uses the jobs.* key (2026-10-22 playtest)
+
+`MultiStatusScreen` translated the bare root id, which has no lang key, so the card read
+"gatherer". It now uses `"jobs." + rootId` like every other screen (`jobTitle`). The 1.19.2
+golden had the same bug.
+
+## Villagers page status tooltip wraps (2026-10-22 playtest)
+
+The status-icon tooltip ("Gatherer can't find work. Check the Economics Tab and the Job...") ran
+off the right screen edge: `MultiStatusScreen` handed the lines to `showTooltip` unwrapped. It now
+goes through `renderTooltipWithDynamicWrapping` like the other card tooltips. Compiled and gated;
+not yet seen live.
+
+## Quests tab: open quests only, completed behind the link (2026-10-22)
+
+`QuestsScreen.cardsData()` shows only non-COMPLETED quests until the player presses
+"View completed quests →" (`menu.quests.view_completed`). That used to show the whole list;
+since r17 (dev 2026-10-25: "it shows incomplete quests too, it shouldn't") it shows COMPLETED
+quests only, and the button becomes a toggle ("← View open quests", `menu.quests.view_open`)
+that flips `showingCompleted`, returns to page 1 (`PagedCardScreen.firstPage`) and rebuilds
+the widgets. In the completed view the toggle always sits in the footer (the all-done centred
+spot would sit on the cards).
+Completed cards used to share the main list and padded it to dozens of pages (agent
+playtest: 4 open quests on "Page 1 / 7"; 48 pages after the quest cascade). Dev ruling:
+open only + the link. The link was previously only the all-done empty state's; it now also
+appears whenever any quest is completed, as a button just below the panel
+(`footerButtonY`, 2 px gap). All-done keeps its centred placement.
+
+Card indices point into `cardsData()`, not `quests`: `renderCardContent` and
+`openLessonForClickedCard` look up `cardsData().get(card.index())`. Verified live:
+"Page 1 / 1" with the two open quests, the link below the panel, gui-lint OK on
+QuestsScreen (606x647); clicking it shows "Page 1 / 48". Applies to the per-villager
+quests screen too (same class).
+
+## Completed quest cards freeze their progress (2026-10-22)
+
+ITEM/LOOT cards show "(n/m)" from `questProgress`, the town-wide live tally keyed by the
+wanted item, so a ticked card drifted with the storeroom ("Coal x8 (7/8)" after the cook
+burned one). Dev ruling: freeze at completion. `QuestCardProgress.shown` returns the live
+count while open and `countNeeded` once COMPLETED: these quests complete only on reaching
+their count, and the card caps at the target, so the count at completion always reads n/n
+(no stored value needed). `UIQuest`'s server-side mapping calls it. Pinned by
+`QuestCardProgressTest`; live: with 4 coal in the storeroom, the completed card read "(8/8)".
+
+## UI batch, 2026-10-22 (dev: "fix them", see docs/ui-principles.md)
+
+- **Job board toggle band (`WorkScreen`).** The auto-request row was drawn at the moved card cursor
+  `y + backgroundHeight - 34`, i.e. on the panel's bottom border. The panel is now 182 px (was 166)
+  and the row sits at `panelTop + backgroundHeight - PAGE_PADDING - 9`, inside a bottom band;
+  `MAX_CARDS_PER_PAGE` is derived from the space above the band, so it stays 3. Live: r8.
+  Later the same day the grey square became vanilla's checkbox sprite (`RenderContext.checkbox`,
+  `GuiGraphics.blitSprite` of `widget/checkbox[_selected][_highlighted]`), 13 px at
+  `panelTop + backgroundHeight - borderPadding - 13`; the band is `13 + borderPadding + 4` = 23,
+  the same as before, so 3 cards per page still. The click box is 13 high to match the box.
+  Live r8: ticked when on, empty when off, the click toggles, gui-lint OK. Live r9: hovering shows
+  the highlighted sprite and the on/off tooltip. (An r8 note said hover was unobservable; that was
+  the agent parking the cursor at 2x coordinates. QtDiagClient `click`/`cursor` take the
+  screenshot's own pixel coordinates.)
+- **Quest titles fit their card (`QuestsScreen`).** One line through `Compat.fitToWidth` (ends in
+  "…" when cut), leaving room for the removal "x"; the full title shows on hover over the line.
+- **Readable job variant names.** `Jobs.getVariantNameComponent` = lang key `jobs.<root>.<job>`,
+  else `JobNames.variant` ("rod_half_day" -> "Rod (half day)"). Used by the "Learn More" page title
+  (`ItemJobsScreen`), the skill tree's node titles (`VillagerAdvancementsContent`) and the job
+  tooltip pair (`Jobs.getComponentsForTooltip`). The skill tree root's placeholder "test"/"test2"
+  is now `menu.jobs.root.title`/`.description`. `JobNamesTest`.
+- **Economics card order (`EconomicsCardOrder`).** While the free-food claim is open, the food card
+  is pinned to row 1; otherwise the server's ranking is kept. `EconomicsCardOrderTest`.
+- **Stats page level and mood effects (`VillagerStatsScreen`).** `VillagerStatsData` gained
+  `level` and `moodEffects` (effect ids, from `Delegator.getMoodEffectIds`, default empty), on the
+  wire via `VillagerStatsMenu.write/read` (the menus payload now uses those too instead of a
+  duplicate encoding). "Lvl N" is right-aligned on the experience title; the old mood row lists the
+  active effects in words on one fitted line (`menu.villager_stats.effect.<path>`, else
+  `JobNames.variant`). Live: r8 showed "Lvl 1" and a sleepless villager's effect.
+  A line cut short by `Compat.fitToWidth` lists every effect, one per line, on hover (r16 #13:
+  "Didn't sleep, works slower, Ate…" had no way to read the rest); a line that fits shows no
+  tooltip, as with quest-card titles. Live on the r16 world: "Ate without a table, Ate raw fo…"
+  hovered to both names.
+
+## Request categories on the job board (2026-10-22)
+
+Dev: "figure out some way for players to request 'food' ... (same for swords)". A cook starts with
+a subset of recipes; the player just wants food. A category is an item tag offered in the board's
+"+" list; requesting it posts a tag `WorkRequest`, which the engine already handled end to end
+(`Ingredients.asWorkRequest` -> `WorkRequest.of(TagKey)`; producers match by `Ingredient.test`).
+
+- **Which categories**: `jobs/requests/RequestCategories.CATEGORIES` (food, raw food, raw fish,
+  swords, axes, pickaxes, shovels, hoes, fishing rods), offered when some unlocked job can make an
+  item in the tag (`RequestCategories.offered` over `getAllOutputs`' stacks; `TownWorkHandle`).
+- **Wire**: categories travel as tag ids (`AddWorkContainer.write/readCategories`). An `Ingredient`
+  crosses the network as its item list, so a tag ingredient arrived as an anonymous list the client
+  could neither name nor encode (`Ingredients.toString` threw: a client crash, caught live in r8).
+  The client rebuilds `Ingredient.of(tag)` (`AddWorkContainer.getCategories`).
+- **Screen**: a category is one framed slot (cycling its members), tooltip "Raw Food / Any kind will
+  do", never expanded into its members (most are not producible); each slot remembers the request it
+  stands for, so a click sends the category, not the member on show. Board cards now name the
+  request ("Raw Food") instead of "An item was requested".
+- Pins: `RequestCategoriesTest` (3); autotest `loot:cook_extract_food_category` (a Food category
+  request drives the cook exactly like the cooked-mutton one, 5/8). Live r8: hover, confirm
+  ("Requesting Raw Food", 3 producers), posted card "Raw Food".
+
+## Change-job panel names the promised job (2026-10-22)
+
+While an onboarding job-change quest is open, a BOP spend on that townie gives the quest's job
+whatever the BOP (`TownQuests.onboardingJobChangeGuarantee`, now exposed as
+`TownFlagBlockEntity.promisedJobChange`), but the panel said "change to a different, random
+profession". The root rides `VillagerMenusPayload.promisedRoot` (and the server-side
+`JobChangeConfirmMenu`) and `JobChangeConfirmScreen` shows
+`menu.unlock_root.insert_bop_promised` ("Insert a Block of Progress to make this villager a
+Hunter"). Since ADR-0016 the promise is the only named root a spend can have.
+`VillagerMenusPayloadTest` round-trips the field.
+
+## Flag crafting: "Begin moving this town" takes two clicks (2026-10-22, r9)
+
+The relocate button (`FlagCraftingScreen.onBeginMoving`) starts the shutdown ritual, which recalls
+every townsfolk (cancel and wake now have a UI: see the next section). It sits
+8 px under the last Craft row, so the first click only arms it and relabels it "Click again to pack
+the town" (`menu.flag_crafting.begin_moving.confirm`); the second sends `BeginTownRelocationMessage`.
+`moveArmed` resets in `init()`, so reopening the tab (or a resize) disarms it. docs/ui-principles.md
+rule 10. Live r9: one click armed it with no shutdown; the second logged "Town shutdown started".
+
+## Town shutdown: wake, deed re-issue and cancel from the UI (2026-10-23)
+
+ADR-0009's loss-protection paths (`TownFlagBlockEntity.wakeInPlace`, `reissueDeed`,
+`cancelTownShutdown`) were reachable only through `/qt flag <pos> shutdown wake|reissue|cancel`, so
+a lost deed or a misclicked relocate had no way back without commands (dev ruling: build it now).
+
+- **Right-click on the flag** is decided by the pure `blocks/FlagClickAction.of(deedAvailable,
+  phase)` (pin: `FlagClickActionTest`): a waiting deed is collected first; a DORMANT flag with no
+  deed sends `OpenDormantFlagMessage` and the client opens `DormantFlagScreen` ("Wake the town" /
+  "Get the deed back" / Cancel), whose choice comes back as `DormantFlagChoiceMessage` and calls the
+  owner's `wakeInPlace()` / `reissueDeed()`; every other phase opens the flag menu as before.
+- **During the ritual** the crafting tab's move section reads the synced `TownFlagBlock.PHASE`
+  blockstate on the client (`FlagCraftingScreen.isShuttingDown`, no `FlagInfo` wire change): while
+  SHUTTING_DOWN it shows `cancel_moving_desc` and a one-click "Cancel moving" button
+  (`CancelTownShutdownMessage` → `cancelTownShutdown()`). One click, because cancelling is the safe
+  direction. The button is deactivated before sending (P10).
+- Every server handler re-checks eligibility on the owner and answers in chat either way; a stale
+  open tab (the ritual finished first) gets "This town isn't packing up."
+- `DormantFlagScreen` sizes its message with the 1.5x wrapped line height that `Compat.drawTextWrap`
+  uses; sizing with `font.lineHeight` made gui-lint report the text overlapping "Wake the town".
+
+Verified live 2026-10-23 (held `flag/town_shutdown`, `runClient -Pautojoin -Pautoport=25585`, the
+real right-click via `_qtdev clickheld` in survival; spectator clicks return PASS): deed collect, then
+the dormant screen (gui-lint OK); Wake ("Your townsfolk are unpacking.", town re-activated); Get
+the deed back (reissued deed collected on the next click); Cancel moving mid-ritual ("Town shutdown
+cancelled; flag re-activated"). `flag/` autotests 19/19.
+
+## Status art for work, waiting and extracting (2026-10-23)
+
+`StatusArt` maps a `ProductionStatus` to a picture and fell back to
+`textures/error.png` (the purple/black checkerboard) for anything unmapped,
+which included every work state (`state:N`), `WAITING_FOR_TIMED_STATE` and
+`EXTRACTING_PRODUCT`. So a villager at work showed the checkerboard (r9
+findings #14; 1.19.2 does the same). Work states are not constants, so they map
+by predicate (`isWorkingOnProduction()` after the table lookup) to
+`menu/gatherer/working.png`; waiting and extracting have table entries
+(`waiting.png`, `extracting.png`). Dev ruling: new art, drawn by the dev. The
+three PNGs are placeholders copied from `gathering.png`, `relaxing.png` and
+`returned_success.png`; replace the files, no code change needed. Pin:
+`StatusArtTest` (no checkerboard for those states, and each texture file ships).
+**A root's own working art (dev playtest 2026-10-28).** `working.png` is the leaver's gathering
+art, so a crafter at its table showed it ("makes no sense"). Every crafter-root job JSON declares
+a `{"type": "working", "new_texture": ...}` override showing the table it works at: the
+`crafter_*` files show `minecraft:textures/block/crafting_table_top.png`, the `blacksmith_*` files
+(ids `crafter/...`) show `questown:textures/blocks/blacksmiths_table_front.png` (dev 2026-10-29; the
+face its item icon shows, since the top is a plain dark square at icon size), and the display jobs
+name their own. Both are 16x16; `StatusGraphic` blits 32x32 with the size declared 32x32, so the
+whole texture fills the box. `ServerJobsRegistry.getTexture` applies the override before
+`StatusArt`, and like the cook's furnace art it also covers extraction. 2026-10-29: this was a Java
+`ROOT_WORKING_ART` map in `StatusArt`, moved to data so per-job art stays one mechanism. Pins:
+`JobDataRootsTest.everyCrafterJobDeclaresItsWorkingArt`, `blacksmithsTableJobs_showTheBlacksmithsTable`.
+The four `armorer_*` files (ids `armorer/...`, run under the crafter root) were missed by the
+`crafter/` id check and showed the leaver art (dev playtest 2026-10-29: "Crafter building boots is
+showing the 'left town' icon"); they now show `armorers_table_front.png`, pinned by
+`armorersTableJobs_showTheArmorersTable` (the table checks key on the job's `block`, not its id).
+
+## Change-job panel: the next action and the real timing (2026-10-23, r9 #2)
+
+The panel said "Insert a Block of Progress ... (starting tomorrow morning)" with the Block of
+Progress already in the slot, and in creative, where `JobRootChangeMessage` (which carries the
+player's creative flag) changes the job at once. `JobChangeText.of(inserted, creative,
+promisedRoot)` picks the line: `insert_bop[_promised]` before insertion,
+`click_unlock[_promised]` after (the "special" blessed line went with ADR-0016); the timing is its own
+key (`when_morning` / `when_now`) passed as the last `%s`. Pin: `JobChangeTextTest`. Live
+2026-10-23: survival empty / inserted, and creative inserted ("starting now"), gui-lint OK.
+**A promised change is "now" too (dev playtest 2026-10-28).** Since r22 a quest-promised change
+(onboarding or a path's JOB_CHANGE) applies at the spend (`TownFlagBlockEntity.requestJobRootChange`:
+`now = instant || promised.isPresent()`), and the menu's promised root comes from the same
+`promisedJobChange` (`TownVillagerUIs`). `when_now` = creative or promised. Pin:
+`JobChangeTextTest.promised_is_now_in_survival`.
+
+## A tag's name: lang key "#<tag>", with a fallback (dev playtest 2026-10-28)
+
+`Ingredients.getName` names a tag ingredient through the lang key `"#<tag>"`. With no entry the key
+itself rendered (the economics tab showed "#minecraft:saplings"). It now uses
+`Compat.translatableWithFallback`, with `tagFallbackName` (the path's last segment, words
+capitalized: "Saplings") as the fallback. The real names live in `en_us.json`;
+`TagNamesTest` fails when a tag in `questown_jobs/` or `questown_paths/` has none.
+
+## The status tooltip and needs row name what a villager is blocked on (2026-10-23, r9 #4)
+
+A swordless hunter read "Hunter is looking for supplies. They will search in room chests." and its
+needs row showed a Job Board (`getWantedResourcesProvider` hardcodes the board for any seeking-work
+villager), while the town already knew the blocker: the townie's UNMET_ITEM key, which drives the
+need bubble. Dev ruling: row + status line. `VisitorMobEntity.getUnmetItemIngredient()` (moved from
+`NeedBubbleFocus`) is the one source. `ServerJobsRegistry.getStatusText(job, status, townie)` and
+`getNeededItems(townie)` apply `StatusNeedLine`: while the villager is not working (a work state,
+extracting, or going to the job site count as working), the blocker replaces the second status
+line ("They need %s to work.") and the needs row; while working, both stay as the job describes
+them. A diner (any of the three, `DiningStages.isDiner`) also keeps its own lines and row
+(`StatusNeedLine.keepsOwnLines`, agent playtest r10 #8, dev 2026-10-23): "Cook is looking for
+food. / They need Coal to work." read as one thought; the job's blocker shows again once the
+villager is back at work. Pin: `StatusNeedLineTest`. Live 2026-10-23 (held `cook/fuel [no_coal]`): flag villagers tab
+"Cook is looking for supplies. They need Coal to work."; inventory needs row showed Coal, not the
+Job Board. Not fixed: the inventory screen's own status tooltip still falls back to "busy with
+their work" (`.scratch/agent-playtest-2026-10-22-r9/inventory-status-tooltip-ignores-server-text.md`).
+
+## Status first lines stand alone (2026-10-23 r10)
+
+Many `tooltips.villagers.job.*.status_1.*` strings were half a sentence finished by `status_2`
+("%s can't find work. Check" / "the Economics Tab and the Job Board"). Since `StatusNeedLine`
+replaces the second line with "They need X to work." for any non-working status, the first line
+dangled: a swordless hunter read "Hunter can't find work. Check / They need Swords to work."
+Every non-working first line is now a full sentence and the second line adds to it.
+`StatusFirstLineSentenceTest` reads `en_us.json` and fails on a fragment; crafting-step keys
+(blacksmith, crafter, baker, smelter, one_mushroom_stew) are exempt because a working status
+keeps its own second line.
+
+## Work-request confirm: the job icons name their job (2026-10-23 r10)
+
+"There are N known jobs which produce it" draws one icon per producing job (the job JSON's
+`icon`, often a tool: the gatherer variants are all boots). `RenderUtil.stripOfRequestableItems`
+returns the hovered icon's tooltip lines (root + variant name, `Jobs.getComponentsForTooltip`),
+and `WorkRequestConfirmScreen.renderJobIcons` dropped that return, so hovering only highlighted
+the icon. It now passes the lines to `showTooltip`. Live: hovering the first boot reads
+"Gatherer / Gather (half day)".
+
+Diner statuses (all three diners share the `diner` tooltip category in `JobTooltips`) had keys
+only for NO_SUPPLIES and NO_JOBSITE, so an eating villager read the generic "%s is busy with their
+work." (r10 #10). The diner category now covers its work states (0-2), GOING_TO_JOB,
+COLLECTING_SUPPLIES, WAITING_FOR_TIMED_STATE, EXTRACTING_PRODUCT and IDLE.
+
+## Quests screen: nothing to show (2026-10-23 r10)
+
+`QuestsScreen` had one empty state, the flag's all-done state (`isAllComplete()`, from the town
+summary). A villager's Quests tab (`VillagerQuestsContainer`) inherits `isAllComplete() == false`,
+so with no open quests it drew a blank "Page 1 / 1". When there are no cards and no all-done state,
+`renderNothingToShow` now centres "No open quests right now." (`menu.quests.none_open`). gui-lint:
+`QuestsScreen — OK`.
+
+
+## Item jobs screen: no known producer (r17 crash, 2026-10-25)
+
+Clicking a quest's item icon opens `ItemJobsScreen` with the producers
+`ServerJobsRegistry.getJobsKnownToProduce` returns. Loot jobs count only for drops the town has
+already seen, so on day 1 the raw-food quest's icon got an empty list, and `getFirst`
+(called every frame from `renderPrologue`) did `jobs.get(0)`: `ArrayIndexOutOfBoundsException`,
+client crash. `getFirst` now returns empty for an empty list (the Add button hides, as for a
+job with no result), and the screen draws `menu.item_jobs.none_known` under the title.
+
+The empty-state line sits under the page-navigation row, aligned to it (the first placement, a
+fixed offset from the title, drew over "Page 1 / 1": r17 screenshot 00:14). Player text says
+"villagers", never "townies" (dev rule).
+
+## Quests panel grows to hold the "View completed quests" button (r17, dev 2026-10-25)
+
+The footer button sits just below the 166 px panel (`footerButtonY`), which read as floating in
+space. `QuestsScreen.panelHeight()` adds `FOOTER_GAP + BUTTON_HEIGHT + FOOTER_PADDING` while
+the footer button shows (not in the all-done state, where it is centred inside the panel), and
+both the panel draw and `getExtraAreas` use it. The top edge stays put, so cards and the page row
+do not move.
+
+The Produces row and the "Add To Work Requests" item use `ProducedMatches.of(result, requested)`
+(r17, dev: "should only show matching items"): only the job's results that match the clicked item,
+or all of them when none match. Before, a click on raw food listed the hunter's whole loot and the
+button requested the job's first result, whatever it was. `ProducedMatchesTest`.
+
+## Flag crafting: the "Begin moving" description is a tooltip (r17, dev 2026-10-25)
+
+With five recipe rows plus the moving section (shown once a villager has joined), the panel was
+~257 GUI px, taller than a 240-px GUI (1280x720 at scale 3): the title and the button were cut
+off. The 4-line description moved from the layout into the move button's hover tooltip
+(`isOverMoveButton`, wrapped to `TOOLTIP_WIDTH`), which saves ~60 px. Hiding the mineshaft and
+fishing station rows until their quests (r17 finding #1) will save more.
+
+## BOP tab: bottom-aligned Take button that keeps the tab open (r17 #3, #11, 2026-10-25)
+
+`TownBlockofProgressScreen` put the Take button wherever its text ended, so it moved when the
+optional "Earned by" or red "flag full" line appeared. It is now anchored to the panel's bottom
+(`BUTTON_MARGIN` above the edge) and hidden at 0 BOPs. A click used to send `GiveBOPMessage` and
+close the screen; now it disables itself and `GiveBOPMessage.handle` re-opens the BOP tab
+(`menus.showUI(..., OpenFlagMenuMessage.BOP, ...)`) with the new count, the job board's
+re-open pattern. Check with gui-lint that the text never reaches the button.
+
+## Villager menus have no Quests tab (r17 #20, dev 2026-10-25: "not useful")
+
+`VillagerTabs.build` no longer adds the book-icon Quests tab (the flag's Quests tab stays), and
+the inventory tab's "Quests" button is gone: its handler (`openQuestsScreen`) was empty, so it
+never did anything. The villager quests container and its open path are still there, unreachable
+from the UI. Tab positions after it shift left by one (playtest skill click positions).
+
+## Flag crafting rows wait for their quest (r17 #1, dev 2026-10-25)
+
+"The mineshaft and fishing station crafting recipes should be hidden until the relevant quests have
+been opened." `FlagCraftRecipes` carries `unlockedByQuest` (the mineshaft row:
+`questown:block_room/block.questown.mineshaft`, the miner beat's room quest via
+`getRoomForJob(miner/coal)`; the fishing station row: `questown:block_room/block.questown.fishing_station`,
+the fisher's room). The flag menus payload already carries the town's quests, so
+`FlagMenus.fromNetwork` hands their wanted ids to `FlagCraftingMenu`, and `FlagCraftingScreen` lays
+out only rows `FlagCraftGates.visible` accepts, each button keeping its index in `ALL`.
+`FlagCraftMessage` re-checks against the flag's own quests. Posted = open or completed, so a row
+stays once seen. `FlagCraftRecipes.craft` itself is ungated (the growth driver calls it directly).
+`FlagCraftGatesTest`.
+
+## Skills tree: frame columns are vanilla's (r17 #22, dev 2026-10-25)
+
+"The squares behind job icons on the skills UI look like they're grabbing the wrong part of the
+texture; needs to be adjusted by 1 or 2 pixels horizontally." `VillagerAdvancementsWidget.
+getFrameType` hardcoded u 1 (task) and 54 (goal) for the bundled `widgets.png`; that sheet has the
+vanilla layout (26-px cells at u 0 / 26 / 52, `FrameType.getTexture()` in 1.19.2 by javap; the
+golden calls `FrameType.X.getTexture()`), and 1 / 54 are only where the art's opaque pixels start.
+Now 0 / 26 / 52. Checked from the PNG (opaque runs on row 140: x 1-24, 27-50, 54-75), not yet on
+screen.
+
+## Work requests: card 1 is no longer tinted (r22, 2026-10-26)
+
+Dev: "The first card on the work requests UI is still shaded. Other UIs are fixed though." The F2
+shot (Raw Food + Raw Mutton) measured card 1's interior at RGB 174, card 2 and the panel at 198; the
+1.19.2 golden draws every card at 198, and JEI's `single_recipe_background.png` centre is an opaque
+198, so it was a draw-time tint. `PagedCardScreen.renderCards` resets the shader colour before card 1;
+`WorkScreen` reset it only after each `drawNineNine`, so card 1 inherited what the page header
+(`renderPageNum`'s fill + drawString) left. `WorkScreen.renderScreenContent` now calls
+`Compat.resetShaderColor()` before the card loop. Which call leaves the colour is not identified.
+Verify with a shot of 2+ cards (`QtDiagClient.shot`), not a one-card bank.
+
+## The mineshaft quest card opens crafting (r22, 2026-10-26)
+
+Dev: "The 'mineshaft' quest should have a hint for looking at the crafting tab, like the job board
+and welcome mat quests do." `QuestsScreen.opensCrafting(wantedId)` (welcome mat, empty room, job
+board, `FlagCraftRecipes.MINESHAFT_QUEST`) drives both the two-line tooltip (`menu.quests.roomblock.mineshaft`
++ grey `click_crafting`) and the click deep link to the crafting tab. The fishing station
+(`FISHING_STATION_QUEST`, also a flag crafting row) is not included; nobody asked.
+
+## Blank skill cards (Outfitter #20, dev 2026-10-26)
+
+`UIQuest.lockedUntilLevel` (networked after `deposited`, -1 = none) blanks a named-skill card: the
+name becomes "Unlock ???" and `QuestsScreen`'s tooltip, checked before the flavor text, gives the
+job and level. The server side and the rule are in `town/quests/COMPLEX.md` "A skill quest above
+every villager's level is a blank card".
+
+## Switching to an unlocked job asks first (dev playtest 2026-10-29)
+
+"Skill tab click on already-unlocked job. It instantly switched without informing me of the
+consequences and asking for confirmation." `VillagerAdvancementsScreen.mouseClicked` on an unlocked
+node now opens `SwitchJobConfirmScreen` (client-only, the `RelocationConfirmScreen` shape) instead of
+sending `ChangeVillagerJobMessage`. The screen names the villager and the new job; if the client
+entity is away (`VisitorMobEntity.isAwayOnTrip`, the synced visibility flag) it offers "Switch after
+this trip" / "Switch now (trip is lost)" / Cancel, else "Switch now" / Cancel
+(`SwitchJobChoice.forTrip`, `SwitchJobChoiceTest`). The message gained `afterTrip`; the server routes
+it through `VillagerHolder.switchJob` (`town/entity/COMPLEX.md`). Locked nodes keep the unlock path.
+Screen not yet seen in game.
+
+## Job board: stock/limit with - and + per request (dev playtest 2026-10-29)
+
+`WorkScreen.renderStockAndLimit` draws "6/8" (storage holds / pauses at; greyed when paused) and -
+and + between the item icon and the remove "x"; clicks ride the `removes` position map and call
+`TownWorkContainer.sendLimitStep` (-1 / +1; a step since 2026-10-30, town/entity/COMPLEX.md "Request limit steps"). The paused tooltip names the request's own limit.
+Server side: `town/entity/COMPLEX.md` "Board requests: per-request limit". Not yet seen in game
+(gui-lint pending).
+
+## A skill click opens its details (dev playtest 2026-10-29)
+
+"Clicking on a skill on the skill UI should take the player to a variant of the existing 'who makes
+<item>' screen" + ruling "Details with Unlock button". `VillagerAdvancementsScreen.mouseClicked` sends
+`OpenSkillDetailsMessage(flag, villager, job, locked)`; the server builds that job's `UIJob` card with
+the same builder as the jobs screens (`TownVillagerUIs.uiJob`, extracted from
+`showJobsWithSameRootUI`) and answers `ShowSkillDetailsMessage`; the client opens
+`ItemJobsScreen.forSkill`: header "Skill:", the card (items, tools, products, room and its blocks,
+villagers), and the bottom button "Unlock" (locked: `UnlockJobMessage(..., confirmFirst=true)`, the old
+click's path) or "Switch to this job" (unlocked: `SwitchJobConfirmScreen.open`, which reads the
+villager's name and trip state from the client entity). Seen in game (`overnight-shots/skill-details*.png`,
+`details-to-confirm.png`); gui-lint OK for ItemJobsScreen and SwitchJobConfirmScreen. No autotest:
+the round trip needs a connected player.
+
+## Spend the flag's Block of Progress on a skill (dev playtest 2026-10-29)
+
+"If the user is viewing the skill or job unlock screens via the flag menu (not via the villager menu)
+and the flag has BOPs on it, the slot should change to an item renderer and they should be able to
+just spend directly from the flag instead of having to withdraw first." Ruling: flag menu only.
+`VillagerAdvancementsScreen.fromFlag` (= management-only, `!showInventoryTab`) rides
+`OpenSkillDetailsMessage`; the server answers with the flag's count (`getBopCount`) in
+`ShowSkillDetailsMessage.flagBops`; for a locked skill the details screen draws the Block of Progress
+item (count) left of a narrowed "Unlock from the flag" button, which sends
+`SpendFlagBopOnSkillMessage` -> `TownFlagBlockEntity.spendBopToUnlockSkill` (level gate + tree, the
+owner call the growth driver and `_qtdev unlock_skill` use). Seen in game:
+`overnight-shots/flag-unlock2.png` and chat "Dev spent a Block of Progress from the flag: Villager 1
+can now do hunter:sword_half_day" (`after-click.png`).
+
+The change-job panel (root change) does the same from the flag. `TownVillagerUIs.openMenu` fills
+`VillagerMenusPayload.flagBops` from the flag's BOP count (`FlagBop(count)`; the
+blessed/root fields went with ADR-0016) for a management-only open, and
+`FlagBop.NONE` for the full villager menu. `JobChangeConfirmMenu.usesFlagBop()` (slot empty, flag
+count > 0) enables Unlock;
+`JobChangeConfirmScreen` draws the BOP item over the slot and sends `JobRootChangeMessage.fromFlag`,
+whose handler takes `flag.takeOldestBop()` instead of `BopTransactionSyncer.syncConsumedBOP`. Seen in
+game: the "special" BOP text with Unlock lit (`run-client/diags/change-job-flag.png`), chat
+"Villager 2 will change to a new job in the morning", and the flag's BOP tab at 0 afterwards;
+gui-lint OK for JobChangeConfirmScreen.
+
+Same pass: the skills pane's tab embedding did not override `showInventoryTab()` (default true), so
+from the flag it still drew a lit, dead inventory tab - the co-highlight from 471ad99a's report on
+this pane. It now returns the screen's flag (`overnight-shots/mgmt-skills2.png`: economics, stats,
+skills lit, BOP).
+
+## Economics: all time / last 1000 ticks (dev playtest 2026-10-29)
+
+"Economics should probably have 'in last 1000 ticks' view too, that would be more actionable" +
+ruling "Toggle: recent / all time". The flag's economics tab now receives both aggregates
+(`EconomicsUpdate.recent`, from `NoMCEconomics.getRecentItems(now)` = `aggregateSince(records, now -
+RECENT_WINDOW_TICKS)`, `NoMCEconomicsRecentTest`); `TownEconomicsScreen` draws "View: all time" /
+"View: last 1000 ticks" at the panel's bottom-left (tooltip: click to switch) and swaps
+`cardsData` on click, client-side. Caveat: the records are first-enter events (a townie becoming
+blocked on an item, `TownPossibleWork`), so "last 1000 ticks" counts needs that started in the
+window, not ongoing ones. The villager economics pane keeps all-time only. Seen in game
+(`overnight-shots/econ-recent.png`); gui-lint OK.
+
+## "Switch after this trip" says so (dev 2026-10-30)
+
+The choice gave no feedback (r23). Dev: a chat line on confirm and a note on the villager card
+until it happens. `ChangeVillagerJobMessage.handle` sends the sender "Villager 1 will start working
+as Gatherer - Gather when they get back from their trip." The pending switch is read with
+`PendingJobSwitches.peek` (`VillagerHolder.getSwitchAfterTrip`) into
+`MultiStatusScreen.SyncedData.switchAfterTrip` (`FlagMenus.makeSyncData`), and the villagers-tab
+card's job title becomes "Hunter → Gatherer" (`PendingJobChangeMark.afterTripTitle`; the variant's
+name when the root stays the same; "→ Gatherer" when the full title would run under the status
+art), with the hover tooltip "Becomes Gatherer - Gather after this trip". The card re-syncs on the
+villager's next status change, so the note clears when the switch applies. Seen in game on the r23
+day-6 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/after-trip-*.png` (confirm,
+chat + tooltip, card, card cleared after the board's player-switch branch applied it). gui-lint OK
+for MultiStatusScreen. The short form was added after that check (unit-tested only).
+
+## Skill details: Produces and Tools (dev 2026-10-30)
+
+r23 #18: hunter skills showed an empty "Produces:" and cook skills "Tools Used: Raw Beef" beside
+"Items Used: Raw Beef". Dev: list the three most likely loot items and "…" with an "and others"
+tooltip; list a tool that is also used up under Items Used only.
+- `ItemJobsScreen` shows at most `PRODUCES_SHOWN` (3) products, then "…" whose tooltip is
+  `menu.item_jobs.and_others` ("And others"; `RenderUtil.renderEllipsesAndReturnTooltip` gained a
+  tooltip overload, the old "and N more" one delegates to it). The order comes from the server
+  (`town/COMPLEX.md` "Skill card products").
+- Tools pass `ToolsNotUsedUp.of(tools, ingredients, Ingredients::equal)`, and the Tools row is not
+  drawn at all when nothing is left (any job with no tools to list, so a cook card has no row).
+- The card's own tooltips (an item's name, the "…" note) had never shown: `afterRender`'s return
+  was dropped (the 1.19.2 screen dropped it too). `renderScreenContent` now shows it.
+Seen in game on the r23 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight-shots/skill-*.png`
+(hunter: leather, mutton, porkchop, "…" with "And others"; cook: no Tools row, "Raw Beef" on hover).
+gui-lint OK for ItemJobsScreen. The "jobs that make this item" screen shares the card, so it also
+caps products at three. Not asked and left as is: an empty "Items Used:" row (a hunter's) still shows.
+
+## Selector strip: page selector and economics view toggle (dev playtest 2026-10-30)
+
+Dev: "The alltime/1000ticks selector should have the same style as the page selector". The
+economics tab's view toggle (e70eda79) was a plain dark-text label. It is now the page selector's
+look: `PagedCardScreen.drawSelectorStrip` draws the dark strip (0x30000000, from the previous
+button's right edge to `rightX`) and the centred light text. The paged screens' "Page N / M" row
+and `TownEconomicsScreen` both call it. The toggle has its own pair of JEI arrow buttons
+(`previousView` / `nextView`, both flip `showRecent`), placed in `init()` along the panel's bottom
+edge (`borderPadding` from the bottom). Hovering the strip shows the tooltip. Seen in game, and
+gui-lint reports TownEconomicsScreen OK. The other hand-rolled page rows (WorkScreen,
+AddWorkScreen, CreateStockRequestScreen, QuestRemoveConfirmScreen) are unchanged.
+
+## Flag BOP tooltip (dev playtest 2026-10-30)
+
+Dev: the flag's BOP shown on the job-change / unlock screens "should have a tooltip explaining
+that it represents the BOPs on the flag". Hovering the BOP item that `JobChangeConfirmScreen`
+draws in the empty slot (`usesFlagBop`), or the icon left of "Unlock from the flag" in
+`ItemJobsScreen` (`isOverFlagBop`), shows `gui.flag_bop.tooltip` ("Blocks of Progress on the town
+flag: %s. Unlock spends one."). Seen on skill details ("...: 3. Unlock spends one."). The
+change-job slot shares the text and the 16x16 hover box but was not seen in game.
+
+## Job board request card: x top-right, - + bottom-right (dev playtest 2026-10-30)
+
+Dev: "+-x are not aligned on the job board" / "x should be in top right corner, -+ should be in
+bottom right corner". `WorkScreen` draws a request card's remove "x" at `rightX`, level with the
+request name (`idY`; its hit box starts at `idY - borderPadding + 1`). The `renderStockAndLimit`
+row puts + at the same `rightX`, so it sits under the x, with - and the "stock/limit" count to
+its left, level with the icon. Before this, x, + and - were all on the icon row. The count's
+tooltip drops "Storage holds N" (dev: "We can drop 'Storage hold 1' from the tooltip") and reads
+"Villagers stop making more at N." Seen in game: x tooltip "Remove request", + raised 2/8 to 2/9,
+gui-lint WorkScreen OK.
+
+## Skill-unlock quest cards open the villagers tab (dev playtest 2026-10-30)
+
+Dev: 'Clicking on the "unlock a cook skill" quest should take you to the villagers tab (tooltip
+should indicate that too)'. `QuestsScreen.opensVillagersTab` covers JOB_CHANGE and SKILL_UNLOCK, so
+a click on either card opens the villagers tab while it exists. The SKILL_UNLOCK tooltip
+(`skillUnlockTooltip`: the "locked until level N" line, else the flavor text) gets the same grey
+"Click to open villagers" line through `withVillagersHint`, shared with `jobChangeTooltip`. The
+locked-level line used to sit before the flavor check for every quest type; only SKILL_UNLOCK
+cards carry `lockedUntilLevel` (`UIQuest`), so it now lives in `skillUnlockTooltip`.
+Compile-verified; not yet seen in game.
+
+## Arrival card after the villagers, on page 1 (dev playtest 2026-10-30)
+
+'".. and one more in the morning" card should be in third spot, so it renders after 2 villagers.'
+`ArrivalCard.order(villagers, card, arriving, cardsPerPage)` puts it right after the villagers but
+no later than page 1's last slot (`AbstractPagedCardScreen.cardsPerPage()`). That keeps
+2026-10-29's "always on page 1" (66d3da84 had put it first). `ArrivalCardTest` (3).
+
+## Quests: the view button is always in the footer (dev playtest 2026-10-30)
+
+'Quest UI "You will be rewarded in the morning" screen's button should be on bottom of menu.
+Button placement should be consistent.' On the all-done view the "View completed" button was
+centred under the subtitle (`emptyStateButtonY`). It now uses `footerButtonY` on every view, and
+the subtitle alone is centred in the panel. The wider ask (common layout code for every screen's
+buttons) is not done: `TownBlockofProgressScreen` and the paged screens still place their own.
+
+## Flag crafting: pages and BOP-cost rows (dev playtest 2026-10-30)
+
+Dev: "add pagination to the crafting screen. We should add lines for armory and blacksmith table.
+Clicking craft on those ones should say 'this costs 4 bops' and it should use up 4 bops when
+crafted. it should only craft if the BOPs are available" / "This is just to make sure players can
+have a familiar place to craft. But the crafting table recipe can stay".
+- `FlagCraftRecipes` gains `bopCost` (0 = an item recipe, via the old 6-arg constructor).
+  `forBops` builds the armorer's- and blacksmith's-table rows: the input icon is 4 BOPs and
+  there's no input item. `craft` takes the BOPs from the flag (`TownFlagBlockEntity.takeBops`,
+  all or none) or tells the player "The flag needs 4 Blocks of Progress for that."
+- `FlagCraftingMenu.getFlagBops` (the payload's `bopRootJobs` size): a BOP row's Craft button is
+  active only with enough, and its tooltip reads "Blocks of Progress on the flag: N (costs 4)".
+  The first click arms the button ("4 BOPs?"; the first wording, "Costs 4 BOPs: craft", overflowed the 60-px button), the second crafts, as "Begin moving"
+  does (docs/ui-principles.md 10).
+- Pages: `ROWS_PER_PAGE` 5. With more unlocked rows, a page selector strip (shared
+  `PagedCardScreen.drawSelectorStrip`) sits under the title, and the arrows `rebuildWidgets()`.
+Seen (r24 world, 5 unlocked rows, so one page): both table rows, buttons greyed with 3 BOPs on the
+flag, tooltip "Blocks of Progress on the flag: 3 (costs 4)" in red, gui-lint FlagCraftingScreen
+OK. The first open right after a server start read 0 BOPs (the flag hadn't loaded yet); a reopen
+read 3. Seen later: an armed craft spent the flag's 4 BOPs ("Created Armorer's Table", flag 4 -> 0). Not yet seen: a page turn (needs 6+ unlocked rows).
+
+## Settings tab (dev playtest 2026-10-30)
+
+"I think the 'move flag' interaction should be on a 'settings' tab instead of crafting tab." A sixth
+flag tab, `OpenFlagMenuMessage.SETTINGS` ("settings", comparator icon, tooltip "Settings"):
+`FlagSettingsMenu` / `FlagSettingsScreen`, registered like the crafting tab (`MenuTypesInit.FLAG_SETTINGS`,
+`QuestownClient`, `FlagMenus.settingsMenu`, `TownFlagMenus` showers, `FlagTabs.build` /
+`allExcept` / `computeTabDecisions`). It holds "Begin moving this town" / "Cancel moving" with the
+same gates and arm-then-confirm, and with no villager yet it says "Nothing to set yet ...".
+`FlagCraftingScreen` lost that section. Seen: both tabs, gui-lint OK for each.
+
+## Job board keeps its page after a limit step (dev playtest 2026-10-30)
+
+"Adjusting job request quantity causes UI to jump back to page 1." The server re-opens the board
+after each step (to show the new limit), and the new `WorkScreen` started on page 1.
+`WorkScreen.sendLimitStep` records `pageAfterReopen`, and the next `WorkScreen` starts there
+(clamped to its last page). Not seen in game (my test town has one request).
+
+## Work bar on the status icon (dev playtest 2026-10-30)
+
+"Crafters should have a progress bar on their status icon too. Or any work-based job." The villagers
+tab's status icon draws a bar in the leaver bar's spot when the villager is working off a work
+count: `StatusPacket.workProgress` (0..1, -1 none; new network float) comes from
+`VisitorMobEntity.getWorkProgress` -> `DeclarativeJob.getWorkProgress`, the current step's work done
+(`WorkProgress.fraction(left, max(declared, left))`). A leaver's trip bar wins when both apply
+(`renderLeaverReturnBar` returns whether it drew). Work moves without a status change, so the
+server-side `MultiStatusMenu` re-sends the statuses every 20 ticks while open
+(`broadcastChanges` -> `FlagMenus.resendStatuses`), wired in both open paths (`TownFlagMenus`
+and `TownVillagerUIs.showMultiStatusUI`). `StatusSmoother`'s equality ignores the new field, so
+it keeps the newest progress. `WorkProgressTest`. Not seen in game (my test town only had a
+hunter).
+
+## Going-to-jobsite art (dev ruling 2026-10-30)
+
+An in-town crafter walking to its table showed `leaving.png` (an empty path, read as "left town").
+The dev: "there's already a going to jobsite graphic". That's the unused `menu/gatherer/gathering.png`,
+a figure walking along a path. `StatusArt` maps `GOING_TO_JOB` to it for every job.
+
+## RenderContext owns blit and scissor (2026-10-31, 1.19 merge PR 0)
+
+The villager-advancements trio called `ctx.gui().blit(...)` / `enableScissor` directly. On 1.19.2
+`RenderContext.gui()` is the `PoseStack` (there is no `GuiGraphics`), so those calls go through
+`RenderContext.blit` (256-sheet and sized forms), `enableScissor` and `disableScissor` on both
+branches.

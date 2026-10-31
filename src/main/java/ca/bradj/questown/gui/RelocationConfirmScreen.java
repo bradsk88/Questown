@@ -5,9 +5,6 @@ import ca.bradj.questown.core.network.RelocationChoiceMessage;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 
@@ -24,7 +21,7 @@ import java.util.List;
  * </ul>
  * Bring/leave send a {@link RelocationChoiceMessage} that finishes the placement on the server.
  */
-public class RelocationConfirmScreen extends Screen {
+public class RelocationConfirmScreen extends CompatScreen {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -59,57 +56,50 @@ public class RelocationConfirmScreen extends Screen {
         int buttonX = pageLeftX + PAGE_PADDING;
         int firstButtonY = pageTopY + backgroundHeight - (2 * PAGE_PADDING) - (3 * (buttonHeight + 4));
 
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY, buttonWidth, buttonHeight,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.relocation_confirm.bring_anyway"),
-                (b) -> choose(false)
+                (b) -> choose(false),
+                buttonX, firstButtonY, buttonWidth, buttonHeight
         ));
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY + buttonHeight + 4, buttonWidth, buttonHeight,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.relocation_confirm.leave_behind"),
-                (b) -> choose(true)
+                (b) -> choose(true),
+                buttonX, firstButtonY + buttonHeight + 4, buttonWidth, buttonHeight
         ));
-        this.addRenderableWidget(new Button(
-                buttonX, firstButtonY + (2 * (buttonHeight + 4)), buttonWidth, buttonHeight,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.common.cancel"),
-                (b) -> this.onClose()
+                (b) -> this.onClose(),
+                buttonX, firstButtonY + (2 * (buttonHeight + 4)), buttonWidth, buttonHeight
         ));
     }
 
     private void choose(boolean leaveBehind) {
-        QuestownNetwork.CHANNEL.sendToServer(new RelocationChoiceMessage(targetPos, leaveBehind));
+        QuestownNetwork.sendToServer(new RelocationChoiceMessage(targetPos, leaveBehind));
         this.onClose();
     }
 
     @Override
-    public void render(
-            PoseStack stack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.fillGradient(stack, 0, 0, this.width, this.height, -1072689136, -804253680);
-        this.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
-        int textX = pageLeftX + PAGE_PADDING;
-        Compat.drawDarkText(this.font, stack, title, textX, pageTopY);
-        Compat.drawDarkText(
-                this.font, stack,
-                Compat.translatable("menu.relocation_confirm.too_far"),
-                textX, messageY
-        );
-        Compat.drawDarkText(
-                this.font, stack,
-                Compat.translatable("menu.relocation_confirm.fixture_count", farFixtureCount),
-                textX, messageY + (font.lineHeight * 2)
-        );
+    protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        ctx.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
     }
 
     @Override
-    public void renderBackground(PoseStack poseStack) {
+    protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+    }
+
+    @Override
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        int textX = pageLeftX + PAGE_PADDING;
+        ctx.darkText(title, textX, pageTopY);
+        ctx.darkText(Compat.translatable("menu.relocation_confirm.too_far"), textX, messageY);
+        ctx.darkText(
+                Compat.translatable("menu.relocation_confirm.fixture_count", farFixtureCount),
+                textX,
+                messageY + (font.lineHeight * 2)
+        );
     }
 
     @Override

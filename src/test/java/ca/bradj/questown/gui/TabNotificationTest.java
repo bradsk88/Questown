@@ -110,7 +110,7 @@ class TabNotificationTest {
         FlagTabsEmbedding.FlagInfo fi = FlagTabsEmbedding.FlagInfo.withQuestNotification(
                 BlockPos.ZERO, true, true, false
         );
-        assertTrue(fi.hasIncompleteQuests());
+        assertTrue(fi.questsTabAttention());
     }
 
     @Test
@@ -118,7 +118,7 @@ class TabNotificationTest {
         FlagTabsEmbedding.FlagInfo fi = FlagTabsEmbedding.FlagInfo.withQuestNotification(
                 BlockPos.ZERO, true, false, false
         );
-        assertFalse(fi.hasIncompleteQuests());
+        assertFalse(fi.questsTabAttention());
     }
 
     @Test
