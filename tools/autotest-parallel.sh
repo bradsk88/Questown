@@ -35,9 +35,12 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$REPO/build/autotest-par
 mkdir -p "$OUT"
 
-# Only a Minecraft JVM in this checkout's own run dirs conflicts (same world/ports). Another
+# Only a Minecraft JVM in this checkout's own run dirs is stopped (same world). Another
 # checkout's playtest server/client (e.g. the main repo beside this worktree) is left alone:
-# every stop below is by pid and scoped to this script's run dirs.
+# every stop below is by pid and scoped to this script's run dirs. Ports are global, though:
+# a second suite running in another checkout needs its own AUTOTEST_PORT_BASE (default 25700;
+# run i listens on base + i), or its servers fail to bind (2026-10-31).
+PORT_BASE=${AUTOTEST_PORT_BASE:-25700}
 for p in $(pgrep -f '[B]ootstrapLauncher'); do
     case "$(readlink "/proc/$p/cwd")" in
         "$REPO/run"|"$OUT"/*)
@@ -101,7 +104,7 @@ while [ "$i" -le "$N" ]; do
     D=$OUT/run-$i
     rm -rf "$D"; mkdir -p "$D"
     cp -r "$REPO/run/config" "$REPO/run/defaultconfigs" "$REPO/run/eula.txt" "$D/" 2>/dev/null || true
-    sed -e "s/^server-port=.*/server-port=$((25700 + i))/" \
+    sed -e "s/^server-port=.*/server-port=$((PORT_BASE + i))/" \
         -e "s/^enable-rcon=.*/enable-rcon=false/" \
         -e "s/^online-mode=.*/online-mode=false/" \
         -e "s/^level-seed=.*/level-seed=/" \
@@ -124,7 +127,7 @@ EOF
     (cd "$D" && MOD_CLASSES=$(cat "$OUT/cmd/mod_classes") LANG=C.UTF-8 \
         xargs -0 -a "$D/argv" sh -c 'exec "$@"' sh > "$OUT/run-$i.log" 2>&1) &
     PIDS="$PIDS $!"
-    echo "run $i: started (port $((25700 + i)), log $OUT/run-$i.log)"
+    echo "run $i: started (port $((PORT_BASE + i)), log $OUT/run-$i.log)"
     i=$((i + 1))
 done
 

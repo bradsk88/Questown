@@ -5,7 +5,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -17,7 +17,7 @@ public record RemoveQuestFromUIMessage(
         boolean promptForConfirmation
 ) {
 
-    public static void encode(RemoveQuestFromUIMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(RemoveQuestFromUIMessage msg, FriendlyByteBuf buffer) {
         buffer.writeUUID(msg.questIndex);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
@@ -25,7 +25,7 @@ public record RemoveQuestFromUIMessage(
         buffer.writeBoolean(msg.promptForConfirmation);
     }
 
-    public static RemoveQuestFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static RemoveQuestFromUIMessage decode(FriendlyByteBuf buffer) {
         UUID questIndex = buffer.readUUID();
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();

@@ -6,7 +6,7 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -22,14 +22,14 @@ public record OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo flag, String type) 
 
     public static void encode(
             OpenFlagMenuMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flag.flagPos());
         buffer.writeUtf(msg.type());
         buffer.writeBoolean(msg.flag.showBlockOfProgressTab());
     }
 
-    public static OpenFlagMenuMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenFlagMenuMessage decode(FriendlyByteBuf buffer) {
         BlockPos flag = buffer.readBlockPos();
         String type = buffer.readUtf();
         boolean show = buffer.readBoolean();

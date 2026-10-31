@@ -6,7 +6,7 @@ import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.loader.Loader;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,7 +14,7 @@ public record OnScreenTextMessage(
         String key, Object... args
 ) {
 
-    public static void encode(OnScreenTextMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(OnScreenTextMessage msg, FriendlyByteBuf buffer) {
         buffer.writeUtf(msg.key());
         buffer.writeInt(msg.args.length);
         for (Object arg : msg.args) {
@@ -22,7 +22,7 @@ public record OnScreenTextMessage(
         }
     }
 
-    public static OnScreenTextMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OnScreenTextMessage decode(FriendlyByteBuf buffer) {
         String key = buffer.readUtf();
         int numArgs = buffer.readInt();
         ImmutableList.Builder<String> b = ImmutableList.builder();

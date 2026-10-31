@@ -1083,11 +1083,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     /** Pauses the board requests storage already holds enough of ({@link BoardRequests}). */
     void refreshStockedRequests(ImmutableList<MCTownItem> stacks) {
-        ImmutableMap.Builder<WorkRequest, Integer> stock = ImmutableMap.builder();
+        java.util.Map<WorkRequest, Integer> stock = new java.util.LinkedHashMap<>();
         for (WorkRequest r : workHandle.getRequestedResults()) {
             stock.put(r, countInStorage(stacks, r));
         }
-        ImmutableMap<WorkRequest, Integer> counts = stock.buildKeepingLast();
+        ImmutableMap<WorkRequest, Integer> counts = ImmutableMap.copyOf(stock);
         workHandle.setStock(counts);
         workHandle.setStocked(BoardRequests.stocked(
                 workHandle.getRequestedResults(),

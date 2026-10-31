@@ -5,7 +5,7 @@ import ca.bradj.questown.loader.neo.NeoConfigBuilder;
 import ca.bradj.questown.loader.neo.NeoItemHandler;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -162,7 +162,7 @@ public final class TestLoader implements LoaderApi {
 
     // ---- Open screen ------------------------------------------------------
     @Override
-    public void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra) {
+    public void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<FriendlyByteBuf> extra) {
     }
 
     // ---- Networking (no transport in a plain JVM) -------------------------

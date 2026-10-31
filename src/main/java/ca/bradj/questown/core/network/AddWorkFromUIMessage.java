@@ -13,7 +13,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -55,14 +55,14 @@ public final class AddWorkFromUIMessage {
 
     public static void encode(
             AddWorkFromUIMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.action().ordinal());
         Ingredients.toNetwork(msg.requested, buffer);
         buffer.writeBlockPos(msg.flagPos);
     }
 
-    public static AddWorkFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static AddWorkFromUIMessage decode(FriendlyByteBuf buffer) {
         Action action = Action.values()[buffer.readInt()];
         Ingredient request = Ingredients.fromNetwork(buffer);
         BlockPos flagPos = buffer.readBlockPos();

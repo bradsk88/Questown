@@ -150,6 +150,25 @@ public record RenderContext(
         gui.blitSprite(sprite, x, y, size, size);
     }
 
+    // -- textures
+    /** A region of a 256x256 texture sheet at 1:1. */
+    public void blit(ResourceLocation texture, int x, int y, int u, int v, int width, int height) {
+        gui.blit(texture, x, y, u, v, width, height);
+    }
+
+    /** A region of a texture of the given size at 1:1. */
+    public void blit(ResourceLocation texture, int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
+        gui.blit(texture, x, y, u, v, width, height, textureWidth, textureHeight);
+    }
+
+    public void enableScissor(int x1, int y1, int x2, int y2) {
+        gui.enableScissor(x1, y1, x2, y2);
+    }
+
+    public void disableScissor() {
+        gui.disableScissor();
+    }
+
     public void renderWidget(Button widget, int mouseX, int mouseY, float partialTicks) {
         widget.render(gui, mouseX, mouseY, partialTicks);
     }

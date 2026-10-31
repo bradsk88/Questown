@@ -4,7 +4,7 @@ import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -17,12 +17,12 @@ public record CancelTownShutdownMessage(BlockPos flagPos) {
 
     public static void encode(
             CancelTownShutdownMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos());
     }
 
-    public static CancelTownShutdownMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static CancelTownShutdownMessage decode(FriendlyByteBuf buffer) {
         return new CancelTownShutdownMessage(buffer.readBlockPos());
     }
 

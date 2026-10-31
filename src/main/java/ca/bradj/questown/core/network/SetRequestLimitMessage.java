@@ -6,7 +6,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 
@@ -22,7 +22,7 @@ public record SetRequestLimitMessage(
 
     public static void encode(
             SetRequestLimitMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         msg.requested.toNetwork(buffer);
         buffer.writeInt(msg.delta);
@@ -31,7 +31,7 @@ public record SetRequestLimitMessage(
         buffer.writeInt(msg.flagZ);
     }
 
-    public static SetRequestLimitMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SetRequestLimitMessage decode(FriendlyByteBuf buffer) {
         WorkRequest requested = WorkRequest.fromNetwork(buffer);
         int delta = buffer.readInt();
         return new SetRequestLimitMessage(requested, delta, buffer.readInt(), buffer.readInt(), buffer.readInt());

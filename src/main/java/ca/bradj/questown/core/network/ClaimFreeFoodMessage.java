@@ -4,7 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -17,12 +17,12 @@ public record ClaimFreeFoodMessage(BlockPos flagPos) {
 
     public static void encode(
             ClaimFreeFoodMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
     }
 
-    public static ClaimFreeFoodMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ClaimFreeFoodMessage decode(FriendlyByteBuf buffer) {
         return new ClaimFreeFoodMessage(buffer.readBlockPos());
     }
 

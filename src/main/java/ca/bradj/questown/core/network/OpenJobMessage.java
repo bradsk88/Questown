@@ -7,7 +7,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -19,13 +19,13 @@ public record OpenJobMessage(
 
     public static void encode(
             OpenJobMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         Jobs.writeIdToNetwork(buffer, msg.jobToShow);
     }
 
-    public static OpenJobMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenJobMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         JobID j = Jobs.getIdFromNetwork(buffer);
         return new OpenJobMessage(flagPos, j);

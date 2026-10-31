@@ -193,7 +193,7 @@ public class VillagerAdvancementsWidget {
                 float shade = unlocked ? 1f : LOCKED_SHADE;
                 Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
                 RenderSystem.setShaderColor(shade, shade, shade, 1f);
-                ctx.gui().blit(WIDGETS_LOCATION, x, y, ft, v1, v2, v3);
+                ctx.blit(WIDGETS_LOCATION, x, y, ft, v1, v2, v3);
                 ctx.renderItemAndDecorations(this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
                 RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             }
@@ -237,7 +237,7 @@ public class VillagerAdvancementsWidget {
             int height
     ) {
         Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
-        ctx.gui().blit(WIDGETS_LOCATION, x, y, u, v, width, height);
+        ctx.blit(WIDGETS_LOCATION, x, y, u, v, width, height);
     }
 
     private void hLine(

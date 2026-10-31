@@ -211,7 +211,7 @@ public class VillagerAdvancementsContent {
                     // tile samples only the texture's top-left pixel (the pane
                     // renders as one solid color). Vanilla's own
                     // AdvancementTab passes the texture dimensions.
-                    ctx.gui().blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
+                    ctx.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
                 }
             }
         }

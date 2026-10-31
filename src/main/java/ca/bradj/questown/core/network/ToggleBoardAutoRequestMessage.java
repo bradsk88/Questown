@@ -5,7 +5,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -22,7 +22,7 @@ public record ToggleBoardAutoRequestMessage(
 
     public static void encode(
             ToggleBoardAutoRequestMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBoolean(msg.newState);
         buffer.writeInt(msg.flagX);
@@ -30,7 +30,7 @@ public record ToggleBoardAutoRequestMessage(
         buffer.writeInt(msg.flagZ);
     }
 
-    public static ToggleBoardAutoRequestMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ToggleBoardAutoRequestMessage decode(FriendlyByteBuf buffer) {
         boolean newState = buffer.readBoolean();
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();

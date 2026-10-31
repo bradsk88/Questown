@@ -4,7 +4,7 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.StatusPacket;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 
 public record SyncStatusTextMessage(
@@ -15,13 +15,13 @@ public record SyncStatusTextMessage(
 
     public static void encode(
             SyncStatusTextMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeUtf(msg.status().name());
         StatusPacket.toNetwork(buffer, msg.packet);
     }
 
-    public static SyncStatusTextMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SyncStatusTextMessage decode(FriendlyByteBuf buffer) {
         ProductionStatus ps = ProductionStatus.fromNumber(buffer.readUtf());
         return new SyncStatusTextMessage(ps, StatusPacket.fromNetwork(buffer));
     }

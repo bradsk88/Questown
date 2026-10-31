@@ -5,7 +5,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -14,12 +14,12 @@ public record GiveBOPMessage(BlockPos flagPos) {
 
     public static void encode(
             GiveBOPMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
     }
 
-    public static GiveBOPMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static GiveBOPMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         return new GiveBOPMessage(flagPos);
     }

@@ -27,7 +27,6 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.loader.ItemHandler;
 import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;

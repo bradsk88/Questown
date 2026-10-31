@@ -4,7 +4,6 @@ import ca.bradj.questown.core.network.NetworkCompat;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -22,19 +21,19 @@ public record UIJob(
         ImmutableList<Ingredient> roomRecipe,
         ImmutableList<ItemStack> result
 ) {
-    public static UIJob fromNetwork(RegistryFriendlyByteBuf buf) {
+    public static UIJob fromNetwork(FriendlyByteBuf buf) {
         JobID jobId = NetworkCompat.fromNetworkJobID(buf);
         List<UUID> vs = buf.readList(b -> b.readUUID());
         List<String> in = buf.readList(b -> b.readUtf());
         List<String> tl = buf.readList(b -> b.readUtf());
         ResourceLocation rrName = buf.readResourceLocation();
         List<String> rr = buf.readList(b -> b.readUtf());
-        List<ItemStack> result = buf.readList(b -> net.minecraft.world.item.ItemStack.STREAM_CODEC.decode((RegistryFriendlyByteBuf) b));
+        List<ItemStack> result = buf.readList(b -> ca.bradj.questown.mc.Compat.readItem(b));
         return fromBufferData(jobId, in, tl, vs, rrName, rr, result);
     }
 
     public static void toNetwork(
-            RegistryFriendlyByteBuf buf,
+            FriendlyByteBuf buf,
             UIJob uiJob
     ) {
         NetworkCompat.toNetwork(buf, uiJob.jobId());
@@ -47,7 +46,7 @@ public record UIJob(
         buf.writeCollection(toolIDs, (b, v) -> b.writeUtf(v));
         buf.writeUtf(uiJob.roomNameTranslationKey().toString());
         buf.writeCollection(roomRecipe, (b, v) -> b.writeUtf(v));
-        buf.writeCollection(uiJob.result(), (b, v) -> net.minecraft.world.item.ItemStack.STREAM_CODEC.encode((RegistryFriendlyByteBuf) b, v));
+        buf.writeCollection(uiJob.result(), (b, v) -> ca.bradj.questown.mc.Compat.writeItem(b, v));
     }
 
     private static @NotNull UIJob fromBufferData(

@@ -189,11 +189,49 @@ public class Compat {
                 (net.minecraft.network.RegistryFriendlyByteBuf) buf);
     }
 
+    /**
+     * An item stack on the wire (empty allowed). 1.20.5's item codec needs the registry-aware
+     * buffer the network stack hands every message; 1.19.2 uses the buffer's own read/write.
+     */
+    public static void writeItem(FriendlyByteBuf buf, ItemStack stack) {
+        ItemStack.OPTIONAL_STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, stack);
+    }
+
+    public static ItemStack readItem(FriendlyByteBuf buf) {
+        return ItemStack.OPTIONAL_STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf);
+    }
+
+    /** An ingredient as JSON (1.20.5: the non-empty codec; 1.19.2: Ingredient#toJson). */
+    public static com.google.gson.JsonElement ingredientToJson(net.minecraft.world.item.crafting.Ingredient i) {
+        return net.minecraft.world.item.crafting.Ingredient.CODEC_NONEMPTY
+                .encode(i, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty())
+                .getOrThrow();
+    }
+
+    public static net.minecraft.world.item.crafting.Ingredient ingredientFromJson(com.google.gson.JsonElement json) {
+        return net.minecraft.world.item.crafting.Ingredient.CODEC_NONEMPTY
+                .parse(com.mojang.serialization.JsonOps.INSTANCE, json)
+                .getOrThrow();
+    }
+
+    /** An item stack as NBT; 1.20.5 needs the level's registries (1.19.2 doesn't). */
+    public static CompoundTag saveItem(net.minecraft.world.level.Level level, ItemStack stack) {
+        return (CompoundTag) stack.save(level.registryAccess(), new CompoundTag());
+    }
+
+    public static ItemStack loadItem(net.minecraft.world.level.Level level, CompoundTag tag) {
+        return ItemStack.parseOptional(level.registryAccess(), tag);
+    }
+
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
-            Consumer<net.minecraft.network.RegistryFriendlyByteBuf> writer) {
-        sender.openMenu(menuProvider, writer == null ? buf -> {} : writer);
+            Consumer<FriendlyByteBuf> writer) {
+        sender.openMenu(menuProvider, buf -> {
+            if (writer != null) {
+                writer.accept(buf);
+            }
+        });
     }
 
     public static void enqueueOrLog(Runnable staticInitialize) {
@@ -600,18 +638,6 @@ public class Compat {
      * the same 1.19.2 item registry inline). */
     public static java.util.stream.Stream<Item> itemRegistryStream() {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM.stream();
-    }
-
-    /** The map-decoration holder a sunset-map target stamp needs (the
-     * target_x decoration id), so the helper-chicken map never names the Registries edge. */
-    public static net.minecraft.core.Holder<net.minecraft.world.level.saveddata.maps.MapDecorationType> mapDecorationHolder(
-            net.minecraft.world.level.Level level,
-            net.minecraft.resources.ResourceLocation decorationId
-    ) {
-        var registry = level.registryAccess().registryOrThrow(Registries.MAP_DECORATION_TYPE);
-        return registry.getHolderOrThrow(
-                net.minecraft.resources.ResourceKey.create(Registries.MAP_DECORATION_TYPE, decorationId)
-        );
     }
 
     /** The SCHEDULE registry key, for the HolderRegistry the visitor schedule registers onto. */

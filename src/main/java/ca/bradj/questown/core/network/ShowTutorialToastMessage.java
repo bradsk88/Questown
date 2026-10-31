@@ -5,7 +5,7 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.loader.Loader;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -13,12 +13,12 @@ public record ShowTutorialToastMessage(
         String titleKey, String descriptionKey
 ) {
 
-    public static void encode(ShowTutorialToastMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(ShowTutorialToastMessage msg, FriendlyByteBuf buffer) {
         buffer.writeUtf(msg.titleKey());
         buffer.writeUtf(msg.descriptionKey());
     }
 
-    public static ShowTutorialToastMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ShowTutorialToastMessage decode(FriendlyByteBuf buffer) {
         String titleKey = buffer.readUtf();
         String descriptionKey = buffer.readUtf();
         return new ShowTutorialToastMessage(titleKey, descriptionKey);

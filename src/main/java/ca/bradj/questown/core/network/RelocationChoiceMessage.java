@@ -7,7 +7,7 @@ import ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy;
 import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -28,13 +28,13 @@ public record RelocationChoiceMessage(
 
     public static void encode(
             RelocationChoiceMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.targetPos());
         buffer.writeBoolean(msg.leaveBehind());
     }
 
-    public static RelocationChoiceMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static RelocationChoiceMessage decode(FriendlyByteBuf buffer) {
         BlockPos targetPos = buffer.readBlockPos();
         boolean leaveBehind = buffer.readBoolean();
         return new RelocationChoiceMessage(targetPos, leaveBehind);

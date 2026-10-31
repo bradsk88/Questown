@@ -9,7 +9,7 @@ import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -26,14 +26,14 @@ public record SpendFlagBopOnSkillMessage(BlockPos flagPos, UUID villagerUUID, Jo
 
     public static void encode(
             SpendFlagBopOnSkillMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
         Jobs.writeIdToNetwork(buffer, msg.id);
     }
 
-    public static SpendFlagBopOnSkillMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SpendFlagBopOnSkillMessage decode(FriendlyByteBuf buffer) {
         return new SpendFlagBopOnSkillMessage(buffer.readBlockPos(), buffer.readUUID(), Jobs.getIdFromNetwork(buffer));
     }
 

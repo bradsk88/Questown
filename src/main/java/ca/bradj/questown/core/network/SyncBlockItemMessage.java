@@ -5,7 +5,7 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 
 
@@ -15,19 +15,19 @@ public record SyncBlockItemMessage(
         int index
 ) {
 
-    public static void encode(SyncBlockItemMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(SyncBlockItemMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.pos.getX());
         buffer.writeInt(msg.pos.getY());
         buffer.writeInt(msg.pos.getZ());
-        ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, msg.item());
+        ca.bradj.questown.mc.Compat.writeItem(buffer, msg.item());
         buffer.writeInt(msg.index());
     }
 
-    public static SyncBlockItemMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SyncBlockItemMessage decode(FriendlyByteBuf buffer) {
         int blockX = buffer.readInt();
         int blockY = buffer.readInt();
         int blockZ = buffer.readInt();
-        ItemStack item = ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer);
+        ItemStack item = ca.bradj.questown.mc.Compat.readItem(buffer);
         int index = buffer.readInt();
         return new SyncBlockItemMessage(new BlockPos(blockX, blockY, blockZ), item, index);
     }

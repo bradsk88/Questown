@@ -92,7 +92,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
             // 1.20.6 save() throws on an empty stack (1.19.2 tolerated it); legacy saves or
             // a pre-fix deposit could have left an AIR entry, so skip rather than corrupt.
             if (!bop.isEmpty()) {
-                stacks.add(bop.save(flag.getLevel().registryAccess(), new CompoundTag()));
+                stacks.add(ca.bradj.questown.mc.Compat.saveItem(flag.getLevel(), bop));
             }
         }
         t.put("stacks", stacks);
@@ -107,7 +107,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         if (tag.contains("stacks")) {
             ListTag stacks = tag.getList("stacks", Tag.TAG_COMPOUND);
             for (Tag s : stacks) {
-                flag.bopStacks.add(ItemStack.parseOptional(flag.getLevel().registryAccess(), (CompoundTag) s));
+                flag.bopStacks.add(ca.bradj.questown.mc.Compat.loadItem(flag.getLevel(), (CompoundTag) s));
             }
         } else if (tag.contains("count")) {
             // Legacy saves stored a bare count (bless NBT did not survive the flag yet):

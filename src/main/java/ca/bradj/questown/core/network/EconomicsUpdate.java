@@ -7,7 +7,7 @@ import ca.bradj.questown.gui.VillagerEconomicsScreen;
 import com.google.common.collect.ImmutableList;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.loader.Loader;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,13 +24,13 @@ public record EconomicsUpdate(
 
     public static void encode(
             EconomicsUpdate msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         writeItems(buffer, msg.data);
         writeItems(buffer, msg.recent);
     }
 
-    private static void writeItems(RegistryFriendlyByteBuf buffer, ImmutableList<ItemEconomicsData> items) {
+    private static void writeItems(FriendlyByteBuf buffer, ImmutableList<ItemEconomicsData> items) {
         buffer.writeCollection(
                 items, (b, i) -> {
                     b.writeUtf(i.ingredientKey());
@@ -39,7 +39,7 @@ public record EconomicsUpdate(
         );
     }
 
-    public static EconomicsUpdate decode(RegistryFriendlyByteBuf buffer) {
+    public static EconomicsUpdate decode(FriendlyByteBuf buffer) {
         List<ItemEconomicsData> l = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
         List<ItemEconomicsData> r = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
         return new EconomicsUpdate(ImmutableList.copyOf(l), ImmutableList.copyOf(r));

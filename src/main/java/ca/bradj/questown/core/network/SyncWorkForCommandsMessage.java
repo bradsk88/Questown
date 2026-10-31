@@ -4,7 +4,7 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 
 public record SyncWorkForCommandsMessage(
@@ -13,12 +13,12 @@ public record SyncWorkForCommandsMessage(
 
     public static void encode(
             SyncWorkForCommandsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeCollection(msg.jobs, NetworkCompat::toNetwork);
     }
 
-    public static SyncWorkForCommandsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SyncWorkForCommandsMessage decode(FriendlyByteBuf buffer) {
         return new SyncWorkForCommandsMessage(
                 ImmutableList.copyOf(buffer.readList(NetworkCompat::fromNetworkJobID))
         );

@@ -6,7 +6,7 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -19,13 +19,13 @@ public record OpenItemJobsMessage(
 
     public static void encode(
             OpenItemJobsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUtf(Ingredients.toString(msg.itemToShowJobsFor()));
     }
 
-    public static OpenItemJobsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenItemJobsMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         Ingredient ing = Ingredients.fromString(buffer.readUtf());
         return new OpenItemJobsMessage(flagPos, ing);

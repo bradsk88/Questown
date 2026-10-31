@@ -4,7 +4,7 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -39,7 +39,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
 
     public static void encode(
             OpenVillagerAdvancementsMenuMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.flagPos.getX());
         buffer.writeInt(msg.flagPos.getY());
@@ -52,7 +52,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         buffer.writeBoolean(msg.showInventoryTab);
     }
 
-    public static OpenVillagerAdvancementsMenuMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenVillagerAdvancementsMenuMessage decode(FriendlyByteBuf buffer) {
         return new OpenVillagerAdvancementsMenuMessage(
                 new BlockPos(buffer.readInt(), buffer.readInt(), buffer.readInt()),
                 buffer.readUUID(),

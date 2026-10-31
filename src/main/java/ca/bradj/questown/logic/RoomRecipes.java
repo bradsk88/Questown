@@ -168,9 +168,7 @@ public class RoomRecipes {
 
     private static JsonObject getAsJsonObject(Ingredient js) {
         try {
-            com.google.gson.JsonElement j = Ingredient.CODEC_NONEMPTY
-                    .encode(js, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty())
-                    .getOrThrow();
+            com.google.gson.JsonElement j = ca.bradj.questown.mc.Compat.ingredientToJson(js);
             return j.getAsJsonObject();
         } catch (IllegalStateException e) {
             throw new IllegalStateException("Not a JSON object: " + js, e);

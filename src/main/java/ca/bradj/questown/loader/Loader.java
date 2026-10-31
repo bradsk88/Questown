@@ -9,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.Container;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -172,7 +172,7 @@ public final class Loader {
     }
 
     // ---- Open screen ------------------------------------------------------
-    public static void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra) {
+    public static void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<FriendlyByteBuf> extra) {
         api().openScreen(p, provider, extra);
     }
 

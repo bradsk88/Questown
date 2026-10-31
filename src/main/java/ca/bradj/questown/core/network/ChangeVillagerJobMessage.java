@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -26,7 +26,7 @@ public record ChangeVillagerJobMessage(
 
     public static void encode(
             ChangeVillagerJobMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeInt(msg.flagX());
         buffer.writeInt(msg.flagY());
@@ -37,7 +37,7 @@ public record ChangeVillagerJobMessage(
         buffer.writeBoolean(msg.afterTrip());
     }
 
-    public static ChangeVillagerJobMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ChangeVillagerJobMessage decode(FriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();

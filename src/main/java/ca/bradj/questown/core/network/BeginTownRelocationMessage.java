@@ -4,7 +4,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 
@@ -19,12 +19,12 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
 
     public static void encode(
             BeginTownRelocationMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos());
     }
 
-    public static BeginTownRelocationMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static BeginTownRelocationMessage decode(FriendlyByteBuf buffer) {
         return new BeginTownRelocationMessage(buffer.readBlockPos());
     }
 

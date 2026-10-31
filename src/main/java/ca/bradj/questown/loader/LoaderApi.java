@@ -9,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.Container;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -89,7 +89,7 @@ public interface LoaderApi {
     ItemHandler handlerForInventory(Container inv);
 
     // Open screen
-    void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra);
+    void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<FriendlyByteBuf> extra);
 
     // Networking
     Channel channel(String id);

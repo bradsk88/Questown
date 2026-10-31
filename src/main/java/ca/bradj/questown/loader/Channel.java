@@ -1,6 +1,6 @@
 package ca.bradj.questown.loader;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -10,7 +10,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Neutral message channel (Forge {@code SimpleChannel} / NeoForge payload-handler equivalent).
  * Main code registers a message type with its wire encoder/decoder over the vanilla
- * {@link RegistryFriendlyByteBuf} plus a handler, then sends via
+ * {@link FriendlyByteBuf} plus a handler, then sends via
  * {@link #sendToPlayer}/{@link #sendToAll}/{@link #sendToServer}. The active loader adapts this to
  * its own stack (NeoForge's Payload API: one envelope payload, a StreamCodec over the registered
  * encoder/decoders, and one IPayloadHandler per direction), so the Questown message classes (which
@@ -43,12 +43,12 @@ public interface Channel {
 
     @FunctionalInterface
     interface Encoder<T> {
-        void encode(T msg, RegistryFriendlyByteBuf buf);
+        void encode(T msg, FriendlyByteBuf buf);
     }
 
     @FunctionalInterface
     interface Decoder<T> {
-        T decode(RegistryFriendlyByteBuf buf);
+        T decode(FriendlyByteBuf buf);
     }
 
     interface Handler<T> {

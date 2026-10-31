@@ -27,7 +27,7 @@ public class Ingredients {
             empty.add("items", new com.google.gson.JsonArray());
             return empty;
         }
-        return Ingredient.CODEC_NONEMPTY.encode(item, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty()).getOrThrow();
+        return ca.bradj.questown.mc.Compat.ingredientToJson(item);
     }
 
     public static Component getName(Ingredient item) {

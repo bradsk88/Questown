@@ -264,3 +264,15 @@ workshop, brewing_room, potions_room, forge_room, enchanting_room, huge_enchanti
 maxed_enchanting_room). The tag itself stays (TagsInit). Room matching for these rooms now hangs
 on their remaining blocks (a bedroom is just a bed); the full autotest suite covers room
 detection.
+
+## A Town Flag is craftable in survival (dev 2026-10-31)
+
+"Add a recipe for making a flag in survival mode (Upside down T, all cobblestone, sapling at the
+intersection)": `recipes/flag_base.json` is shaped ` C `/` C `/`CSC` (cobblestone, any
+`#minecraft:saplings` where the stem meets the bar) and makes `questown:flag_base` (the Cobblestone
+Flag Base). The recipe book unlocks it with the first cobblestone
+(`advancements/recipes/flag_base.json`). `FlagRecipeTest` pins the shape.
+
+Fixed alongside: `advancements/chapter_4.json` named `questown:town_flag_block` as its icon, which is
+not an item (the flag's item is `flag_base`), so "Chapter 4" never loaded (since 2026-04-05; found
+by the 1.19.2 boot log).

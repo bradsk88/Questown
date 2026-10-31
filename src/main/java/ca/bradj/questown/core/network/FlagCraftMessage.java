@@ -16,7 +16,7 @@ import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -25,12 +25,12 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
 
-    public static void encode(FlagCraftMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(FlagCraftMessage msg, FriendlyByteBuf buffer) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeInt(msg.recipeIndex);
     }
 
-    public static FlagCraftMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static FlagCraftMessage decode(FriendlyByteBuf buffer) {
         return new FlagCraftMessage(buffer.readBlockPos(), buffer.readInt());
     }
 

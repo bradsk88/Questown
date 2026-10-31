@@ -14,7 +14,7 @@ import java.util.Objects;
  * Mod network.
  *
  * <p>The 33 message classes in this package (plus {@code MultiStatusScreenSyncMessage}) are
- * loader-neutral: POJOs with a wire encoder/decoder over the vanilla {@code RegistryFriendlyByteBuf}
+ * loader-neutral: POJOs with a wire encoder/decoder over the vanilla {@code FriendlyByteBuf}
  * and a neutral {@code Channel.Context} handler. The channel setup and dispatch are the
  * loader-specific part, adapted by the active loader (NeoForge: one envelope payload + StreamCodec +
  * IPayloadHandler, see {@code loader.neo.NeoChannel}).

@@ -4,7 +4,7 @@ import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -17,13 +17,13 @@ public record DormantFlagChoiceMessage(BlockPos flagPos, boolean wake) {
 
     public static void encode(
             DormantFlagChoiceMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos());
         buffer.writeBoolean(msg.wake());
     }
 
-    public static DormantFlagChoiceMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static DormantFlagChoiceMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         boolean wake = buffer.readBoolean();
         return new DormantFlagChoiceMessage(flagPos, wake);

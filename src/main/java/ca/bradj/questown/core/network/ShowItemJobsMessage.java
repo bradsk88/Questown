@@ -6,7 +6,7 @@ import ca.bradj.questown.gui.UIJob;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.crafting.Ingredient;
 
 
@@ -18,18 +18,18 @@ public record ShowItemJobsMessage(
 
     public static void encode(
             ShowItemJobsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         String s = "";
         if (!msg.requestedItem.isEmpty()) {
             s = Ingredients.toString(msg.requestedItem);
         }
         buffer.writeUtf(s);
-        buffer.writeCollection(msg.jobs, (buf, v) -> UIJob.toNetwork((net.minecraft.network.RegistryFriendlyByteBuf) buf, v));
+        buffer.writeCollection(msg.jobs, (buf, v) -> UIJob.toNetwork((net.minecraft.network.FriendlyByteBuf) buf, v));
         buffer.writeBlockPos(msg.flagPos);
     }
 
-    public static ShowItemJobsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ShowItemJobsMessage decode(FriendlyByteBuf buffer) {
         String block = buffer.readUtf();
         Ingredient requestedItem = Ingredient.EMPTY;
         if (!block.isEmpty()) {
@@ -37,7 +37,7 @@ public record ShowItemJobsMessage(
         }
         return new ShowItemJobsMessage(
                 requestedItem,
-                ImmutableList.copyOf(buffer.readList(b -> UIJob.fromNetwork((net.minecraft.network.RegistryFriendlyByteBuf) b))),
+                ImmutableList.copyOf(buffer.readList(b -> UIJob.fromNetwork((net.minecraft.network.FriendlyByteBuf) b))),
                 buffer.readBlockPos()
         );
     }

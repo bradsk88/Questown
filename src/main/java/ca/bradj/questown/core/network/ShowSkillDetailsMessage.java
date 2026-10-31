@@ -4,7 +4,7 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.UIJob;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.UUID;
 
@@ -20,7 +20,7 @@ public record ShowSkillDetailsMessage(
 
     public static void encode(
             ShowSkillDetailsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         UIJob.toNetwork(buffer, msg.job);
         buffer.writeBlockPos(msg.flagPos);
@@ -29,7 +29,7 @@ public record ShowSkillDetailsMessage(
         buffer.writeInt(msg.flagBops);
     }
 
-    public static ShowSkillDetailsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static ShowSkillDetailsMessage decode(FriendlyByteBuf buffer) {
         return new ShowSkillDetailsMessage(
                 UIJob.fromNetwork(buffer), buffer.readBlockPos(), buffer.readUUID(), buffer.readBoolean(), buffer.readInt()
         );

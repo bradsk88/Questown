@@ -3,7 +3,7 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 /**
  * Server → client: open the dormant-flag screen (wake the town, or get the deed back). Sent when
@@ -14,12 +14,12 @@ public record OpenDormantFlagMessage(BlockPos flagPos) implements ClientRunnable
 
     public static void encode(
             OpenDormantFlagMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos());
     }
 
-    public static OpenDormantFlagMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenDormantFlagMessage decode(FriendlyByteBuf buffer) {
         return new OpenDormantFlagMessage(buffer.readBlockPos());
     }
 

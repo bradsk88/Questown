@@ -255,9 +255,12 @@ public final class NeoLoader implements LoaderApi {
 
     // ---- Open screen ------------------------------------------------------
     @Override
-    public void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<RegistryFriendlyByteBuf> extra) {
-        p.openMenu(provider, extra == null ? buf -> {
-        } : extra);
+    public void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<net.minecraft.network.FriendlyByteBuf> extra) {
+        p.openMenu(provider, buf -> {
+            if (extra != null) {
+                extra.accept(buf);
+            }
+        });
     }
 
     // ---- Networking (NeoForge 1.20.6 payload/stream-codec stack) ----------

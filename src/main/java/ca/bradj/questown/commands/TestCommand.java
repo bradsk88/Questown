@@ -2,7 +2,6 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.commands.test.TestBlueprint;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry;
-import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
 import ca.bradj.questown.loader.Loader;

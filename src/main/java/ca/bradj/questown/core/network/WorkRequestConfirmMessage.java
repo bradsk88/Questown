@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -21,7 +20,7 @@ public record WorkRequestConfirmMessage(
 
     public static void encode(
             WorkRequestConfirmMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         Ingredients.toNetwork(msg.itemRequested(), buffer);
         buffer.writeMap(
@@ -32,7 +31,7 @@ public record WorkRequestConfirmMessage(
         buffer.writeBlockPos(msg.flagPos());
     }
 
-    public static WorkRequestConfirmMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static WorkRequestConfirmMessage decode(FriendlyByteBuf buffer) {
         Ingredient itemRequested = Ingredients.fromNetwork(buffer);
         Map<JobID, ResourceLocation> l = buffer.readMap(
                 NetworkCompat::fromNetworkJobID,

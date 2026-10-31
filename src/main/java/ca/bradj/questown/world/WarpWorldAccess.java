@@ -28,8 +28,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
-import ca.bradj.questown.mc.Compat;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;

@@ -5,7 +5,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 
@@ -14,14 +14,14 @@ public record SyncStatusArtMessage(JobID id, ProductionStatus status, ResourceLo
 
     public static void encode(
             SyncStatusArtMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         Jobs.writeIdToNetwork(buffer, msg.id());
         buffer.writeUtf(msg.status().name());
         buffer.writeResourceLocation(msg.artID());
     }
 
-    public static SyncStatusArtMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SyncStatusArtMessage decode(FriendlyByteBuf buffer) {
         return new SyncStatusArtMessage(
                 Jobs.getIdFromNetwork(buffer),
                 ProductionStatus.fromNumber(buffer.readUtf()),

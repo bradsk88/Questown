@@ -8,7 +8,7 @@ import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.town.TownVillagerUIs;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -26,7 +26,7 @@ public record OpenSkillDetailsMessage(
 
     public static void encode(
             OpenSkillDetailsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villager);
@@ -35,7 +35,7 @@ public record OpenSkillDetailsMessage(
         buffer.writeBoolean(msg.fromFlag);
     }
 
-    public static OpenSkillDetailsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenSkillDetailsMessage decode(FriendlyByteBuf buffer) {
         return new OpenSkillDetailsMessage(
                 buffer.readBlockPos(), buffer.readUUID(), Jobs.getIdFromNetwork(buffer), buffer.readBoolean(), buffer.readBoolean()
         );

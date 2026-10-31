@@ -4,7 +4,6 @@ import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,13 +16,13 @@ public record SyncVillagerAdvancementsMessage(
 
     public static void encode(
             SyncVillagerAdvancementsMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeMap(msg.parents, NetworkCompat::toNetwork, NetworkCompat::toNetworkNullable);
         buffer.writeMap(msg.icons, NetworkCompat::toNetwork, FriendlyByteBuf::writeResourceLocation);
     }
 
-    public static SyncVillagerAdvancementsMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static SyncVillagerAdvancementsMessage decode(FriendlyByteBuf buffer) {
         Map<JobID, @Nullable JobID> jobs = buffer.readMap(
                 NetworkCompat::fromNetworkJobID,
                 NetworkCompat::fromNetworkJobIDNullable

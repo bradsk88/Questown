@@ -1011,7 +1011,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
         Jobs.getItems(job.get())
             .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
-                : v.save(registryAccess())));
+                : ca.bradj.questown.mc.Compat.saveItem(level(), v)));
         p_21484_.put("items", items);
     }
 
@@ -1028,7 +1028,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                     // for every expected-empty slot on every entity load.
                     ItemStack stack = tag.isEmpty()
                             ? net.minecraft.world.item.ItemStack.EMPTY
-                            : net.minecraft.world.item.ItemStack.parse(registryAccess(), tag).orElse(net.minecraft.world.item.ItemStack.EMPTY);
+                            : ca.bradj.questown.mc.Compat.loadItem(level(), tag);
                     return MCHeldItem.fromMCItemStack(stack);
                 })
                 .toList();

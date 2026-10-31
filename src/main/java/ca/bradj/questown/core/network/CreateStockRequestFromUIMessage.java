@@ -5,7 +5,7 @@ import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -17,7 +17,7 @@ public record CreateStockRequestFromUIMessage(
 
     public static void encode(
             CreateStockRequestFromUIMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         msg.item.toNetwork(buffer);
         buffer.writeInt(msg.flagX());
@@ -26,7 +26,7 @@ public record CreateStockRequestFromUIMessage(
         buffer.writeUUID(msg.playerUUID());
     }
 
-    public static CreateStockRequestFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static CreateStockRequestFromUIMessage decode(FriendlyByteBuf buffer) {
         WorkRequest ing = WorkRequest.fromNetwork(buffer);
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();

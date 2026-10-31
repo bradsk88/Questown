@@ -171,7 +171,7 @@ public class UIQuest implements Comparable<UIQuest> {
             Map<ResourceLocation, Integer> questProgress,
             Map<ResourceLocation, Integer> lockedSkillLevels
     ) {
-        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        java.util.Map<ResourceLocation, RoomRecipe> rMapB = new java.util.LinkedHashMap<>();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
         BlockAsRoomEntity.ALL.forEach(v -> {
             RoomBlock vv = v.get();
@@ -188,7 +188,7 @@ public class UIQuest implements Comparable<UIQuest> {
                 SpecialQuests.JOB_BOARD,
                 NonNullList.withSize(1, Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()))
         ));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.buildKeepingLast();
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = ImmutableMap.copyOf(rMapB);
 
         return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();

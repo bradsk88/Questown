@@ -5,7 +5,7 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -14,13 +14,13 @@ public record OpenMultiVillagerMenuMessage(
         int flagX, int flagY, int flagZ
 ) {
 
-    public static void encode(OpenMultiVillagerMenuMessage msg, RegistryFriendlyByteBuf buffer) {
+    public static void encode(OpenMultiVillagerMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
         buffer.writeInt(msg.flagZ);
     }
 
-    public static OpenMultiVillagerMenuMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenMultiVillagerMenuMessage decode(FriendlyByteBuf buffer) {
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();
         int flagZ = buffer.readInt();

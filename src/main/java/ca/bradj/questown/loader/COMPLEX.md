@@ -262,3 +262,31 @@ Waking from a campfire sleep, `CampfireSleepForgeEvents.applyGrogginess` gives M
 Weakness for 6000 ticks. Both are created with `visible=false`, so there are no particles and no
 icon, and the player had no idea why they were weaker. It now also sends a chat line,
 `message.questown.campfire_sleep.groggy`.
+
+## The neutral wire buffer is FriendlyByteBuf (2026-10-31, 1.19 merge PR 0)
+
+`Channel.Encoder`/`Decoder`, `LoaderApi.openScreen` and every message take `FriendlyByteBuf`, not
+1.20.5's `RegistryFriendlyByteBuf`, so the same message classes compile on Forge 1.19.2 (which has
+no registry-aware buffer). On NeoForge every buffer the payload stack hands a message is still a
+`RegistryFriendlyByteBuf` (a subclass), and the one registry-bound operation, item stacks, goes
+through `Compat.writeItem`/`readItem`, which casts inside the seam. `NeoLoader.openScreen` and
+`Compat.openScreen` adapt the consumer to vanilla's `openMenu`. A unit test that round-trips an
+item must therefore build a `RegistryFriendlyByteBuf` itself (`SyncBlockItemMessageTest`); the
+cast throws `ClassCastException` on a plain buffer. No production code builds its own buffer.
+
+The same PR moved three more version-bound calls behind `Compat` so leaves stay identical:
+`ingredientToJson`/`ingredientFromJson` (1.20.5 codec vs 1.19.2 `Ingredient#toJson`),
+`saveItem`/`loadItem` (1.20.5 item NBT needs the level's registries), and two keep-last maps that
+used Guava 31.1's `buildKeepingLast` (Forge 1.19.2 ships 31.0.1) now fill a `LinkedHashMap` first
+(`UIQuest`, `TownFlagBlockEntity.refreshStockedRequests`). The dead `Compat.mapDecorationHolder`
+went.
+
+## Porting to 1.19.2: tools/port-1192.py (2026-10-31)
+
+The 1.19 line (`1.19.2-1.0.0-beta`) runs this tree with a Forge 1.19.2 seam (`loader/forge` in
+place of `loader/neo`, 1.19.2 bodies in `mc/`, `gui/RenderContext`, `gui/RenderUtil`,
+`core/network`). Leaf files differ only mechanically, and `tools/port-1192.py` applies those
+differences: `text` (joml, distmarker, NeoForge->Forge packages, tick events, block/BE API shapes),
+`errors` (renames javac reports missing: `level()`, widget x/y, `copyWithCount`, ...), `data`
+(`c:`->`forge:` tags, recipe result `id`->`item`, armor tags). Re-running it changes nothing. Plan:
+`docs/plans/2026-10-31-001-beta-and-1.19-merge-plan.md`; tracker `.scratch/merge-119/`.

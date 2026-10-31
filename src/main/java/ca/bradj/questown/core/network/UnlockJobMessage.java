@@ -12,7 +12,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,7 +30,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
 
     public static void encode(
             UnlockJobMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
@@ -38,7 +38,7 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
         buffer.writeBoolean(msg.confirmFirst);
     }
 
-    public static UnlockJobMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static UnlockJobMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         UUID uuid = buffer.readUUID();
         JobID jobId = Jobs.getIdFromNetwork(buffer);

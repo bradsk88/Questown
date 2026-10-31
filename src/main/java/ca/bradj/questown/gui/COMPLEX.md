@@ -1716,3 +1716,10 @@ hunter).
 An in-town crafter walking to its table showed `leaving.png` (an empty path, read as "left town").
 The dev: "there's already a going to jobsite graphic". That's the unused `menu/gatherer/gathering.png`,
 a figure walking along a path. `StatusArt` maps `GOING_TO_JOB` to it for every job.
+
+## RenderContext owns blit and scissor (2026-10-31, 1.19 merge PR 0)
+
+The villager-advancements trio called `ctx.gui().blit(...)` / `enableScissor` directly. On 1.19.2
+`RenderContext.gui()` is the `PoseStack` (there is no `GuiGraphics`), so those calls go through
+`RenderContext.blit` (256-sheet and sized forms), `enableScissor` and `disableScissor` on both
+branches.

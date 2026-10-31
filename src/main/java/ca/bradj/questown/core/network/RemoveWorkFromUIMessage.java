@@ -6,7 +6,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -18,7 +18,7 @@ public record RemoveWorkFromUIMessage(
 
     public static void encode(
             RemoveWorkFromUIMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         msg.requested.toNetwork(buffer);
         buffer.writeInt(msg.flagX);
@@ -27,7 +27,7 @@ public record RemoveWorkFromUIMessage(
 
     }
 
-    public static RemoveWorkFromUIMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static RemoveWorkFromUIMessage decode(FriendlyByteBuf buffer) {
         WorkRequest requested = WorkRequest.fromNetwork(buffer);
         int flagX = buffer.readInt();
         int flagY = buffer.readInt();

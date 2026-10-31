@@ -21,7 +21,6 @@ import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 // MCQuests is a simple wrapper for Quests that is coupled to Minecraft
 public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> {

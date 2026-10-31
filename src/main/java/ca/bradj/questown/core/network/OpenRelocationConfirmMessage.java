@@ -3,7 +3,7 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 
 /**
@@ -20,13 +20,13 @@ public record OpenRelocationConfirmMessage(
 
     public static void encode(
             OpenRelocationConfirmMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.targetPos());
         buffer.writeVarInt(msg.farFixtureCount());
     }
 
-    public static OpenRelocationConfirmMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static OpenRelocationConfirmMessage decode(FriendlyByteBuf buffer) {
         BlockPos targetPos = buffer.readBlockPos();
         int farFixtureCount = buffer.readVarInt();
         return new OpenRelocationConfirmMessage(targetPos, farFixtureCount);

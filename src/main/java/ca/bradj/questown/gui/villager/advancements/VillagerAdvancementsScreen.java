@@ -188,7 +188,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             // absolute canvas edges (not width/height - confirmed from the
             // ScreenRectangle(x, y, p3 - x, p4 - y) ctor), so it wraps the
             // pose push/translate block.
-            ctx.gui().enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
+            ctx.enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
             // 1.20.6: GUI transforms live on guiGraphics.pose(); touching the global
             // modelview stack here corrupts the u_ModelView uniform that the
             // RenderType.gui() pipeline (fill/drawString) applies, clipping content.
@@ -196,7 +196,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             ctx.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
             advancementtab.drawContents(ctx);
             ctx.pose().popPose();
-            ctx.gui().disableScissor();
+            ctx.disableScissor();
         }
 
     }
@@ -210,7 +210,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         RenderSystem.enableBlend();
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderTexture(0, WINDOW_LOCATION);
-        ctx.gui().blit(WINDOW_LOCATION, p_97358_, p_97359_, 0, 0, 252, 140);
+        ctx.blit(WINDOW_LOCATION, p_97358_, p_97359_, 0, 0, 252, 140);
 
         ctx.text(TITLE, p_97358_ + 8, p_97359_ + 6, 4210752, false);
 

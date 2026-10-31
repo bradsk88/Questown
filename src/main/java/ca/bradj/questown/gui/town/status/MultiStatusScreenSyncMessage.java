@@ -12,7 +12,6 @@ import com.google.common.collect.ImmutableSet;
 import ca.bradj.questown.loader.Channel;
 import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.NotNull;
@@ -29,7 +28,7 @@ public record MultiStatusScreenSyncMessage(
 
     public static void encode(
             MultiStatusScreenSyncMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeMap(
                 msg.data.villagerStatuses(), (b, k) -> b.writeUUID(k), StatusPacket::toNetwork
@@ -43,7 +42,7 @@ public record MultiStatusScreenSyncMessage(
         buffer.writeMap(msg.data.switchAfterTrip(), (b, k) -> b.writeUUID(k), NetworkCompat::toNetwork);
     }
 
-    public static MultiStatusScreenSyncMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
         HashMap<UUID, StatusPacket> data = buffer.readMap(
                 HashMap::new,
                 b -> b.readUUID(),

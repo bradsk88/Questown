@@ -5,7 +5,7 @@ import ca.bradj.questown.gui.BopTransactionSyncer;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import ca.bradj.questown.loader.Channel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -17,7 +17,7 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
 
     public static void encode(
             JobRootChangeMessage msg,
-            RegistryFriendlyByteBuf buffer
+            FriendlyByteBuf buffer
     ) {
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
@@ -25,7 +25,7 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
         buffer.writeBoolean(msg.fromFlag());
     }
 
-    public static JobRootChangeMessage decode(RegistryFriendlyByteBuf buffer) {
+    public static JobRootChangeMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         UUID uuid = buffer.readUUID();
         boolean instant = buffer.readBoolean();
