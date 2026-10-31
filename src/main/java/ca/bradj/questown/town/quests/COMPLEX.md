@@ -565,3 +565,10 @@ crafter has a new thing to make while it trains. `train_crafter_3` opens after `
 which satisfies `QuestPathDataTest.everyNamedSkill_isLearnableWhenItsBatchOpens`. The wooden
 sword stays a level-3 skill in `weapons_1`. A town whose `train_crafter_3` batch is already open
 keeps its old quests (batches are posted once).
+
+Revised the same evening (dev: "Or maybe it should be pickaxes. Nobody uses shovels in this town,
+but pickaxes are good."): the pickaxe takes that role. `crafter/wooden_pickaxe`
+(`blacksmith_wood_pickaxe.json`) is the level-2 skill named in `train_crafter_3`, and
+`crafter/wooden_shovel` is back to level 3 in `weapons_1`. The pickaxe's tree parent stays
+`crafter/wooden_hoe` (level 3). Unlocking is gated on level only, across the root's whole tree
+(`TownVillagerUIsHandle.unlockableSkills` -> `childJobsKnownToExist`), not on the parent node.
