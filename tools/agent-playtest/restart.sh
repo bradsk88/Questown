@@ -2,10 +2,13 @@
 # restart.sh <name>: restart the agent playtest in this checkout (client down by cwd, server stop
 # via the FIFO only if it is alive, then server, then client) and wait for the join. Rebuilds as a
 # side effect, so run it after a code change. Logs: build/agent-playtest/<name>-{server,client}.log
+# PORT=<n> joins a server on another port (set server-port=<n> in run/server.properties too), so a
+# second checkout can run beside the dev's session on 25585.
 set -u
 REPO=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$REPO"
 name=${1:?usage: restart.sh <name>}
+port=${PORT:-25585}
 for p in $(pgrep java); do
   [ "$(readlink /proc/$p/cwd)" = "$REPO/run-client" ] && kill $p && echo "killed client $p"
 done
@@ -26,6 +29,6 @@ LANG=C.UTF-8 setsid nohup ./gradlew runServer -Dquestown.tp.fifo=true > "build/a
 until grep -q -E 'Done \(|FAILED' "build/agent-playtest/$name-server.log"; do sleep 2; done
 grep -E 'Done \(|FAILED|error:' "build/agent-playtest/$name-server.log" | head -5
 grep -q 'Done (' "build/agent-playtest/$name-server.log" || exit 1
-LANG=C.UTF-8 setsid nohup ./gradlew runClient -Pautojoin -Pautoport=25585 > "build/agent-playtest/$name-client.log" 2>&1 &
+LANG=C.UTF-8 setsid nohup ./gradlew runClient -Pautojoin -Pautoport=$port > "build/agent-playtest/$name-client.log" 2>&1 &
 until grep -q 'joined the game' run/logs/latest.log || grep -q 'FAILED' "build/agent-playtest/$name-client.log"; do sleep 3; done
 grep -q 'joined the game' run/logs/latest.log && echo "client joined" || { echo "client FAILED"; exit 1; }

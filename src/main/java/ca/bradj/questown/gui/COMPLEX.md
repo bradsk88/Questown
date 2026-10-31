@@ -1600,3 +1600,24 @@ Seen in game on the r23 world: `.scratch/dev-playtest-2026-10-29-fresh/overnight
 (hunter: leather, mutton, porkchop, "…" with "And others"; cook: no Tools row, "Raw Beef" on hover).
 gui-lint OK for ItemJobsScreen. The "jobs that make this item" screen shares the card, so it also
 caps products at three. Not asked and left as is: an empty "Items Used:" row (a hunter's) still shows.
+
+## Selector strip: page selector and economics view toggle (dev playtest 2026-10-30)
+
+Dev: "The alltime/1000ticks selector should have the same style as the page selector". The
+economics tab's view toggle (e70eda79) was a plain dark-text label. It is now the page selector's
+look: `PagedCardScreen.drawSelectorStrip` draws the dark strip (0x30000000, from the previous
+button's right edge to `rightX`) and the centred light text. The paged screens' "Page N / M" row
+and `TownEconomicsScreen` both call it. The toggle has its own pair of JEI arrow buttons
+(`previousView` / `nextView`, both flip `showRecent`), placed in `init()` along the panel's bottom
+edge (`borderPadding` from the bottom). Hovering the strip shows the tooltip. Seen in game, and
+gui-lint reports TownEconomicsScreen OK. The other hand-rolled page rows (WorkScreen,
+AddWorkScreen, CreateStockRequestScreen, QuestRemoveConfirmScreen) are unchanged.
+
+## Flag BOP tooltip (dev playtest 2026-10-30)
+
+Dev: the flag's BOP shown on the job-change / unlock screens "should have a tooltip explaining
+that it represents the BOPs on the flag". Hovering the BOP item that `JobChangeConfirmScreen`
+draws in the empty slot (`usesFlagBop`), or the icon left of "Unlock from the flag" in
+`ItemJobsScreen` (`isOverFlagBop`), shows `gui.flag_bop.tooltip` ("Blocks of Progress on the town
+flag: %s. Unlock spends one."). Seen on skill details ("...: 3. Unlock spends one."). The
+change-job slot shares the text and the 16x16 hover box but was not seen in game.

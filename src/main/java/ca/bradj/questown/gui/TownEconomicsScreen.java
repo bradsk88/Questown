@@ -6,7 +6,9 @@ import ca.bradj.questown.core.network.ClaimFreeFoodMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
+import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -51,12 +53,31 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         return EconomicsCardOrder.order(showRecent ? lastUpdate.recent() : lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
     }
 
-    private int viewToggleX() {
-        return (this.width - backgroundWidth) / 2 + 8;
+    private final GuiIconButtonSmall previousView = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> showRecent = !showRecent
+    );
+    private final GuiIconButtonSmall nextView = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> showRecent = !showRecent
+    );
+
+    @Override
+    protected void init() {
+        super.init();
+        // The view toggle is a selector strip like the page selector, along the panel's bottom edge.
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight()) / 2 + backgroundHeight() - borderPadding - buttonHeight;
+        previousView.setX(x + borderPadding);
+        previousView.setY(y);
+        nextView.setX(x + backgroundWidth - buttonWidth - borderPadding);
+        nextView.setY(y);
+        addRenderableWidget(previousView);
+        addRenderableWidget(nextView);
     }
 
-    private int viewToggleY() {
-        return (this.height - backgroundHeight()) / 2 + backgroundHeight() - 8 - this.font.lineHeight;
+    private boolean isOverViewToggle(int mouseX, int mouseY) {
+        int x = previousView.getX();
+        return UtilClean.isCoordInBox(mouseX, mouseY, x, previousView.getY(),
+                nextView.getX() + buttonWidth - x, buttonHeight);
     }
 
     private Component viewToggleLabel() {
@@ -91,9 +112,11 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int mouseY,
             float partialTicks
     ) {
-        ctx.darkText(viewToggleLabel(), viewToggleX(), viewToggleY());
-        if (UtilClean.isCoordInBox(mouseX, mouseY, viewToggleX(), viewToggleY(),
-                this.font.width(viewToggleLabel()), this.font.lineHeight)) {
+        drawSelectorStrip(ctx, previousView, nextView, (this.width - backgroundWidth) / 2 + backgroundWidth,
+                viewToggleLabel().getString());
+        ctx.renderWidget(previousView, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(nextView, mouseX, mouseY, partialTicks);
+        if (isOverViewToggle(mouseX, mouseY)) {
             this.showTooltip(Compat.translatable("questown.menu.economics.view.tooltip"));
             return;
         }
@@ -242,11 +265,6 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 QuestownNetwork.sendToServer(msg);
                 return true;
             }
-        }
-        if (UtilClean.isCoordInBox(mouseX, mouseY, viewToggleX(), viewToggleY(),
-                this.font.width(viewToggleLabel()), this.font.lineHeight)) {
-            showRecent = !showRecent;
-            return true;
         }
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight()) / 2;

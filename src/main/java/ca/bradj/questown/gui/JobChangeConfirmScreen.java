@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
@@ -101,6 +102,13 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         }
         renderChangeText(ctx, jobIconX, bgY + menu.gathererInventoryYOffset);
         this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.showTooltip(Compat.translatable(key)));
+        if (menu.usesFlagBop()) {
+            Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
+            if (UtilClean.isCoordInBox(mouseX, mouseY, bgX + bopSlot.x, bgY + bopSlot.y, 16, 16)) {
+                // Dev playtest 2026-10-30: say that this Block of Progress is the flag's.
+                this.showTooltip(Compat.translatable("gui.flag_bop.tooltip", menu.flagBopCount()));
+            }
+        }
     }
 
     private void renderChangeText(

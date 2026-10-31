@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
@@ -13,7 +12,6 @@ import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ca.bradj.questown.loader.TriPredicate;
@@ -196,11 +194,9 @@ public final class PagedCardScreen<D> {
             List<D> cardsData
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
-        renderPageNum(
-                ctx, bgX, cardsData, (rc, pos, size) -> rc.fill(
-                        pos.a(), pos.b(), size.a(), size.b(), 0x30000000
-                )
-        );
+        int totalPages = Pages.count(cardsData.size(), MAX_CARDS_PER_PAGE);
+        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+        drawSelectorStrip(ctx, previousPage, nextPage, bgX + backgroundWidth, pageString);
 
         // Render the page buttons
         this.previousPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
@@ -248,28 +244,23 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    private void renderPageNum(
+    /**
+     * The page selector's look: a dark strip from the previous button to {@code rightX}, with the
+     * text centred between the two arrow buttons. Also the economics tab's view toggle (dev
+     * playtest 2026-10-30: "should have the same style as the page selector").
+     */
+    static void drawSelectorStrip(
             RenderContext ctx,
-            int x,
-            List<D> cardsData,
-            TriConsumer<RenderContext, Pair<Integer, Integer>, Pair<Integer, Integer>> fill
+            GuiIconButtonSmall previous,
+            GuiIconButtonSmall next,
+            int rightX,
+            String text
     ) {
-        // Draw page numbers
-        int xx = x + borderPadding + buttonWidth;
-        int y = nextPage.getY();
-        int width = xx + backgroundWidth - borderPadding - buttonWidth;
-        int height = nextPage.getY() + buttonHeight;
-        fill.accept(
-                ctx,
-                new Pair<>(xx, y),
-                new Pair<>(width, height)
-        );
-        int totalPages = Pages.count(cardsData.size(), MAX_CARDS_PER_PAGE);
-        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
-
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, ctx.font(), pageString);
-        ctx.lightText(pageString, textArea.getX(), textArea.getY());
+        int y = next.getY();
+        ctx.fill(previous.getX() + buttonWidth, y, rightX, y + buttonHeight, 0x30000000);
+        ImmutableRect2i area = MathUtil.union(previous.getArea(), next.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(area, ctx.font(), text);
+        ctx.lightText(text, textArea.getX(), textArea.getY());
     }
 
     /** Back to page 1, for a screen whose card list just changed (QuestsScreen's open/completed toggle). */

@@ -98,6 +98,18 @@ public class ItemJobsScreen extends CompatScreen {
 
     private static final int FLAG_BOP_ICON_SPACE = 20;
 
+    private int flagBopIconX() {
+        return addButton.getX() - FLAG_BOP_ICON_SPACE + 1;
+    }
+
+    private int flagBopIconY() {
+        return addButton.getY() + 1;
+    }
+
+    private boolean isOverFlagBop(int mouseX, int mouseY) {
+        return showsFlagBop() && UtilClean.isCoordInBox(mouseX, mouseY, flagBopIconX(), flagBopIconY(), 16, 16);
+    }
+
     private boolean showsFlagBop() {
         return skillVillager != null && skillLocked && flagBops > 0;
     }
@@ -218,7 +230,7 @@ public class ItemJobsScreen extends CompatScreen {
     ) {
         if (showsFlagBop()) {
             ItemStack bop = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance().copyWithCount(Math.min(flagBops, 64));
-            ctx.renderItemAndDecorations(bop, addButton.getX() - FLAG_BOP_ICON_SPACE + 1, addButton.getY() + 1);
+            ctx.renderItemAndDecorations(bop, flagBopIconX(), flagBopIconY());
         }
         String renderString = skillVillager == null ? "Jobs:" : title.getString() + ":";
         ImmutableRect2i textArea = getTitleArea();
@@ -245,6 +257,10 @@ public class ItemJobsScreen extends CompatScreen {
         renderTooltips(ctx, mouseX, mouseY, textArea.expandBy(4));
         if (cardTooltip != null && !cardTooltip.isEmpty()) {
             this.showTooltip(cardTooltip.stream().map(Compat::componentText).toList());
+        }
+        if (isOverFlagBop(mouseX, mouseY)) {
+            // Dev playtest 2026-10-30: say that this Block of Progress is the flag's.
+            this.showTooltip(Compat.translatable("gui.flag_bop.tooltip", flagBops));
         }
     }
 
