@@ -797,7 +797,8 @@ public class TownPossibleWork {
                 .filter(jobID -> vh.isUnlocked(villagerUUID, jobID))
                 .collect(ImmutableList.toImmutableList());
         return cycler.nextValid(possible, canAlwaysStart, canFitInDay, requestedResults, td,
-                job -> ServerJobsRegistry.tripLength(villagerUUID, job));
+                job -> ServerJobsRegistry.tripLength(villagerUUID, job),
+                ServerJobsRegistry::getAvailableAtLevel);
     }
 
     /**

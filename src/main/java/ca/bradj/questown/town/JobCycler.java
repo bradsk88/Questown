@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
 public class JobCycler {
@@ -26,11 +27,6 @@ public class JobCycler {
         return nextValid(availableJobs, canAlwaysStart, canFitInDay, requestedResults, td, j -> 0L);
     }
 
-    /**
-     * {@code tripLength} ranks the valid jobs: the longest trip that fits the day wins (dev playtest
-     * 2026-10-29: "Longest that fits the day"); jobs that are not trips (length 0) and ties keep the
-     * shuffled rotation.
-     */
     public @Nullable JobID nextValid(
             Iterable<JobID> availableJobs,
             Predicate<JobID> canAlwaysStart,
@@ -38,6 +34,24 @@ public class JobCycler {
             BoardRequests requestedResults,
             WorksBehaviour.TownData td,
             ToLongFunction<JobID> tripLength
+    ) {
+        return nextValid(availableJobs, canAlwaysStart, canFitInDay, requestedResults, td, tripLength, j -> 0);
+    }
+
+    /**
+     * {@code tripLength} ranks the valid jobs: the longest trip that fits the day wins (dev playtest
+     * 2026-10-29: "Longest that fits the day"). Then {@code level}: the job needing the highest
+     * villager level wins (dev playtest 2026-10-30: "Crafter should prefer building the highest
+     * level thing", for every villager). Remaining ties keep the shuffled rotation.
+     */
+    public @Nullable JobID nextValid(
+            Iterable<JobID> availableJobs,
+            Predicate<JobID> canAlwaysStart,
+            Predicate<JobID> canFitInDay,
+            BoardRequests requestedResults,
+            WorksBehaviour.TownData td,
+            ToLongFunction<JobID> tripLength,
+            ToIntFunction<JobID> level
     ) {
         Set<JobID> currentSet = toSet(availableJobs);
         if (!currentSet.equals(knownJobs)) {
@@ -51,6 +65,7 @@ public class JobCycler {
         int size = shuffled.size();
         int bestPos = -1;
         long bestLength = -1;
+        int bestLevel = Integer.MIN_VALUE;
         for (int i = 0; i < size; i++) {
             int pos = (index + i) % size;
             JobID candidate = shuffled.get(pos);
@@ -58,9 +73,11 @@ public class JobCycler {
                 continue;
             }
             long length = tripLength.applyAsLong(candidate);
-            if (length > bestLength) {
+            int lvl = level.applyAsInt(candidate);
+            if (length > bestLength || (length == bestLength && lvl > bestLevel)) {
                 bestPos = pos;
                 bestLength = length;
+                bestLevel = lvl;
             }
         }
         if (bestPos >= 0) {

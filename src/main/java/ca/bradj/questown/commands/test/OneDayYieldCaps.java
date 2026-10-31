@@ -11,8 +11,15 @@ final class OneDayYieldCaps {
     /** A warp day is 24000 ticks, at most half of them productive. */
     static final int PRODUCTIVE_TICKS = 12000;
 
-    /** hunter: sword_half_day, 5 attempts per 4000 ticks, 3 trips (Outfitter ruling #25, 2026-10-26). */
-    static final int HUNTER = 15;
+    /**
+     * hunter: the best day is two sword_full_day trips (8 attempts per 6000 ticks) with every roll
+     * a meat, now 2 per roll: 2 x 8 x 2 = 32 (dev playtest 2026-10-30, "make hunters bring meat
+     * more often"; was 15 = 3 half-day trips x 5 single items, Outfitter ruling #25).
+     */
+    static final int HUNTER = 32;
+
+    /** The most items one hunter roll gives (meat is 2 per roll since 2026-10-30). */
+    static final int HUNTER_ITEMS_PER_ROLL = 2;
 
     /** gatherer: axe_half_day, 5 attempts per 4000 ticks, 3 trips (Outfitter ruling #25, 2026-10-26). */
     static final int GATHERER = 15;

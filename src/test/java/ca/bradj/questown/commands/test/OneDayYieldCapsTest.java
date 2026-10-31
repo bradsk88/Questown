@@ -18,6 +18,9 @@ import java.util.stream.Stream;
  * 2026-10-29: {@code hunter/sword [one_day_yield]} failed 1 in 3 runs with 10 items against a cap
  * of 8. The cap came from the trip yields before Outfitter ruling #25 (2026-10-26) raised half-day
  * trips to 5 attempts and full-day trips to 6; two half-day trips bank 10 in 8000 ticks.
+ * 2026-10-30 (dev: hunters should bring more meat, with the longer trips still worth it): hunter
+ * meat is 2 per roll and the full-day trip has 8 attempts, so the hunter cap also scales by the
+ * largest per-roll count in its loot tables.
  */
 class OneDayYieldCapsTest {
 
@@ -26,7 +29,34 @@ class OneDayYieldCapsTest {
 
     @Test
     void hunterCap_isTheBestTierAcrossOneDay() throws IOException {
-        Assertions.assertEquals(bestDayYield("hunter_unmapped_"), OneDayYieldCaps.HUNTER);
+        Assertions.assertEquals(maxCountPerRoll(Path.of("src/main/resources/data/questown/loot_tables/jobs/hunter_sword")),
+                OneDayYieldCaps.HUNTER_ITEMS_PER_ROLL);
+        Assertions.assertEquals(bestDayYield("hunter_unmapped_") * OneDayYieldCaps.HUNTER_ITEMS_PER_ROLL, OneDayYieldCaps.HUNTER);
+    }
+
+    /** The largest set_count in any table under dir (1 for an entry without one). */
+    private static int maxCountPerRoll(Path dir) throws IOException {
+        int max = 1;
+        try (Stream<Path> files = Files.walk(dir)) {
+            for (Path p : files.filter(f -> f.toString().endsWith(".json")).toList()) {
+                JsonObject table = GSON.fromJson(Files.readString(p), JsonObject.class);
+                for (JsonElement pool : table.getAsJsonArray("pools")) {
+                    for (JsonElement entry : pool.getAsJsonObject().getAsJsonArray("entries")) {
+                        JsonObject e = entry.getAsJsonObject();
+                        if (!e.has("functions")) {
+                            continue;
+                        }
+                        for (JsonElement fn : e.getAsJsonArray("functions")) {
+                            JsonObject f = fn.getAsJsonObject();
+                            if ("minecraft:set_count".equals(f.get("function").getAsString()) && f.get("count").isJsonPrimitive()) {
+                                max = Math.max(max, f.get("count").getAsInt());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return max;
     }
 
     @Test

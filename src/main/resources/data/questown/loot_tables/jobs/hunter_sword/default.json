@@ -9,7 +9,10 @@
           "name": "minecraft:mutton",
           "weight": 40,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         },
         {
@@ -17,7 +20,10 @@
           "name": "minecraft:porkchop",
           "weight": 30,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         },
         {
@@ -25,7 +31,10 @@
           "name": "minecraft:beef",
           "weight": 20,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         },
         {
@@ -33,7 +42,10 @@
           "name": "minecraft:chicken",
           "weight": 15,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         },
         {
@@ -41,7 +53,10 @@
           "name": "minecraft:feather",
           "weight": 10,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         },
         {
@@ -49,7 +64,10 @@
           "name": "minecraft:leather",
           "weight": 43,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         },
         {
@@ -57,7 +75,10 @@
           "name": "minecraft:white_wool",
           "weight": 14,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         }
       ]

@@ -48,4 +48,26 @@ class JobCyclerTest {
         JobID second = c.nextValid(List.of(a, b), j -> true, j -> true, NONE, null, j -> 0L);
         Assertions.assertNotEquals(first, second);
     }
+
+    /** Dev playtest 2026-10-30: "Crafter should prefer building the highest level thing" (every villager). */
+    @Test
+    void amongInTownJobs_theHighestLevelWins_everyTime() {
+        JobCycler c = new JobCycler();
+        JobID stick = new JobID("crafter", "stick");
+        JobID boots = new JobID("crafter", "leather_boots");
+        JobID sword = new JobID("crafter", "stone_sword");
+        Map<JobID, Integer> level = Map.of(stick, 1, boots, 3, sword, 5);
+        for (int i = 0; i < 4; i++) {
+            Assertions.assertEquals(sword, c.nextValid(List.of(stick, boots, sword), j -> true, j -> true, NONE, null,
+                    j -> 0L, level::get));
+        }
+    }
+
+    @Test
+    void aLongerTrip_beatsAHigherLevel() {
+        JobCycler c = new JobCycler();
+        Map<JobID, Integer> level = Map.of(SHORT, 9, HALF, 1, FULL, 1);
+        Assertions.assertEquals(FULL, c.nextValid(List.of(SHORT, HALF, FULL), j -> false, j -> true, NONE, null,
+                j -> LENGTH.getOrDefault(j, 0L), level::get));
+    }
 }

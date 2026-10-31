@@ -1237,3 +1237,29 @@ the chestplate must go on the dressed one): with the preference off, 1 of 2 runs
 was random); with it, green. The display fixture now clears earlier scenarios' displays and item
 entities first: in a shared server they made `fullest_stand` (a second dressed stand) and
 `corner_frames` (old drops) fail. `crafter/display` 5/5.
+
+## Diamonds only on deep miner trips (dev ruling 2026-10-30)
+
+"Two diamonds already. Too easy." -> "Deep trips only". The diamond (weight 1) is gone from
+`loot_tables/jobs/miner/default.json`; `jobs/miner/deep.json` is the old table, diamond included,
+and only `miner/coal_full_day` uses it (`result.default`). The short and half-day trips can no
+longer find diamonds.
+
+## Hunters bring more meat; longer trips stay worth it (dev ruling 2026-10-30)
+
+"Food continues to be a bit of a bottleneck. Maybe we should make hunters bring meat more often?"
+-> more meat per trip, "but I want to make sure the half-day and full-day jobs are comparatively
+still beneficial". Every meat entry (mutton, porkchop, beef, chicken, rabbit) in the
+`jobs/hunter_sword` tables now has `set_count` 2. A trip is `attempts` single rolls, so per 1000
+ticks the trips were short 0.5, half-day 1.25 and full-day 1.0 items: the full day was worse than
+the half day. It now has 8 attempts (1.33 per 1000 ticks). `OneDayYieldCaps.HUNTER` is 32 (two
+full-day trips x 8 x 2), and `OneDayYieldCapsTest` derives the per-roll factor from the loot
+tables.
+
+## The work roll prefers the highest-level job (dev ruling 2026-10-30)
+
+"Crafter should prefer building the highest level thing", for every villager. `JobCycler.nextValid`
+takes a `level` key after `tripLength`: among valid jobs with the same trip length (all in-town
+jobs are 0), the one with the highest `ServerJobsRegistry.getAvailableAtLevel` wins, and the
+remaining ties keep the rotation. A longer trip still beats a higher level. `JobCyclerTest`
+(`amongInTownJobs_theHighestLevelWins_everyTime`, `aLongerTrip_beatsAHigherLevel`).

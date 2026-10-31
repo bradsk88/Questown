@@ -8,7 +8,7 @@
   "result": {
     "type": "biome_loot",
     "prefix": "jobs/miner",
-    "default": "jobs/miner/default",
+    "default": "jobs/miner/deep",
     "attempts": 6, "prefer_requested": true
   },
   "block": "questown:mineshaft",
