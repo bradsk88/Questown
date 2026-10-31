@@ -9,6 +9,7 @@ import ca.bradj.questown.core.network.FlagCraftMessage;
 import ca.bradj.questown.core.network.FlagCraftRecipes;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import mezz.jei.gui.elements.GuiIconButtonSmall;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.ChatFormatting;
@@ -29,6 +30,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ca.bradj.questown.gui.PagedCardScreen.buttonHeight;
+import static ca.bradj.questown.gui.PagedCardScreen.buttonWidth;
+
 public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> {
     private static final int backgroundWidth = 176;
     private static final int MARGIN = 12;
@@ -39,6 +43,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private static final int CRAFT_BTN_X = 100;
     private static final int CRAFT_BTN_W = 60;
     private static final int BTN_HEIGHT = 20;
+    // Rows per page (dev playtest 2026-10-30: "add pagination to the crafting screen"); five rows
+    // already filled a 240-px-tall GUI (r17).
+    static final int ROWS_PER_PAGE = 5;
 
     private final FlagTabs tabs;
     private final JEI.NineNine background;
@@ -49,6 +56,15 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     // to its index in ALL (what FlagCraftMessage sends). Gated rows wait for their quest (r17 #1).
     private final List<Button> craftButtons = new ArrayList<>();
     private List<Integer> visibleRecipes = new ArrayList<>();
+    private int page = 0;
+    private int pageCount = 1;
+    private int navY;
+    private final GuiIconButtonSmall previousPage = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> turnPage(-1));
+    private final GuiIconButtonSmall nextPage = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> turnPage(1));
+    // A BOP recipe's first click arms it ("Spend 4 Blocks of Progress?"), the second crafts.
+    private int armedRecipe = -1;
 
     // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
     // overlap regardless of string length / translation. All values are offsets from the panel's
@@ -115,12 +131,20 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         titleY = y;
         y += wrappedHeight(title()) + BLOCK_PAD;
 
-        visibleRecipes = new ArrayList<>();
+        List<Integer> unlocked = new ArrayList<>();
         for (int i = 0; i < FlagCraftRecipes.ALL.size(); i++) {
             if (FlagCraftGates.visible(FlagCraftRecipes.ALL.get(i).unlockedByQuest(), menu.getPostedQuests())) {
-                visibleRecipes.add(i);
+                unlocked.add(i);
             }
         }
+        pageCount = Math.max(1, Pages.count(unlocked.size(), ROWS_PER_PAGE));
+        page = Math.min(page, pageCount - 1);
+        if (pageCount > 1) {
+            navY = y;
+            y += buttonHeight + BLOCK_PAD;
+        }
+        int from = page * ROWS_PER_PAGE;
+        visibleRecipes = new ArrayList<>(unlocked.subList(from, Math.min(unlocked.size(), from + ROWS_PER_PAGE)));
         rowY = new int[visibleRecipes.size()];
         for (int i = 0; i < rowY.length; i++) {
             rowY[i] = y;
@@ -146,6 +170,15 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
 
+        if (pageCount > 1) {
+            previousPage.setX(bgX + MARGIN);
+            previousPage.setY(bgY + navY);
+            nextPage.setX(bgX + backgroundWidth - MARGIN - buttonWidth);
+            nextPage.setY(bgY + navY);
+            this.addRenderableWidget(previousPage);
+            this.addRenderableWidget(nextPage);
+        }
+        armedRecipe = -1;
         craftButtons.clear();
         for (int i = 0; i < rowY.length; i++) {
             Button b = craftButton(bgX + CRAFT_BTN_X, bgY + rowY[i], visibleRecipes.get(i));
@@ -182,10 +215,23 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.onClose();
     }
 
+    private void turnPage(int delta) {
+        page = Math.max(0, Math.min(pageCount - 1, page + delta));
+        rebuildWidgets();
+    }
+
     private Button craftButton(int x, int y, int recipeIndex) {
+        FlagCraftRecipes recipe = FlagCraftRecipes.ALL.get(recipeIndex);
         return Compat.button(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
+                    // Dev playtest 2026-10-30: clicking craft on a BOP recipe should say what it
+                    // costs. The first click arms it, as "Begin moving" does (docs/ui-principles.md 10).
+                    if (recipe.costsBops() && armedRecipe != recipeIndex) {
+                        armedRecipe = recipeIndex;
+                        btn.setMessage(Compat.translatable("menu.flag_crafting.craft_bops_confirm", recipe.bopCost()));
+                        return;
+                    }
                     // A fast double-click can fire the second send before the onClose from the
                     // first click lands (2026-10-12 playtest: "Created X" printed twice for one
                     // click - the server consumes input and grants the item per message, so the
@@ -212,8 +258,20 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     // grey the button out when the local player has none — clicking it would be a no-op.
     private void updateCraftButtonStates() {
         for (int i = 0; i < craftButtons.size(); i++) {
-            craftButtons.get(i).active = countMatching(FlagCraftRecipes.ALL.get(visibleRecipes.get(i)).input().get()) > 0;
+            FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
+            craftButtons.get(i).active = r.costsBops()
+                    ? menu.getFlagBops() >= r.bopCost()
+                    : countMatching(r.input().get()) > 0;
         }
+    }
+
+    // A BOP recipe's tooltip counts the flag's Blocks of Progress, not the player's inventory.
+    private void renderBopCraftTooltip(Component desc, int cost, int mouseX, int mouseY) {
+        int have = menu.getFlagBops();
+        List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
+        Style style = Style.EMPTY.applyFormat(have < cost ? ChatFormatting.RED : ChatFormatting.GRAY);
+        lines.add(Compat.componentText(Compat.translatableStyled("menu.flag_crafting.on_flag", style, have, cost)));
+        this.showTooltip(lines);
     }
 
     private int countMatching(Ingredient ingredient) {
@@ -243,6 +301,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         int bgY = (this.height - panelHeight) / 2;
 
         ctx.darkTextWrap(new Coordinate(bgX + MARGIN, bgY + titleY), TEXT_WIDTH, title());
+        if (pageCount > 1) {
+            PagedCardScreen.drawSelectorStrip(ctx, previousPage, nextPage, nextPage.getX() + buttonWidth,
+                    "Page " + (page + 1) + " / " + pageCount);
+        }
 
         for (int i = 0; i < rowY.length; i++) {
             FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
@@ -256,7 +318,11 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         for (int i = 0; i < craftButtons.size(); i++) {
             if (craftButtons.get(i).isHovered()) {
                 FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
-                renderCraftTooltip(Compat.translatable(r.descKey()), r.input().get(), mouseX, mouseY);
+                if (r.costsBops()) {
+                    renderBopCraftTooltip(Compat.translatable(r.descKey()), r.bopCost(), mouseX, mouseY);
+                } else {
+                    renderCraftTooltip(Compat.translatable(r.descKey()), r.input().get(), mouseX, mouseY);
+                }
             }
         }
     }

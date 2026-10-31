@@ -1658,3 +1658,24 @@ Button placement should be consistent.' On the all-done view the "View completed
 centred under the subtitle (`emptyStateButtonY`). It now uses `footerButtonY` on every view, and
 the subtitle alone is centred in the panel. The wider ask (common layout code for every screen's
 buttons) is not done: `TownBlockofProgressScreen` and the paged screens still place their own.
+
+## Flag crafting: pages and BOP-cost rows (dev playtest 2026-10-30)
+
+Dev: "add pagination to the crafting screen. We should add lines for armory and blacksmith table.
+Clicking craft on those ones should say 'this costs 4 bops' and it should use up 4 bops when
+crafted. it should only craft if the BOPs are available" / "This is just to make sure players can
+have a familiar place to craft. But the crafting table recipe can stay".
+- `FlagCraftRecipes` gains `bopCost` (0 = an item recipe, via the old 6-arg constructor).
+  `forBops` builds the armorer's- and blacksmith's-table rows: the input icon is 4 BOPs and
+  there's no input item. `craft` takes the BOPs from the flag (`TownFlagBlockEntity.takeBops`,
+  all or none) or tells the player "The flag needs 4 Blocks of Progress for that."
+- `FlagCraftingMenu.getFlagBops` (the payload's `bopRootJobs` size): a BOP row's Craft button is
+  active only with enough, and its tooltip reads "Blocks of Progress on the flag: N (costs 4)".
+  The first click arms the button ("Costs 4 BOPs: craft"), the second crafts, as "Begin moving"
+  does (docs/ui-principles.md 10).
+- Pages: `ROWS_PER_PAGE` 5. With more unlocked rows, a page selector strip (shared
+  `PagedCardScreen.drawSelectorStrip`) sits under the title, and the arrows `rebuildWidgets()`.
+Seen (r24 world, 5 unlocked rows, so one page): both table rows, buttons greyed with 3 BOPs on the
+flag, tooltip "Blocks of Progress on the flag: 3 (costs 4)" in red, gui-lint FlagCraftingScreen
+OK. The first open right after a server start read 0 BOPs (the flag hadn't loaded yet); a reopen
+read 3. Not yet seen: a page turn (needs 6+ unlocked rows) and an armed craft spending 4.

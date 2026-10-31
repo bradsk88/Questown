@@ -4,9 +4,6 @@
   "farm": false,
   "ingredients": [
     {
-      "tag": "questown:light_sources"
-    },
-    {
       "item": "questown:blacksmiths_table"
     },
     {

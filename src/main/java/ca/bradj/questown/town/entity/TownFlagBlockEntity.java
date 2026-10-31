@@ -531,6 +531,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return bopStacks.isEmpty() ? Optional.empty() : Optional.of(bopStacks.get(0));
     }
 
+    /**
+     * Takes {@code n} of the flag's Blocks of Progress, oldest first, or none if it has fewer
+     * (a flag-crafting recipe that costs BOPs, dev playtest 2026-10-30).
+     */
+    public boolean takeBops(int n) {
+        if (bopStacks.size() < n) {
+            return false;
+        }
+        for (int i = 0; i < n; i++) {
+            takeOldestBop();
+        }
+        return true;
+    }
+
     /** Removes and returns the flag's oldest deposited Block of Progress (the player collects them in this order). */
     public Optional<net.minecraft.world.item.ItemStack> takeOldestBop() {
         if (bopStacks.isEmpty()) {

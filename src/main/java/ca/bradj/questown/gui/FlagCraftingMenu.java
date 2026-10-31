@@ -30,14 +30,22 @@ public class FlagCraftingMenu extends AbstractContainerMenu implements FlagTabsE
     /** Ids of the town's posted quests (open or completed): which gated rows show (r17 #1). */
     private final ImmutableList<ResourceLocation> postedQuests;
 
+    /** The flag's Blocks of Progress when the menu opened: whether a BOP recipe can be crafted. */
+    private final int flagBops;
+
     public FlagCraftingMenu(int windowId, FlagInfo flagInfo) {
-        this(windowId, flagInfo, ImmutableList.of());
+        this(windowId, flagInfo, ImmutableList.of(), 0);
     }
 
-    public FlagCraftingMenu(int windowId, FlagInfo flagInfo, Collection<ResourceLocation> postedQuests) {
+    public FlagCraftingMenu(int windowId, FlagInfo flagInfo, Collection<ResourceLocation> postedQuests, int flagBops) {
         super(MenuTypesInit.FLAG_CRAFTING.get(), windowId);
         this.flagInfo = flagInfo;
         this.postedQuests = ImmutableList.copyOf(postedQuests);
+        this.flagBops = flagBops;
+    }
+
+    public int getFlagBops() {
+        return flagBops;
     }
 
     public ImmutableList<ResourceLocation> getPostedQuests() {

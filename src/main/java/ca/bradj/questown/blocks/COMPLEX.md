@@ -248,3 +248,10 @@ pins the files and their recipes; the in-game load is checked in a server log, n
 "we should use the 'stone' texture for the mineshafts walls rather than the cobblestone one, since
 most mines have stone walls". `models/block/mineshaft.json` texture `#2` and the particle are now
 `minecraft:block/stone`.
+
+## Smithy rooms need no light (dev playtest 2026-10-30)
+
+"The smithy room shouldn't require a torch. That's an old thing I used to do with room recipes."
+`questown:light_sources` is gone from `smithy`, `smithy_stocked`, `weapon_display` and
+`grand_smithy` (the tiers stay nested: `WorkTableRecipesTest.smithyTiers_eachContainTheTierBefore`).
+Other room recipes still list light sources (bedroom, library, inn, ...): not ruled on.

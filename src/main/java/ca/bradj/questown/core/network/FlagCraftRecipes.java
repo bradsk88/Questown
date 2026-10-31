@@ -1,5 +1,6 @@
 package ca.bradj.questown.core.network;
 
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.QT;
 import net.minecraft.resources.ResourceLocation;
 import ca.bradj.questown.Questown;
@@ -35,6 +36,10 @@ import java.util.function.Supplier;
  * @param advancement   fired on craft, or null
  * @param unlockedByQuest the room quest that unlocks this row once posted, or null for always
  *                        (r17 #1, {@code FlagCraftGates})
+ * @param bopCost       Blocks of Progress the craft takes from the flag instead of an input item
+ *                      (0 = an item recipe). Dev playtest 2026-10-30: the armorer's and
+ *                      blacksmith's tables can also be made at the flag for 4 BOPs, "so players
+ *                      can have a familiar place to craft" (their crafting-table recipes stay).
  */
 public record FlagCraftRecipes(
         Supplier<Ingredient> input,
@@ -42,8 +47,32 @@ public record FlagCraftRecipes(
         Supplier<Item> output,
         String descKey,
         @Nullable RoomTrigger.Triggers advancement,
-        @Nullable ResourceLocation unlockedByQuest
+        @Nullable ResourceLocation unlockedByQuest,
+        int bopCost
 ) {
+
+    public static final int TABLE_BOP_COST = 4;
+
+    FlagCraftRecipes(
+            Supplier<Ingredient> input,
+            Supplier<ItemStack> icon,
+            Supplier<Item> output,
+            String descKey,
+            @Nullable RoomTrigger.Triggers advancement,
+            @Nullable ResourceLocation unlockedByQuest
+    ) {
+        this(input, icon, output, descKey, advancement, unlockedByQuest, 0);
+    }
+
+    private static FlagCraftRecipes forBops(Supplier<Item> output, String descKey) {
+        return new FlagCraftRecipes(() -> Ingredient.EMPTY,
+                () -> new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get(), TABLE_BOP_COST),
+                output, descKey, null, null, TABLE_BOP_COST);
+    }
+
+    public boolean costsBops() {
+        return bopCost > 0;
+    }
 
     public static final ResourceLocation MINESHAFT_QUEST = Questown.ResourceLocation("block_room/block.questown.mineshaft");
     public static final ResourceLocation FISHING_STATION_QUEST = Questown.ResourceLocation("block_room/block.questown.fishing_station");
@@ -63,7 +92,9 @@ public record FlagCraftRecipes(
                     ItemsInit.MINESHAFT_BLOCK::get, "menu.flag_crafting.mineshaft_desc", null, MINESHAFT_QUEST),
             // Dev's recipe (2026-10-19): the fishing station is a stamped room block too.
             new FlagCraftRecipes(() -> Ingredient.of(Items.FISHING_ROD), Items.FISHING_ROD::getDefaultInstance,
-                    ItemsInit.FISHING_STATION_BLOCK::get, "menu.flag_crafting.fishing_station_desc", null, FISHING_STATION_QUEST)
+                    ItemsInit.FISHING_STATION_BLOCK::get, "menu.flag_crafting.fishing_station_desc", null, FISHING_STATION_QUEST),
+            forBops(ItemsInit.ARMORERS_TABLE_BLOCK::get, "menu.flag_crafting.armorers_table_desc"),
+            forBops(ItemsInit.BLACKSMITHS_TABLE_BLOCK::get, "menu.flag_crafting.blacksmiths_table_desc")
     );
 
     /**
@@ -72,7 +103,13 @@ public record FlagCraftRecipes(
      * (FlagCraftMessage) and the village/growth driver both come through here.
      */
     public void craft(ServerPlayer player, BlockPos flagPos) {
-        if (!consumeMatching(player, input().get())) {
+        if (costsBops()) {
+            if (!(player.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)
+                    || !flag.takeBops(bopCost())) {
+                player.sendSystemMessage(Compat.translatable("message.flag_crafting.not_enough_bops", bopCost()));
+                return;
+            }
+        } else if (!consumeMatching(player, input().get())) {
             return;
         }
         // Every output only works against its parent flag (wand actions, mat / board / room-block
