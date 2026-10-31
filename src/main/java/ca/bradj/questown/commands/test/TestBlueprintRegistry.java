@@ -244,6 +244,7 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("crafter", "display_weapons"), displayWeaponsBlueprint()));
         jobs.add(edgeCaseEntry("crafter", "display_weapons", "full_frame", displayWeaponsFullFrameBlueprint()));
         jobs.add(edgeCaseEntry("crafter", "display_weapons", "corner_frames", displayWeaponsCornerFramesBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_armor", "fullest_stand", displayArmorFullestStandBlueprint()));
         jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
@@ -3108,6 +3109,42 @@ public class TestBlueprintRegistry {
         }).withRealtimeTicks(4000);
     }
 
+    private static final BlockPos DISPLAY_SECOND_STAND_OFFSET = new BlockPos(4 + 3, 0, -2 + 3);
+
+    /**
+     * Dev playtest 2026-10-30: "Display_Armor job should prefer adding pieces to the most
+     * well-equipped stand." Two stands in the Armory: an empty one, and one already wearing leather
+     * boots. A leather chestplate in the chest must go on the stand with the boots.
+     */
+    private static TestBlueprint displayArmorFullestStandBlueprint() {
+        return displayBlueprint(
+                armorerBlueprint(),
+                List.of(new ItemStack(Items.LEATHER_CHESTPLATE, 1)),
+                (level, pos) -> {
+                    BlockPos second = pos.offset(DISPLAY_SECOND_STAND_OFFSET.subtract(DISPLAY_STAND_OFFSET));
+                    net.minecraft.world.entity.decoration.ArmorStand dressed = new net.minecraft.world.entity.decoration.ArmorStand(
+                            level, second.getX() + 0.5, second.getY(), second.getZ() + 0.5);
+                    dressed.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+                    level.addFreshEntity(dressed);
+                    return new net.minecraft.world.entity.decoration.ArmorStand(
+                            level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                },
+                DISPLAY_STAND_OFFSET,
+                new ResourceLocation(Questown.MODID, "armor_display"),
+                "minecraft:leather_chestplate"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            ca.bradj.questown.integration.minecraft.DisplaySlots empty =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, flagPos.offset(DISPLAY_STAND_OFFSET));
+            ca.bradj.questown.integration.minecraft.DisplaySlots dressed =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, flagPos.offset(DISPLAY_SECOND_STAND_OFFSET));
+            boolean onDressed = dressed != null && dressed.items().stream().anyMatch(i -> i.is(Items.LEATHER_CHESTPLATE));
+            boolean onEmpty = empty != null && empty.items().stream().anyMatch(i -> i.is(Items.LEATHER_CHESTPLATE));
+            output.msg("fullest-stand: on dressed=" + onDressed + " on empty=" + onEmpty
+                    + " (dressed " + (dressed == null ? "missing" : dressed.items()) + ")");
+            return report(output, "fullest-stand-gets-the-piece", onDressed && !onEmpty);
+        }).withRealtimeTicks(3000);
+    }
+
     private static TestBlueprint displayBlueprint(
             TestBlueprint base,
             List<ItemStack> supplies,
@@ -3133,6 +3170,13 @@ public class TestBlueprintRegistry {
                 new TestExpectation(List.of(), 0, 100), null, null, null, null, false
         ).withSetupHook((level, flagPos, town, output) -> {
             BlockPos at = flagPos.offset(displayOffset);
+            // Scenarios in one server reuse these coordinates: clear an earlier scenario's displays
+            // and dropped items first, or they skew this one (a dressed stand, a full frame).
+            net.minecraft.world.phys.AABB area = new net.minecraft.world.phys.AABB(at).inflate(8);
+            level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, area,
+                    x -> ca.bradj.questown.integration.minecraft.DisplaySlots.isDisplay(x)
+                            || x instanceof net.minecraft.world.entity.item.ItemEntity)
+                    .forEach(x -> x.discard());
             net.minecraft.world.entity.Entity e = display.apply(level, at);
             boolean added = level.addFreshEntity(e);
             output.msg("display fixture: spawned " + e.getType().getDescriptionId() + " at " + at.toShortString() + " -> " + added);

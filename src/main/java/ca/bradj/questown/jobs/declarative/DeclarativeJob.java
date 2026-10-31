@@ -886,8 +886,20 @@ public class DeclarativeJob extends
                 blocksSrc,
                 work,
                 isJobBlock,
-                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent)
+                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent),
+                bp -> filledDisplaySlots(town, bp)
         );
+    }
+
+    /** How many of the display's slots at bp hold something (0 when there is no display). */
+    private static int filledDisplaySlots(TownInterface town, BlockPos bp) {
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return 0;
+        }
+        ca.bradj.questown.integration.minecraft.DisplaySlots d =
+                ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, bp);
+        return d == null ? 0 : (int) d.items().stream().filter(i -> !i.isEmpty()).count();
     }
 
     private Dependencies4<MCHeldItem> getSupplyDeps() {

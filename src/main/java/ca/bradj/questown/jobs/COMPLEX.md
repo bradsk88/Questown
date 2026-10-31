@@ -1224,3 +1224,16 @@ empty frame while `DressDisplaySpecialRule` inserted into the full one, which de
 Autotests: `crafter/display_weapons [corner_frames]` (two frames on one block, one full: red with
 the old lookup, holding=1; green, holding=2, none dropped) and `[full_frame]` (three swords, one
 frame: none lost; the frame counts as town storage). `TestBlueprint.withRealtimeTicks` added.
+
+## Display jobs fill the most-equipped display first (dev playtest 2026-10-30)
+
+"Display_Armor job should prefer adding pieces to the most well-equipped stand." `DeclarativeJobs
+.findJobSite` gains a `preference` overload. It collects the job blocks that pass `isJobBlock`
+across the shuffled rooms, scores each once (`preference`), and tries the highest first (a stable
+sort, so ties keep the shuffle). `DeclarativeJob` passes `filledDisplaySlots`: the number of
+non-empty slots on the display at that block, 0 where there is none, so non-display jobs are
+unaffected. Autotest `crafter/display_armor [fullest_stand]` (an empty stand and one wearing boots;
+the chestplate must go on the dressed one): with the preference off, 1 of 2 runs failed (the pick
+was random); with it, green. The display fixture now clears earlier scenarios' displays and item
+entities first: in a shared server they made `fullest_stand` (a second dressed stand) and
+`corner_frames` (old drops) fail. `crafter/display` 5/5.
