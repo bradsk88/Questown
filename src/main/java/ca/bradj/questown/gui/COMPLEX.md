@@ -1710,3 +1710,9 @@ server-side `MultiStatusMenu` re-sends the statuses every 20 ticks while open
 and `TownVillagerUIs.showMultiStatusUI`). `StatusSmoother`'s equality ignores the new field, so
 it keeps the newest progress. `WorkProgressTest`. Not seen in game (my test town only had a
 hunter).
+
+## Going-to-jobsite art (dev ruling 2026-10-30)
+
+An in-town crafter walking to its table showed `leaving.png` (an empty path, read as "left town").
+The dev: "there's already a going to jobsite graphic". That's the unused `menu/gatherer/gathering.png`,
+a figure walking along a path. `StatusArt` maps `GOING_TO_JOB` to it for every job.

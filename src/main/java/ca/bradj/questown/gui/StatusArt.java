@@ -26,7 +26,9 @@ public class StatusArt {
         b.put(ProductionStatus.NO_SPACE, "menu/gatherer/no_space.png");
         b.put(ProductionStatus.RELAXING, "menu/gatherer/relaxing.png");
         b.put(ProductionStatus.NO_JOBSITE, "menu/gatherer/no_jobsite.png");
-        b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/leaving.png");
+        // The walking-to-work figure (dev playtest 2026-10-30: "there's already a going to jobsite
+        // graphic"); leaving.png, the empty path, read as "left town" on an in-town crafter.
+        b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/gathering.png");
         b.put(ProductionStatus.NO_SUPPLIES, "menu/gatherer/no_supplies.png");
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
         b.put(ProductionStatus.NO_WORK_POSSIBLE, "menu/gatherer/no_work_possible.png");
