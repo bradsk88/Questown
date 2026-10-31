@@ -76,5 +76,6 @@ public final class QuestownClient {
         Loader.registerScreen(MenuTypesInit.VILLAGER_BLOCKS_OF_PROGRESS.get(), (menu, inv, title) -> new VillagerBlockofProgressScreen(menu, inv, title));
         Loader.registerScreen(MenuTypesInit.TOWN_BLOCKS_OF_PROGRESS.get(), (menu, inv, title) -> new TownBlockofProgressScreen(menu, inv, title));
         Loader.registerScreen(MenuTypesInit.FLAG_CRAFTING.get(), (menu, inv, title) -> new ca.bradj.questown.gui.FlagCraftingScreen(menu, inv, title));
+        Loader.registerScreen(MenuTypesInit.FLAG_SETTINGS.get(), (menu, inv, title) -> new ca.bradj.questown.gui.FlagSettingsScreen(menu, inv, title));
     }
 }

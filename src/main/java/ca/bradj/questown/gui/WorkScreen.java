@@ -56,6 +56,9 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private final AddWorkScreen addWorkScreen;
 
     private int currentPage = 0;
+    // A - / + click re-opens the board to show the new limit; the new screen starts on the page
+    // the click was on (dev playtest 2026-10-30: it "jumps back to page 1").
+    private static int pageAfterReopen = -1;
     private Map<Position, Runnable> removes = new HashMap<>();
 
     // Wide (position + pixel width) hover/click regions for bottom-band toggles:
@@ -76,6 +79,11 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         super.imageHeight = 220;
 
         this.work = ImmutableList.copyOf(container.getWork());
+        if (pageAfterReopen >= 0) {
+            int lastPage = Math.max(0, (work.size() - 1) / MAX_CARDS_PER_PAGE);
+            this.currentPage = Math.min(pageAfterReopen, lastPage);
+            pageAfterReopen = -1;
+        }
         this.background = JEI.getRecipeGuiBackground();
         this.cardBackground = JEI.getRecipeBackground();
 
@@ -284,11 +292,16 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
         ctx.lightText("-", minusX + borderPadding - 1, iconY + borderPadding - 1);
         highlightAndTooltip(ctx, mouseX, mouseY, minusX, iconY, Compat.translatable("job_board.limit_down"));
-        this.removes.put(new Position(minusX, iconY), () -> menu.sendLimitStep(jobPosting, -1));
+        this.removes.put(new Position(minusX, iconY), () -> sendLimitStep(jobPosting, -1));
 
         ctx.lightText("+", plusX + borderPadding - 1, iconY + borderPadding - 1);
         highlightAndTooltip(ctx, mouseX, mouseY, plusX, iconY, Compat.translatable("job_board.limit_up"));
-        this.removes.put(new Position(plusX, iconY), () -> menu.sendLimitStep(jobPosting, 1));
+        this.removes.put(new Position(plusX, iconY), () -> sendLimitStep(jobPosting, 1));
+    }
+
+    private void sendLimitStep(UIWork jobPosting, int delta) {
+        pageAfterReopen = currentPage;
+        menu.sendLimitStep(jobPosting, delta);
     }
 
     private ImmutableList<Slot> renderJobCardIcons(

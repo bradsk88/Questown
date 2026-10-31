@@ -35,6 +35,7 @@ public class FlagMenus {
     TownEconomicsMenu econMenu;
     TownBlockofProgressMenu bopMenu;
     FlagCraftingMenu craftingMenu;
+    FlagSettingsMenu settingsMenu;
 
     public FlagMenus() {
     }
@@ -62,6 +63,7 @@ public class FlagMenus {
             menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
             menus.initCrafting(windowId, flagInfo, quests.stream().map(UIQuest::getWantedId).filter(java.util.Objects::nonNull).toList(),
                     bopResult.bopRootJobs().size());
+            menus.settingsMenu = new FlagSettingsMenu(windowId, flagInfo);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());

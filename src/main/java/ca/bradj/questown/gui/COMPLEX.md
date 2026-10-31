@@ -1671,11 +1671,28 @@ have a familiar place to craft. But the crafting table recipe can stay".
   all or none) or tells the player "The flag needs 4 Blocks of Progress for that."
 - `FlagCraftingMenu.getFlagBops` (the payload's `bopRootJobs` size): a BOP row's Craft button is
   active only with enough, and its tooltip reads "Blocks of Progress on the flag: N (costs 4)".
-  The first click arms the button ("Costs 4 BOPs: craft"), the second crafts, as "Begin moving"
+  The first click arms the button ("4 BOPs?"; the first wording, "Costs 4 BOPs: craft", overflowed the 60-px button), the second crafts, as "Begin moving"
   does (docs/ui-principles.md 10).
 - Pages: `ROWS_PER_PAGE` 5. With more unlocked rows, a page selector strip (shared
   `PagedCardScreen.drawSelectorStrip`) sits under the title, and the arrows `rebuildWidgets()`.
 Seen (r24 world, 5 unlocked rows, so one page): both table rows, buttons greyed with 3 BOPs on the
 flag, tooltip "Blocks of Progress on the flag: 3 (costs 4)" in red, gui-lint FlagCraftingScreen
 OK. The first open right after a server start read 0 BOPs (the flag hadn't loaded yet); a reopen
-read 3. Not yet seen: a page turn (needs 6+ unlocked rows) and an armed craft spending 4.
+read 3. Seen later: an armed craft spent the flag's 4 BOPs ("Created Armorer's Table", flag 4 -> 0). Not yet seen: a page turn (needs 6+ unlocked rows).
+
+## Settings tab (dev playtest 2026-10-30)
+
+"I think the 'move flag' interaction should be on a 'settings' tab instead of crafting tab." A sixth
+flag tab, `OpenFlagMenuMessage.SETTINGS` ("settings", comparator icon, tooltip "Settings"):
+`FlagSettingsMenu` / `FlagSettingsScreen`, registered like the crafting tab (`MenuTypesInit.FLAG_SETTINGS`,
+`QuestownClient`, `FlagMenus.settingsMenu`, `TownFlagMenus` showers, `FlagTabs.build` /
+`allExcept` / `computeTabDecisions`). It holds "Begin moving this town" / "Cancel moving" with the
+same gates and arm-then-confirm, and with no villager yet it says "Nothing to set yet ...".
+`FlagCraftingScreen` lost that section. Seen: both tabs, gui-lint OK for each.
+
+## Job board keeps its page after a limit step (dev playtest 2026-10-30)
+
+"Adjusting job request quantity causes UI to jump back to page 1." The server re-opens the board
+after each step (to show the new limit), and the new `WorkScreen` started on page 1.
+`WorkScreen.sendLimitStep` records `pageAfterReopen`, and the next `WorkScreen` starts there
+(clamped to its last page). Not seen in game (my test town has one request).

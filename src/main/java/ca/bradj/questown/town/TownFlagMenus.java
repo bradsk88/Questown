@@ -126,6 +126,13 @@ public class TownFlagMenus {
                                 windowId, realFlagInfo
                         ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary
+                ),
+                OpenFlagMenuMessage.SETTINGS,
+                () -> openMenu(
+                        sender, (windowId, inv, p) -> new FlagSettingsMenu(
+                                windowId, realFlagInfo
+                        ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
+                        () -> flagEntity.hasVillagerArrivingInMorning(), summary
                 )
         );
 

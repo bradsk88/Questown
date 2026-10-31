@@ -41,6 +41,8 @@ public class MenuTypesInit {
         Loader.registerMenu("town_blocks_of_progress", TownBlockofProgressMenu::ForClientSide);
     public static final Holder<MenuType<FlagCraftingMenu>> FLAG_CRAFTING =
         Loader.registerMenu("flag_crafting", FlagCraftingMenu::ForClientSide);
+    public static final Holder<MenuType<FlagSettingsMenu>> FLAG_SETTINGS =
+        Loader.registerMenu("flag_settings", FlagSettingsMenu::ForClientSide);
 
     public static void boot() {}
 }

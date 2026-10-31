@@ -23,10 +23,11 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
+            @Nullable Runnable settingsScreenFn,
             FlagTabsEmbedding.FlagInfo showBOPTab,
             @Nullable String activeTabKey
     ) {
-        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab, activeTabKey));
+        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, settingsScreenFn, showBOPTab, activeTabKey));
     }
 
     private static boolean isSelected(String titleKey, @Nullable String activeTabKey) {
@@ -41,6 +42,7 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
+            @Nullable Runnable settingsScreenFn,
             FlagTabsEmbedding.FlagInfo fi,
             @Nullable String activeTabKey
     ) {
@@ -98,6 +100,14 @@ public class FlagTabs extends Tabs implements SubUI {
                 isSelected("tooltips.crafting", activeTabKey),
                 false
         ));
+        // Town-level actions such as moving the town (dev playtest 2026-10-30).
+        b.add(new Tab(
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.COMPARATOR.getDefaultInstance(), x + 10, y + 7),
+                setScreen(settingsScreenFn),
+                "tooltips.settings",
+                isSelected("tooltips.settings", activeTabKey),
+                false
+        ));
         return b.build();
     }
 
@@ -144,6 +154,7 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
                 factory.apply(OpenFlagMenuMessage.CRAFTING),
+                factory.apply(OpenFlagMenuMessage.SETTINGS),
                 menu.getFlagInfo(),
                 activeTabKey
         );
@@ -158,6 +169,7 @@ public class FlagTabs extends Tabs implements SubUI {
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), fi.bonusFoodAvailable()));
         b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), fi.bopTabAttention()));
         b.add(new TabDecision("tooltips.crafting", true, false));
+        b.add(new TabDecision("tooltips.settings", true, false));
         return b.build();
     }
 
@@ -197,7 +209,8 @@ public class FlagTabs extends Tabs implements SubUI {
                 OpenFlagMenuMessage.QUESTS,
                 OpenFlagMenuMessage.ECONOMICS,
                 OpenFlagMenuMessage.BOP,
-                OpenFlagMenuMessage.CRAFTING
+                OpenFlagMenuMessage.CRAFTING,
+                OpenFlagMenuMessage.SETTINGS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
