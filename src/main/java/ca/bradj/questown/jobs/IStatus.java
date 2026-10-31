@@ -21,4 +21,13 @@ public interface IStatus<S extends IStatus<S>> {
     @Nullable String getCategoryId();
 
     boolean isBusy();
+
+    /**
+     * A downtime townie's job has no server-side status (null). For
+     * job-assignment purposes a null status counts as "not busy": board
+     * request re-evaluations must reach the downtime pool rather than NPE.
+     */
+    static boolean isBusy(@Nullable IStatus<?> status) {
+        return status != null && status.isBusy();
+    }
 }

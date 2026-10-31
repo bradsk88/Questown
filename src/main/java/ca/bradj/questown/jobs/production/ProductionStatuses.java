@@ -21,7 +21,7 @@ public class ProductionStatuses {
                 return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction);
             }
             case NIGHT, EVENING -> {
-                return getEveningStatus(currentStatus, inventory, town, factory);
+                return getEveningStatus(currentStatus, inventory, town, factory, factory);
             }
             default -> throw new IllegalArgumentException(String.format("Unrecognized signal %s", signal));
         }
@@ -44,12 +44,28 @@ public class ProductionStatuses {
         return nullIfUnchanged(currentStatus, newStatus);
     }
 
-    public static <ROOM extends Room> @Nullable ProductionStatus getEveningStatus(
-            ProductionStatus currentStatus,
+    /**
+     * The evening/night branch, generic over the status type so it can be
+     * unit-tested with a lightweight fake status. {@code waitingFactory} is
+     * the source of {@code waitingForTimedState()} (an {@link
+     * IProductionStatusFactory} when the concrete type supports it); {@code
+     * factory} supplies the recall statuses (droppingLoot / relaxing).
+     */
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> @Nullable STATUS getEveningStatus(
+            STATUS currentStatus,
             EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
-            IStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<STATUS> waitingFactory,
+            IStatusFactory<STATUS> factory
     ) {
+        // Mirror the morning path (JobStatuses.productionRoutine): a villager
+        // waiting on a timed work state whose timer is still running must not
+        // be recalled to town. Without this, evening/night yanks a town-leaver
+        // home mid-trip (empty-handed), cutting the trip short. Returning null
+        // leaves the status unchanged, so he stays out until the timer ends.
+        if (waitingFactory.waitingForTimedState().equals(currentStatus) && town.isUnfinishedTimeWorkPresent()) {
+            return null;
+        }
         if (JobStatuses.hasItems(inventory)) {
             return nullIfUnchanged(currentStatus, factory.droppingLoot());
         }
@@ -57,9 +73,9 @@ public class ProductionStatuses {
         return nullIfUnchanged(currentStatus, factory.relaxing());
     }
 
-    private static ProductionStatus nullIfUnchanged(
-            ProductionStatus oldStatus,
-            ProductionStatus newStatus
+    private static <STATUS extends IStatus<STATUS>> STATUS nullIfUnchanged(
+            STATUS oldStatus,
+            STATUS newStatus
     ) {
         if (oldStatus.equals(newStatus)) {
             return null;

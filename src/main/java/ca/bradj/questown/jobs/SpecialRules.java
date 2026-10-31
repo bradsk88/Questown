@@ -30,7 +30,11 @@ public class SpecialRules {
     // "work" on that spot until they have finished their work, and then they will
     // "release" to plate for others to use. Other villagers will try to claim other
     // plates - ignoring claimed ones.
-    public static final String CLAIM_SPOT = "claim_spot";
+    // The job data spells this rule "claim_workspot" (all 12 job JSONs; the constant's
+    // old value "claim_spot" matched no data, so the claim suppliers gated on it never
+    // fired - offline warp sims got no work claims and claim-gated jobs like
+    // farmer/harvest_wheat never worked there).
+    public static final String CLAIM_SPOT = "claim_workspot";
 
     // If this rule is enabled, the villager will scan the blocks BELOW the job block
     // first, if there are any valid interaction spots on that level, they will navigate
@@ -46,6 +50,12 @@ public class SpecialRules {
     // it is time for them to go to bed. If this rule is disabled, villagers will become
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
+
+    // Global rule. When a townie holding a job with this rule becomes hungry, the
+    // hungry->dining short-circuit may snap it straight to a dining work. Jobs without
+    // this rule end their current work and re-enter the work board instead, where their
+    // carried work output is deposited before they eat.
+    public static final String CAN_INSTANTLY_SWITCH_TO_EATING = "can_instantly_switch_to_eating";
 
     // If this rule is active (globally) then blocks will only be considered
     // valid for use as workspots if they have empty air above them.
@@ -65,7 +75,7 @@ public class SpecialRules {
     // pose on top of their workspot.
     public static final String CLEAR_POSE = "clear_pose";
     // If this rule is active during the extraction stage of a job, the
-    // villager's hunger will be filled up by 50% from its current value.
+    // villager's fullness rises by 50% of max, capped at max (never lowered).
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up to 100%.
@@ -87,6 +97,8 @@ public class SpecialRules {
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.
     public static final String ADD_ITEM_TO_CONTAINER = "add_item_to_container";
+    // The inserted item goes on the display (armor stand, item frame) at the work spot.
+    public static final String DRESS_DISPLAY = "dress_display";
 
     // Global rule. By default, Questown will only allow villagers to start
     // a job if there is an abundance of supplies available. This rule causes

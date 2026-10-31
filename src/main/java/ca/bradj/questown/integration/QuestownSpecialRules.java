@@ -4,15 +4,15 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown._vanilla.VanillaSpecialRules;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.*;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class QuestownSpecialRules {
 
-    @SubscribeEvent()
-    public static void register(FMLCommonSetupEvent event) {
+    /**
+     * The mod's own special-rule set - the neutral registration list other mods
+     * can model theirs on. The loader bus binding that calls it at common setup
+     * lives in {@code loader.neo.NeoSpecialRulesInit} (G6 events slice).
+     */
+    public static void registerRules() {
         // This is what other mods should do if they want to implement special rules
 
         // If this rule is enabled for the "extract product" step and the workspot
@@ -121,6 +121,10 @@ public final class QuestownSpecialRules {
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.ADD_ITEM_TO_CONTAINER),
                 new AddItemToContainerSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.DRESS_DISPLAY),
+                new DressDisplaySpecialRule()
         );
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.CLEAR_BOP_FOR_VILLAGER),

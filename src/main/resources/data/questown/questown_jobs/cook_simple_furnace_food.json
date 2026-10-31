@@ -2,7 +2,9 @@
   "version": 2,
   "id": "cook/simple_furnace_food",
   "priority": 2000,
+  "experience": 200,
   "parent": "cook/extract",
+  "starter_recipes": ["mutton"],
   "icon": "minecraft:beef",
   "initial_request": "minecraft:cooked_beef",
   "result": {
@@ -39,5 +41,8 @@
       "state": 1,
       "rules": ["insert_into_slot_0"]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/furnace_front.png"}
   ]
 }

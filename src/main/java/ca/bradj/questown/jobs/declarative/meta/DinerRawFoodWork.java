@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
@@ -43,7 +44,7 @@ public class DinerRawFoodWork {
             BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_EAT, 25,
+            BLOCK_STATE_NEED_EAT, 12, // 25 -> 3 (dev, 2026-10-19: ~1/10) -> 6 (r22: "villagers eat too quickly", 2x) -> 12 (dev 2026-10-30: eating at the flag "about 2x too fast")
             BLOCK_STATE_CONSUME_FOOD, 0,
             BLOCK_STATE_DONE, 0
     );
@@ -98,7 +99,12 @@ public class DinerRawFoodWork {
                                         SpecialRules.APPLY_ATE_RAW_FOOD
                                 )
                         ), // No stage rules
+                        // Finish the meal (extract at the done state) before fetching more
+                        // food: without this, a town with food in storage keeps the diner
+                        // collecting supplies after its food was consumed (playtest
+                        // 2026-10-17; eating/eat_direct). JSON jobs get this by default.
                         ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.WORK_IN_EVENING,
                                 SpecialRules.NO_EXPERIENCE_GAINED
                         )

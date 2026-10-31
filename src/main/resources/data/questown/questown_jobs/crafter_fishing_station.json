@@ -23,7 +23,7 @@
   ],
   "cooldown_ticks": 5,
   "sound": {
-    "id": "minecraft:block.wood.hit",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
   },
@@ -39,5 +39,8 @@
         "questown:associate_item_with_town"
       ]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}
   ]
 }

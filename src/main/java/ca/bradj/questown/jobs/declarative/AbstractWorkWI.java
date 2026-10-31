@@ -71,7 +71,10 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
             actionCompleted = true;
         }
-        TOWN result = nextStepTime <= 0
+        // Only the write that advances into the next state starts that state's timer: a partial
+        // work write started it early, and the completing write then "clobbered" it (day1 run,
+        // 2026-10-17: hunter state 1 -> 2, "from 1990 to 2000").
+        TOWN result = !actionCompleted || nextStepTime <= 0
                 ? setJobBlockState(extra, bp, bs)
                 : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
         if (actionCompleted) {

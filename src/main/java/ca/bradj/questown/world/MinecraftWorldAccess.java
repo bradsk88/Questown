@@ -4,6 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown._vanilla.VoidLevel;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -25,16 +27,15 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.ToolActions;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -109,9 +110,9 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = level.getBlockState(trunkPos);
-        // Only chop log/wood columns (RotatedPillarBlock = logs/wood/stems). A tag-free proxy for
-        // #minecraft:logs so ChopDownTree's scan over all room positions never chops chests/grass/saplings.
-        if (!(trunkState.getBlock() instanceof net.minecraft.world.level.block.RotatedPillarBlock)) {
+        // Only chop logs: ChopDownTree scans every room position. A RotatedPillarBlock stand-in
+        // also took deepslate, basalt and hay bales (2026-10-20: the warp arborist banked deepslate).
+        if (!trunkState.is(BlockTags.LOGS)) {
             return List.of();
         }
         Block trunkBlock = trunkState.getBlock();
@@ -121,13 +122,25 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     private void chopTreeRecursive(BlockPos center, Block matchBlock, List<ItemStack> drops) {
-        for (BlockPos adjacent : BlockPos.betweenClosed(center.offset(-1, 0, -1), center.offset(1, 1, 1))) {
-            if (!level.getBlockState(adjacent).is(matchBlock)) {
+        // Iterative flood fill: one stack frame per block (the recursive form) overflows the JVM
+        // stack on a large connected log region, so the work list lives on the heap instead.
+        // A block is only ever re-examined while it still matches: cutting it makes it AIR.
+        Deque<BlockPos> work = new ArrayDeque<>();
+        work.push(center);
+        while (!work.isEmpty()) {
+            BlockPos cur = work.pop();
+            if (!level.getBlockState(cur).is(matchBlock)) {
                 continue;
             }
-            level.removeBlock(adjacent, true);
+            level.removeBlock(cur, true);
             drops.add(matchBlock.asItem().getDefaultInstance());
-            chopTreeRecursive(adjacent.immutable(), matchBlock, drops);
+            for (BlockPos adjacent : BlockPos.betweenClosed(
+                    cur.offset(-1, 0, -1), cur.offset(1, 1, 1)
+            )) {
+                if (level.getBlockState(adjacent).is(matchBlock)) {
+                    work.push(adjacent.immutable());
+                }
+            }
         }
     }
 
@@ -194,15 +207,6 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         };
     }
 
-    private static ToolAction forgeToolAction(QTToolAction toolAction) {
-        return switch (toolAction) {
-            case HOE_TILL -> ToolActions.HOE_TILL;
-            case AXE_STRIP -> ToolActions.AXE_STRIP;
-            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
-            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
-        };
-    }
-
     private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(
                 Vec3.atCenterOf(pos), Direction.UP, pos, false
@@ -216,8 +220,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         return modified != null;
     }
@@ -225,8 +229,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         if (modified == null) {
             return;
@@ -269,13 +273,12 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Nullable
-    private IItemHandler resolveItemHandler(BlockPos pos) {
+    private ItemHandler resolveItemHandler(BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be == null) {
             return null;
         }
-        LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
-        return cap.resolve().orElse(null);
+        return Loader.handlerOf(be).orElse(null);
     }
 
     @Override
@@ -285,7 +288,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public int getContainerSlotCount(BlockPos pos) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler != null) {
             return handler.getSlots();
         }
@@ -298,7 +301,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public ItemStack getContainerSlot(BlockPos pos, int slot) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler != null) {
             return handler.getStackInSlot(slot);
         }
@@ -332,11 +335,33 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        return d == null ? List.of() : d.items();
+    }
+
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+        net.minecraft.world.level.block.Block.popResource(level, pos, item);
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        if (d == null || slot < 0 || slot >= d.getContainerSize()) {
+            return false;
+        }
+        d.setItem(slot, item);
+        return true;
+    }
+
+    @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler == null) {
             return false;
         }
+        // Target size 1: villagers cannot stack, by design (CONTEXT.md "Unstacked deposit").
         return Compat.insertInNextOpenSlot(handler, item, 1);
     }
 
@@ -348,6 +373,15 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void advanceProcessing(BlockPos pos, int ticks) {
         BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof ca.bradj.questown.blocks.BreadOvenBlockEntity oven) {
+            QT.FLAG_LOGGER.debug(
+                    "advanceProcessing (bread oven) at {} for {} ticks. Slot0={}, Slot1={}, Slot2={}",
+                    pos.toShortString(), ticks,
+                    oven.getItem(0), oven.getItem(1), oven.getItem(2)
+            );
+            oven.advanceBake(ticks); // the shared BreadOvenBake caps its own loop
+            return;
+        }
         if (!(be instanceof AbstractFurnaceBlockEntity furnace)) {
             return;
         }

@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "id": "crafter/display_weapons",
+  "priority": 3000,
+  "experience": 0,
+  "parent": "crafter/stone_sword",
+  "icon": "minecraft:item_frame",
+  "initial_request": "#questown:swords",
+  "note": "Dev 2026-10-28: \"Same for blacksmith and item frames\". Like crafter/display_armor: a villager puts a sword from storage in an empty item frame in a Weapon Display or bigger smithy.",
+  "result": {
+    "type": "uses_special_rules"
+  },
+  "block": {
+    "display": "item_frame",
+    "accepts": "#questown:swords"
+  },
+  "room": "questown:weapon_display",
+  "work_states": [
+    {
+      "tools": "#questown:swords",
+      "work": 0.1
+    },
+    {
+      "ingredients": "#questown:swords"
+    }
+  ],
+  "cooldown_ticks": 50,
+  "special": [
+    {
+      "type": "global",
+      "rules": [
+        "exclude_from_warp"
+      ]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": [
+        "dress_display"
+      ]
+    }
+  ],
+  "status_texture_overrides": [
+    {
+      "type": "working",
+      "new_texture": "minecraft:textures/item/item_frame.png"
+    }
+  ]
+}

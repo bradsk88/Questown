@@ -11,9 +11,8 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -36,8 +35,8 @@ public class Loots {
             GathererTools.LootTableParameters lt
     ) {
         final ResourceLocation biome = finalizeBiome(items);
-        int maxAmount = items.size();
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        int amount = items.size();
+        return getFromLootTables(level, amount, amount, lt, biome);
     }
 
     @NotNull
@@ -47,7 +46,7 @@ public class Loots {
             int maxAmount,
             GathererTools.LootTableParameters lt
     ) {
-        return getFromLootTables(level, Math.max(1, maxAmount / 2), maxAmount, lt, finalizeBiome(items));
+        return getFromLootTables(level, maxAmount, maxAmount, lt, finalizeBiome(items));
     }
 
     @NotNull
@@ -57,7 +56,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
     ) {
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        return getFromLootTables(level, maxAmount, maxAmount, lt, biome);
     }
 
     @NotNull
@@ -69,16 +68,15 @@ public class Loots {
     ) {
         String id = String.format("%s/%s/%s", lt.prefix().value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = level.getServer().getLootTables();
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, lt.fallback().path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, NO_TOOL_LOOT_TABLE_DEFAULT.path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             throw new IllegalStateException(
                     String.format(
                             "No loot table found for %s or fallback %s",
@@ -86,7 +84,7 @@ public class Loots {
                     )
             );
         }
-        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
+        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, rl);
     }
 
     @NotNull
@@ -95,17 +93,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome, ResourceLocation rl
     ) {
-        LootTables tables = level.getServer().getLootTables();
-        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
-    }
-
-    @NotNull
-    private static List<MCHeldItem> getFromKnownTable(
-            ServerLevel level, int minAmount, int maxAmount,
-            GathererTools.LootTableParameters lt,
-            ResourceLocation biome, LootTables tables, ResourceLocation rl
-    ) {
-        LootTable lootTable = tables.get(rl);
+        LootTable lootTable = Compat.lootTable(level, rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
         return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
     }
@@ -133,21 +121,15 @@ public class Loots {
         LootContext.Builder lcb = new LootContext.Builder(level);
         LootContext lc = lcb.create(LootContextParamSets.EMPTY);
 
-        ArrayList<ItemStack> rItems = new ArrayList<>();
         int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
-        for (int i = 0; i < Compat.configGet(Config.BASE_MAX_LOOP).get(); i++) {
-            if (rItems.size() >= max) {
-                break;
-            }
-            rItems.addAll(lootTable.getRandomItems(lc));
-        }
+        // Empty rolls don't count: a leaver brings back one item per attempt (dev, 2026-10-26).
+        List<ItemStack> rItems = new ArrayList<>(LootRolls.roll(
+                max, Compat.configGet(Config.BASE_MAX_LOOP).get(), () -> lootTable.getRandomItems(lc), ItemStack::isEmpty
+        ));
         Collections.shuffle(rItems);
-        int subLen = Math.min(rItems.size(), maxItems);
-        List<MCTownItem> list = rItems.stream()
-                .filter(v -> !v.isEmpty())
+        return rItems.stream()
+                .limit(max)
                 .map(MCTownItem::fromMCItemStack)
-                .toList()
-                .subList(0, subLen);
-        return list;
+                .toList();
     }
 }

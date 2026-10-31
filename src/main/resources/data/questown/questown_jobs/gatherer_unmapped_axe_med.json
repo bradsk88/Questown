@@ -9,7 +9,7 @@
     "type": "biome_loot",
     "prefix": "jobs/gatherer_axe",
     "default": "jobs/gatherer_axe/default",
-    "attempts": 3
+    "attempts": 5
   },
   "block": "questown:welcome_mat_block",
   "room": "questown:special_quest.town_gate",

@@ -70,11 +70,12 @@ public class DeclarativeJobTickerDependencies implements
     public ImmutableList<RoomRecipeMatch<MCRoom>> getJobSites() {
         // Use getRoomsMatching() instead of getMatches() because it has
         // special handling for farms (stored in activeFarms, not activeRecipes)
-        return town.getRoomHandle()
+        ImmutableList<RoomRecipeMatch<MCRoom>> out = town.getRoomHandle()
                    .getRoomsMatching(job.location().baseRoom())
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
+        return out;
     }
 
     @Override
@@ -276,6 +277,11 @@ public class DeclarativeJobTickerDependencies implements
     @Override
     public boolean hasSpace() {
         return Jobs.townHasSpace(town);
+    }
+
+    @Override
+    public boolean finishedProductNeedsStorage() {
+        return job.finishedProductNeedsStorage();
     }
 
     @Override
@@ -504,6 +510,16 @@ public class DeclarativeJobTickerDependencies implements
             @Override
             public boolean hasServerLevel() {
                 return town.getServerLevel() != null;
+            }
+
+            @Override
+            public Signals.DayTime getDayTime() {
+                return self.getDayTime();
+            }
+
+            @Override
+            public boolean isOwnerStarving() {
+                return town.getVillagerHandle().isStarving(VillagerUUID.from(job.getOwnerUUID()));
             }
 
             @Override

@@ -25,7 +25,7 @@ public class DefaultInventoryStateProvider<I extends HeldItem<I, ?>> implements 
         return this.itemsSource.GetCurrentItems().stream().anyMatch(Predicates.and(
                 Predicates.not(Item::isFood),
                 Predicates.not(Item::isEmpty),
-                Predicates.not(HeldItem::isLocked)
+                Predicates.not(HeldItem::staysWithVillager)
         ));
     }
 

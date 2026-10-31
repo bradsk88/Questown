@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Blocks;
@@ -94,7 +95,8 @@ public class DowntimeWork {
                                 SpecialRules.ALWAYS_POPULATE_JOBSITE,
                                 SpecialRules.RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL,
                                 SpecialRules.RANDOM_DOWNTIME_POSE,
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.CAN_INSTANTLY_SWITCH_TO_EATING
                         )
                 ),
                 null,
@@ -105,16 +107,38 @@ public class DowntimeWork {
                         Compat.configGet(Config.MAX_DOWNTIME_TICKS),
                         WorkSeekerJob::getIDForRoot
                 )
-        ).withOverrides(new Overrides(
+        ).withOverrides(overrides());
+    }
+
+    /**
+     * Downtime is spent in the work states and extraction, which have no default art or text
+     * (the villagers tab showed the error checkerboard and "busy with their work"): they all
+     * read as relaxing. So does NO_SUPPLIES, the status circuit's fallback when no wander spot is
+     * found (r22, dev: "status is 'looking for supplies' but should be 'relaxing'").
+     */
+    static Overrides overrides() {
+        Pair<String, String> relaxingText = new Pair<>(
+                "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
+                "questown.tooltips.villagers.job_common.click_to_learn"
+        );
+        ImmutableMap.Builder<IStatus<?>, Pair<String, String>> text = ImmutableMap.builder();
+        text.put(ProductionStatus.NO_JOBSITE, relaxingText);
+        text.put(ProductionStatus.NO_SUPPLIES, relaxingText);
+        text.put(ProductionStatus.EXTRACTING_PRODUCT, relaxingText);
+        for (int i = 0; i < MAX_STATE; i++) {
+            text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);
+        }
+        // Idle art throughout: the RELAXING status art is the night scene ("finished for the day"),
+        // not "relaxing for a moment" (dev playtest 2026-10-28).
+        ResourceLocation idle = StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE);
+        return new Overrides(
                 ImmutableMap.of(
-                        ProductionStatus.NO_JOBSITE,
-                        StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
+                        ProductionStatus.NO_JOBSITE, idle,
+                        ProductionStatus.NO_SUPPLIES, idle
                 ),
-                ImmutableMap.of(ProductionStatus.NO_JOBSITE, new Pair<>(
-                        "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
-                        "questown.tooltips.villagers.job_common.click_to_learn"
-                ))
-        ));
+                text.build(),
+                idle
+        );
     }
 
     public static JobID getIdFor(JobID rootId) {

@@ -1,4 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.QT;
 
 import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
@@ -20,23 +22,23 @@ import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -50,6 +52,8 @@ public class RealtimeWorldInteraction extends
     private final Supplier<String> jobRoom;
     private final Function<MCExtra, BlockPos> townFlagPos;
     private int soundTicksLeft;
+    private static final java.util.Set<net.minecraft.resources.ResourceLocation> MISSING_SOUNDS_WARNED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
@@ -93,20 +97,6 @@ public class RealtimeWorldInteraction extends
         this.townFlagPos = townFlagPos;
     }
 
-    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
-        return b.build();
-    }
-
-    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
-        return b.build();
-    }
-
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
         java.util.UUID uuid = mcExtra.entity().getUUID();
@@ -118,42 +108,9 @@ public class RealtimeWorldInteraction extends
         return applyProficiencyToWorkSpeed(base, mult);
     }
 
-    /**
-     * Scale an of-10 work speed by a proficiency multiplier, keeping the result inside the 1–10
-     * band {@link ca.bradj.questown.town.workstatus.State#decrWork} accepts. Without the ceiling a
-     * townie who is both well-fed (base 10) and better than break-even at their job (multiplier
-     * above 1) computes a speed of 11+ and throws, taking down the whole work loop — the warp
-     * loop's exception handler turns that into a silently lost visit.
-     */
-    static int applyProficiencyToWorkSpeed(
-            int baseOf10,
-            float multiplier
-    ) {
-        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
-    }
-
     @Override
     protected @Nullable String getProficiencyId() {
         return ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
-    }
-
-    /**
-     * The work-speed multiplier for the current job's proficiency-id (1× if the job declares none).
-     * Both paths fold this into their {@code of-10} speed at {@code getWorkSpeedOf10} so effective
-     * production rate stays warp/realtime-symmetric (ADR-0010).
-     */
-    static float proficiencyMultiplier(
-            @Nullable String proficiencyId,
-            Function<String, Float> levelForId
-    ) {
-        if (proficiencyId == null) {
-            return 1f;
-        }
-        return ca.bradj.questown.jobs.Proficiency.multiplierFor(
-                levelForId.apply(proficiencyId),
-                ca.bradj.questown.core.Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
-                ca.bradj.questown.core.Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
-        );
     }
 
     @Override
@@ -175,14 +132,7 @@ public class RealtimeWorldInteraction extends
         }
         java.util.UUID uuid = mcExtra.entity().getUUID();
         var handle = mcExtra.town().getVillagerHandle();
-        Map<String, Float> leveled = ca.bradj.questown.jobs.Proficiency.levelUp(
-                handle.getProficiencies(uuid),
-                profId,
-                ca.bradj.questown.core.Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
-                ca.bradj.questown.core.Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue(),
-                interval
-        );
-        handle.setProficiencies(uuid, leveled);
+        handle.setProficiencies(uuid, levelProficiencies(handle.getProficiencies(uuid), profId));
         return town;
     }
 
@@ -208,10 +158,7 @@ public class RealtimeWorldInteraction extends
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toQTItemStack();
-            is.hurtAndBreak(
-                    1, mcExtra.entity(), (x) -> {
-                    }
-            );
+            is.hurtAndBreak(1, mcExtra.entity(), e -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
         }
@@ -225,12 +172,38 @@ public class RealtimeWorldInteraction extends
         return extra.work();
     }
 
+    /**
+     * A display job tries the fullest display first (dev playtest 2026-10-30: "prefer adding
+     * pieces to the most well-equipped stand"). findJobSite only chose the walk target; the spot
+     * worked on arrival came from this shuffled list, so the piece went to either stand.
+     */
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            MCExtra mcExtra,
+    protected ArrayList<WorkPosition<BlockPos>> orderSpots(
+            MCExtra extra,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), mcExtra.town().getServerLevel()));
+        ArrayList<WorkPosition<BlockPos>> spots = super.orderSpots(extra, workSpots);
+        ServerLevel level = getServerLevel(extra);
+        if (level == null || spots.size() < 2 || !dressesDisplays()) {
+            return spots;
+        }
+        Map<BlockPos, Integer> filled = new HashMap<>();
+        spots.sort(Comparator.comparingInt((WorkPosition<BlockPos> s) ->
+                filled.computeIfAbsent(s.jobBlock(), p -> DisplaySlots.filledAt(level, p))).reversed());
+        return spots;
+    }
+
+    @Override
+    protected @Nullable ServerLevel getServerLevel(MCExtra extra) {
+        return extra.town().getServerLevel();
+    }
+
+    @Override
+    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
+            MCExtra mcExtra,
+            WorkOutput<Boolean, WorkPosition<BlockPos>> v
+    ) {
+        return Util.workWithSurfaceInteractionPos(getServerLevel(mcExtra), v);
     }
 
     @Override
@@ -267,9 +240,15 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        Iterable<MCHeldItem> base = resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
-        return ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee.maybePrepend(
-                resolveFlagFromTown(inputs), base
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+        ServerLevel level = inputs.town().getServerLevel();
+        return withLootGuarantees(
+                flag,
+                withRequestedLootPreference(
+                        flag, level,
+                        resultGenerator.apply(level, mcHeldItems),
+                        () -> resultGenerator.apply(level, mcHeldItems)
+                )
         );
     }
 
@@ -277,15 +256,10 @@ public class RealtimeWorldInteraction extends
         if (inputs.town() instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
             return flag;
         }
-        net.minecraft.server.level.ServerLevel level = inputs.town().getServerLevel();
-        if (level == null) {
-            return null;
-        }
-        net.minecraft.core.BlockPos flagPos = inputs.town().getTownFlagBasePos();
-        if (level.getBlockEntity(flagPos) instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
-            return flag;
-        }
-        return null;
+        return flagBlockEntityAt(
+                inputs.town().getServerLevel(),
+                inputs.town().getTownFlagBasePos()
+        );
     }
 
     @Override
@@ -327,7 +301,15 @@ public class RealtimeWorldInteraction extends
         if (sound == null) {
             return;
         }
-        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound.sound());
+        @Nullable SoundEvent s = Loader.soundFromId(sound.sound());
+        if (s == null) {
+            // An unregistered id (data typo, or a sound renamed between MC versions) played as a
+            // null sound and crashed the server (2026-10-26, the sword jobs' item.sword.hit).
+            if (MISSING_SOUNDS_WARNED.add(sound.sound())) {
+                QT.JOB_LOGGER.warn("Job sound {} is not a registered sound event; skipping it", sound.sound());
+            }
+            return;
+        }
         int dieRoll = mcExtra.town().getServerLevel().getRandom().nextInt(100);
         int chance = sound.chance() == null ? 10 : sound.chance();
         if (dieRoll < chance) {
@@ -356,11 +338,17 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra
     ) {
         VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
+        boolean res;
         if (wtu == null) {
-            return true;
+            res = true;
+        } else {
+            res = tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
         }
-        return tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
+        // TEMP DEBUG (2026-10-06) - throttled: the give-back latch is the suspected
+        // permanent stall (job=COLLECTING_SUPPLIES, no extraction ever).
+        return res;
     }
+
 
     @Override
     public int timesInserted(MCExtra mcExtra) {
@@ -416,6 +404,11 @@ public class RealtimeWorldInteraction extends
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
+                    // A rule-taken product (cook/extract's take_from_slot_2) is an extraction too:
+                    // it gets the LOOT-quest check like a result item (warp routes it through
+                    // tryGiveItems -> postExtractHook already). 2026-10-19: the cook's meals never
+                    // counted toward the "eight pieces of food" quest.
+                    onLootExtracted(inputs, i);
                     return in;
                 },
                 position,
@@ -444,7 +437,7 @@ public class RealtimeWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
-        return PostExtractHook.run(
+        Boolean hooked = PostExtractHook.run(
                 aBoolean,
                 inputs.town().getTownFlagBasePos(),
                 rules,
@@ -454,12 +447,12 @@ public class RealtimeWorldInteraction extends
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return town;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = Compat.itemDataTag(extractedItem.get().toMCItemStack());
                     itemData.forEach(t::putInt);
                     return town;
                 },
                 (in, up) -> {
-                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    inputs.town().getVillagerHandle().eat(inputs.entity().getUUID(), up);
                     return in;
                 },
                 (in, effect, durationTicks) -> {
@@ -473,6 +466,34 @@ public class RealtimeWorldInteraction extends
                     return in;
                 }
         );
+        // The LOOT-quest close runs in onLootExtracted (the abstract 3-arg bridge's
+        // unconditional extract path), so a job that declares no EXTRACTING_PRODUCT
+        // special rule (e.g. the sword hunter) still closes its raw-food quest.
+        // The item itself is not consumed — the deposit / eat path still decides its fate.
+        return hooked;
+    }
+
+    /**
+     * Close matching LOOT quests on a non-empty extraction. Lives on the
+     * unconditional extract path (the abstract 3-arg {@code postExtractHook}
+     * bridge) rather than the rule-gated 5-arg hook, so a hunt that declares no
+     * {@code EXTRACTING_PRODUCT} special rule (e.g. the sword hunter) still
+     * closes its quest. See {@link LootExtractGuard}.
+     */
+    @Override
+    protected void onLootExtracted(MCExtra inputs, @Nullable MCHeldItem item) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+            boolean rawWasActive = FirstHunterLootGuarantee.rawFoodLootQuestActive(flag)
+                    && flag != null && "hunter".equals(getJobId() != null ? getJobId().rootId() : null)
+                    && !flag.isFirstHunterLootGuaranteeFired();
+            inputs.town().getQuestHandle().processLootQuests(item.get());
+            if (rawWasActive && FirstHunterLootGuarantee.matchesFirstHunterItem(item)) {
+                FirstHunterLootGuarantee.flipOnceBit(flag);
+            }
+        }
     }
 
     @Override
@@ -516,22 +537,6 @@ public class RealtimeWorldInteraction extends
             return position.workPos().jobBlock().above();
         }
         return position.workPos().entityFeetPos();
-    }
-
-    @Override
-    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
-            MCExtra mcExtra,
-            WorkOutput<Boolean, WorkPosition<BlockPos>> v
-    ) {
-        return Util.workWithSurfaceInteractionPos(mcExtra.town().getServerLevel(), v);
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     @Override

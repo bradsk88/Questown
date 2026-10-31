@@ -1,9 +1,9 @@
 package ca.bradj.questown.jobs.requests;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -11,7 +11,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -66,8 +65,16 @@ public class WorkRequest {
         return Ingredient.of();
     }
 
+    /** True when this is a tag request whose tag holds {@code other}'s item. */
+    public boolean covers(WorkRequest other) {
+        if (tag == null || other.item == null) {
+            return false;
+        }
+        return other.item.getDefaultInstance().is(tag);
+    }
+
     public void toNetwork(FriendlyByteBuf buffer) {
-        buffer.writeUtf(item == null ? "" : ForgeRegistries.ITEMS.getKey(item).toString());
+        buffer.writeUtf(item == null ? "" : Loader.itemIdOf(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());
     }
 
@@ -78,9 +85,9 @@ public class WorkRequest {
             throw new IllegalArgumentException("Invalid work request on buffer.");
         }
         if (i.isEmpty()) {
-            return new WorkRequest(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(t)), null);
+            return new WorkRequest(Compat.itemTag(new ResourceLocation(t)), null);
         }
-        return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)));
+        return new WorkRequest(null, Loader.itemFromId(new ResourceLocation(i)));
     }
 
     @Override
