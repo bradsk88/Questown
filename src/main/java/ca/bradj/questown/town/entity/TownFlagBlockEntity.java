@@ -2419,6 +2419,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
+    /**
+     * The player puts a Block of Progress (blessing and all) back on the flag (dev playtest
+     * 2026-10-30: a sneak-right-click to put one back placed it on the ground instead). False
+     * when the item isn't a BOP or the flag is full.
+     */
+    public boolean returnBopFromPlayer(ServerPlayer player, ItemStack held) {
+        if (!held.is(ItemsInit.BLOCK_OF_PROGRESS.get()) || getBopCount() >= TownFlagBOPItemHandler.CAP) {
+            return false;
+        }
+        TownFlagBOPItemHandler.depositOne(held, false, bopStacks::add);
+        setChanged();
+        syncBopFull();
+        player.sendSystemMessage(Compat.translatable("message.questown.bop.returned", getBopCount()));
+        return true;
+    }
+
     /** Grants N Blocks of Progress to the flag's BOP store (onboarding rewards). */
     public void grantBlockOfProgress(int amount) {
         for (int i = 0; i < amount; i++) {

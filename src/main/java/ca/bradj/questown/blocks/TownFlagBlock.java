@@ -353,6 +353,14 @@ public class TownFlagBlock extends BaseEntityBlock {
             InteractionHand hand,
             BlockHitResult hitResult
     ) {
+        // A Block of Progress used on the flag goes back into it (dev playtest 2026-10-30).
+        if (stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+            if (level instanceof ServerLevel && player instanceof ServerPlayer sp
+                    && level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+                flag.returnBopFromPlayer(sp, stack);
+            }
+            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide());
+        }
         InteractionResult r = useFlag(level, pos, player, hand);
         if (r == InteractionResult.PASS) {
             return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;

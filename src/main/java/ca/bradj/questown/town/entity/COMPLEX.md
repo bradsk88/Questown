@@ -1900,3 +1900,20 @@ path for player posts and auto-posted starter requests. Loading a save must not 
 board, so `TownWorkHandleSerializer` re-adds saved requests through `restoreRequest`, which
 appends in saved (top-first) order. `TownWorkHandleRequestWorkTest`
 (`requestWork_putsTheNewRequestOnTop`, `restoredRequests_keepTheSavedOrder`).
+
+## A Block of Progress goes back on the flag, never onto the ground (dev playtest 2026-10-30)
+
+"shift-rightclick with BOP in hand placed it on the ground. Breaking it destroyed it permanently."
+/ "I was trying to put it back on the flag." A sneak skips the flag's `useItemOn`, so vanilla's
+`BlockItem.useOn` placed the BOP block, which had no loot table. Now:
+- `TownFlagBlockEntity.returnBopFromPlayer` stores one held BOP (blessing kept, via
+  `TownFlagBOPItemHandler.depositOne`) unless the flag is at `CAP`, and tells the player "You put a
+  Block of Progress back on the flag (N there now)". It doesn't send the "deposited ... right-click
+  to collect" broadcast.
+- `TownFlagBlock.useItemOn` (plain right-click) and `BlockOfProgressItem.useOn` (the sneak path)
+  both call it when the target is the flag. Anywhere else, `useOn` returns PASS, so a BOP no longer
+  places as a block.
+- `loot_tables/blocks/block_of_progress.json` drops the item, so a BOP block already placed in a
+  world can be recovered (unblessed).
+Seen: a right-click on the flag with a BOP gave "... (4 there now)"; a use on the ground did
+nothing.
