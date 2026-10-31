@@ -1632,3 +1632,14 @@ its left, level with the icon. Before this, x, + and - were all on the icon row.
 tooltip drops "Storage holds N" (dev: "We can drop 'Storage hold 1' from the tooltip") and reads
 "Villagers stop making more at N." Seen in game: x tooltip "Remove request", + raised 2/8 to 2/9,
 gui-lint WorkScreen OK.
+
+## Skill-unlock quest cards open the villagers tab (dev playtest 2026-10-30)
+
+Dev: 'Clicking on the "unlock a cook skill" quest should take you to the villagers tab (tooltip
+should indicate that too)'. `QuestsScreen.opensVillagersTab` covers JOB_CHANGE and SKILL_UNLOCK, so
+a click on either card opens the villagers tab while it exists. The SKILL_UNLOCK tooltip
+(`skillUnlockTooltip`: the "locked until level N" line, else the flavor text) gets the same grey
+"Click to open villagers" line through `withVillagersHint`, shared with `jobChangeTooltip`. The
+locked-level line used to sit before the flavor check for every quest type; only SKILL_UNLOCK
+cards carry `lockedUntilLevel` (`UIQuest`), so it now lives in `skillUnlockTooltip`.
+Compile-verified; not yet seen in game.

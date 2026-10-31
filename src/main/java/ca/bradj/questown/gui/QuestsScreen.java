@@ -350,13 +350,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return jobChangeTooltip(recipe, villagersTabShown);
         }
 
-        if (recipe.getLockedUntilLevel() != null) {
-            // Outfitter #20: a blank skill card says how far off it is, not what it is.
-            return ImmutableList.of(Compat.translatable(
-                    "menu.quests.skill_unlock.locked",
-                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(recipe.getWantedId())),
-                    recipe.getLockedUntilLevel()
-            ));
+        if (recipe.getType() == Quest.QuestType.SKILL_UNLOCK) {
+            return withVillagersHint(skillUnlockTooltip(recipe), villagersTabShown);
         }
 
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
@@ -414,6 +409,33 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         List<Component> base = recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()
                 ? ImmutableList.of(Compat.literal(recipe.getFlavorText()))
                 : renderJobQuestTooltip(recipe);
+        return withVillagersHint(base, villagersTabShown);
+    }
+
+    /**
+     * A skill is unlocked on a villager's skills tab, reached from the villagers tab, so the card
+     * opens it like a job-change card (dev playtest 2026-10-30).
+     */
+    private static List<Component> skillUnlockTooltip(UIQuest recipe) {
+        if (recipe.getLockedUntilLevel() != null) {
+            // Outfitter #20: a blank skill card says how far off it is, not what it is.
+            return ImmutableList.of(Compat.translatable(
+                    "menu.quests.skill_unlock.locked",
+                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(recipe.getWantedId())),
+                    recipe.getLockedUntilLevel()
+            ));
+        }
+        if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
+            return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
+        }
+        return ImmutableList.of();
+    }
+
+    private static boolean opensVillagersTab(Quest.QuestType type) {
+        return type == Quest.QuestType.JOB_CHANGE || type == Quest.QuestType.SKILL_UNLOCK;
+    }
+
+    private static List<Component> withVillagersHint(List<Component> base, boolean villagersTabShown) {
         if (!villagersTabShown) {
             return base;
         }
@@ -675,7 +697,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;
             }
-            if (quest.getType() == Quest.QuestType.JOB_CHANGE
+            if (opensVillagersTab(quest.getType())
                     && this.tabs instanceof Tabs tabs && tabs.openTab(VILLAGERS_TAB)) {
                 return true;
             }
