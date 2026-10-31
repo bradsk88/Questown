@@ -11,6 +11,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -20,12 +21,10 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.network.NetworkEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, boolean confirmFirst) {
 
@@ -47,15 +46,31 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> flag = Optional.ofNullable(sender.getLevel().getBlockEntity(flagPos)).filter(TownFlagBlockEntity.class::isInstance).map(TownFlagBlockEntity.class::cast);
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
+                return;
+            }
+            // Level gate (skills-tab ruling): a job whose JSON available_at_level is above the
+            // townie's level is not yet unlockable. The skills tab hides it, but a stale client
+            // (or a direct packet) could still name it - reject server-side.
+            int level = flag.get().getVillagerHandle().getVillagerLevel(villagerUUID);
+            int availableAtLevel = ca.bradj.questown.jobs.ServerJobsRegistry.getAvailableAtLevel(id);
+            if (availableAtLevel > level) {
+                QT.GUI_LOGGER.info(
+                        "Refusing unlock of {} for {} at level {}: the job's available_at_level "
+                                + "({}) is not reached yet",
+                        id,
+                        villagerUUID,
+                        level,
+                        availableAtLevel
+                );
                 return;
             }
             if (confirmFirst) {
@@ -90,7 +105,6 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopSpend);
             unlockJob(flag, sender);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 
@@ -98,10 +112,13 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             Optional<TownFlagBlockEntity> flag,
             ServerPlayer sender
     ) {
-        flag.get().getVillagerHandle().unlockJob(villagerUUID, id);
+        flag.get().unlockSkillFromPlayer(villagerUUID, id);
         String key = "messages.jobs.unlocked_by_mod";
-        MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villagerUUID);
-        for (Player player : sender.level.players()) {
+        // The villager by name, not the raw UUID: 1.20.6 rejects a UUID translation argument
+        // (2026-10-20 playtest: "TranslatableContents' arguments must be ...", unlock unsent).
+        String villager = flag.get().getVillagerHandle().labelFor(villagerUUID);
+        MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villager);
+        for (Player player : sender.getLevel().players()) {
             Compat.sendMessage((ServerPlayer) player, msg);
         }
     }

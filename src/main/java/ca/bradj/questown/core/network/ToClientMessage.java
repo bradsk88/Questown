@@ -1,29 +1,21 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 public final class ToClientMessage {
     public static void handle(
-            Supplier<NetworkEvent.Context> ctx,
+            Channel.Context ctx,
             ClientRunnable o
     ) {
         final AtomicBoolean success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> () -> {
-                        o.runOnClient();
-                        success.set(true);
-                    }
-            );
-        }).exceptionally(err -> logError(o.getClass(), err));
-        ctx.get().setPacketHandled(true);
+        ctx.enqueueWork(() -> Loader.runClient(() -> {
+            o.runOnClient();
+            success.set(true);
+        })).exceptionally(err -> logError(o.getClass(), err));
     }
 
     private static Void logError(

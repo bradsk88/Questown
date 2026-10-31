@@ -3,11 +3,10 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * Client → server: the flag menu's "Begin moving this town" action (ADR-0009, #199). The
@@ -29,9 +28,9 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
         return new BeginTownRelocationMessage(buffer.readBlockPos());
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
+    public void handle(Channel.Context ctx) {
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             if (sender == null) {
                 return;
             }
@@ -43,7 +42,6 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
             // truncated it off-screen and faded before it could be read.
             sender.sendSystemMessage(Compat.translatable(startMessageKey(started, flag)));
         });
-        ctx.get().setPacketHandled(true);
     }
 
     private static String startMessageKey(boolean started, TownFlagBlockEntity flag) {

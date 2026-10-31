@@ -28,7 +28,7 @@ public class PredicateCollections {
                 },
                 IPredicateCollection::isEmpty,
                 (ingr, item) -> ingr.test(item.get().toQTItemStack()),
-                "MC.Ingredient " + v.toJson()
+                "MC.Ingredient " + v
         );
     }
     public static PredicateCollection<MCHeldItem, MCHeldItem> fromMCIngredient2(Ingredient v) {
@@ -46,7 +46,7 @@ public class PredicateCollections {
                 },
                 IPredicateCollection::isEmpty,
                 Predicate::test,
-                "MC.Ingredient " + v.toJson()
+                "MC.Ingredient " + v
         );
     }
 

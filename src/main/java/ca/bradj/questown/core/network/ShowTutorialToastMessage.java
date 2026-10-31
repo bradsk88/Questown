@@ -3,13 +3,11 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 public record ShowTutorialToastMessage(
         String titleKey, String descriptionKey
@@ -27,22 +25,16 @@ public record ShowTutorialToastMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         final AtomicBoolean success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> () -> {
-                        ClientAccess.showTutorialToast(
-                                Compat.translatable(titleKey),
-                                Compat.translatable(descriptionKey)
-                        );
-                        success.set(true);
-                    }
+        ctx.enqueueWork(() -> Loader.runClient(() -> {
+            ClientAccess.showTutorialToast(
+                    Compat.translatable(titleKey),
+                    Compat.translatable(descriptionKey)
             );
-        }).exceptionally(ShowTutorialToastMessage::logError);
-        ctx.get().setPacketHandled(true);
+            success.set(true);
+        })).exceptionally(ShowTutorialToastMessage::logError);
     }
 
     private static Void logError(Throwable ex) {

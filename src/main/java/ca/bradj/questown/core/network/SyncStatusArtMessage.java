@@ -4,11 +4,10 @@ import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncStatusArtMessage(JobID id, ProductionStatus status, ResourceLocation artID) implements
         ClientRunnable {
@@ -31,7 +30,7 @@ public record SyncStatusArtMessage(JobID id, ProductionStatus status, ResourceLo
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

@@ -10,7 +10,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -33,27 +32,28 @@ public class RenderUtil {
             BiConsumer<Component, Coordinate> renderDarkText,
             BiConsumer<Coordinate, Coordinate> renderHighlight
     ) {
-        int itemX = data.topLeft.x() + (24 * data.maxItemsBeforeEllipses);
-        Coordinate squareTopLeft = new Coordinate(itemX, data.topLeft.y());
-        renderDarkText.accept(Compat.literal("…"), squareTopLeft.shifted(4, 2));
-        if (UtilClean.isCoordInBox(data.mouse, squareTopLeft.shifted(-4, 0), squareTopLeft.shifted(20, 16))) {
-            return getEllipseTooltip(data, renderHighlight, itemX);
-        }
-        return null;
-    }
-
-    private static @Nullable List<Component> getEllipseTooltip(
-            EllipsesData data,
-            BiConsumer<Coordinate, Coordinate> renderHighlight,
-            int itemX
-    ) {
-        Coordinate itemTopLeft = new Coordinate(itemX, data.topLeft.y());
-        renderHighlight.accept(itemTopLeft, itemTopLeft.shifted(16, 16));
         MutableComponent andMore = Compat.translatable(
                 "menu.work_add_confirm.and_n_more",
                 data.totalItemCount - data.maxItemsBeforeEllipses
         );
-        return ImmutableList.of(andMore);
+        return renderEllipsesAndReturnTooltip(data, andMore, renderDarkText, renderHighlight);
+    }
+
+    /** The "…" after a strip's last item, and {@code tooltip} while the mouse is over it. */
+    public static @Nullable List<Component> renderEllipsesAndReturnTooltip(
+            EllipsesData data,
+            Component tooltip,
+            BiConsumer<Component, Coordinate> renderDarkText,
+            BiConsumer<Coordinate, Coordinate> renderHighlight
+    ) {
+        int itemX = data.topLeft.x() + (24 * data.maxItemsBeforeEllipses);
+        Coordinate squareTopLeft = new Coordinate(itemX, data.topLeft.y());
+        renderDarkText.accept(Compat.literal("…"), squareTopLeft.shifted(4, 2));
+        if (!UtilClean.isCoordInBox(data.mouse, squareTopLeft.shifted(-4, 0), squareTopLeft.shifted(20, 16))) {
+            return null;
+        }
+        renderHighlight.accept(squareTopLeft, squareTopLeft.shifted(16, 16));
+        return ImmutableList.of(tooltip);
     }
 
     // TODO: Make this a widget so it can handle clicks and send an OpenItemJobsMessage
@@ -95,16 +95,21 @@ public class RenderUtil {
     }
 
     public static void highlight(
-            PoseStack stack,
+            PoseStack gui,
             Coordinate topLeft,
             Coordinate botRight
     ) {
-        GuiComponent.fill(stack, topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
+        GuiComponent.fill(gui, topLeft.x(), topLeft.y(), botRight.x(), botRight.y(), HIGHLIGHT);
     }
 
+    /**
+     * The BOP's model shrinks in its gui display (scale 1.25 on an 8 px cube, so a slot shows it at
+     * vanilla block size); these big-icon spots scale from that. Factors were x2/x3/x4 against the
+     * old 0.5 gui scale and are 0.4 of that now (2026-10-22, the BOP-icon change).
+     */
     public static void renderItemScaled(
             ItemRenderer itemRenderer,
-            int scale,
+            float scale,
             ItemStack defaultInstance,
             int x,
             int y
@@ -116,7 +121,7 @@ public class RenderUtil {
         PoseStack posestack = RenderSystem.getModelViewStack();
         posestack.pushPose();
         posestack.translate(x, y, 100.0F + itemRenderer.blitOffset);
-        posestack.translate(8.0D, 8.0D, 0.0D);
+        posestack.translate(8.0F, 8.0F, 0.0F);
         posestack.scale(1.0F, -1.0F, 1.0F);
         float size = 16.0F * scale;
         posestack.scale(size, size, size);
@@ -126,7 +131,7 @@ public class RenderUtil {
                                                                                  .bufferSource();
         itemRenderer.render(
                 defaultInstance,
-                ItemTransforms.TransformType.GUI,
+                net.minecraft.client.renderer.block.model.ItemTransforms.TransformType.GUI,
                 false,
                 posestack1,
                 multibuffersource$buffersource,

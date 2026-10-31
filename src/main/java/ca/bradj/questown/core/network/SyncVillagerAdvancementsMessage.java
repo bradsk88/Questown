@@ -2,13 +2,12 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.network.NetworkEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 public record SyncVillagerAdvancementsMessage(
         Map<JobID, @Nullable JobID> parents,
@@ -38,7 +37,7 @@ public record SyncVillagerAdvancementsMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

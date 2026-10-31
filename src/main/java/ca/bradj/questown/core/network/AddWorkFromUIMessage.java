@@ -4,19 +4,21 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  */
@@ -69,11 +71,11 @@ public final class AddWorkFromUIMessage {
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
             // Do stuff
             BlockEntity flag = sender.getLevel().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
@@ -82,27 +84,40 @@ public final class AddWorkFromUIMessage {
             }
             switch (action) {
                 case INQUIRED -> {
-                    WorksBehaviour.TownData td = tfbe.getTownData();
+                    WorksBehaviour.TownData td = tfbe.getTownDataForDisplay();
                     Ingredient result = (Ingredient) requested;
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
+                    // Only jobs the town KNOWS count - progressive discovery means
+                    // "20 known jobs" should not count the whole dataset
+                    // (2026-10-15 playtest: the hint listed jobs the town has
+                    // never been revealed).
+                    ImmutableSet<JobID> townKnown = tfbe.getTownVillagerHandle().getTownKnownJobs();
+                    ImmutableMap.Builder<JobID, ResourceLocation> producers = ImmutableMap.builder();
+                    // ...and only jobs whose (knowledge-limited) results include it: a job's
+                    // declared initial_request alone does not count (2026-10-19 playtest).
+                    ServerJobsRegistry.getJobsKnownToProduce(td, result)
+                                      .forEach((jobId, icon) -> {
+                                          if (townKnown.contains(jobId)) {
+                                              producers.put(jobId, icon);
+                                          }
+                                      });
+                    QuestownNetwork.sendToPlayer(
+                            sender,
                             new WorkRequestConfirmMessage(
                                     (Ingredient) requested(),
-                                    ServerJobsRegistry.getAllJobsThatProduce(td, result),
+                                    producers.build(),
                                     tfbe.getTownFlagBasePos()
                             )
                     );
                 }
                 case CONFIRMED -> {
                     VisitorTrigger.Triggers adv = VisitorTrigger.Triggers.FirstJobRequest;
-                    AdvancementsInit.VISITOR_TRIGGER.trigger(ctx.get().getSender(), adv);
-                    tfbe.getWorkHandle().requestWork(Ingredients.asWorkRequest(requested));
+                    AdvancementsInit.VISITOR_TRIGGER.trigger((net.minecraft.server.level.ServerPlayer) ctx.sender(), adv);
+                    tfbe.requestWorkFromPlayer(Ingredients.asWorkRequest(requested));
                     tfbe.openJobsMenu(sender, false);
                 }
                 case REJECTED -> tfbe.openJobsMenu(sender, true);
             }
         });
-        ctx.get().setPacketHandled(true);
 
     }
 

@@ -5,25 +5,34 @@ import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.gui.TownEconomicsScreen;
 import ca.bradj.questown.gui.VillagerEconomicsScreen;
 import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 public record EconomicsUpdate(
-        ImmutableList<ItemEconomicsData> data
+        ImmutableList<ItemEconomicsData> data,
+        /** The same needs over the last NoMCEconomics.RECENT_WINDOW_TICKS (empty where not sent). */
+        ImmutableList<ItemEconomicsData> recent
 ) {
+
+    public EconomicsUpdate(ImmutableList<ItemEconomicsData> data) {
+        this(data, ImmutableList.of());
+    }
 
     public static void encode(
             EconomicsUpdate msg,
             FriendlyByteBuf buffer
     ) {
+        writeItems(buffer, msg.data);
+        writeItems(buffer, msg.recent);
+    }
+
+    private static void writeItems(FriendlyByteBuf buffer, ImmutableList<ItemEconomicsData> items) {
         buffer.writeCollection(
-                msg.data, (b, i) -> {
+                items, (b, i) -> {
                     b.writeUtf(i.ingredientKey());
                     b.writeInt(i.timesNeeded());
                 }
@@ -32,20 +41,17 @@ public record EconomicsUpdate(
 
     public static EconomicsUpdate decode(FriendlyByteBuf buffer) {
         List<ItemEconomicsData> l = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
-        return new EconomicsUpdate(ImmutableList.copyOf(l));
+        List<ItemEconomicsData> r = buffer.readCollection(ArrayList::new, b -> new ItemEconomicsData(b.readUtf(), b.readInt()));
+        return new EconomicsUpdate(ImmutableList.copyOf(l), ImmutableList.copyOf(r));
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                Dist.CLIENT,
-                () -> () -> {
-                    VillagerEconomicsScreen.lastUpdate = this;
-                    TownEconomicsScreen.lastUpdate = this;
-                }
-        )).exceptionally(EconomicsUpdate::logError);
-        ctx.get().setPacketHandled(true);
+        ctx.enqueueWork(() -> Loader.runClient(() -> {
+            VillagerEconomicsScreen.lastUpdate = this;
+            TownEconomicsScreen.lastUpdate = this;
+        })).exceptionally(EconomicsUpdate::logError);
 
     }
 

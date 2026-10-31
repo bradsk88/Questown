@@ -2,10 +2,9 @@ package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.gui.ClientAccess;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * Server → client: open the relocation "some of your town is too far away" confirmation screen
@@ -33,7 +32,7 @@ public record OpenRelocationConfirmMessage(
         return new OpenRelocationConfirmMessage(targetPos, farFixtureCount);
     }
 
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
+    public void handle(Channel.Context ctx) {
         ToClientMessage.handle(ctx, this);
     }
 
