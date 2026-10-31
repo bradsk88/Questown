@@ -50,13 +50,10 @@ public final class VillagerMenusPayload {
     /** False while onboarding hides the change-job tab from this (non-gatherer) villager. */
     public final boolean showChangeRootTab;
     /**
-     * Opened from the flag (management-only): the flag's Block of Progress count, and whether its
-     * oldest (the one a spend takes) is blessed and with which root ("" none). The change-job panel
-     * spends it instead of the player's (dev playtest 2026-10-29). Zero / false / "" otherwise.
+     * Opened from the flag (management-only): the flag's Block of Progress count. The change-job
+     * panel spends one instead of the player's (dev playtest 2026-10-29). Zero otherwise.
      */
     public final int flagBops;
-    public final boolean flagBopBlessed;
-    public final String flagBopRoot;
 
     public VillagerMenusPayload(
             int entityId,
@@ -76,9 +73,7 @@ public final class VillagerMenusPayload {
             boolean changeRootAttention,
             String promisedRoot,
             boolean showChangeRootTab,
-            int flagBops,
-            boolean flagBopBlessed,
-            String flagBopRoot
+            int flagBops
     ) {
         this.entityId = entityId;
         this.villager = villager;
@@ -98,8 +93,6 @@ public final class VillagerMenusPayload {
         this.promisedRoot = promisedRoot;
         this.showChangeRootTab = showChangeRootTab;
         this.flagBops = flagBops;
-        this.flagBopBlessed = flagBopBlessed;
-        this.flagBopRoot = flagBopRoot;
     }
 
     public void write(FriendlyByteBuf buf) {
@@ -137,8 +130,6 @@ public final class VillagerMenusPayload {
         buf.writeUtf(promisedRoot);
         buf.writeBoolean(showChangeRootTab);
         buf.writeInt(flagBops);
-        buf.writeBoolean(flagBopBlessed);
-        buf.writeUtf(flagBopRoot);
     }
 
     public static VillagerMenusPayload read(FriendlyByteBuf buf) {
@@ -179,8 +170,6 @@ public final class VillagerMenusPayload {
         String promisedRoot = buf.readUtf();
         boolean showChangeRootTab = buf.readBoolean();
         int flagBops = buf.readInt();
-        boolean flagBopBlessed = buf.readBoolean();
-        String flagBopRoot = buf.readUtf();
         return new VillagerMenusPayload(
                 entityId,
                 villager,
@@ -199,9 +188,7 @@ public final class VillagerMenusPayload {
                 changeRootAttention,
                 promisedRoot,
                 showChangeRootTab,
-                flagBops,
-                flagBopBlessed,
-                flagBopRoot
+                flagBops
         );
     }
 }

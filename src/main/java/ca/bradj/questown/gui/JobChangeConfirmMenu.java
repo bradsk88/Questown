@@ -39,11 +39,10 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     /**
      * The flag's Blocks of Progress when the panel was opened from the flag (dev playtest
-     * 2026-10-29: spend "directly from the flag instead of having to withdraw first"): how many, and
-     * whether the oldest (the one a spend takes) is blessed and with which root ("" none).
+     * 2026-10-29: spend "directly from the flag instead of having to withdraw first").
      */
-    public record FlagBop(int count, boolean blessed, String root) {
-        public static final FlagBop NONE = new FlagBop(0, false, "");
+    public record FlagBop(int count) {
+        public static final FlagBop NONE = new FlagBop(0);
     }
 
     private final FlagBop flagBop;
@@ -122,20 +121,5 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     public int flagBopCount() {
         return flagBop.count();
-    }
-
-    public boolean isBlessed() {
-        if (usesFlagBop()) {
-            return flagBop.blessed();
-        }
-        return tx.hasBlockOfProgress() && tx.isBlessed();
-    }
-
-    /** The root job a blessed ("gold") BOP guarantees, or empty for a plain BOP. */
-    public java.util.Optional<JobID> getBlessedJob() {
-        if (usesFlagBop()) {
-            return flagBop.root().isEmpty() ? Optional.empty() : Optional.of(new JobID(flagBop.root(), ""));
-        }
-        return tx.getBlessedJob();
     }
 }

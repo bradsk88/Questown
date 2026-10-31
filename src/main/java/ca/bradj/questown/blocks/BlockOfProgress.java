@@ -36,39 +36,31 @@ public class BlockOfProgress extends Block {
         return SHAPE;
     }
 
-    /** Marks the stack as a plain (fungible) Block of Progress. */
-    public static void bless(ItemStack item) {
-        Compat.updateItemDataTag(item, tag -> QTNBT.putBoolean(tag, BLESSED, true));
-    }
-
     /**
-     * Marks the stack as a "gold" (blessed) Block of Progress: spending it on a root job change
-     * is guaranteed to take {@code job} instead of picking a random root. Depositing villagers
-     * bless their BOPs with the root job that earned them (see TownFlagBlockEntity).
+     * Records which root job earned this Block of Progress (the flag's BOP tab says "Earned by").
+     * It guarantees nothing: a job change with a BOP takes an open job-change quest's job, else a
+     * random root (dev ruling 2026-10-30, which retired ADR-0015's "gold" BOPs).
      */
-    public static void bless(ItemStack item, JobID job) {
-        Compat.updateItemDataTag(item, tag -> {
-            QTNBT.putBoolean(tag, BLESSED, true);
-            QTNBT.put(tag, GUARANTEED_JOB, JobID.toTag(job));
-        });
+    public static void markEarnedBy(ItemStack item, JobID job) {
+        Compat.updateItemDataTag(item, tag -> QTNBT.put(tag, EARNED_BY, JobID.toTag(job)));
     }
 
-    public static boolean isBlessed(ItemStack item) {
-        return QTNBT.getBoolean(customData(item), BLESSED, false);
-    }
-
-    /** The job a blessed BOP guarantees, or empty for a plain BOP. */
-    public static Optional<JobID> getBlessedJob(ItemStack item) {
-        if (!isBlessed(item) || !QTNBT.contains(customData(item), GUARANTEED_JOB)) {
-            return Optional.empty();
+    /** The root job that earned this BOP, or empty. Reads a pre-2026-10-30 "gold" BOP's job too. */
+    public static Optional<JobID> getEarnedBy(ItemStack item) {
+        CompoundTag data = customData(item);
+        if (QTNBT.contains(data, EARNED_BY)) {
+            return Optional.of(JobID.fromTag(QTNBT.getCompound(data, EARNED_BY)));
         }
-        return Optional.of(JobID.fromTag(QTNBT.getCompound(customData(item), GUARANTEED_JOB)));
+        if (QTNBT.contains(data, LEGACY_GUARANTEED_JOB)) {
+            return Optional.of(JobID.fromTag(QTNBT.getCompound(data, LEGACY_GUARANTEED_JOB)));
+        }
+        return Optional.empty();
     }
 
     private static CompoundTag customData(ItemStack stack) {
         return Compat.itemDataTag(stack);
     }
 
-    private static final String BLESSED = "blessed";
-    private static final String GUARANTEED_JOB = "guaranteed_job";
+    private static final String EARNED_BY = "earned_by";
+    private static final String LEGACY_GUARANTEED_JOB = "guaranteed_job";
 }

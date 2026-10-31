@@ -1,12 +1,9 @@
 package ca.bradj.questown.core.network;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.gui.BopTransactionSyncer;
-import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.item.ItemStack;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -44,23 +41,19 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;
             }
-            // Read the consumed BOP's guarantee before it vanishes: a blessed ("gold") BOP
-            // forces the specified root instead of the usual random choice.
-            ItemStack consumed;
+            // A BOP guarantees nothing (dev ruling 2026-10-30): an open job-change quest's promise
+            // decides in requestJobRootChange, else the root is random.
             if (fromFlag) {
-                Optional<ItemStack> taken = flag.takeOldestBop();
-                if (taken.isEmpty()) {
+                if (flag.takeOldestBop().isEmpty()) {
                     QT.GUI_LOGGER.info("Flag has no Block of Progress; job root of {} not changed", villagerUUID);
                     return;
                 }
-                consumed = taken.get();
             } else {
-                consumed = BopTransactionSyncer.syncConsumedBOP(sender);
+                BopTransactionSyncer.syncConsumedBOP(sender);
             }
-            Optional<JobID> guarantee = ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(consumed);
             // The flag owns the spend-and-request: it schedules the root change (deciding the
             // root now) and completes any matching JOB_CHANGE quest at the spend moment.
-            flag.requestJobRootChange(villagerUUID, instant, guarantee);
+            flag.requestJobRootChange(villagerUUID, instant, Optional.empty());
         });
 
     }

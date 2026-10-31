@@ -62,9 +62,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     // Serialized
     private final Map<UUID, Boolean> jobChangesPending = new HashMap<>();
-    // roots guaranteed by blessed ("gold") BOPs; cleared once the pending change applies
+    // roots promised by an open job-change quest at the spend; cleared once the pending change applies
     private final Map<UUID, JobID> guaranteedRoots = new HashMap<>();
-    // roots pre-rolled at the BOP-spend moment for ordinary (non-blessed) changes; applied at
+    // roots pre-rolled at the BOP-spend moment for changes no quest promises; applied at
     // morning unless a tutorial override wins; persisted across save/quit like guaranteedRoots
     private final Map<UUID, JobID> preRolls = new HashMap<>();
 
@@ -759,8 +759,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     /**
-     * Schedules a root change and returns the root decided at the spend moment: the blessed
-     * guarantee when the BOP carried one, otherwise a pre-roll from the registry's roots. Empty
+     * Schedules a root change and returns the root decided at the spend moment: the quest
+     * guarantee when a job-change quest promised one, otherwise a pre-roll from the registry's roots. Empty
      * when no candidate root exists (the morning then re-rolls), or when an instant change had no
      * guarantee (it rolled now); an instant change with a guarantee returns it, already applied.
      */
@@ -854,11 +854,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ENTITY v,
             long currentTick
     ) {
-        // A blessed ("gold") BOP spent on this villager dictates the new root; it applies
+        // A job-change quest promised this villager's new root at the spend; it applies
         // before any overnight quest override, and ordinary random picks.
         Optional<JobID> guaranteed = Optional.ofNullable(guaranteedRoots.remove(delegator.getUUID(v)));
         if (guaranteed.isPresent()) {
-            QT.FLAG_LOGGER.info("Blessed BOP dictates job root change to: {}", guaranteed.get());
+            QT.FLAG_LOGGER.info("Job-change quest dictates job root change to: {}", guaranteed.get());
             unlockAndChange(v, guaranteed.get(), currentTick);
             return;
         }

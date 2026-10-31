@@ -19,13 +19,11 @@ public record JobChangeText(String key, Optional<String> root, String whenKey) {
      * @param inserted     a Block of Progress is in the slot
      * @param creative     the viewing player is in creative
      * @param promisedRoot the root an open onboarding job-change quest guarantees
-     * @param blessed      the inserted Block of Progress is a "special" one (the screen supplies its root)
      */
     public static JobChangeText of(
             boolean inserted,
             boolean creative,
-            Optional<String> promisedRoot,
-            boolean blessed
+            Optional<String> promisedRoot
     ) {
         // A promised change applies at the spend (TownFlagBlockEntity.requestJobRootChange).
         boolean now = creative || promisedRoot.isPresent();
@@ -33,9 +31,6 @@ public record JobChangeText(String key, Optional<String> root, String whenKey) {
         if (promisedRoot.isPresent()) {
             String key = inserted ? "menu.unlock_root.click_unlock_promised" : "menu.unlock_root.insert_bop_promised";
             return new JobChangeText(key, promisedRoot, when);
-        }
-        if (blessed) {
-            return new JobChangeText("menu.unlock_root.insert_bop_blessed", Optional.empty(), when);
         }
         String key = inserted ? "menu.unlock_root.click_unlock" : "menu.unlock_root.insert_bop";
         return new JobChangeText(key, Optional.empty(), when);

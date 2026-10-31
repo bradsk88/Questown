@@ -124,8 +124,8 @@ therefore two distinct states, not one:
   townie) — set on level-up, the value `addExperience` early-returns on; a townie
   can hold **at most one** uncollected BOP, so it accrues no XP until it deposits.
 - **The flag's deposits** (`TownFlagBlockEntity.bopStacks`, capped at **64** by
-  `TownFlagBOPItemHandler.getSlots()`) — real stacks, because each deposit may be
-  **blessed** with the depositing townie's root job (a "gold" BOP; see ADR-0015).
+  `TownFlagBOPItemHandler.getSlots()`) — real stacks, because each deposit records
+  the depositing townie's root job (`earned_by`, the BOP tab's "Earned by" line; ADR-0016).
   Appended on deposit, popped FIFO only when the **player** collects. This is the
   "uncollected by the player" state.
 
@@ -240,12 +240,16 @@ flowchart LR
   Compat.getItemName(v), ...)` where `Compat.getItemName(ItemStack)` returns
   `stack.getDisplayName()` (1.20.6 renamed `ItemStack.getName()` →
   `getDisplayName()`).
-- A blessed ("gold") BOP guarantees its carried root on a root job change:
-  `JobRootChangeMessage` reads the spent stack (`BopTransactionSyncer.syncConsumedBOP`
-  returns it), and `SimpleVillagerHandle` stores it in `guaranteedRoots`, applied at
-  `handleMorning` **before** the overnight quest override (persisted as
-  `guaranteed_roots` NBT). The menu shows the named root
-  (`menu.unlock_root.insert_bop_blessed`).
+- **A BOP no longer guarantees a root (ADR-0016, supersedes ADR-0015; dev ruling
+  2026-10-30).** A deposit only records the job that earned it
+  (`BlockOfProgress.markEarnedBy`, NBT `earned_by`; `getEarnedBy` also reads the old
+  `guaranteed_job` key) for the BOP tab's "Earned by" line. A spend's root is an open
+  job-change quest's root (`promisedJobChange` -> `TownQuests.onboardingJobChangeGuarantee`;
+  every posted JOB_CHANGE quest is onboarding-flagged), otherwise the pre-roll.
+  `SimpleVillagerHandle.guaranteedRoots` (`guaranteed_roots` NBT) now carries only that quest
+  promise (log: "Job-change quest dictates job root change to"), applied before the overnight
+  quest override. `JobRootChangeMessage` and `spendBopToRequestJobChange` pass
+  `Optional.empty()` as the BOP guarantee.
 - While the flag holds any BOP it **sparkles cyan** (`TownFlagTicker.spawnBopParticlesIfNeeded`,
   `DustParticleOptions`); a full flag renders the red BOP cube instead.
 
@@ -1627,8 +1631,8 @@ craft it at the flag and place it near the flag.
 A plain Block of Progress job change rolls a random root, at the spend (`rollPendingRoot`, the
 pre-roll) or at dawn (`handleMorning`'s fallback). Both now draw from `RootRoll.candidates`: roots
 no townie holds yet, or every root but the townie's own when all are held (`RootRollTest`). r16's
-two rolls gave a baker and a second hunter while the town's top need had no producer. A gold BOP
-still forces its root (ADR-0015), and an overnight quest override still wins. The rest of the
+two rolls gave a baker and a second hunter while the town's top need had no producer. An open job-change
+quest's root still wins (ADR-0016; the gold BOP's forced root is gone). The rest of the
 ruling (alternating job-change and job batches) was superseded the same day by curated quest
 paths: `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md`.
 

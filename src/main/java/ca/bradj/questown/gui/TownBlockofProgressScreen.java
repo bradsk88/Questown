@@ -117,8 +117,8 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
                 text
         );
         bgY += 8;
-        // Day-1 playtest: "The town has 3 BOPs!" with no way to see why. The deposited BOPs are
-        // blessed with the root job that earned them (BlockOfProgress.bless), so group and list
+        // Day-1 playtest: "The town has 3 BOPs!" with no way to see why. The deposited BOPs carry
+        // the root job that earned them (BlockOfProgress.markEarnedBy), so group and list
         // them - the player's "why".
         Map<String, Integer> byRoot = new java.util.LinkedHashMap<>();
         for (String root : menu.bopRootJobs) {

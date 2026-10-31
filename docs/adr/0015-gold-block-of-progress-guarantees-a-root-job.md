@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0016
 ---
 
 # Gold (blessed) Blocks of Progress guarantee a root job; the flag stores real stacks

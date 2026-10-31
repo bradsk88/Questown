@@ -87,12 +87,12 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
         ImmutableMap<VillagerUUID, Boolean> pending = deserializeVMap(compound, NBT_PENDING_JOB_CHANGES, simpleBool);
-        // Blessed ("gold") BOP guarantees pending against root changes, persisted so a spend
+        // Quest-promised roots pending against root changes, persisted so a spend
         // overnight still forces the root after a save/quit in between.
         ImmutableMap<UUID, JobID> guaranteedRoots = deserializeMap(
                 compound, NBT_GUARANTEED_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
         );
-        // Pre-rolled at the BOP-spend moment for ordinary (non-blessed) changes; persisted so a
+        // Pre-rolled at the BOP-spend moment for ordinary (unpromised) changes; persisted so a
         // spend overnight still applies the settled root after a save/quit in between.
         ImmutableMap<UUID, JobID> preRolls = deserializeMap(
                 compound, NBT_PRE_ROLL_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))

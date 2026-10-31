@@ -227,7 +227,7 @@ public interface VillagerHolder {
     void clearBlockOfProgress(UUID uuid);
 
     /**
-     * Schedules a root change (no blessed guarantee) and returns the pre-rolled root decided at
+     * Schedules a root change (no quest guarantee) and returns the pre-rolled root decided at
      * the spend moment, or empty when instant or when no candidate root exists. The morning
      * applies it unless a tutorial override wins.
      */
@@ -238,7 +238,7 @@ public interface VillagerHolder {
 
     /**
      * Same as {@link #scheduleJobRootChange(UUID, boolean)} but carries a guaranteed root
-     * (from a blessed "gold" BOP): when present, the pending change takes this root instead
+     * (an open job-change quest's root): when present, the pending change takes this root instead
      * of picking randomly at handleMorning.
      */
     Optional<JobID> scheduleJobRootChange(

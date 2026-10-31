@@ -87,7 +87,7 @@ public class VillagerMenus {
                 p.showSkillsTab,
                 p.showInventoryTab,
                 p.promisedRoot,
-                new JobChangeConfirmMenu.FlagBop(p.flagBops, p.flagBopBlessed, p.flagBopRoot)
+                new JobChangeConfirmMenu.FlagBop(p.flagBops)
         );
         return menus;
     }
@@ -128,9 +128,7 @@ public class VillagerMenus {
                 changeRootAttention,
                 promisedRoot,
                 showChangeRootTab,
-                flagBop.count(),
-                flagBop.blessed(),
-                flagBop.root()
+                flagBop.count()
         ).write(data);
     }
 

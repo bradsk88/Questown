@@ -345,8 +345,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownFlagTicker ticker = new TownFlagTicker();
 
     // Deposited Blocks of Progress. Stored as real stacks (not a count) because each deposit
-    // may be blessed: the item's NBT carries the depositor's job, which a blessed BOP guarantees
-    // on a root job change. FIFO: eject() gives the player the oldest deposit first.
+    // carries the job that earned it (the BOP menu's "Earned by" line; it no longer guarantees
+    // anything, ADR-0016). FIFO: eject() gives the player the oldest deposit first.
     final NonNullList<ItemStack> bopStacks = NonNullList.create();
     boolean tutorialBopGranted = false;
     int completedProceduralBatches = 0;
@@ -449,14 +449,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
-     * The root job ids the deposited BOPs were blessed with, in deposit (FIFO) order. A plain
-     * (unblessed) BOP contributes "". Feeds the flag's BOP menu "Earned by: ..." line, which is
+     * The root job ids that earned the deposited BOPs, in deposit (FIFO) order. A BOP no villager
+     * earned contributes "". Feeds the flag's BOP menu "Earned by: ..." line, which is
      * the player's answer to "why does the town have BOPs?" (day-1 playtest: the deposit notice
      * announced the amount but not the cause).
      */
     public ImmutableList<String> depositedBopRootJobs() {
         return bopStacks.stream()
-                .map(s -> BlockOfProgress.getBlessedJob(s)
+                .map(s -> BlockOfProgress.getEarnedBy(s)
                         .map(j -> j.rootId())
                         .orElse(""))
                 .collect(ImmutableList.toImmutableList());
@@ -468,7 +468,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     /**
      * The root a BOP spend on this townie is promised to give, whatever the BOP: an open onboarding
-     * job-change quest's job. Empty when the spend would roll (or follow the BOP's own blessing).
+     * job-change quest's job. Empty when the spend would roll.
      */
     public Optional<JobID> promisedJobChange(UUID villagerUUID) {
         return quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID));
@@ -476,8 +476,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     /**
      * The spend-and-request a player makes on a BOP: schedules the townie's root change
-     * (the root is decided here - an onboarding quest's root beats the BOP's own blessing,
-     * a blessed BOP beats a pre-roll, and the morning applies the decided root) and, when a
+     * (the root is decided here - an open job-change quest's root, else a pre-roll; ADR-0016:
+     * the BOP itself never decides it) and, when a
      * pending root was decided, completes the matching JOB_CHANGE quest at the spend moment
      * - the reward lands on the player's act, not on the morning application. An onboarding
      * quest's change applies at the spend (dev, r22 2026-10-26: the morning wait left the
@@ -506,8 +506,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
      * store (the order the player collects them in) - the spend the player makes
      * in the tab - and routes through {@link #requestJobRootChange(UUID, boolean, Optional)}
      * overnight (not instant) so the spend completes any matching JOB_CHANGE quest the same
-     * way the player's in-game spend does. A blessed BOP's guaranteed root is carried the way
-     * the handler carries it.
+     * way the player's in-game spend does.
      */
     public JobChangeResult spendBopToRequestJobChange(UUID villagerUUID) {
         boolean inTown = getVillagerHandle().entities().stream()
@@ -519,10 +518,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (consumed.isEmpty()) {
             return JobChangeResult.NO_BOP;
         }
-        requestJobRootChange(
-                villagerUUID, false,
-                BlockOfProgress.getBlessedJob(consumed.get())
-        );
+        // The quest promise (requestJobRootChange) decides, else a random root (2026-10-30 ruling).
+        requestJobRootChange(villagerUUID, false, Optional.empty());
         return JobChangeResult.REQUESTED;
     }
 
@@ -581,8 +578,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     /**
      * Dev/test only: fill the flag's deposited BOPs directly, mirroring the tutorial
      * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
-     * without having to drive 63 level-ups through the real deposit path. Grants plain
-     * (unblessed) BOPs.
+     * without having to drive 63 level-ups through the real deposit path. Grants BOPs no
+     * villager earned.
      */
     public void grantBlockOfProgressForTest(int amount) {
         for (int i = 0; i < amount; i++) {
@@ -1330,10 +1327,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             // (town/entity/COMPLEX.md "Earn → latch → assign"): hand out only
             // when the townie is not already carrying one.
             if (!carrying) {
-                // Bless the BOP with the job that earned it: a "gold" BOP guarantees that root job
-                // when spent on a job change (see BlockOfProgress.bless / getBlessedJob).
+                // Note the job that earned it (the BOP tab's "Earned by"); it guarantees nothing
+                // (dev ruling 2026-10-30, retiring ADR-0015's gold BOPs).
                 ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
-                BlockOfProgress.bless(bopStack, currentJob);
+                BlockOfProgress.markEarnedBy(bopStack, currentJob);
                 MCHeldItem bop = MCHeldItem.fromTown(bopStack);
                 villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
             }
@@ -2420,7 +2417,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
-     * The player puts a Block of Progress (blessing and all) back on the flag (dev playtest
+     * The player puts a Block of Progress (earned-by job and all) back on the flag (dev playtest
      * 2026-10-30: a sneak-right-click to put one back placed it on the ground instead). False
      * when the item isn't a BOP or the flag is full.
      */

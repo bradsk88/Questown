@@ -610,13 +610,7 @@ public class TownVillagerUIs {
                 || !(TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos()) instanceof TownFlagBlockEntity flag)) {
             return JobChangeConfirmMenu.FlagBop.NONE;
         }
-        return flag.peekOldestBop()
-                .map(bop -> new JobChangeConfirmMenu.FlagBop(
-                        flag.getBopCount(),
-                        ca.bradj.questown.blocks.BlockOfProgress.isBlessed(bop),
-                        ca.bradj.questown.blocks.BlockOfProgress.getBlessedJob(bop).map(JobID::rootId).orElse("")
-                ))
-                .orElse(JobChangeConfirmMenu.FlagBop.NONE);
+        return new JobChangeConfirmMenu.FlagBop(flag.getBopCount());
     }
 
     private static boolean hidesJobChange(ServerPlayer sender, VisitorMobEntity e) {

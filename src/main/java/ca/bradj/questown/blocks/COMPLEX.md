@@ -190,7 +190,7 @@ How a player gets them (there was no in-game way but 2 iron, which no villager p
 crafting table ringed by 4 Blocks of Progress. Plus shape (left, right, up, down) = blacksmith's
 table (`recipes/blacksmiths_table_from_blocks_of_progress.json`; the iron recipe stays); corners =
 armorer's table (`recipes/armorers_table.json`). A shaped recipe's item ingredient ignores
-components, so blessed BOPs count.
+components, so BOPs with an `earned_by` tag count.
 
 `getDrops` returned an ore processing block for the blacksmith's table; both tables now drop
 themselves (`asItem()`). Pin: `WorkTableRecipesTest` (data: room recipes share no work block, the

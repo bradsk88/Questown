@@ -1,9 +1,6 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.jobs.JobID;
-import java.util.Optional;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -27,7 +24,7 @@ public class BopTransactionSyncer {
             ServerPlayer sender
     ) {
         // Also clear the BOP slot in the open menu, if present, to prevent it being returned to the player.
-        // Returns the consumed stack so callers can read bless/guarantee NBT before it is voided.
+        // Returns the consumed stack so callers can read its NBT before it is voided.
         ItemStack consumed = ItemStack.EMPTY;
         if (sender.containerMenu instanceof JobChangeConfirmMenu menu) {
             consumed = menu.tx.takeBopSlot();
@@ -59,12 +56,4 @@ public class BopTransactionSyncer {
         return stack;
     }
 
-    public boolean isBlessed() {
-        return BlockOfProgress.isBlessed(getBopSlotItem());
-    }
-
-    /** The root job a blessed BOP in the slot guarantees, or empty for a plain BOP. */
-    public Optional<JobID> getBlessedJob() {
-        return BlockOfProgress.getBlessedJob(getBopSlotItem());
-    }
 }

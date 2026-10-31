@@ -43,9 +43,7 @@ class VillagerMenusPayloadTest {
                 true,
                 "hunter",
                 false,
-                3,
-                true,
-                "cook"
+                3
         );
     }
 
@@ -73,8 +71,6 @@ class VillagerMenusPayloadTest {
         assertEquals("hunter", r.promisedRoot);
         assertEquals(false, r.showChangeRootTab);
         assertEquals(3, r.flagBops);
-        assertEquals(true, r.flagBopBlessed);
-        assertEquals("cook", r.flagBopRoot);
         assertEquals(p.showBlockOfProgressTab, r.showBlockOfProgressTab);
         assertEquals(p.showSkillsTab, r.showSkillsTab);
         assertEquals(false, r.showInventoryTab);

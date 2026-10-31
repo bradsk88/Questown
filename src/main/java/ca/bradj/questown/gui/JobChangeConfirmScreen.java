@@ -125,19 +125,12 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         JobChangeText text = JobChangeText.of(
                 menu.hasBlockOfProgress(),
                 Minecraft.getInstance().player != null && Minecraft.getInstance().player.isCreative(),
-                menu.getPromisedRoot(),
-                menu.isBlessed()
+                menu.getPromisedRoot()
         );
         Component when = Compat.translatable(text.whenKey());
         Object[] args;
         if (text.root().isPresent()) {
             args = new Object[]{Compat.translatable("jobs." + text.root().get()), when};
-        } else if (menu.isBlessed()) {
-            // A plain-blessed stack without a guaranteed root keeps the legacy generic text;
-            // a "gold" BOP names the root it will change to.
-            args = new Object[]{menu.getBlessedJob()
-                    .map(j -> Compat.translatable("jobs." + j.rootId()))
-                    .orElseGet(() -> Compat.translatable("menu.unlock_root.unguaranteed_job")), when};
         } else {
             args = new Object[]{when};
         }

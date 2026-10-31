@@ -1250,7 +1250,7 @@ whatever the BOP (`TownQuests.onboardingJobChangeGuarantee`, now exposed as
 profession". The root rides `VillagerMenusPayload.promisedRoot` (and the server-side
 `JobChangeConfirmMenu`) and `JobChangeConfirmScreen` shows
 `menu.unlock_root.insert_bop_promised` ("Insert a Block of Progress to make this villager a
-Hunter"). Precedence matches the spend: promised beats a blessed BOP's text.
+Hunter"). Since ADR-0016 the promise is the only named root a spend can have.
 `VillagerMenusPayloadTest` round-trips the field.
 
 ## Flag crafting: "Begin moving this town" takes two clicks (2026-10-22, r9)
@@ -1323,8 +1323,8 @@ showing the 'left town' icon"); they now show `armorers_table_front.png`, pinned
 The panel said "Insert a Block of Progress ... (starting tomorrow morning)" with the Block of
 Progress already in the slot, and in creative, where `JobRootChangeMessage` (which carries the
 player's creative flag) changes the job at once. `JobChangeText.of(inserted, creative,
-promisedRoot, blessed)` picks the line: `insert_bop[_promised]` before insertion,
-`click_unlock[_promised]` after, `insert_bop_blessed` for a "special" stack; the timing is its own
+promisedRoot)` picks the line: `insert_bop[_promised]` before insertion,
+`click_unlock[_promised]` after (the "special" blessed line went with ADR-0016); the timing is its own
 key (`when_morning` / `when_now`) passed as the last `%s`. Pin: `JobChangeTextTest`. Live
 2026-10-23: survival empty / inserted, and creative inserted ("starting now"), gui-lint OK.
 **A promised change is "now" too (dev playtest 2026-10-28).** Since r22 a quest-promised change
@@ -1541,10 +1541,10 @@ owner call the growth driver and `_qtdev unlock_skill` use). Seen in game:
 can now do hunter:sword_half_day" (`after-click.png`).
 
 The change-job panel (root change) does the same from the flag. `TownVillagerUIs.openMenu` fills
-`VillagerMenusPayload.flagBops/flagBopBlessed/flagBopRoot` from the flag's oldest BOP
-(`TownFlagBlockEntity.peekOldestBop`, the one a spend takes) for a management-only open, and
+`VillagerMenusPayload.flagBops` from the flag's BOP count (`FlagBop(count)`; the
+blessed/root fields went with ADR-0016) for a management-only open, and
 `FlagBop.NONE` for the full villager menu. `JobChangeConfirmMenu.usesFlagBop()` (slot empty, flag
-count > 0) enables Unlock and makes `isBlessed()`/`getBlessedJob()` describe the flag's BOP;
+count > 0) enables Unlock;
 `JobChangeConfirmScreen` draws the BOP item over the slot and sends `JobRootChangeMessage.fromFlag`,
 whose handler takes `flag.takeOldestBop()` instead of `BopTransactionSyncer.syncConsumedBOP`. Seen in
 game: the "special" BOP text with Unlock lit (`run-client/diags/change-job-flag.png`), chat

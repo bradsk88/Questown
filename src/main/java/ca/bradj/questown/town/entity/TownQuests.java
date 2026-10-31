@@ -1543,7 +1543,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // Onboarding-flow quest: like the other tutorial-phase batches (see
         // addQuestsForJobChangeAndFood), it is onboarding-flagged. Without the flag the
         // open hunter JOB_CHANGE quest is invisible to onboardingJobChangeGuarantee, and
-        // a BOP spend with no BOP blessing pre-rolls arbitrarily instead of promising
+        // a BOP spend pre-rolls arbitrarily instead of promising
         // the hunter the quest names (2026-10-14 playtest: pre-roll fisher beat the
         // intended first hunter).
         markOnboarding(qq);
@@ -2234,8 +2234,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /**
      * The onboarding job-change guarantee (ruling D, 2026-10-13, expected-guaranteed-cook-got-arborist.md):
      * while an onboarding JOB_CHANGE quest is open, its wanted root is what a BOP spend promises,
-     * so it fills the same guarantee slot a blessed BOP's NBT uses. Without this, a spend with no
-     * BOP blessing pre-rolls arbitrarily - the onboarding cook quest lost to an arborist in the
+     * so it fills the guarantee slot (the only thing that fills it since ADR-0016). Without
+     * this, a spend pre-rolls arbitrarily - the onboarding cook quest lost to an arborist in the
      * 2026-10-13 incident, and the first hunter lost to a fisher in the 2026-10-14 playtest
      * (the hunter-gatherer batch was unflagged until addHunterGatherer gained markOnboarding).
      * The oldest open onboarding JOB_CHANGE quest for this townie wins
@@ -2260,7 +2260,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /**
      * Completes the active JOB_CHANGE quest for a townie the moment its BOP spend is
      * requested, not when the root change applies in the morning: the reward lands on the
-     * player's act. Only a quest whose wanted root matches the decided pending root (blessed
+     * player's act. Only a quest whose wanted root matches the decided pending root (quest
      * guarantee or pre-roll) completes, and never one already owned by a different townie
      * (the quest-level owner: a batch can hold several JOB_CHANGE quests for the same town
      * with different owners). Returns whether a quest completed so the caller can log the

@@ -96,7 +96,7 @@ public class TownFlagBOPItemHandler implements ItemHandler {
     }
 
     /**
-     * Takes one item off {@code from} and hands {@code store} a 1-count snapshot of it (bless
+     * Takes one item off {@code from} and hands {@code store} a 1-count snapshot of it (earned-by
      * NBT included). Returns what is left of {@code from}.
      */
     static ItemStack depositOne(
