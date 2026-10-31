@@ -177,6 +177,16 @@ public record TestBlueprint(
                 postSpawnAction, customAssertion);
     }
 
+    public TestBlueprint withRealtimeTicks(int ticks) {
+        return new TestBlueprint(
+                roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+                roomId, expectation, supplyDoorOffset, warpAmountOverride, startTimeTick,
+                villagerCount, realtimePhase, ticks, drainHungerBeforeTest, skipWarp,
+                realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+                extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
+                postSpawnAction, customAssertion);
+    }
+
     public TestBlueprint withWarpAmountOverride(int n) {
         return new TestBlueprint(
                 roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,

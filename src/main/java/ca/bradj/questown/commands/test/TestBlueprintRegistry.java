@@ -242,6 +242,8 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
         jobs.add(entry(new JobID("crafter", "display_armor"), displayArmorBlueprint()));
         jobs.add(entry(new JobID("crafter", "display_weapons"), displayWeaponsBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_weapons", "full_frame", displayWeaponsFullFrameBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_weapons", "corner_frames", displayWeaponsCornerFramesBlueprint()));
         jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
@@ -3025,6 +3027,85 @@ public class TestBlueprintRegistry {
                 new ResourceLocation(Questown.MODID, "weapon_display"),
                 "minecraft:stone_sword"
         );
+    }
+
+    /**
+     * Dev playtest 2026-10-30: with one Weapon Display frame, the display job kept working the frame
+     * after it held a sword, and every further sword it inserted was destroyed ("Item lost: no free
+     * display slot", every ~25 s). Three swords, one frame: one goes in the frame, and the other two
+     * must stay with the town (chest or villager), none dropped or lost. The frame is town storage
+     * (DisplaySlots), so the container count includes the displayed sword: all three stay counted.
+     */
+    private static TestBlueprint displayWeaponsFullFrameBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1), new ItemStack(Items.STONE_SWORD, 1), new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ItemFrame(
+                        level, pos, net.minecraft.core.Direction.UP),
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            int inChests = 0;
+            for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                if (level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c) {
+                    for (int i = 0; i < c.getContainerSize(); i++) {
+                        if (c.getItem(i).is(Items.STONE_SWORD)) {
+                            inChests += c.getItem(i).getCount();
+                        }
+                    }
+                }
+            }
+            int held = 0;
+            for (LivingEntity v : town.getVillagerHandle().entities()) {
+                if (v instanceof VisitorMobEntity vme) {
+                    held += (int) vme.getJobJournalSnapshot().items().stream()
+                            .filter(h -> h.get().get().equals(Items.STONE_SWORD)).count();
+                }
+            }
+            BlockPos at = flagPos.offset(DISPLAY_FRAME_OFFSET);
+            int dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(at).inflate(16)).stream()
+                    .filter(e -> e.getItem().is(Items.STONE_SWORD)).mapToInt(e -> e.getItem().getCount()).sum();
+            ca.bradj.questown.integration.minecraft.DisplaySlots slots =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, at);
+            int shown = slots == null ? 0 : (int) slots.items().stream().filter(i -> i.is(Items.STONE_SWORD)).count();
+            output.msg("full-frame: shown=" + shown + " inChests=" + inChests + " held=" + held + " dropped=" + dropped);
+            return report(output, "full-frame-keeps-swords", shown == 1 && inChests + held == 3 && dropped == 0);
+        }).withRealtimeTicks(6000);
+    }
+
+    /**
+     * The dev's room (2026-10-30): two item frames on the walls of a corner share one block
+     * position, one already holding a stone sword. The sword in the chest must go into the empty
+     * frame. Before the fix the display lookup took whichever frame the entity list gave first, so
+     * the insert could hit the full frame and destroy the sword.
+     */
+    private static TestBlueprint displayWeaponsCornerFramesBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> {
+                    net.minecraft.world.entity.decoration.ItemFrame full = new net.minecraft.world.entity.decoration.ItemFrame(
+                            level, pos, net.minecraft.core.Direction.UP);
+                    full.setItem(new ItemStack(Items.STONE_SWORD));
+                    level.addFreshEntity(full);
+                    return new net.minecraft.world.entity.decoration.ItemFrame(level, pos, net.minecraft.core.Direction.NORTH);
+                },
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(DISPLAY_FRAME_OFFSET);
+            List<net.minecraft.world.entity.decoration.ItemFrame> frames = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(at).inflate(1));
+            long holding = frames.stream().filter(f -> f.getItem().is(Items.STONE_SWORD)).count();
+            int dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(at).inflate(16)).stream()
+                    .filter(e -> e.getItem().is(Items.STONE_SWORD)).mapToInt(e -> e.getItem().getCount()).sum();
+            output.msg("corner-frames: frames=" + frames.size() + " holding=" + holding + " dropped=" + dropped);
+            return report(output, "corner-frames-fill-the-empty-one", frames.size() == 2 && holding == 2 && dropped == 0);
+        }).withRealtimeTicks(4000);
     }
 
     private static TestBlueprint displayBlueprint(

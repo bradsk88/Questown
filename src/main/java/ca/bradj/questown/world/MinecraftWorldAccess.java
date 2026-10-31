@@ -342,6 +342,11 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+        net.minecraft.world.level.block.Block.popResource(level, pos, item);
+    }
+
+    @Override
     public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
         DisplaySlots d = DisplaySlots.at(level, pos);
         if (d == null || slot < 0 || slot >= d.getContainerSize()) {

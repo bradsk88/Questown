@@ -564,6 +564,11 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return false;
     }
 
+    /** No item entities in warp; the display jobs, the only callers, are excluded from it. */
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+    }
+
     @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
         List<ItemStack> slots = containerSlots.get(pos);

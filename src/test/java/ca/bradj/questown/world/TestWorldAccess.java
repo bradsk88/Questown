@@ -256,6 +256,13 @@ public class TestWorldAccess implements QTWorldAccess {
         return displays.getOrDefault(pos, List.of());
     }
 
+    public final java.util.List<ItemStack> dropped = new java.util.ArrayList<>();
+
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+        dropped.add(item);
+    }
+
     @Override
     public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
         List<ItemStack> slots = displays.get(pos);

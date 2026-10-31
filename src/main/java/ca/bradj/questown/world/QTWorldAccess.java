@@ -71,6 +71,9 @@ public interface QTWorldAccess {
     /** Puts the item in that slot of the display at pos; false when there is no such display. */
     boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item);
 
+    /** Drops the item as an entity at pos (an item that has nowhere to go must not vanish). */
+    void dropItem(BlockPos pos, ItemStack item);
+
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);
     void playSound(BlockPos pos, SoundEvent sound, SoundSource source);

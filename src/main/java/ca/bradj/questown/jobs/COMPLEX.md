@@ -1209,3 +1209,18 @@ caused by this.
 of 36) now plays `minecraft:block.anvil.use`. Most were `item.axe.scrape`; a few were wood/metal
 hits or a sweep. The chance and duration fields are unchanged. `JobSoundIdsDataTest`. Not heard
 in game.
+
+## Display jobs never destroy items; corner frames (dev playtest 2026-10-30)
+
+Live: "Item lost: no free display slot for 1 minecraft:stone_sword @ (-18,77,28)" every ~25 s. The
+dev's Grand Smithy had item frames on two walls of each corner, so two frames shared one block
+position. `DisplaySlots.at` returned whichever frame the entity list gave first, and that order
+isn't stable: the display job's spot check (`ResourceJobLoader.isDisplayJobBlock`) could see the
+empty frame while `DressDisplaySpecialRule` inserted into the full one, which deleted the item.
+- `DisplaySlots.at` -> `preferFree`: the first display at the position with an empty slot,
+  else the first one, so the check and the insert agree.
+- `DressDisplaySpecialRule`: an item with no free slot is dropped there
+  (`QTWorldAccess.dropItem`; a no-op in warp, where display jobs are excluded), never deleted.
+Autotests: `crafter/display_weapons [corner_frames]` (two frames on one block, one full: red with
+the old lookup, holding=1; green, holding=2, none dropped) and `[full_frame]` (three swords, one
+frame: none lost; the frame counts as town storage). `TestBlueprint.withRealtimeTicks` added.

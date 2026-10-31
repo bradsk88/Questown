@@ -26,17 +26,31 @@ public abstract class DisplaySlots implements Container {
             EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD
     );
 
-    /** The display standing (or hanging) at pos, if any. */
+    /**
+     * The display standing (or hanging) at pos, if any. Two item frames on the walls of a corner
+     * share one block position; the entity order is not stable, so the job's spot check could see
+     * the empty frame while the insert went to the full one and destroyed the item (dev playtest
+     * 2026-10-30). Prefer a display with a free slot, so the check and the insert agree.
+     */
     public static @Nullable DisplaySlots at(
             Level level,
             BlockPos pos
     ) {
-        for (Entity e : level.getEntitiesOfClass(Entity.class, new AABB(pos), DisplaySlots::isDisplay)) {
-            if (e.blockPosition().equals(pos)) {
-                return of(e);
+        List<DisplaySlots> here = level.getEntitiesOfClass(Entity.class, new AABB(pos), DisplaySlots::isDisplay).stream()
+                .filter(e -> e.blockPosition().equals(pos))
+                .map(DisplaySlots::of)
+                .toList();
+        return preferFree(here);
+    }
+
+    /** The first display with an empty slot, else the first one, else null. */
+    static @Nullable DisplaySlots preferFree(List<DisplaySlots> here) {
+        for (DisplaySlots d : here) {
+            if (d.items().stream().anyMatch(ItemStack::isEmpty)) {
+                return d;
             }
         }
-        return null;
+        return here.isEmpty() ? null : here.get(0);
     }
 
     public static boolean isDisplay(Entity e) {
