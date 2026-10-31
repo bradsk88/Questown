@@ -11,15 +11,16 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 
 /**
- * {@code /qt flag shutdown <pos>} begins the town-shutdown relocation ritual on the flag at
- * {@code pos}; {@code /qt flag shutdown <pos> cancel} aborts an in-progress ritual (ADR-0009, #199).
+ * {@code /qt flag <pos> shutdown} begins the town-shutdown relocation ritual on the flag at
+ * {@code pos}; {@code /qt flag <pos> shutdown cancel} aborts an in-progress ritual (ADR-0009, #199),
+ * and {@code wake} / {@code reissue} are the dormant flag's loss-protection paths.
  *
  * <p>This is the admin/dev trigger for the ritual. The polished in-game entry point — the "Begin
  * moving this town" button on the flag menu's crafting tab (see
  * {@link ca.bradj.questown.core.network.BeginTownRelocationMessage}) — wraps this same
- * {@link TownFlagBlockEntity#beginTownShutdown()} entry point. The button's click path stays a
- * documented server-autotest blind spot; the shutdown ritual it starts is covered by the
- * {@code flag/town_shutdown} autotest.
+ * {@link TownFlagBlockEntity#beginTownShutdown()} entry point. Players reach cancel, wake and
+ * re-issue through the flag UI too (gui/COMPLEX.md "Town shutdown: wake, deed re-issue and cancel
+ * from the UI"); the ritual itself is covered by the {@code flag/town_shutdown} autotest.
  */
 public class FlagShutdownCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
@@ -68,8 +69,7 @@ public class FlagShutdownCommand {
             return 0;
         }
         boolean started = tf.beginTownShutdown();
-        source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+        source.sendSuccess(net.minecraft.network.chat.Component.literal(
                         started ? "Town shutdown started" : "Flag is not eligible for shutdown"
                 ),
                 false
@@ -86,8 +86,7 @@ public class FlagShutdownCommand {
             return 0;
         }
         boolean cancelled = tf.cancelTownShutdown();
-        source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+        source.sendSuccess(net.minecraft.network.chat.Component.literal(
                         cancelled ? "Town shutdown cancelled" : "No shutdown in progress"
                 ),
                 false
@@ -104,8 +103,7 @@ public class FlagShutdownCommand {
             return 0;
         }
         boolean ok = tf.reissueDeed();
-        source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+        source.sendSuccess(net.minecraft.network.chat.Component.literal(
                         ok ? "Relocation deed re-issued" : "Flag is not dormant"
                 ),
                 false
@@ -122,8 +120,7 @@ public class FlagShutdownCommand {
             return 0;
         }
         boolean ok = tf.wakeInPlace();
-        source.sendSuccess(
-                net.minecraft.network.chat.Component.literal(
+        source.sendSuccess(net.minecraft.network.chat.Component.literal(
                         ok ? "Town woken in place" : "Flag is not dormant"
                 ),
                 false

@@ -1,13 +1,10 @@
 package ca.bradj.questown.commands;
 
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
 import net.minecraft.server.level.ServerPlayer;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Reproduction for the crash reported when running
@@ -22,26 +19,24 @@ import static org.junit.jupiter.api.Assertions.fail;
  * {@code /execute ... as}) yields null from {@code source.getPlayer()}. This
  * test asserts the trigger must not throw on a null player, or the command
  * crashes the server.
+ *
+ * <p>The trigger is constructed directly rather than via
+ * {@code AdvancementsInit.register()}: the guard under test lives in the
+ * trigger's own {@code trigger()} override and needs no registry. (Criterion
+ * trigger registration goes through NeoForge's dynamic registry, which is
+ * only open during the mod-bus registry phase — not available in a plain
+ * unit-test JVM.)
  */
 class FlagCommandCrashReproTest {
 
     @Test
     void approachTownTriggerDoesNotCrashWithNullPlayer() {
-        // Register the trigger exactly the way the mod does at boot.
-        try {
-            AdvancementsInit.register();
-        } catch (Throwable t) {
-            fail("AdvancementsInit.register() threw in a plain test context: "
-                + t);
-        }
-        assertNotNull(AdvancementsInit.APPROACH_TOWN_TRIGGER,
-            "ApproachTownTrigger must be registered");
+        ApproachTownTrigger trigger = new ApproachTownTrigger();
 
         // FlagCommand.setBlock calls trigger(source.getPlayer(), FirstVisit).
         // With a console/command-block source, getPlayer() is null.
         assertDoesNotThrow(
-            () -> AdvancementsInit.APPROACH_TOWN_TRIGGER
-                .trigger((ServerPlayer) null, ApproachTownTrigger.Triggers.FirstVisit),
+            () -> trigger.trigger((ServerPlayer) null, ApproachTownTrigger.Triggers.FirstVisit),
             "ApproachTownTrigger.trigger(null, FirstVisit) must not crash the server"
         );
     }

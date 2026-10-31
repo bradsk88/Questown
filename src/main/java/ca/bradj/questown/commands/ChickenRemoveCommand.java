@@ -68,8 +68,7 @@ public class ChickenRemoveCommand {
         flag.setChanged();
 
         int despawned = despawnChickensForFlag(level, flag);
-        source.sendSuccess(
-                Compat.translatable("messages.chicken.remove.done", despawned),
+        source.sendSuccess(Compat.translatable("messages.chicken.remove.done", despawned),
                 true
         );
         return despawned;

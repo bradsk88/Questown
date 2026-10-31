@@ -48,6 +48,7 @@ class EmptyTownGrassThinnerTest {
         int grassIdx = -1;
         for (int i = 0; i < finalPalette.size(); i++) {
             CompoundTag p = finalPalette.getCompound(i);
+            // 1.20.6: the short grass plant is minecraft:short_grass (minecraft:grass no longer exists).
             if ("minecraft:grass".equals(p.getString("Name")) && !p.contains("Properties")) {
                 grassIdx = i;
                 break;
