@@ -95,6 +95,14 @@ public sealed interface ChickenArcScriptedAction {
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
+    /**
+     * Right-click the flag block with the fake player, through the block's own use path (what a
+     * player does), rather than marking the flag-UI observation directly.
+     */
+    record RightClickFlag(
+            int postActionWaitTicks
+    ) implements ChickenArcScriptedAction {}
+
     /** Advance {@code ticks} server ticks with no action. */
     record AdvanceTicks(
             int ticks
@@ -122,6 +130,28 @@ public sealed interface ChickenArcScriptedAction {
      */
     record RunCommand(
             String command,
+            int postActionWaitTicks
+    ) implements ChickenArcScriptedAction {}
+
+    /**
+     * Move the fake player by writing its position directly ({@code setPos}).
+     * Do NOT use {@code teleportTo} or a {@code /tp @s} RunCommand: same-level
+     * {@code ServerPlayer.teleportTo} delegates to {@code connection.teleport(...)}
+     * (verified in 1.20.6 bytecode: the connection-null branch is the only
+     * direct-setPos path), which records a pending teleport applied on the
+     * connection's next tick — and NeoForge's {@code FakePlayer.tick()} is an
+     * empty {@code return}, so its connection never ticks and the pending
+     * teleport is never applied. A {@code /tp @s} command logs a successful
+     * teleport for the same reason. Direct {@code setPos} writes x/y/z
+     * synchronously and is what the goals read ({@code blockPosition()}).
+     * Note {@code teleportPlayerNearFlag} has the same latent no-op: the fake
+     * player already sits at the AutoTestRunner setPos origin, so the no-op
+     * was never visible.
+     */
+    record MovePlayer(
+            double x,
+            double y,
+            double z,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 

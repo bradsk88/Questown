@@ -15,8 +15,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class TestExecutor {
@@ -77,6 +81,39 @@ public class TestExecutor {
     private int lastReportedPercent = 0;
     private boolean warpPassed = false;
     private boolean realtimePassed = false;
+    // The townies the scenario assigned its job to (the flag's handle contents
+    // at the job-assignment phase). The fullness check asserts on exactly this
+    // population; strays absorbed into the handle later (post-assignment)
+    // were not put to work and are out of scope.
+    private Set<VillagerUUID> assignmentTownies;
+
+    /**
+     * The fullness-check targets: exactly the townies the scenario assigned its
+     * job to — the handle contents at the job-assignment phase, intersected
+     * with the check-time contents (a scenario townie that died before the
+     * check is simply absent). Strays from earlier scenarios register into
+     * the flag's handle *after* the assignment phase (the spawn wait already
+     * passed, so they are not in the snapshot and the scenario did not put
+     * them to work) — and a stray's job carries no HUNGER_FILL, so it can
+     * never satisfy the assertion anyway. A townie present at assignment IS
+     * in scope: the scenario's assign loop gave it the job and the drain left
+     * it hungry, so it is part of the scenario's world. Null snapshot (no
+     * assignment snapshot was taken for this flow) falls back to all townies.
+     *
+     * @param currentTownies the flag's handle contents at check time
+     * @param assignmentTownies the handle contents at the job-assignment
+     *                          phase, or null when no snapshot was taken
+     */
+    static Set<VillagerUUID> scenarioTownieTargets(
+            Collection<VillagerUUID> currentTownies,
+            @Nullable Set<VillagerUUID> assignmentTownies) {
+        if (assignmentTownies == null) {
+            return new HashSet<>(currentTownies);
+        }
+        Set<VillagerUUID> targets = new HashSet<>(currentTownies);
+        targets.retainAll(assignmentTownies);
+        return targets;
+    }
 
     public TestExecutor(
             ServerLevel level,
@@ -268,6 +305,12 @@ public class TestExecutor {
 
     private void buildRoom() {
         msg("Building room...");
+        // Fixture crops wither on a random tick in the dark, so a night start would kill the
+        // planted field before the monitor/warp window sees it. Pin noon for unpinned scenarios;
+        // time-pinned variants (night_start, all_night, 3_day) set their own start time.
+        if (blueprint.startTimeTick() == null) {
+            level.setDayTime(6000);
+        }
         RoomBuilder.build(level, flagPos, blueprint);
         phase = Phase.REGISTER_ROOM;
     }
@@ -359,6 +402,7 @@ public class TestExecutor {
     }
 
     private void assignJob() {
+        assignmentTownies = new HashSet<>(tfbe.getVillagerHandle().getVillagerJobs().keySet());
         for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
             tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
             tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
@@ -488,7 +532,13 @@ public class TestExecutor {
         warpDeltas = result.deltas();
         boolean containerPassed = checkContainerContentsIfNeeded(
                 beforeContainerContents, afterState, blueprint.expectation());
-        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed;
+        // A warp-only scenario has no realtime check phase — the custom assertion and the
+        // villager-held gate must still run here or they are vacuous (2026-10-04:
+        // loot_on_extract_warp passed with the quest never closed). Mixed realtime+warp
+        // scenarios run them in both — assertions must be read-only/idempotent.
+        boolean customPassed = checkCustomAssertionIfNeeded();
+        boolean heldPassed = checkVillagerHeldIfNeeded(afterState);
+        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed && customPassed && heldPassed;
         broadcastResult("WARP", result);
         if (warpOnly) {
             phase = Phase.DONE;
@@ -718,7 +768,12 @@ public class TestExecutor {
             return true;
         }
         boolean allPassed = true;
+        Set<VillagerUUID> targets = scenarioTownieTargets(
+                tfbe.getVillagerHandle().getVillagerJobs().keySet(), assignmentTownies);
         for (Map.Entry<VillagerUUID, JobID> entry : tfbe.getVillagerHandle().getVillagerJobs().entrySet()) {
+            if (!targets.contains(entry.getKey())) {
+                continue;
+            }
             VillagerUUID vuid = entry.getKey();
             UUID uuid = VillagerUUID.get(vuid);
             VillagerStatsData stats = tfbe.getVillagerHandle().getStats(uuid);

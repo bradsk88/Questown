@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
@@ -117,10 +118,7 @@ public final class TestArenaPreparer {
             // from origin. Use a wide sweep so later scenarios start clean, and
             // additionally discard any entity bound to this origin via ownerFlagPos
             // so wanderers outside the bounds still get cleaned up.
-            AABB wide = new AABB(
-                    origin.offset(-128, -16, -128),
-                    origin.offset(128, 32, 128)
-            );
+            AABB wide = new AABB(origin.offset(-128, -16, -128)).minmax(new AABB(origin.offset(128, 32, 128)));
             for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, wide)) {
                 e.discard();
                 chickens++;
@@ -168,7 +166,13 @@ public final class TestArenaPreparer {
     ) {
         for (int x = region.minX(); x <= region.maxX(); x++) {
             for (int z = region.minZ(); z <= region.maxZ(); z++) {
-                for (int y = region.topY(); y >= 0; y--) {
+                // Clear up to the natural surface too: where the ground stands above the fixed
+                // clear height (a plains hill), the leftover terrain roofs the arena and the
+                // fixture sits in a dark cave - crops placed there pop off at once (raw light 0,
+                // no sky). 2026-10-20: every warp farmer variant failed on such seeds.
+                int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, origin.getX() + x, origin.getZ() + z) - origin.getY();
+                int top = Math.max(region.topY(), surface);
+                for (int y = top; y >= 0; y--) {
                     level.destroyBlock(origin.offset(x, y, z), false);
                 }
                 level.setBlockAndUpdate(origin.offset(x, -1, z), Blocks.COBBLESTONE.defaultBlockState());
@@ -201,9 +205,6 @@ public final class TestArenaPreparer {
 
     private static AABB strayAreaAround(BlockPos origin, int halfWidth) {
         int stray = halfWidth + 13; // retain legacy +20/origin=+13/half=7 relationship
-        return new AABB(
-                origin.offset(-stray, -5, -stray),
-                origin.offset(stray, 10, stray)
-        );
+        return new AABB(origin.offset(-stray, -5, -stray)).minmax(new AABB(origin.offset(stray, 10, stray)));
     }
 }

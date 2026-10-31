@@ -10,10 +10,9 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayerFactory;
-import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
@@ -22,10 +21,13 @@ import java.util.Locale;
 import java.util.UUID;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.FORGE)
 public class AutoTestRunner {
 
     private static final String SYSPROP = "questown.autotest";
@@ -37,6 +39,10 @@ public class AutoTestRunner {
     // running so a dev client can join and inspect the final world state
     // (e.g. visual verification of need bubbles via screenshot).
     private static final String SYSPROP_HOLD = "questown.autotest.hold";
+    private static final String SYSPROP_SHARD = "questown.autotest.shard";
+    /** Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). */
+    private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of("perf/town_large");
+    private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
     private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
@@ -57,22 +63,58 @@ public class AutoTestRunner {
 
         QT.FLAG_LOGGER.info("[autotest] BOOT_OK");
 
-        // Force-load the test chunk so block entity tickers run without a player
-        ChunkPos chunkPos = new ChunkPos(ORIGIN);
-        overworld.setChunkForced(chunkPos.x, chunkPos.z, true);
-        QT.FLAG_LOGGER.info("[autotest] Force-loaded chunk at {}", chunkPos);
+        // Fast-forward tick-budgeted runs. The scenario clock is ticks (warp-simulated
+        // or a realtime tick budget), never wall clock, so a 200 t/s server delivers
+        // the same tick sequence in ~5% of the 20 t/s wall time (vanilla default).
+        // Applies to held runs too - it is what the 2026-10-09 guidance did by hand
+        // via `ffeed.sh '/tick rate 200'`. Override (e.g. back to vanilla): -Dquestown.autotest.tickrate=20
+        float tickRate = parseTickRate();
+        Compat.setServerTickRate(server, tickRate);
+        QT.FLAG_LOGGER.info("[autotest] tick rate set to {} t/s (override: -D{}=<tps>)", tickRate, SYSPROP_TICKRATE);
 
-        // Spawn a fake player near origin so the town flag doesn't go inactive
-        GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
-        var fakePlayer = FakePlayerFactory.get(overworld, profile);
-        fakePlayer.setPos(ORIGIN.getX(), ORIGIN.getY() + 1, ORIGIN.getZ());
-        overworld.addNewPlayer(fakePlayer);
-        QT.FLAG_LOGGER.info("[autotest] Spawned fake player at origin");
+        // Force-load the test chunks so block entity tickers run without a player, AND mobs
+        // keep ticking. Headless (no player) non-player entities only tick inside
+        // entity-ticking chunks; the town's doors/mats/chests sit past the flag's own chunk
+        // (x<0, z<0), so a single forced chunk at the origin leaves them unticked and any
+        // leaver crossing into that region soft-locks (~50/50 by seed). A 3x3 around the
+        // flag covers the whole town footprint.
+        ChunkPos chunkPos = new ChunkPos(ORIGIN);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                overworld.setChunkForced(chunkPos.x + dx, chunkPos.z + dz, true);
+            }
+        }
+        QT.FLAG_LOGGER.info("[autotest] Force-loaded 3x3 chunks around {}", chunkPos);
 
         int warpAmount = parseWarpAmount();
         String category = parseCategory();
         String only = parseOnly();
         String scope = describeScope(category, only);
+
+        // The held, agent-driven village/growth run has exactly one real player: the
+        // runClient observer ("Dev"). Both the chicken arc's findNearestPlayer and
+        // the flag's active gate read the nearest player, and the agent drives the
+        // Dev via console (give / clickwand). A fake player added at the flag would be
+        // the nearest player and steal both gates from the Dev (the Dev gets the wand,
+        // but the arc reads the fake player's empty hand, so the run is stuck at
+        // WAITING_FOR_STICK). In that path we create the fake player (the executor's
+        // player field may reference it) but do NOT add it to the level, so
+        // getNearestPlayer returns the Dev. The forced chunk above keeps the flag's
+        // chunk loaded regardless.
+        boolean heldVillage = only != null
+                && (nameMatches("village/growth", only) || nameMatches("village/day1", only)
+                        || nameMatches("village/self_sufficiency", only) || nameMatches("paths/at_fork", only)
+                        || nameMatches("paths/outfitter", only))
+                && "true".equals(System.getProperty(SYSPROP_HOLD));
+        GameProfile profile = new GameProfile(UUID.randomUUID(), "[AutoTest]");
+        var fakePlayer = FakePlayerFactory.get(overworld, profile);
+        fakePlayer.setPos(ORIGIN.getX(), ORIGIN.getY() + 1, ORIGIN.getZ());
+        if (!heldVillage) {
+            overworld.addNewPlayer(fakePlayer);
+            QT.FLAG_LOGGER.info("[autotest] Spawned fake player at origin");
+        } else {
+            QT.FLAG_LOGGER.info("[village] held run: fake player created but not added to level; the Dev (runClient) is the single player the arc gates on");
+        }
         QT.FLAG_LOGGER.info("[autotest] Starting automated test suite ({}, warp={}, origin={})", scope, warpAmount, ORIGIN.toShortString());
 
         LogTestOutput output = new LogTestOutput("autotest");
@@ -83,13 +125,59 @@ public class AutoTestRunner {
         List<AnyTestEntry> jobsList = runJobs ? TestBlueprintRegistry.resolveJobs(category) : List.of();
         List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
 
+        boolean runDay1 = only != null && nameMatches("village/day1", only);
+        // paths/at_fork: growth's driver, stopped (and, held, kept) at the curated-path fork.
+        boolean runAtFork = only != null && nameMatches("paths/at_fork", only);
+        // paths/outfitter: the same driver played on until every curated path batch is complete.
+        boolean runPaths = only != null && nameMatches("paths/outfitter", only);
+        boolean runVillage = only != null && (nameMatches("village/growth", only) || runDay1 || runAtFork || runPaths);
+        VillageGrowthExecutor.Goal villageGoal = runPaths ? VillageGrowthExecutor.Goal.PATHS_FINISHED
+                : runAtFork ? VillageGrowthExecutor.Goal.FORK : VillageGrowthExecutor.Goal.FIVE_VILLAGERS;
+        boolean runSelfSuff = only != null && nameMatches("village/self_sufficiency", only);
+        if (runVillage || runSelfSuff) {
+            runJobs = false;
+            runChicken = false;
+            // The village scenarios test the quest and economy flow, not survival: a creeper at
+            // the flag killed a whole growth town (2026-10-24, dev ruling: peaceful). The watch
+            // listener's login hook set this only when a spectator joined; headless runs ran on
+            // the world's default difficulty.
+            server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+            QT.FLAG_LOGGER.info("[village] difficulty set to peaceful");
+            // The growth scenario runs for many minutes; let a spectator client
+            // join and watch while it plays, not only in post-run hold mode.
+            if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
+                MinecraftForge.EVENT_BUS.register(new VillageWatchListener());
+                QT.FLAG_LOGGER.info("[village] watch: spectator camera armed (join anytime)");
+            }
+        }
+
         if (only != null) {
             jobsList = jobsList.stream().filter(e -> nameMatches(e.name(), only)).toList();
             chickenList = chickenList.stream().filter(b -> nameMatches(b.name(), only)).toList();
             runJobs = !jobsList.isEmpty();
             runChicken = !chickenList.isEmpty();
-            if (!runJobs && !runChicken) {
+            if (!runJobs && !runChicken && !runVillage && !runSelfSuff) {
                 reportNoMatchAndShutdown(server, only, category);
+                return;
+            }
+        }
+
+        // Parallel runs (tools/autotest-parallel.sh --shard): this server's share of the suite.
+        AutoTestShard shard = AutoTestShard.parse(System.getProperty(SYSPROP_SHARD));
+        if (!shard.isWholeSuite() && !runVillage && !runSelfSuff) {
+            List<String> names = new ArrayList<>();
+            jobsList.forEach(e -> names.add(e.name()));
+            chickenList.forEach(b -> names.add(b.name()));
+            java.util.Set<String> mine = shard.selectNames(names, SOLO_SCENARIOS);
+            jobsList = jobsList.stream().filter(e -> mine.contains(e.name())).toList();
+            chickenList = chickenList.stream().filter(b -> mine.contains(b.name())).toList();
+            runJobs = !jobsList.isEmpty();
+            runChicken = !chickenList.isEmpty();
+            QT.FLAG_LOGGER.info("[autotest] shard {}/{}: {} scenarios", shard.index(), shard.count(),
+                    jobsList.size() + chickenList.size());
+            if (!runJobs && !runChicken) {
+                QT.FLAG_LOGGER.info("[autotest] RESULT: 0/0 passed (ALL PASS)");
+                server.halt(false);
                 return;
             }
         }
@@ -100,11 +188,43 @@ public class AutoTestRunner {
         ChickenArcAllExecutor chickenExecutor = runChicken
                 ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
                 : null;
+        VillageGrowthExecutor villageExecutor = runVillage
+                ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1, villageGoal)
+                : null;
+        VillageSelfSufficiencyExecutor selfSuffExecutor = runSelfSuff
+                ? new VillageSelfSufficiencyExecutor(overworld, server, fakePlayer, ORIGIN)
+                : null;
 
         AutoTestTickListener listener = new AutoTestTickListener(
-                server, jobsExecutor, chickenExecutor
+                server, jobsExecutor, chickenExecutor, villageExecutor, selfSuffExecutor
         );
         MinecraftForge.EVENT_BUS.register(listener);
+    }
+
+    /**
+     * Autotest default tick rate: 1000 t/s, i.e. "as fast as the server can" — the box tops out
+     * near 370 t/s on village/day1. Scenarios are tick-budgeted, so a "Can't keep up" stall only
+     * costs wall time (2026-10-19: day1 452 s at 200 -> 242 s at 1000, full suite 72/75 with the
+     * known reds only). Override: -Dquestown.autotest.tickrate=<tps>.
+     */
+    private static final float DEFAULT_TICK_RATE = 1000f;
+
+    private static float parseTickRate() {
+        String val = System.getProperty(SYSPROP_TICKRATE);
+        if (val == null) {
+            return DEFAULT_TICK_RATE;
+        }
+        try {
+            float tps = Float.parseFloat(val);
+            // The /tick rate command's own bounds: 1.0..10000.0 t/s.
+            if (tps >= 1.0f && tps <= 10000.0f) {
+                return tps;
+            }
+            QT.FLAG_LOGGER.warn("[autotest] tickrate {} out of 1..10000; using default {}", val, DEFAULT_TICK_RATE);
+        } catch (NumberFormatException e) {
+            QT.FLAG_LOGGER.warn("[autotest] tickrate '{}' not a number; using default {}", val, DEFAULT_TICK_RATE);
+        }
+        return DEFAULT_TICK_RATE;
     }
 
     private static boolean shouldRunChickenTrack(@Nullable String category) {
@@ -209,7 +329,7 @@ public class AutoTestRunner {
         static @Nullable BlockPos pickDeadDoor(net.minecraft.server.level.ServerPlayer sp) {
             // The arena is a small fixed region around ORIGIN; read its chunks
             // directly (1.19.2 ServerChunkCache has no getLoadedChunks()).
-            net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) sp.getLevel();
+            net.minecraft.server.level.ServerLevel level = sp.getLevel();
             BlockPos best = null;
             double bestDist = Double.MAX_VALUE;
             for (int cx = (ORIGIN.getX() >> 4) - 2; cx <= (ORIGIN.getX() >> 4) + 2; cx++) {
@@ -232,7 +352,7 @@ public class AutoTestRunner {
         }
 
         @SubscribeEvent
-        public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        public void onLogin_qatr354(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
             if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
                 return;
             }
@@ -243,17 +363,14 @@ public class AutoTestRunner {
             // Inside the DeadDoorBubbles 16-block gate and aimed south-east at the
             // standard arena (test blocks sit toward +x/+z), so the first aim pass
             // can usually hon in without a starring-at-the-sky frame.
-            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
+            sp.teleportTo(sp.getLevel(), ORIGIN.getX() + 4, ORIGIN.getY() + 3, ORIGIN.getZ() + 4, 135, 20);
             preferredDoor = readPreferredDoor();
             aim(sp);
             QT.FLAG_LOGGER.info("[autotest] HOLDING: teleported {} to arena viewpoint", sp.getGameProfile().getName());
         }
 
         @SubscribeEvent
-        public void onTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
-            if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick_qatr372(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
             if (++ticks < REAIM_TICKS) {
                 return;
             }
@@ -337,7 +454,143 @@ public class AutoTestRunner {
             double hor = Math.sqrt(dx * dx + dz * dz);
             float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
             float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
-            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.level, from.x, from.y - 1.62, from.z, yaw, pitch);
+            sp.teleportTo(sp.getLevel(), from.x, from.y - 1.62, from.z, yaw, pitch);
+        }
+    }
+
+    /**
+     * Spectator camera for a held village/growth run. Drops each joining player
+     * in spectator mode above the village, aimed at the flag; every 40 ticks it
+     * re-aims at the newest thing worth watching (a needy townie if one exists,
+     * else the flag), so the viewer watches the village live instead of a
+     * finished arena. Unlike HoldModeLoginListener it also tracks the village
+     * while the scenario is still playing out — hold mode is entered only after
+     * the executor finishes, so during the run the same listener is registered
+     * up front by onServerStarted when the village track is selected.
+     */
+    static class VillageWatchListener {
+        private int ticks = 0;
+        private int tickCoverageTries = 0;
+        private boolean tickCoverageDone = false;
+        private boolean tickCoverageReported = false;
+        // Room chunks this check already force-loaded. Rooms register over several seconds, so
+        // a one-shot check at the first room missed the later ones (2026-10-28: the at_fork
+        // hunter froze in an unloaded west room for the whole run).
+        private final java.util.Set<String> tickCoverageForced = new java.util.TreeSet<>();
+
+        @SubscribeEvent
+        public void onLogin_qatr481(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+            if (!(event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)) {
+                return;
+            }
+            if (sp.getGameProfile().getName().startsWith("[")) { // skip FakePlayers
+                return;
+            }
+            // Peaceful world + survival player: a dead player silently stalls every interaction beat
+            // (the chicken-arc gates on a live nearest player's inventory, and tp/give do not reach a
+            // dead player). Peaceful removes the whole class of dead-player stalls deterministically,
+            // so the agent does not have to remember to set it via the FIFO.
+            sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
+            }
+            aim(sp);
+            QT.FLAG_LOGGER.info("[village] watch: teleported {} to village viewpoint (survival, peaceful)",
+                    sp.getGameProfile().getName());
+        }
+
+        @SubscribeEvent
+        public void onTick_qatr503(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+            checkTickCoverage();
+            // No-op: the login handler gives each spectator an initial viewpoint
+            // (aimed at the flag) and then leaves them alone, so the user can fly
+            // around and observe on their own. The former per-tick re-aim kept
+            // resetting the camera and fought the user's own movement.
+        }
+
+        // Invariant: in a headless autotest world there is no player chunk ticket, so
+        // non-player mobs tick ONLY inside entity-ticking chunks. A room laid down
+        // outside an entity-ticking chunk stalls any leaver that crosses into it
+        // (811/812 class soft-lock). Boot force-loads only the 3x3 around the flag, so
+        // this watches (every ~10 s) for rooms outside that region and force-loads their
+        // chunks (idempotent), logging each newly covered chunk. Fails open: never blocks the run.
+        private void checkTickCoverage() {
+            if (tickCoverageDone) {
+                return;
+            }
+            if (++tickCoverageTries % 200 != 0) {
+                return; // once at boot + every ~10 s
+            }
+            net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (server == null) {
+                return;
+            }
+            ServerLevel over = server.overworld();
+            if (over == null) {
+                return;
+            }
+            if (!(over.getBlockEntity(ORIGIN) instanceof TownFlagBlockEntity flag)) {
+                return;
+            }
+            ChunkPos base = new ChunkPos(ORIGIN);
+            java.util.List<RoomRecipeMatch<MCRoom>> matches;
+            try {
+                matches = java.util.List.copyOf(flag.getRoomHandle().getMatches(r -> true));
+            } catch (RuntimeException e) {
+                return; // room handle not ready yet
+            }
+            if (matches.isEmpty()) {
+                if (tickCoverageTries >= 5400) {
+                    tickCoverageDone = true;
+                    QT.FLAG_LOGGER.warn("[village] tick-coverage: no town rooms found after 9 min; skipping coverage check");
+                }
+                return;
+            }
+            java.util.Set<String> extended = new java.util.TreeSet<>();
+            for (RoomRecipeMatch<MCRoom> m : matches) {
+                for (BlockPos p : m.getContainedBlocks().keySet()) {
+                    ChunkPos cp = new ChunkPos(p);
+                    if (Math.abs(cp.x - base.x) > 1 || Math.abs(cp.z - base.z) > 1) {
+                        String key = cp.x + "," + cp.z;
+                        if (tickCoverageForced.add(key)) {
+                            over.setChunkForced(cp.x, cp.z, true);
+                            extended.add(key);
+                        }
+                    }
+                }
+            }
+            if (!extended.isEmpty()) {
+                QT.FLAG_LOGGER.info("[village] tick-coverage EXTENDED: force-loaded town room chunk(s) outside the boot 3x3: {}", extended);
+            } else if (!tickCoverageReported) {
+                QT.FLAG_LOGGER.info("[village] tick-coverage OK so far: {} room(s), all inside the force-loaded 3x3 around {}", matches.size(), base);
+            }
+            tickCoverageReported = true;
+        }
+
+        private void aim(net.minecraft.server.level.ServerPlayer sp) {
+            // Prefer the newest needy townie; otherwise hover over the flag.
+            net.minecraft.world.phys.Vec3 target = net.minecraft.world.phys.Vec3.atCenterOf(ORIGIN);
+            java.util.List<VisitorMobEntity> townies = sp.getLevel().getEntitiesOfClass(
+                    VisitorMobEntity.class, sp.getBoundingBox().inflate(96));
+            townies.sort((a, b) -> Double.compare(a.distanceTo(sp), b.distanceTo(sp)));
+            for (VisitorMobEntity v : townies) {
+                if (v.getNeed().isNeeded()) {
+                    target = v.getEyePosition();
+                    break;
+                }
+            }
+            double offset = 7.0; // back off so the buildings around the flag stay in frame
+            net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
+                    target.x + offset, target.y + 4.5, target.z + offset);
+            double dx = target.x - from.x;
+            double dy = target.y - from.y;
+            double dz = target.z - from.z;
+            double hor = Math.sqrt(dx * dx + dz * dz);
+            float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+            float pitch = (float) -Math.toDegrees(Math.atan2(dy, hor));
+            sp.teleportTo((net.minecraft.server.level.ServerLevel) sp.getLevel(),
+                    from.x, from.y - 1.62, from.z, yaw, pitch);
         }
     }
 
@@ -345,26 +598,31 @@ public class AutoTestRunner {
         private final MinecraftServer server;
         private final @Nullable TestAllExecutor jobsExecutor;
         private final @Nullable ChickenArcAllExecutor chickenExecutor;
+        private final @Nullable VillageGrowthExecutor villageExecutor;
+        private final @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor;
         private boolean jobsSuiteStartAnnounced;
         private boolean jobsDone;
         private boolean chickenSuiteStartAnnounced;
         private boolean chickenDone;
+        private boolean villageDone;
+        private boolean selfSuffDone;
 
         AutoTestTickListener(
                 MinecraftServer server,
                 @Nullable TestAllExecutor jobsExecutor,
-                @Nullable ChickenArcAllExecutor chickenExecutor
+                @Nullable ChickenArcAllExecutor chickenExecutor,
+                @Nullable VillageGrowthExecutor villageExecutor,
+                @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor
         ) {
             this.server = server;
             this.jobsExecutor = jobsExecutor;
             this.chickenExecutor = chickenExecutor;
+            this.villageExecutor = villageExecutor;
+            this.selfSuffExecutor = selfSuffExecutor;
         }
 
         @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
+        public void onTick_qatr624(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
             if (!jobsDone) {
                 if (jobsExecutor == null) {
                     jobsDone = true;
@@ -393,6 +651,26 @@ public class AutoTestRunner {
                     chickenDone = true;
                 }
             }
+            if (!villageDone) {
+                if (villageExecutor == null) {
+                    villageDone = true;
+                } else {
+                    if (!villageExecutor.tick()) {
+                        return;
+                    }
+                    villageDone = true;
+                }
+            }
+            if (!selfSuffDone) {
+                if (selfSuffExecutor == null) {
+                    selfSuffDone = true;
+                } else {
+                    if (!selfSuffExecutor.tick()) {
+                        return;
+                    }
+                    selfSuffDone = true;
+                }
+            }
             MinecraftForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
         }
@@ -408,16 +686,31 @@ public class AutoTestRunner {
                 passed += chickenExecutor.getPassed();
                 total += chickenExecutor.getTotal();
             }
+            if (villageExecutor != null) {
+                passed += villageExecutor.getPassedAssertions();
+                total += villageExecutor.getTotalAssertions();
+            }
+            // self_sufficiency is a watchtower: it reports but is not a pass/fail gate,
+            // so it contributes no assertions to the result.
             boolean allPassed = total > 0 && passed == total;
+            // A 0/0 run must not read as a failure: it means no assertion-bearing
+            // scenario ran (a self_sufficiency-only sweep), not that anything
+            // failed — the verdict for those runs is the scenario's own watch lines.
+            // (Exit-code semantics are unchanged: 0/0 still takes the halt(1)
+            // path below, exactly as before this banner tweak.)
+            String verdict = total == 0 ? "no assertions executed (report-only)"
+                    : allPassed ? "ALL PASS" : "FAILURES";
 
             QT.FLAG_LOGGER.info("[autotest] ========================================");
             QT.FLAG_LOGGER.info("[autotest] RESULT: {}/{} passed ({})",
-                    passed, total, allPassed ? "ALL PASS" : "FAILURES");
+                    passed, total, verdict);
             QT.FLAG_LOGGER.info("[autotest] ========================================");
 
             if ("true".equals(System.getProperty(SYSPROP_HOLD))) {
                 QT.FLAG_LOGGER.info("[autotest] HOLDING: server left running for client inspection");
-                MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                if (villageExecutor == null && selfSuffExecutor == null) {
+                    MinecraftForge.EVENT_BUS.register(new HoldModeLoginListener());
+                } // village runs already registered VillageWatchListener at startup
                 return;
             }
             server.halt(false);

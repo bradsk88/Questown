@@ -51,6 +51,7 @@ class ChickenArcBlueprintRegistryTest {
                 "F1_stick_to_campfire",
                 "F2_chest_spawn_after_campfire",
                 "F3_build_room_to_welcome_mat",
+                "F3_right_click_flag_after_mat",
                 "F4_seeds_to_statue",
                 "F1_rotation_clockwise_90",
                 "rotation_ambiguity_forfeit",

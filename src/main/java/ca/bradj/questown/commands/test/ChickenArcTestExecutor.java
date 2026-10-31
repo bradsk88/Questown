@@ -1,5 +1,6 @@
 package ca.bradj.questown.commands.test;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
@@ -16,6 +17,7 @@ import ca.bradj.questown.town.HelperChickenSpawnController;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -27,6 +29,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -310,6 +313,10 @@ public final class ChickenArcTestExecutor {
             handleMarkFlagUiOpened();
             return;
         }
+        if (action instanceof ChickenArcScriptedAction.RightClickFlag) {
+            handleRightClickFlag();
+            return;
+        }
         if (action instanceof ChickenArcScriptedAction.AdvanceTicks) {
             // settle-only; the phase machine consumes postActionWaitTicks()
             return;
@@ -320,6 +327,10 @@ public final class ChickenArcTestExecutor {
         }
         if (action instanceof ChickenArcScriptedAction.RunCommand a) {
             handleRunCommand(a);
+            return;
+        }
+        if (action instanceof ChickenArcScriptedAction.MovePlayer a) {
+            handleMovePlayer(a);
             return;
         }
         if (action instanceof ChickenArcScriptedAction.MarkSleepObserved) {
@@ -522,6 +533,15 @@ public final class ChickenArcTestExecutor {
         ChickenArcUiObservations.markFlagUiOpened(level, flagPos);
     }
 
+    private void handleRightClickFlag() {
+        if (fakePlayer == null || flagPos == null) {
+            failAction("RightClickFlag", "fake player or flag missing");
+            return;
+        }
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(flagPos), Direction.UP, flagPos, false);
+        level.getBlockState(flagPos).use(level, fakePlayer, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+    }
+
     private void handleRightClickChicken(ChickenArcScriptedAction.RightClickChickenWithHand a) {
         if (fakePlayer == null) {
             failAction("RightClickChickenWithHand", "fake player is null");
@@ -532,10 +552,7 @@ public final class ChickenArcTestExecutor {
             return;
         }
         int hw = blueprint.effectiveHalfWidth();
-        AABB area = new AABB(
-                flagPos.offset(-hw, -5, -hw),
-                flagPos.offset(hw, 10, hw)
-        );
+        AABB area = new AABB(flagPos.offset(-hw, -5, -hw)).minmax(new AABB(flagPos.offset(hw, 10, hw)));
         // Filter by ownerFlagPos — prior-scenario chickens may wander in.
         HelperChickenEntity chicken = null;
         for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
@@ -551,6 +568,22 @@ public final class ChickenArcTestExecutor {
         }
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(a.item()));
         chicken.interactAt(fakePlayer, Vec3.ZERO, InteractionHand.MAIN_HAND);
+    }
+
+    private void handleMovePlayer(ChickenArcScriptedAction.MovePlayer a) {
+        if (fakePlayer == null) {
+            failAction("MovePlayer", "fake player is null");
+            return;
+        }
+        // setPos, not teleportTo: same-level ServerPlayer.teleportTo delegates
+        // to connection.teleport(...) — a pending teleport applied on the
+        // connection's next tick, which never comes for a FakePlayer (see
+        // MovePlayer's javadoc).
+        fakePlayer.setPos(a.x(), a.y(), a.z());
+        QT.FLAG_LOGGER.info(
+                "[autotest] moved fake player to {} {} {} (now at {})",
+                (int) a.x(), (int) a.y(), (int) a.z(), fakePlayer.blockPosition()
+        );
     }
 
     private void handleRunCommand(ChickenArcScriptedAction.RunCommand a) {
@@ -622,7 +655,7 @@ public final class ChickenArcTestExecutor {
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, fakePlayer);
         TestArenaPreparer.flatten(level, origin, opts);
         // Kill any lingering visitors just in case.
-        AABB area = new AABB(origin.offset(-20, -5, -20), origin.offset(20, 10, 20));
+        AABB area = new AABB(origin.offset(-20, -5, -20)).minmax(new AABB(origin.offset(20, 10, 20)));
         for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
             e.kill();
         }
