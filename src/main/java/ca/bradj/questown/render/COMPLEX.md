@@ -20,3 +20,17 @@ name tag since 2026-10-14, and vanilla draws it at the same height the bubble us
 bubble covered its end ("Villag[!]2"). Dev ruling: raise the bubble. Verified live (ticks
 frozen, 3 blocks from a needy townie): the bubble sits above "Villager 14" with its tail on the
 name. Block anchors (flag, job board) are unchanged.
+
+## The bubble icon turns 180° about Y (2026-10-31)
+
+After `cameraOrientation()` local +Z points away from the camera, while the GUI item transform
+(`Compat.renderItemStaticGui`) expects the viewer at +Z, so the icon was drawn from behind: a
+block showed its underside (dev playtest 2026-10-30, the Smithy bubble's blacksmith table) and a
+flat item was mirrored and dark (lit from the back). `renderBubbleAssembly` now turns the icon
+180° about Y inside its own push, after the background. Verified in a held
+`cook/fuel [open_request_no_pork]` run against the hotbar's raw porkchop: unflipped the chop ran
+upper-left to lower-right and darker, flipped it matches the hotbar. (The old comment said the
+HEAD transform already turned it; on this path it doesn't.)
+Open: water behind a bubble draws over its background (seen against the ocean), flip or not;
+ticket `.scratch/dev-playtest-2026-10-30/bubble-background-under-water.md`.
+

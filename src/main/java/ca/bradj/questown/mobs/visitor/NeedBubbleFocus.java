@@ -68,7 +68,6 @@ public final class NeedBubbleFocus {
 
     /** Townie holders are UUIDs; dead-door holders are BlockPos; attention holders are Targets. */
     private static @Nullable Object current;
-    private static double currentScore;
     private static int hintCooldown;
 
     private NeedBubbleFocus() {
@@ -102,6 +101,10 @@ public final class NeedBubbleFocus {
         @Nullable VisitorMobEntity bestTownie = null;
         @Nullable String bestHintKey = null;
         @Nullable Vec3 bestPos = null;
+        // The holder's score this tick (0 when it no longer qualifies). A score saved when it took
+        // the bubble went stale: one looked at dead-on kept the bubble against everything else
+        // in the cone (2026-10-31: the flag's held it while the crosshair sat on a needy cook).
+        double holderScore = 0;
         boolean townieNeedsShow = villagerNeedsShowAt(mc.level.getDayTime());
         for (VisitorMobEntity townie : mc.level.getEntitiesOfClass(
                 VisitorMobEntity.class, mc.player.getBoundingBox().inflate(16.0D)
@@ -110,6 +113,7 @@ public final class NeedBubbleFocus {
                 continue;
             }
             double score = crosshairAlignment(mc.player, townie.getEyePosition());
+            holderScore = holderScoreIf(townie.getUUID(), score, holderScore);
             if (score < CONE_DOT || score <= bestScore) {
                 continue;
             }
@@ -122,6 +126,7 @@ public final class NeedBubbleFocus {
         for (Map.Entry<BlockPos, DoorTrouble> door : DeadDoorBubbles.near(mc.player).entrySet()) {
             Vec3 bubbleAnchor = Vec3.atBottomCenterOf(door.getKey()).add(0, 2.0, 0);
             double score = crosshairAlignment(mc.player, bubbleAnchor);
+            holderScore = holderScoreIf(door.getKey(), score, holderScore);
             if (score < CONE_DOT || score <= bestScore) {
                 continue;
             }
@@ -134,6 +139,7 @@ public final class NeedBubbleFocus {
         for (AttentionBubbles.Target target : AttentionBubbles.near(mc.player)) {
             Vec3 bubbleAnchor = Vec3.atBottomCenterOf(target.pos()).add(0, 2.0, 0);
             double score = crosshairAlignment(mc.player, bubbleAnchor);
+            holderScore = holderScoreIf(target, score, holderScore);
             if (score < CONE_DOT || score <= bestScore) {
                 continue;
             }
@@ -143,7 +149,7 @@ public final class NeedBubbleFocus {
             bestHintKey = target.kind().hintKey;
             bestPos = Vec3.atCenterOf(target.pos());
         }
-        adopt(best, bestScore);
+        adopt(best, bestScore, holderScore);
         explainIfExamined(mc, bestTownie, best, bestPos, bestHintKey, bestScore);
     }
 
@@ -206,13 +212,19 @@ public final class NeedBubbleFocus {
         return detail != null ? detail : Compat.translatable(hintKey);
     }
 
-    private static void adopt(@Nullable Object best, double bestScore) {
-        if (keepsBubble(current, currentScore, best, bestScore)) {
-            currentScore = best != null && best.equals(current) ? bestScore : currentScore;
+    private static void adopt(@Nullable Object best, double bestScore, double holderScore) {
+        if (keepsBubble(current, holderScore, best, bestScore)) {
             return;
         }
         current = best;
-        currentScore = bestScore;
+    }
+
+    /** {@code score} when {@code candidate} holds the bubble and still qualifies, else {@code soFar}. */
+    private static double holderScoreIf(Object candidate, double score, double soFar) {
+        if (!candidate.equals(current) || score < CONE_DOT) {
+            return soFar;
+        }
+        return score;
     }
 
     /**
@@ -287,7 +299,6 @@ public final class NeedBubbleFocus {
 
     private static void forget() {
         current = null;
-        currentScore = 0;
     }
 
     /**

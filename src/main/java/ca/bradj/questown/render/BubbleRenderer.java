@@ -328,8 +328,10 @@ import net.minecraft.world.item.ItemStack;
     /**
      * Scale + billboard + bubble background + icon, shared by the entity path (origin at the
      * entity's feet, pre-lifted) and the block path (origin at the bubble's world anchor).
-     * HEAD transform brings its own 180°Y rotation that orients the model toward the
-     * camera, so we DO NOT apply our own 180°Y here.
+     * After {@code cameraOrientation()} local +Z points away from the camera, but the GUI
+     * display transform expects the viewer at +Z, so the icon turns 180° about Y first.
+     * Without it a block showed its underside (dev playtest 2026-10-30: the "needs a Smithy"
+     * bubble's blacksmith table) and a flat item was mirrored.
      */
     private static void renderBubbleAssembly(
             PoseStack poseStack,
@@ -361,6 +363,7 @@ import net.minecraft.world.item.ItemStack;
         // icon sits inside it regardless of item kind.
         poseStack.pushPose();
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0F));
         Compat.renderItemStaticGui(
                 itemRenderer,
                 shown,

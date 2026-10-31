@@ -137,6 +137,12 @@ flowchart TD
 - `keepsBubble` is deliberately pure and package-visible so the flicker rule is unit
   tested (`NeedBubbleFocusTest`) without a client level; the cone threshold itself is
   only verifiable in-game.
+- `holderScore` is the holder's score **this tick** (`holderScoreIf`, 0 once it leaves the
+  cone). Until 2026-10-31 it was the score saved when the holder last won, which went stale:
+  look dead-on at the flag (~1.0) and nothing in the cone could beat 1.0 + 0.02, so the flag's
+  "!" kept the bubble while the crosshair sat on a needy cook. That is why the 2026-10-30 held
+  run never showed a villager bubble. Verified live in `cook/fuel [open_request_no_pork]`: flag
+  first, then the cook's raw-pork bubble and its hint.
 - Focus state is **static** — there is exactly one local player, and exactly one
   bubble is shown town-wide by design.
 

@@ -47,6 +47,14 @@ class NeedBubbleFocusTest {
     }
 
     @Test
+    void Test_HolderOutOfTheConeLosesToAnyChallenger() {
+        // The caller passes the holder's live score, 0 once it leaves the cone. It once passed the
+        // score saved at takeover, so a flag looked at dead-on (~1.0) kept the bubble from a needy
+        // cook under the crosshair (2026-10-31).
+        Assertions.assertFalse(NeedBubbleFocus.keepsBubble(HOLDER, 0, CHALLENGER, 0.91));
+    }
+
+    @Test
     void Test_BubbleIsDroppedWhenNobodyQualifiesAnymore() {
         Assertions.assertFalse(NeedBubbleFocus.keepsBubble(HOLDER, 0.95, null, 0));
     }
