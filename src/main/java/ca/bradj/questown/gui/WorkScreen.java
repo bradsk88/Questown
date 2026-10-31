@@ -214,23 +214,27 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             int nameColor = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
             ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, nameColor, false);
 
-            int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
+            // x in the card's top-right corner, level with the name; - and + in the bottom-right
+            // corner, level with the icon (dev playtest 2026-10-30: "x should be in top right
+            // corner, -+ should be in bottom right corner").
+            int rightX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
+            int removeY = idY - borderPadding + 1;
             ctx.lightText(
                     "x",
-                    removeX + borderPadding - 1,
-                    iconY + borderPadding - 1
+                    rightX + borderPadding - 1,
+                    idY
             );
             highlightAndTooltip(
                     ctx,
                     mouseX,
                     mouseY,
-                    removeX,
-                    iconY,
+                    rightX,
+                    removeY,
                     Compat.translatable("job_board.remove_work")
             );
-            this.removes.put(new Position(removeX, iconY), () -> menu.sendRemoveRequest(jobPosting));
+            this.removes.put(new Position(rightX, removeY), () -> menu.sendRemoveRequest(jobPosting));
 
-            renderStockAndLimit(ctx, jobPosting, removeX, iconY, mouseX, mouseY);
+            renderStockAndLimit(ctx, jobPosting, rightX, iconY, mouseX, mouseY);
         }
         slots.clear();
         slots.addAll(b.build());
@@ -264,19 +268,19 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private List<Slot> slots = new ArrayList<>();
 
     /**
-     * "6/8" (storage holds / pauses at) with - and + to lower or raise the limit, left of the
-     * remove button (dev playtest 2026-10-29: "see 'we've hit the limit' and see and adjust the
+     * "6/8" (storage holds / pauses at) with - and + to lower or raise the limit, + at
+     * {@code rightX} (dev playtest 2026-10-29: "see 'we've hit the limit' and see and adjust the
      * limit"). Clicks ride the same per-frame position map as remove.
      */
-    private void renderStockAndLimit(RenderContext ctx, UIWork jobPosting, int removeX, int iconY, int mouseX, int mouseY) {
-        int plusX = removeX - buttonWidth - 2;
+    private void renderStockAndLimit(RenderContext ctx, UIWork jobPosting, int rightX, int iconY, int mouseX, int mouseY) {
+        int plusX = rightX;
         int minusX = plusX - buttonWidth - 2;
         String count = jobPosting.getStock() + "/" + jobPosting.getLimit();
         int countX = minusX - 4 - this.font.width(count);
         int color = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
         ctx.text(Compat.literal(count), countX, iconY + borderPadding - 1, color, false);
         highlightAndTooltip(ctx, mouseX, mouseY, countX, iconY,
-                Compat.translatable("job_board.request_stock", jobPosting.getStock(), jobPosting.getLimit()));
+                Compat.translatable("job_board.request_stock", jobPosting.getLimit()));
 
         ctx.lightText("-", minusX + borderPadding - 1, iconY + borderPadding - 1);
         highlightAndTooltip(ctx, mouseX, mouseY, minusX, iconY, Compat.translatable("job_board.limit_down"));

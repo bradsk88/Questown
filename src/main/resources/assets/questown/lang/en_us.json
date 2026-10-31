@@ -487,7 +487,7 @@
   "job_board.empty.top_need": "Villagers can produce the items you ask for. Click the + in this window to add requests.",
   "job_board.remove_work": "Remove request",
   "job_board.request_stocked": "%1$s: paused. Storage holds %2$s, so villagers won't make more until some are used.",
-  "job_board.request_stock": "Storage holds %1$s. Villagers stop making more at %2$s.",
+  "job_board.request_stock": "Villagers stop making more at %1$s.",
   "job_board.limit_down": "Stop making more at a lower amount",
   "job_board.limit_up": "Stop making more at a higher amount",
   "job_board.add_work.category_hint": "Any kind will do",

@@ -1621,3 +1621,14 @@ draws in the empty slot (`usesFlagBop`), or the icon left of "Unlock from the fl
 `ItemJobsScreen` (`isOverFlagBop`), shows `gui.flag_bop.tooltip` ("Blocks of Progress on the town
 flag: %s. Unlock spends one."). Seen on skill details ("...: 3. Unlock spends one."). The
 change-job slot shares the text and the 16x16 hover box but was not seen in game.
+
+## Job board request card: x top-right, - + bottom-right (dev playtest 2026-10-30)
+
+Dev: "+-x are not aligned on the job board" / "x should be in top right corner, -+ should be in
+bottom right corner". `WorkScreen` draws a request card's remove "x" at `rightX`, level with the
+request name (`idY`; its hit box starts at `idY - borderPadding + 1`). The `renderStockAndLimit`
+row puts + at the same `rightX`, so it sits under the x, with - and the "stock/limit" count to
+its left, level with the icon. Before this, x, + and - were all on the icon row. The count's
+tooltip drops "Storage holds N" (dev: "We can drop 'Storage hold 1' from the tooltip") and reads
+"Villagers stop making more at N." Seen in game: x tooltip "Remove request", + raised 2/8 to 2/9,
+gui-lint WorkScreen OK.
