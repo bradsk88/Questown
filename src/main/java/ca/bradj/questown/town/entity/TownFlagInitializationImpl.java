@@ -7,10 +7,15 @@ import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.TownEconomicsSerializer;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -82,21 +87,38 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     @Override
     public CompoundTag serializeBOP() {
         CompoundTag t = new CompoundTag();
-        t.putInt("count", flag.bopCount);
+        ListTag stacks = new ListTag();
+        for (ItemStack bop : flag.bopStacks) {
+            // 1.20.6 save() throws on an empty stack (1.19.2 tolerated it); legacy saves or
+            // a pre-fix deposit could have left an AIR entry, so skip rather than corrupt.
+            if (!bop.isEmpty()) {
+                stacks.add(ca.bradj.questown.mc.Compat.saveItem(flag.getLevel(), bop));
+            }
+        }
+        t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);
-        t.putBoolean("flagpole_built", flag.isFlagpoleBuilt());
         t.putInt("completed_procedural_batches", flag.completedProceduralBatches);
         return t;
     }
 
     @Override
     public void initializeBOP(CompoundTag tag) {
-        flag.bopCount = tag.getInt("count");
+        flag.bopStacks.clear();
+        if (tag.contains("stacks")) {
+            ListTag stacks = tag.getList("stacks", Tag.TAG_COMPOUND);
+            for (Tag s : stacks) {
+                flag.bopStacks.add(ca.bradj.questown.mc.Compat.loadItem(flag.getLevel(), (CompoundTag) s));
+            }
+        } else if (tag.contains("count")) {
+            // Legacy saves stored a bare count (bless NBT did not survive the flag yet):
+            // migrate to that many plain BOPs.
+            int count = tag.getInt("count");
+            for (int i = 0; i < count; i++) {
+                flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            }
+        }
         if (tag.contains("tutorial_bop_granted")) {
             flag.tutorialBopGranted = tag.getBoolean("tutorial_bop_granted");
-        }
-        if (tag.contains("flagpole_built")) {
-            flag.setFlagpoleBuilt(tag.getBoolean("flagpole_built"));
         }
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
@@ -189,6 +211,35 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         return t;
     }
 
+    public CompoundTag serializeBoardAutoRequest() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isBoardAutoRequest());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeBopWithdrawn() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isBopWithdrawn());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeQuestsSeen() {
+        CompoundTag t = new CompoundTag();
+        ListTag keys = new ListTag();
+        flag.seenQuests.keys().forEach(k -> keys.add(StringTag.valueOf(k)));
+        t.put("keys", keys);
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeVillagersTabSeen() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isVillagersTabSeen());
+        return t;
+    }
+
     @Override
     public CompoundTag serializeChickenBeatState() {
         CompoundTag t = new CompoundTag();
@@ -200,6 +251,13 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeChickenFirstGatherWorldlySeedsFired() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.getChickenFirstGatherWorldlySeedsFired());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeFirstHunterLootGuaranteeFired() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());
         return t;
     }
 

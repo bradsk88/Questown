@@ -1,16 +1,11 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.Questown;
-import net.minecraftforge.event.level.SleepFinishedTimeEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class TownFlags {
 
     private static final Map<UUID, TownFlagBlockEntity> flags = new HashMap<>();
@@ -20,25 +15,35 @@ public class TownFlags {
             TownFlagBlockEntity entity
     ) {
         flags.put(uuid, entity);
+        QT.FLAG_LOGGER.info(
+                "[findflag] flag {} registered at {}",
+                uuid,
+                entity.getBlockPos()
+        );
     }
 
-    /** All registered flags (dev tooling + commands). */
+    // Dev-only: dump every known flag's position (used to locate the incident flag).
     public static java.util.Collection<TownFlagBlockEntity> all() {
-        return flags.values();
+        return java.util.Collections.unmodifiableCollection(flags.values());
     }
 
-    @SubscribeEvent
-    public static void OnWake(SleepFinishedTimeEvent event) {
+    /**
+     * The morning-wake domain step (the bus binding lives in
+     * {@code loader.neo.NeoTownWakeEvents}, the G6 events slice). {@code newTime} is the wake's
+     * new daytime and is only logged: the morning pass runs on game time
+     * ({@code runSleptMorning}, r16 #6).
+     */
+    public static void onSleepFinished(long newTime) {
         // Diagnostic: this is the definitive "did morning come" signal. In the
         // 2026-09-03 two-player-sleep soft-lock this never fired, so night
         // never skipped. If it fires but the server then goes silent, the bug
         // is in the wake path (onMorning / onWake), not the night-skip itself.
         QT.JOB_LOGGER.info(
                 "[campfire-sleep] SleepFinishedTimeEvent (morning) newTime={}",
-                event.getNewTime()
+                newTime
         );
         for (TownFlagBlockEntity e : flags.values()) {
-            e.ticker.onMorning(TownFlagTicker.TickData.fromFlag(e), event.getNewTime());
+            e.ticker.runSleptMorning(TownFlagTicker.TickData.fromFlag(e));
         }
     }
 

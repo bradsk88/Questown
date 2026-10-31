@@ -31,7 +31,12 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_DURATION = "duration";
     private static final String NBT_DAMAGE = "damage";
     private static final String NBT_PENDING_JOB_CHANGES = "pending_job_changes";
+    private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
+    private static final String NBT_PRE_ROLL_ROOTS = "pre_roll_roots";
+    private static final String NBT_BOP_LATCHES = "block_of_progress_latches";
     private static final String NBT_PROFICIENCIES = "proficiencies";
+    private static final String NBT_DISPLAY_NUMBERS = "display_numbers";
+    private static final String NBT_DISPLAY_HIGHEST = "display_numbers_highest";
 
     public void deserialize(
             CompoundTag compound,
@@ -82,6 +87,16 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
         ImmutableMap<VillagerUUID, Boolean> pending = deserializeVMap(compound, NBT_PENDING_JOB_CHANGES, simpleBool);
+        // Quest-promised roots pending against root changes, persisted so a spend
+        // overnight still forces the root after a save/quit in between.
+        ImmutableMap<UUID, JobID> guaranteedRoots = deserializeMap(
+                compound, NBT_GUARANTEED_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
+        );
+        // Pre-rolled at the BOP-spend moment for ordinary (unpromised) changes; persisted so a
+        // spend overnight still applies the settled root after a save/quit in between.
+        ImmutableMap<UUID, JobID> preRolls = deserializeMap(
+                compound, NBT_PRE_ROLL_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
+        );
         ImmutableMap<UUID, ImmutableMap<String, Float>> proficiencies = deserializeMap(
                 compound, NBT_PROFICIENCIES, t -> {
                     CompoundTag pt = ((CompoundTag) t).getCompound(NBT_PROFICIENCIES);
@@ -93,9 +108,16 @@ public class TownVillagerHandlerSerializer {
                 }
         );
 
+        ImmutableMap<UUID, Integer> displayNumbers = deserializeMap(compound, NBT_DISPLAY_NUMBERS, simpleInt);
+        int highestDisplayNumber = compound.getInt(NBT_DISPLAY_HIGHEST);
+
         villagerHandle.initialize(
-                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies
+                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
+                guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
         );
+        // A villager that levelled up but has not yet deposited its BOP stays routed to the flag
+        // after a reload (2026-10-30: the unsaved latch let a carried BOP go into a storage chest).
+        villagerHandle.restoreBlockOfProgress(deserializeMap(compound, NBT_BOP_LATCHES, simpleBool));
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
@@ -193,12 +215,23 @@ public class TownVillagerHandlerSerializer {
         serializeMap(compound, NBT_JOBS_KNOWN_TO_EXIST, villagerHandle.getJobsKnownToExist(), bc);
         serializeVMap(compound, NBT_PENDING_JOB_CHANGES, villagerHandle.getJobChangesPending(), simpleBool);
         serializeMap(
+                compound, NBT_GUARANTEED_ROOTS, villagerHandle.getGuaranteedRoots(),
+                (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
+        serializeMap(
+                compound, NBT_PRE_ROLL_ROOTS, villagerHandle.getPreRolls(),
+                (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
+        serializeMap(
                 compound, NBT_PROFICIENCIES, villagerHandle.getAllProficiencies(), (t, m) -> {
                     CompoundTag pt = new CompoundTag();
                     m.forEach(pt::putFloat);
                     t.put(NBT_PROFICIENCIES, pt);
                 }
         );
+        serializeMap(compound, NBT_BOP_LATCHES, villagerHandle.getBlockOfProgressLatches(), simpleBool);
+        serializeMap(compound, NBT_DISPLAY_NUMBERS, villagerHandle.getDisplayNumbers(), simpleInt);
+        compound.putInt(NBT_DISPLAY_HIGHEST, villagerHandle.getHighestDisplayNumber());
         return compound;
     }
 

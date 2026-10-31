@@ -46,6 +46,11 @@ public final class TownVillagerHandle {
     private final ca.bradj.questown.town.TownVillagerProficiencies proficiencies =
             new ca.bradj.questown.town.TownVillagerProficiencies();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+    /**
+     * Display numbers per townie ("Villager N"): assigned on arrival, persisted with the
+     * handle, and never re-issued. 2026-10-14 playtest ruling: no reuse.
+     */
+    private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
 
     TownVillagerHandle() {
         SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
@@ -58,7 +63,8 @@ public final class TownVillagerHandle {
                 Compat.configGet(Config.DAMAGE_TICKS).get(),
                 Compat.configGet(Config.NEUTRAL_MOOD).get(),
                 Compat.configGet(Config.BUFFER_TICKS_AFTER_FOOD_ATTEMPT).get(),
-                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get()
+                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get(),
+                Compat.configGet(Config.MOOD_EFFECT_DURATION_SLEEPLESS).get()
         );
         this.delegate = new SimpleVillagerHandle<>(
                 new Delegator<>() {
@@ -73,28 +79,58 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public String displayNameFor(UUID vuid) {
+                return TownVillagerHandle.this.displayNameFor(vuid);
+            }
+
+            @Override
             public void setJob(
                     UUID villagerUUID,
                     JobID newJob,
                     VisitorMobEntity f,
                     boolean announce
             ) {
-                f.setJob(ServerJobsRegistry.getInitializedJob(
+                var job = ServerJobsRegistry.getInitializedJob(
                         town.getServerLevelUnsafe(),
                         newJob,
                         f.getJobJournalSnapshot().items(),
                         villagerUUID
-                ));
+                );
                 @NotNull TownFlagBlockEntity t = town.getUnsafe();
+                startFlagJobFresh(t, villagerUUID, job);
+                f.setJob(job);
                 t.setChanged();
                 if (announce) {
-                    t.messages.jobChanged(newJob, villagerUUID);
+                    String label = displayNameFor(villagerUUID);
+                    t.messages.jobChanged(newJob, label.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerUUID) : label);
+                }
+            }
+
+            /**
+             * The flag jobs share one work-state record per villager at the flag, each numbering its
+             * states its own way, so a record left by an interrupted one is foreign to the next.
+             * Downtime's state 1 read to a diner as a half-eaten meal: it walked "to the job" with
+             * nowhere to go until it timed out, twice, with food in storage (2026-10-31
+             * hunter/sword [sleep_mid_trip]; the dev's "stuck going to eat"). No flag job resumes
+             * another's cycle, so each starts on a fresh record.
+             */
+            private void startFlagJobFresh(TownFlagBlockEntity t, UUID villagerUUID, Object job) {
+                if (job instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && dj.worksAtTheFlag()) {
+                    t.getWorkStatusHandle(villagerUUID).clearState(t.getBlockPos());
                 }
             }
 
             @Override
             public void setChanged() {
-                town.getUnsafe().setChanged();
+                if (town.isInitialized()) {
+                    town.getUnsafe().setChanged();
+                }
+                // Load-time registration (SimpleVillagerHandle.register's tail
+                // call) arrives before associate(); the town state was just
+                // read from this very block entity, so nothing new needs
+                // persisting. Throwing here made vanilla drop the loading
+                // entity - the second landmine behind the claimBed one,
+                // masked until the first was fixed (2026-10-14).
             }
 
             @Override
@@ -126,6 +162,11 @@ public final class TownVillagerHandle {
             @Override
             public void invalidateCachedWorkPossibilities() {
                 town.getUnsafe().possibleWork.invalidate();
+            }
+
+            @Override
+            public void resetWorkStatus(UUID villagerUUID) {
+                town.getUnsafe().resetWorkStatusFor(villagerUUID);
             }
 
             @Override
@@ -165,6 +206,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public boolean isRemoved(VisitorMobEntity e) {
+                return e.isRemoved();
+            }
+
+            @Override
             public boolean isDining(VisitorMobEntity v) {
                 return ServerJobsRegistry.isDining(v.getJobId());
             }
@@ -188,11 +234,34 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public ImmutableList<String> getMoodEffectIds(UUID uuid) {
+                return moods.getEffects().getOrDefault(uuid, ImmutableList.of()).stream()
+                        .map(e -> e.effect().toString())
+                        .distinct()
+                        .collect(ImmutableList.toImmutableList());
+            }
+
+            @Override
+            public void applyMoodEffect(UUID uuid, ResourceLocation effect, long untilTick) {
+                moods.tryApplyEffect(effect, untilTick, uuid);
+            }
+
+            @Override
             public void unlockJob(
                     VisitorMobEntity v,
                     JobID newJob
             ) {
                 learning.unlockJob(v.getUUID(), newJob);
+            }
+
+            @Override
+            public ImmutableList<JobID> getDefaultWork(JobID root) {
+                return ServerJobsRegistry.getDefaultWork(root);
+            }
+
+            @Override
+            public void postStarterRequests(JobID root) {
+                town.getUnsafe().postStarterRequests(root);
             }
 
             @Override
@@ -240,7 +309,11 @@ public final class TownVillagerHandle {
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
-            Map<UUID, ? extends Map<String, Float>> proficiencies
+            Map<UUID, ? extends Map<String, Float>> proficiencies,
+            ImmutableMap<UUID, JobID> guaranteedRoots,
+            ImmutableMap<UUID, JobID> preRolls,
+            Map<UUID, Integer> displayNumbersIn,
+            int highestDisplayNumberIn
     ) {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
@@ -249,10 +322,87 @@ public final class TownVillagerHandle {
                 experience,
                 level,
                 UtilClean.mapKeys(jobChangesPending, TownVillagerHandle::getUuid),
-                Config.HUNGER_ENABLED.get()
+                Config.HUNGER_ENABLED.get(),
+                guaranteedRoots,
+                preRolls
         );
         moods.initialize(moodEffects);
         this.proficiencies.initialize(proficiencies);
+        this.displayNumbers.restore(displayNumbersIn, highestDisplayNumberIn);
+        // Villagers register as their chunks load, before this restore, and take numbers in
+        // load order; re-stamp them with their saved numbers (2026-10-30: the nameplates of two
+        // villagers swapped after a restart while chat kept the saved ones).
+        delegate.entities().forEach(this::stampNameplate);
+    }
+
+    /** The townie's display number, or 0 if none assigned yet. */
+    public int displayNumberFor(UUID vuid) {
+        return displayNumbers.numberFor(vuid);
+    }
+
+    /**
+     * Assign the next display number (monotonic, never re-issued). Idempotent: a townie
+     * that already has a number (reload from NBT) keeps it.
+     */
+    public void assignDisplayNumber(UUID vuid) {
+        displayNumbers.assign(vuid);
+    }
+
+    /** The townie died: drop it from the saved roster (its number is never re-issued). */
+    void retireDisplayNumber(UUID vuid) {
+        displayNumbers.retire(vuid);
+    }
+
+    private void stampNameplate(VisitorMobEntity villager) {
+        int displayNumber = displayNumberFor(villager.getUUID());
+        if (displayNumber <= 0) {
+            return;
+        }
+        villager.setCustomName(VillagerDisplayNumbers.nameplate(displayNumber));
+        villager.setCustomNameVisible(true);
+    }
+
+    /** "Villager N" (the user-facing display name); the raw root as a last resort. */
+    public String displayNameFor(UUID vuid) {
+        int n = displayNumberFor(vuid);
+        if (n <= 0) {
+            return "";
+        }
+        return VillagerDisplayNumbers.nameplate(n).getString();
+    }
+
+    /**
+     * Every assigned display name (villager UUID -&gt; "Villager N"); townies without a number
+     * are omitted, so callers fall back to the truncated UUID. Feeds the flag quest-card
+     * tooltips (the 2026-10-14 display-name work deferred this surface pending this map).
+     */
+    public ImmutableMap<UUID, String> displayNamesForAll() {
+        ImmutableMap.Builder<UUID, String> b = ImmutableMap.builder();
+        for (Map.Entry<UUID, Integer> e : displayNumbers.byVuid().entrySet()) {
+            String name = displayNameFor(e.getKey());
+            if (!name.isEmpty()) {
+                b.put(e.getKey(), name);
+            }
+        }
+        return b.build();
+    }
+
+    Map<UUID, Integer> getDisplayNumbers() {
+        return displayNumbers.byVuid();
+    }
+
+    /**
+     * Villagers in the town per the saved roster (one display number per townie, retired only
+     * when it leaves or dies) - unlike {@link #size()} it does not drop while their entities are
+     * unloaded or not yet re-registered after a load (2026-10-17: a reload let villager 2 past
+     * the raw-food gate).
+     */
+    long knownVillagerCount() {
+        return displayNumbers.byVuid().size();
+    }
+
+    int getHighestDisplayNumber() {
+        return displayNumbers.highest();
     }
 
     void recallVillagers() {
@@ -278,6 +428,16 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, ImmutableList<Effect>> getMoodEffects() {
         return ImmutableMap.copyOf(moods.getEffects());
+    }
+
+    /** True when the townie currently has an assigned bed the town's rooms provide. */
+    public boolean hasBed(VisitorMobEntity v) {
+        return sleep.hasBed(v);
+    }
+
+    /** True when the given mood effect is currently active on the townie. */
+    public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
+        return moods.hasEffect(uuid, effect);
     }
 
     float getProficiency(
@@ -326,8 +486,30 @@ public final class TownVillagerHandle {
         return ImmutableMap.copyOf(delegate.levels);
     }
 
+    int getLevel(UUID villagerUUID) {
+        return delegate.getLevel(villagerUUID);
+    }
+
+    /** See {@link TutorialTownView#revealSkill}. No-op for a root job (no parent) or unknown job. */
+    public void revealSkill(JobID skill) {
+        JobID parent = ServerJobsRegistry.getParentOf(skill);
+        if (parent != null) {
+            learning.registerAsKnownForAll(parent, skill);
+        }
+    }
+
     ImmutableMap<UUID, Map<JobID, ? extends Collection<JobID>>> getJobsKnownToExist() {
         return ImmutableMap.copyOf(learning.jobsKnownToExist);
+    }
+
+    /**
+     * The set of jobs the town KNOWS (knowledge-tree parents + children,
+     * unioned across villagers, plus unlocked jobs) - see
+     * {@link TownVillagerLearningHandle#getTownKnownJobs}. Public for the
+     * work-request confirm hint (core.network).
+     */
+    public ImmutableSet<JobID> getTownKnownJobs() {
+        return learning.getTownKnownJobs();
     }
 
     long getTick() {
@@ -354,6 +536,31 @@ public final class TownVillagerHandle {
         delegate.changeJobForVillager(getUuid(uuid), idForRoot, getTick(), b);
     }
 
+    private final ca.bradj.questown.town.PendingJobSwitches<VillagerUUID, JobID> switchesAfterTrip =
+            new ca.bradj.questown.town.PendingJobSwitches<>();
+
+    /**
+     * A player-chosen switch that applies now: the villager's work-spot records are cleared first,
+     * so a trip in progress is dropped on purpose rather than clobbered (dev playtest 2026-10-29).
+     */
+    void switchJobNow(VillagerUUID uuid, JobID job) {
+        town.getUnsafe().resetWorkStatusFor(getUuid(uuid));
+        changeJobForVillager(uuid, job, true);
+    }
+
+    /** A player-chosen switch that waits for the villager's next job pick (after its trip). */
+    void switchJobAfterTrip(VillagerUUID uuid, JobID job) {
+        switchesAfterTrip.request(uuid, job);
+    }
+
+    @Nullable JobID peekSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.peek(uuid);
+    }
+
+    @Nullable JobID takeSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.take(uuid);
+    }
+
     VisitorMobEntity getEntity(VillagerUUID ownerUUID) {
         return delegate.getEntity(getUuid(ownerUUID));
     }
@@ -373,6 +580,18 @@ public final class TownVillagerHandle {
         return delegate.isReadyForDowntime(getUuid(ownerVUID), tick);
     }
 
+    /** Fallback readiness: rested old enough; used when there is no work and no fallback (idle-rest). */
+    boolean isReadyForDowntimeIfIdle(
+            VillagerUUID ownerVUID,
+            long tick
+    ) {
+        return delegate.isReadyForDowntimeIfIdle(getUuid(ownerVUID), tick);
+    }
+
+    void markWorked(VillagerUUID ownerVUID, long tick) {
+        delegate.markWorked(getUuid(ownerVUID), tick);
+    }
+
     long size() {
         return delegate.size();
     }
@@ -390,8 +609,27 @@ public final class TownVillagerHandle {
         return UtilClean.mapKeys(delegate.getJobChangesPending(), TownVillagerHandle::fromUuid);
     }
 
+    ImmutableMap<UUID, JobID> getGuaranteedRoots() {
+        return delegate.getGuaranteedRoots();
+    }
+
+    ImmutableMap<UUID, JobID> getPreRolls() {
+        return delegate.getPreRolls();
+    }
+
+    ImmutableMap<UUID, Boolean> getBlockOfProgressLatches() {
+        return delegate.getBlockOfProgressLatches();
+    }
+
+    void restoreBlockOfProgress(Map<UUID, Boolean> latches) {
+        delegate.restoreBlockOfProgress(latches);
+    }
+
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
+
+        assignDisplayNumber(visitorMobEntity.getUUID());
+        stampNameplate(visitorMobEntity);
 
         seedProficiencies(visitorMobEntity.getUUID());
 
@@ -423,8 +661,12 @@ public final class TownVillagerHandle {
         delegate.addHungryListener(o);
     }
 
-    void addStatsListener(Consumer<VillagerStatsData> o) {
-        delegate.addStatsListener(o);
+    void addStatsListener(UUID villager, Consumer<VillagerStatsData> o) {
+        delegate.addStatsListener(villager, o);
+    }
+
+    void addAnyStatsListener(Runnable o) {
+        delegate.addAnyStatsListener(o);
     }
 
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {
@@ -465,6 +707,10 @@ public final class TownVillagerHandle {
 
     public boolean canDine(UUID uuid) {
         return delegate.canDine(uuid);
+    }
+
+    public boolean isStarving(@Nullable VillagerUUID vuid) {
+        return delegate.isStarving(getUuid(vuid));
     }
 
     public boolean gaveUpDiningRecently(@Nullable VillagerUUID vuid) {

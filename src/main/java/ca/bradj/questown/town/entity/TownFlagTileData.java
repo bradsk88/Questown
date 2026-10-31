@@ -17,10 +17,14 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -45,10 +49,19 @@ public class TownFlagTileData {
     private static final String NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED = QTNBT.keyify(
             "chicken_first_gather_worldly_seeds_fired"
     );
+    private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
+            "first_hunter_loot_guarantee_fired"
+    );
     private static final String NBT_CHICKEN_ARC_FORFEIT = QTNBT.keyify("chicken_arc_forfeit");
     private static final String NBT_CHICKEN_STRUCTURE_ROTATION = QTNBT.keyify("chicken_structure_rotation");
     private static final String NBT_CHICKEN_ROTATION_DETECTED = QTNBT.keyify("chicken_rotation_detected");
     private static final String NBT_CHICKEN_SUNSET_CHEST_SPAWNED = QTNBT.keyify("chicken_sunset_chest_spawned");
+    // The board's "auto-request" toggle (F2). Default ON - the board reads alive on a fresh
+    // town; the player can silence auto-posting from the board menu.
+    private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
+    private static final String NBT_VILLAGERS_TAB_SEEN = QTNBT.keyify("villagers_tab_seen");
+    private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
+    private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
     public static Map<String, InitPair> initialize() {
 
@@ -68,10 +81,15 @@ public class TownFlagTileData {
         b.put(NBT_CHICKEN_EVER_SPAWNED, initChickenEverSpawned());
         b.put(NBT_CHICKEN_BEAT_STATE, initChickenBeatState());
         b.put(NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, initChickenFirstGatherWorldlySeedsFired());
+        b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
         b.put(NBT_CHICKEN_ARC_FORFEIT, initChickenArcForfeit());
         b.put(NBT_CHICKEN_STRUCTURE_ROTATION, initChickenStructureRotation());
         b.put(NBT_CHICKEN_ROTATION_DETECTED, initChickenRotationDetected());
         b.put(NBT_CHICKEN_SUNSET_CHEST_SPAWNED, initChickenSunsetChestSpawned());
+        b.put(NBT_BOARD_AUTO_REQUEST, initBoardAutoRequest());
+        b.put(NBT_VILLAGERS_TAB_SEEN, initVillagersTabSeen());
+        b.put(NBT_QUESTS_SEEN, initQuestsSeen());
+        b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
     }
 
@@ -82,6 +100,52 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.chickenEverSpawned = false
+        );
+    }
+
+    private static InitPair initBoardAutoRequest() {
+        return new InitPair(
+                (tag, flag) -> {
+                    // Old flags without the tag keep the default (auto-request ON).
+                    flag.boardAutoRequest = tag.contains("value") && tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.boardAutoRequest = true
+        );
+    }
+
+    private static InitPair initBopWithdrawn() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.bopWithdrawn = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.bopWithdrawn = false
+        );
+    }
+
+    private static InitPair initVillagersTabSeen() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.villagersTabSeen = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.villagersTabSeen = false
+        );
+    }
+
+    private static InitPair initQuestsSeen() {
+        return new InitPair(
+                (tag, flag) -> {
+                    ListTag keys = tag.getList("keys", Tag.TAG_STRING);
+                    List<String> seen = new ArrayList<>();
+                    for (int i = 0; i < keys.size(); i++) {
+                        seen.add(keys.getString(i));
+                    }
+                    flag.seenQuests.markSeen(seen);
+                    return true;
+                },
+                flag -> flag.seenQuests.markSeen(List.of())
         );
     }
 
@@ -102,6 +166,16 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.chickenFirstGatherWorldlySeedsFired = false
+        );
+    }
+
+    private static InitPair initFirstHunterLootGuaranteeFired() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.firstHunterLootGuaranteeFired = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.firstHunterLootGuaranteeFired = false
         );
     }
 
@@ -234,7 +308,9 @@ public class TownFlagTileData {
             logInit("Initialized welcome mats from {}", tag);
             return true;
         };
-        Consumer<TownFlagBlockEntity> onPlace = t -> logInit("Initialized welcome mats for new flag");
+        Consumer<TownFlagBlockEntity> onPlace = t -> {
+            logInit("Initialized welcome mats for new flag");
+        };
         return new InitPair(fromTag, onPlace);
     }
 
@@ -282,6 +358,12 @@ public class TownFlagTileData {
             TownVillagerHandle villagerHandle = t.initializer().getVillagers();
             villagerHandle.associate(t);
             villagerHandle.addHungryListener(e -> {
+                // Only jobs that opt in (CAN_INSTANTLY_SWITCH_TO_EATING) get the direct
+                // dining switch. A working townie instead ends its job and re-enters the
+                // work board, where its carried work output is deposited before it eats.
+                if (!e.canInstantlySwitchToEating()) {
+                    return;
+                }
                 if (t.villagerHandle.isDining(e.getUUID())) {
                     return;
                 }
@@ -300,7 +382,7 @@ public class TownFlagTileData {
                     t.villagerHandle.changeJobForVillager(e.getVUID(), DinerWork.getIdForRoot(rid), false);
                 }
             });
-            villagerHandle.addStatsListener(s -> t.setChanged());
+            villagerHandle.addAnyStatsListener(t::setChanged);
             logInit("Villager handle associated on new flag");
         };
         return new InitPair(fromTag, onPlace);
@@ -346,10 +428,15 @@ public class TownFlagTileData {
         write(t, NBT_CHICKEN_EVER_SPAWNED, flag.serializeChickenEverSpawned());
         write(t, NBT_CHICKEN_BEAT_STATE, flag.serializeChickenBeatState());
         write(t, NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, flag.serializeChickenFirstGatherWorldlySeedsFired());
+        write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
         write(t, NBT_CHICKEN_ARC_FORFEIT, flag.serializeChickenArcForfeit());
         write(t, NBT_CHICKEN_STRUCTURE_ROTATION, flag.serializeChickenStructureRotation());
         write(t, NBT_CHICKEN_ROTATION_DETECTED, flag.serializeChickenRotationDetected());
         write(t, NBT_CHICKEN_SUNSET_CHEST_SPAWNED, flag.serializeChickenSunsetChestSpawned());
+        write(t, NBT_BOARD_AUTO_REQUEST, flag.serializeBoardAutoRequest());
+        write(t, NBT_VILLAGERS_TAB_SEEN, flag.serializeVillagersTabSeen());
+        write(t, NBT_QUESTS_SEEN, flag.serializeQuestsSeen());
+        write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }
 
     private static void write(

@@ -1,9 +1,11 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownVillagerUIs;
 import ca.bradj.questown.town.UnsafeTown;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -23,14 +25,52 @@ public class TownVillagerUIsHandle {
             String type,
             UUID villagerId
     ) {
+        ImmutableSet<JobID> unlockable = unlockableSkills(villagerId);
         TownVillagerUIs.showUI(
                 sender,
                 villagers.entities(),
                 type,
                 villagerId,
                 villagers.getUnlockedJobs(),
-                villagers.getChildJobsKnownToExist(villagers.getEntity(villagerId).getJobId())
+                unlockable
         );
+    }
+
+    public void showUI(
+            ServerPlayer sender,
+            String type,
+            UUID villagerId,
+            boolean showInventoryTab
+    ) {
+        ImmutableSet<JobID> unlockable = unlockableSkills(villagerId);
+        TownVillagerUIs.showUI(
+                sender,
+                villagers.entities(),
+                type,
+                villagerId,
+                villagers.getUnlockedJobs(),
+                unlockable,
+                showInventoryTab
+        );
+    }
+
+    /**
+     * The skills tab's nodes for this villager: children of its job known to exist, filtered by
+     * the skills-tab gate (2026-10-13 ruling) - a job is only unlockable, and so only shown, once
+     * the townie's level reaches its JSON available_at_level. At the starting level (1) the set is
+     * empty, which is what hides the tab. Includes nodes the villager already unlocked.
+     */
+    public ImmutableSet<JobID> unlockableSkills(UUID villagerId) {
+        VisitorMobEntity entity = villagers.getEntity(villagerId);
+        if (entity == null) {
+            return ImmutableSet.of();
+        }
+        int level = villagers.getLevel(villagerId);
+        return villagers
+                .getChildJobsKnownToExist(entity.getJobId())
+                .stream()
+                .filter(job -> ServerJobsRegistry.getAvailableAtLevel(job) <= level)
+                .collect(ImmutableSet.toImmutableSet());
     }
 
     public void showMultiStatusUI(ServerPlayer player, Collection<VisitorMobEntity> entities) {
@@ -39,7 +79,7 @@ public class TownVillagerUIsHandle {
                 town.getUnsafe().getInfo(),
                 entities,
                 () -> town.getUnsafe().getAllQuestsWithRewards(),
-                town.getUnsafe().getBlocksOfProgress(),
+                town.getUnsafe().depositedBopRootJobs(),
                 () -> town.getUnsafe().hasVillagerArrivingInMorning()
         );
     }

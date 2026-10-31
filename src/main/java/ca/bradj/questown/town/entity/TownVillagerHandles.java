@@ -9,6 +9,7 @@ import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -30,13 +32,13 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public void addStatsListener(Consumer<VillagerStatsData> l) {
-                villagerHandle.addStatsListener(l);
+            public void addStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+                villagerHandle.addStatsListener(villager, l);
             }
 
             @Override
-            public void removeStatsListener(Consumer<VillagerStatsData> villagerStatsMenu) {
-                villagerHandle.delegate.removeStatsListener(villagerStatsMenu);
+            public void removeStatsListener(UUID villager, Consumer<VillagerStatsData> villagerStatsMenu) {
+                villagerHandle.delegate.removeStatsListener(villager, villagerStatsMenu);
             }
 
             @Override
@@ -62,6 +64,26 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void showUI(
+                    ServerPlayer sender,
+                    String type,
+                    UUID villagerId,
+                    boolean showInventoryTab
+            ) {
+                villagerHandle.uis.showUI(sender, type, villagerId, showInventoryTab);
+            }
+
+            @Override
+            public String displayNameFor(UUID villagerId) {
+                return villagerHandle.displayNameFor(villagerId);
+            }
+
+            @Override
+            public Map<UUID, String> displayNamesForAll() {
+                return villagerHandle.displayNamesForAll();
+            }
+
+            @Override
             public void fillHunger(UUID uuid) {
                 villagerHandle.delegate.fillHunger(uuid);
             }
@@ -72,6 +94,11 @@ public class TownVillagerHandles {
                     float amount
             ) {
                 villagerHandle.delegate.fillHunger(uuid, amount);
+            }
+
+            @Override
+            public void eat(UUID uuid, float percent) {
+                villagerHandle.delegate.eat(uuid, percent);
             }
 
             @Override
@@ -161,6 +188,23 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void switchJob(VillagerUUID villagerUUID, JobID job, boolean afterTrip) {
+                if (afterTrip) {
+                    villagerHandle.switchJobAfterTrip(villagerUUID, job);
+                    return;
+                }
+                villagerHandle.switchJobNow(villagerUUID, job);
+            }
+
+            @Override
+            public void assignJob(
+                    VillagerUUID villagerUUID,
+                    JobID job
+            ) {
+                villagerHandle.delegate.assignJob(getUUID(villagerUUID), job, villagerHandle.getTick());
+            }
+
+            @Override
             public void changeJobForVillager(
                     UUID villagerUUID,
                     JobID newJob,
@@ -245,6 +289,18 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public ImmutableSet<JobID> getUnlockableSkills(UUID villagerUUID) {
+                return villagerHandle.uis.unlockableSkills(villagerUUID);
+            }
+
+            @Override
+            public int getVillagerLevel(
+                    UUID villagerUUID
+            ) {
+                return villagerHandle.getLevel(villagerUUID);
+            }
+
+            @Override
             public void addExperience(
                     UUID uuid,
                     int exp
@@ -263,17 +319,36 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public void scheduleJobRootChange(
+            public Optional<JobID> scheduleJobRootChange(
                     UUID villagerUUID,
                     boolean instant
             ) {
+                return scheduleJobRootChange(villagerUUID, instant, Optional.empty());
+            }
+
+            @Override
+            public Optional<JobID> scheduleJobRootChange(
+                    UUID villagerUUID,
+                    boolean instant,
+                    Optional<JobID> guaranteedRoot
+            ) {
                 long tick = villagerHandle.getTick();
-                villagerHandle.delegate.scheduleJobRootChange(villagerUUID, tick, instant);
+                return villagerHandle.delegate.scheduleJobRootChange(villagerUUID, tick, instant, guaranteedRoot);
             }
 
             @Override
             public boolean isUnlocked(JobID jobID) {
                 return villagerHandle.learning.isUnlocked(jobID);
+            }
+
+            @Override
+            public ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {
+                return villagerHandle.getUnlockedJobs();
+            }
+
+            @Override
+            public boolean isUnlocked(UUID villagerUUID, JobID jobID) {
+                return villagerHandle.learning.isUnlocked(villagerUUID, jobID);
             }
 
             @Override
@@ -313,6 +388,11 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid) {
+                return villagerHandle.peekSwitchAfterTrip(vuid);
+            }
+
+            @Override
             public boolean isJobChangePending(VillagerUUID vuid) {
                 return villagerHandle.delegate.isJobChangePending(getUUID(vuid));
             }
@@ -341,6 +421,16 @@ public class TownVillagerHandles {
             @Override
             public void toggleHunger() {
                 villagerHandle.delegate.toggleHunger();
+            }
+
+            @Override
+            public boolean hasBed(VisitorMobEntity v) {
+                return villagerHandle.hasBed(v);
+            }
+
+            @Override
+            public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
+                return villagerHandle.hasMoodEffect(uuid, effect);
             }
 
             @SuppressWarnings("removal")
