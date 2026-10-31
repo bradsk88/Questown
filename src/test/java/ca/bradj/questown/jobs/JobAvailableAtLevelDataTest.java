@@ -45,10 +45,13 @@ class JobAvailableAtLevelDataTest {
             int level = Integer.parseInt(expectation.split(":")[1]);
             for (String tool : TOOLS) {
                 JsonObject job = read("blacksmith_" + tier + "_" + tool + ".json");
+                // The wooden pickaxe is the Outfitter's level-2 skill (dev playtest 2026-10-30:
+                // "pickaxes are good"), unlocked while training to crafter 3.
+                int expected = tier.equals("wood") && tool.equals("pickaxe") ? 2 : level;
                 Assertions.assertEquals(
-                        level,
+                        expected,
                         job.get("available_at_level").getAsInt(),
-                        "blacksmith_" + tier + "_" + tool + ".json must declare available_at_level " + level
+                        "blacksmith_" + tier + "_" + tool + ".json must declare available_at_level " + expected
                 );
                 // the id must stay in the crafter family - the gate rides the job, not the file name
                 Assertions.assertTrue(job.get("id").getAsString().startsWith("crafter/"),

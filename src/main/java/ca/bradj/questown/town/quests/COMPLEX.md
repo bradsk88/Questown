@@ -572,3 +572,5 @@ but pickaxes are good."): the pickaxe takes that role. `crafter/wooden_pickaxe`
 `crafter/wooden_shovel` is back to level 3 in `weapons_1`. The pickaxe's tree parent stays
 `crafter/wooden_hoe` (level 3). Unlocking is gated on level only, across the root's whole tree
 (`TownVillagerUIsHandle.unlockableSkills` -> `childJobsKnownToExist`), not on the parent node.
+
+Follow-up (same evening): `JobAvailableAtLevelDataTest.materialTierJobs_declareTheExpectedLevels` pinned every wooden tool at level 3 and went red on this change (caught by the next full unit run); it now expects the wooden pickaxe at 2.
