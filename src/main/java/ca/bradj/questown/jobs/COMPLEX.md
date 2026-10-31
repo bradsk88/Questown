@@ -1192,3 +1192,13 @@ and the `flag/bop_carried_with_loot` autotest (red before: flag 0, chest 1).
 `Work.lootTableDefault` (2026-10-30): the `biome_loot` result's `default` table path, chained by
 `ResourceJobLoader` beside `prefer_requested` and copied by every `Work.with*`; null for other
 results. Only the skill card reads it (`town/COMPLEX.md` "Skill card products").
+
+## Eating at the flag takes 12 work (dev playtest 2026-10-30)
+
+Dev: "Eat at flag is about 2x too fast". `DinerNoTableWork` and `DinerRawFoodWork`, the two
+diners whose job site is the town flag, take 12 work at NEED_EAT (was 6; 25 -> 3 -> 6 -> 12 in the
+inline comments). The table diner (`DinerWork`) stays at 10, so a dining room is now the quicker
+meal. Pinned by `DiningWorkDurationTest`. `eating/` autotests: 7/8, and the failing
+`dine_at_time` also fails with this change reverted (the villager takes the bread as gather trip
+food and never dines; it passed at 922d118c and nothing behavioural has landed since), so it's not
+caused by this.

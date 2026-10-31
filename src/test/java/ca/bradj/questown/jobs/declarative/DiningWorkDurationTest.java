@@ -12,7 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Dev ruling (2026-10-19 playtest): "Villagers take way too long to eat ... Should take more like
  * 1/10th the time it currently does." The eat step is the work-required count at NEED_EAT. r22
  * (2026-10-26, "villagers eat too quickly ... 2x the work") doubled it: 10 at a table, 6 without
- * one / for raw food.
+ * one / for raw food. 2026-10-30 (dev: eating at the flag is "about 2x too fast") doubled the two
+ * flag diners again, to 12.
  */
 class DiningWorkDurationTest {
 
@@ -29,12 +30,12 @@ class DiningWorkDurationTest {
     }
 
     @Test
-    void eatingWithoutATable_isTwiceTheTenth() {
-        assertEquals(6, DinerNoTableWork.WORK_REQUIRED_AT_STATES.get(DinerNoTableWork.BLOCK_STATE_NEED_EAT));
+    void eatingWithoutATable_isTwelve() {
+        assertEquals(12, DinerNoTableWork.WORK_REQUIRED_AT_STATES.get(DinerNoTableWork.BLOCK_STATE_NEED_EAT));
     }
 
     @Test
-    void eatingRawFood_isTwiceTheTenth() {
-        assertEquals(6, DinerRawFoodWork.WORK_REQUIRED_AT_STATES.get(DinerRawFoodWork.BLOCK_STATE_NEED_EAT));
+    void eatingRawFood_isTwelve() {
+        assertEquals(12, DinerRawFoodWork.WORK_REQUIRED_AT_STATES.get(DinerRawFoodWork.BLOCK_STATE_NEED_EAT));
     }
 }
