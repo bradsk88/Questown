@@ -1,8 +1,8 @@
 package ca.bradj.questown.jobs.declarative;
 
+
 import ca.bradj.questown.jobs.EntityCurrentJobSite;
 import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
-import ca.bradj.questown.jobs.JobsClean;
 import ca.bradj.questown.jobs.SupplyItemStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
@@ -28,7 +28,7 @@ class JobsCleanTest {
 
     @Test
     void shouldTakeItem_ifInventoryEmpty_AndItemIsValidForRecipe() {
-        boolean result = JobsClean.shouldTakeItem(
+        boolean result = SupplyItems.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "", "", "", "", "", ""
@@ -40,7 +40,7 @@ class JobsCleanTest {
 
     @Test
     void shouldNotTakeItem_ifInventoryEmpty_AndItemIsNonRecipeItem() {
-        boolean result = JobsClean.shouldTakeItem(
+        boolean result = SupplyItems.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "", "", "", "", "", ""
@@ -52,7 +52,7 @@ class JobsCleanTest {
 
     @Test
     void shouldNotTakeItem_ifInventoryFull() {
-        boolean result = JobsClean.shouldTakeItem(
+        boolean result = SupplyItems.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "wheat", "wheat", "coal", "wheat", "wheat", "coal"
@@ -64,7 +64,7 @@ class JobsCleanTest {
 
     @Test
     void shouldNotTakeItem_ifInventoryHasOneOpening_AndItemIsNotPerfectFIt() {
-        boolean result = JobsClean.shouldTakeItem(
+        boolean result = SupplyItems.shouldTakeItem(
                 6, bakerRecipe,
                 ImmutableList.of(
                         "wheat", "wheat", "coal", "wheat", "wheat", "" // <-- want coal here
@@ -163,7 +163,7 @@ class JobsCleanTest {
 
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityInRoom() {
-        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = DeclarativeJobs.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingVillagerInput<Room, Object, Object>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
@@ -175,7 +175,7 @@ class JobsCleanTest {
 
     @Test
     void getEntityCurrentJobSite_shouldReturnNull_WhenAllRequirementsEmpty_AndResultsAreAvailable_IfEntityNotInRoom() {
-        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = DeclarativeJobs.getEntityCurrentJobSite(
                 new Position(-100, -100),
                 new RoomsNeedingVillagerInput<>(ImmutableMap.of()),
                 ImmutableList.of(arbitaryRoomMatch1.getRoom()),
@@ -211,7 +211,7 @@ class JobsCleanTest {
                 "Test precondition: entity should NOT be inside the room"
         );
 
-        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = DeclarativeJobs.getEntityCurrentJobSite(
                 entityNearDoor,
                 new RoomsNeedingVillagerInput<>(ImmutableMap.of()),
                 ImmutableList.of(roomWithCompletedProduct), // Room has completed product
@@ -227,7 +227,7 @@ class JobsCleanTest {
 
     @Test
     void getEntityCurrentJobSite_shouldReturnCorrectRoom_WhenRoomWithRequirementsExists_AndNoResultsAvailable_IfEntityInRoom() {
-        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = DeclarativeJobs.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingVillagerInput<>(ImmutableMap.of(
                         0,
@@ -243,7 +243,7 @@ class JobsCleanTest {
 
     @Test
     void getEntityCurrentJobSite_shouldReturnNull_WhenRoomWithRequirementsExists_AndResultsAreNotAvailable_IfEntityInADifferentRoom() {
-        EntityCurrentJobSite<Room> site = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<Room> site = DeclarativeJobs.getEntityCurrentJobSite(
                 positionInsideArbitraryRoomMatch1,
                 new RoomsNeedingVillagerInput<>(ImmutableMap.of(
                         0,
@@ -318,7 +318,7 @@ class JobsCleanTest {
         );
 
         // Random loot SHOULD be flagged as non-supply because it's not a tool or needed ingredient
-        boolean hasNonSupply = JobsClean.hasNonSupplyItems(
+        boolean hasNonSupply = SupplyItems.hasNonSupplyItems(
                 villagerItems,
                 2,  // Current state = 2 (needs bowl)
                 ingredientsRequired,

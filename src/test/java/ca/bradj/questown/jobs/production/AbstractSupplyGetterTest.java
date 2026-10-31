@@ -1,7 +1,7 @@
 package ca.bradj.questown.jobs.production;
 
 import ca.bradj.questown.jobs.GathererJournalTest;
-import ca.bradj.questown.jobs.JobsClean;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.jobs.StatusesProductionRoutineTest;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.MonoPredicateCollection;
@@ -83,7 +83,7 @@ class AbstractSupplyGetterTest {
                 0, itemMustMatch(neededItem.get())
         );
 
-        JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return true;
@@ -141,7 +141,7 @@ class AbstractSupplyGetterTest {
                 )
         );
 
-        JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return true;
@@ -200,7 +200,7 @@ class AbstractSupplyGetterTest {
                 )
         );
 
-        JobsClean.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<Position, GathererJournalTest.TestItem> suppliesTarget = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return true;

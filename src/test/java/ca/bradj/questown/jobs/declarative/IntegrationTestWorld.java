@@ -166,6 +166,11 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     }
 
     @Override
+    public boolean fitsInDay(JobID id) {
+        return true;
+    }
+
+    @Override
     public void changeToNextJob() {
         hasChangedJob = true;
     }
@@ -207,6 +212,18 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     @Override
     public boolean tryGrabbingInsertedSupplies() {
         return false; // Simplified - not simulating supply grabbing
+    }
+
+    @Override
+    public boolean isStarving() {
+        return false;
+    }
+
+    @Override
+    public boolean holdsWorkOutput() {
+        // Not modelled: tryDropLoot records loot without emptying the inventory, so a held-output
+        // hold would never release. These scenarios hand off as soon as the cycle finishes.
+        return false;
     }
 
     @Override

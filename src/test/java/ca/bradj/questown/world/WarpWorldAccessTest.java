@@ -1,5 +1,6 @@
 package ca.bradj.questown.world;
 
+import net.minecraft.tags.BlockTags;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.Bootstrap;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +25,8 @@ class WarpWorldAccessTest {
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        // A unit JVM loads no tags; chopTree only chops #minecraft:logs.
+        Blocks.OAK_LOG.builtInRegistryHolder().bindTags(Set.of(BlockTags.LOGS));
     }
 
     // -------------------------------------------------------------------------
@@ -168,6 +172,32 @@ class WarpWorldAccessTest {
         );
         world.advanceProcessing(FURNACE, 1000);
         assertTrue(world.getContainerSlot(FURNACE, 2).isEmpty());
+    }
+
+    // -------------------------------------------------------------------------
+    // advanceProcessing — bread oven (cook-shaped baker family)
+    //
+    // Testability gap: the oven warp branch is selected by
+    // {@code blockStates.get(pos).getBlock() instanceof BreadOvenBlock}.
+    // Constructing a BreadOvenBlock is registry-bound (Block.<init> writes
+    // BuiltInRegistries, frozen after bootstrap), so the branch cannot be
+    // reached from a unit test. The bake arithmetic itself IS unit-tested —
+    // it is shared semantics with
+    // BreadOvenBakeTest (1 wheat + 1 coal -> 1 bread, 1000 ticks,
+    // output stacks like a furnace, partial-progress reset). Autotest
+    // coverage of the full warp lane is tracked in
+    // .scratch/baker-cook-shape-migration/warp-oven-branch-autotest.md. This
+    // test pins the gap so a future QTWorldAccess seam
+    // (docs/special-rules-decoupling.md) can replace it with real branch
+    // tests.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void oven_warpBranch_requiresRegistryBoundBlock_cannotReachInUnitTest() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> new ca.bradj.questown.blocks.BreadOvenBlock(),
+                "expected registry-bound failure; if this passes, replace this test with a real BreadOvenBlock default state in advanceProcessing");
     }
 
     // -------------------------------------------------------------------------
@@ -331,6 +361,24 @@ class WarpWorldAccessTest {
         assertFalse(world.dirtyBlocks.contains(stone));
     }
 
+    /**
+     * 2026-10-20 suite runs: the warp arborist banked {@code deepslate=5} instead of oak logs.
+     * Deepslate (like basalt, hay bales, bone blocks) is a RotatedPillarBlock, which chopTree
+     * once used as a tag-free stand-in for #minecraft:logs.
+     */
+    @Test
+    void chopTree_returnsEmpty_forAPillarThatIsNotALog() {
+        BlockPos base = new BlockPos(0, 64, 0);
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, Blocks.DEEPSLATE.defaultBlockState());
+        blocks.put(base.above(), Blocks.DEEPSLATE.defaultBlockState());
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+
+        assertTrue(world.chopTree(base).isEmpty());
+        assertFalse(world.isAir(base));
+    }
+
     @Test
     void chopTree_returnsEmpty_whenTrunkPosIsAir() {
         Map<BlockPos, BlockState> blocks = new HashMap<>();
@@ -352,6 +400,37 @@ class WarpWorldAccessTest {
         assertTrue(drops.isEmpty());
     }
 
+    /**
+     * Regression: a connected log region far larger than the JVM stack budget must still be cut.
+     * The old recursive flood filled one stack frame per block; a 5000-block line (DFS depth
+     * ~5000) overflowed the stack with a StackOverflowError. The iterative work-stack form
+     * terminates and cuts the whole region. The region is supplied via the fallback state provider
+     * (standing in for the real world beyond the snapshot) so no blockStates entries are pre-seeded.
+     */
+    @Test
+    void chopTree_cutsLargeConnectedRegion_withoutStackOverflow() {
+        final int N = 5000;
+        final int Y = 64;
+        BlockState log = Blocks.OAK_LOG.defaultBlockState();
+        // A horizontal line of OAK_LOG at z=0, x = 0..N-1, all other positions AIR.
+        Function<BlockPos, BlockState> fallback = pos ->
+                (pos.getZ() == 0 && pos.getY() == Y && pos.getX() >= 0 && pos.getX() < N)
+                        ? log : Blocks.AIR.defaultBlockState();
+        WarpWorldAccess world = new WarpWorldAccess(
+                new HashMap<>(), new HashMap<>(), i -> Optional.empty(), i -> 0, fallback);
+
+        List<ItemStack> drops = world.chopTree(new BlockPos(0, Y, 0));
+
+        assertEquals(N, drops.size());
+        assertTrue(drops.stream().allMatch(s -> s.is(Items.OAK_LOG)));
+        // Every position of the line must now be AIR in the in-memory state.
+        for (int x = 0; x < N; x++) {
+            assertTrue(world.isAir(new BlockPos(x, Y, 0)));
+        }
+        // A block just outside the line must be untouched.
+        assertFalse(world.dirtyBlocks.contains(new BlockPos(N, Y, 0)));
+    }
+
     @Test
     void chopTree_doesNotLoopInfinitely_onDenseCluster() {
         // 2x2x2 cube of oak logs — all connected to each other
@@ -367,6 +446,46 @@ class WarpWorldAccessTest {
         WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
         List<ItemStack> drops = world.chopTree(new BlockPos(0, 64, 0));
         assertEquals(8, drops.size());
+    }
+
+    @Test
+    void chopTree_terminates_whenLogIsOutsideTheSnapshot() {
+        // Mirrors the live-warp state the 2026-10-10 server crash exposed:
+        // the trunk is in the snapshot map, but two MUTUALLY ADJACENT logs are NOT —
+        // the miss falls through to the fallback (the real world, which a warp
+        // never mutates). betweenClosed's iterator mutates one shared cursor and
+        // adjacent.immutable() is a no-op on it (verified on the 1.20.6 bytecode:
+        // computeNext() sets and returns the same MutableBlockPos every call), so a
+        // log's air entry is stored under a key whose coordinates later change:
+        // every later lookup misses, the fallback keeps returning the original log,
+        // and a sibling recursion frame re-cuts it — forever (the StackOverflowError
+        // in .scratch/warp-tree-chop/chop-treememory-infinite-recursion.md). The two
+        // logs must be adjacent to EACH OTHER: a lone extra log is re-resolved only
+        // while the frames that cut it are suspended, and their cursors still sit on
+        // the cut position, so the hash guard accidentally holds. The seeded-map
+        // tests above cannot see the bug either: their map keys are stable objects
+        // (an in-place overwrite), and a level-null miss falls to a null state
+        // (skipped), not to a live log.
+        BlockPos base = new BlockPos(0, 64, 0);
+        BlockPos mid = new BlockPos(0, 65, 0);
+        BlockPos side = new BlockPos(1, 64, 0);
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, Blocks.OAK_LOG.defaultBlockState());
+        // mid and side are only in the fallback — the original world never loses a block
+        WarpWorldAccess world = new WarpWorldAccess(
+                blocks,
+                new HashMap<>(),
+                i -> Optional.empty(),
+                i -> 0,
+                pos -> pos.equals(mid) || pos.equals(side)
+                        ? Blocks.OAK_LOG.defaultBlockState()
+                        : null
+        );
+        List<ItemStack> drops = world.chopTree(base);
+        assertEquals(3, drops.size());
+        assertTrue(world.isAir(base));
+        assertTrue(world.isAir(mid));
+        assertTrue(world.isAir(side));
     }
 
     // -------------------------------------------------------------------------

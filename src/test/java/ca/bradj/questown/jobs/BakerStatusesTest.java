@@ -1,4 +1,12 @@
-// TODO: Make sure these are all represented in StatusesProductionRoutineTest
+// These baker-specific scenarios are superseded by the generic
+// StatusesProductionRoutineTest (state 0=ingredients, 1=work, 2=product).
+// Verified 2026-10-10: the morning dropping/go-to-site/no-jobsite/ingredients/
+// work/preference scenarios have generic counterparts there (many
+// @Disabled as "pre-existing failure - needs investigation", which is where
+// that investigation belongs), and the evening drop/relax scenarios are
+// covered by the InEvening_* tests in the same file. The last baker scenario
+// ("collecting bread in the evening") is obsolete: the evening path now
+// always recalls (ProductionStatuses.getEveningStatus).
 //package ca.bradj.questown.jobs;
 //
 //import ca.bradj.questown.Questown;
