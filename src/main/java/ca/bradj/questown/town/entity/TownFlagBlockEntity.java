@@ -367,6 +367,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     // dot once the first villager arrives. Defaults true so a town saved before this field
     // existed shows no dot; a newly placed flag resets it to false.
     boolean villagersTabSeen = true;
+    final SeenQuests seenQuests = new SeenQuests();
     // Whether a player has ever taken a BOP out of the flag. The BOP tab's red dot shows until
     // then (playtest 2026-10-17 round 5).
     boolean bopWithdrawn = false;
@@ -2313,6 +2314,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
+        boolean questsTabAttention = hasIncomplete && seenQuests.hasUnseen(quests.incompleteQuestKeys());
         // Day-1 playtest: the villagers tab is a dead-end with zero townies (its copy
         // even reads "one more in the morning" for the first arrival). Gate it on first
         // arrival. Economics is gated on the SAME condition: the evening playtest (day 2,
@@ -2327,7 +2329,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 true,
                 showEcon,
                 getBopCount() > 0,
-                hasIncomplete,
+                questsTabAttention,
                 isBopFull(),
                 !givenBonusFood,
                 FlagTabsEmbedding.FlagInfo.villagersTabAttention(showVillagers, villagersTabSeen),
@@ -2500,7 +2502,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             declared.add(Ingredients.asWorkRequest(request));
         }
-        for (WorkRequest r : StarterRequests.toPost(declared, WorkRequest::covers)) {
+        List<WorkRequest> onBoard = workHandle.getRequestedResults();
+        for (WorkRequest r : StarterRequests.toPost(declared, onBoard, WorkRequest::covers)) {
             QT.FLAG_LOGGER.info("Starter request for {}: {}", works, r);
             workHandle.requestWork(r);
         }
@@ -2557,6 +2560,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
         bopWithdrawn = true;
+        setChanged();
+    }
+
+    /** The player opened the quests tab: its open quests are seen (no red dot until a new one). */
+    public void markQuestsSeen() {
+        seenQuests.markSeen(quests.incompleteQuestKeys());
         setChanged();
     }
 

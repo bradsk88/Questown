@@ -14,7 +14,9 @@ public interface FlagTabsEmbedding {
             boolean showQuestsTab,
             boolean showEconTab,
             boolean showBlockOfProgressTab,
-            boolean hasIncompleteQuests,
+            // The quests tab's red dot: open quests the player has not yet seen on the tab (dev
+            // playtest 2026-10-30). Not "any incomplete quest": that is the flag's "!" bubble.
+            boolean questsTabAttention,
             boolean bopFull,
             boolean bonusFoodAvailable,
             boolean villagersTabAttention,
@@ -29,8 +31,8 @@ public interface FlagTabsEmbedding {
             return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull, false, false, true);
         }
 
-        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests, boolean bopFull) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests, bopFull, false, false, true);
+        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean questsTabAttention, boolean bopFull) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, questsTabAttention, bopFull, false, false, true);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
@@ -54,7 +56,7 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(showQuestsTab);
             data.writeBoolean(showEconTab);
             data.writeBoolean(showBlockOfProgressTab);
-            data.writeBoolean(hasIncompleteQuests);
+            data.writeBoolean(questsTabAttention);
             data.writeBoolean(bopFull);
             data.writeBoolean(bonusFoodAvailable);
             data.writeBoolean(villagersTabAttention);

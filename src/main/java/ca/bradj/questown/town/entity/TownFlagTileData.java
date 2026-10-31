@@ -17,10 +17,14 @@ import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -56,6 +60,7 @@ public class TownFlagTileData {
     // town; the player can silence auto-posting from the board menu.
     private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
     private static final String NBT_VILLAGERS_TAB_SEEN = QTNBT.keyify("villagers_tab_seen");
+    private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
     private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
     public static Map<String, InitPair> initialize() {
@@ -83,6 +88,7 @@ public class TownFlagTileData {
         b.put(NBT_CHICKEN_SUNSET_CHEST_SPAWNED, initChickenSunsetChestSpawned());
         b.put(NBT_BOARD_AUTO_REQUEST, initBoardAutoRequest());
         b.put(NBT_VILLAGERS_TAB_SEEN, initVillagersTabSeen());
+        b.put(NBT_QUESTS_SEEN, initQuestsSeen());
         b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
     }
@@ -125,6 +131,21 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.villagersTabSeen = false
+        );
+    }
+
+    private static InitPair initQuestsSeen() {
+        return new InitPair(
+                (tag, flag) -> {
+                    ListTag keys = tag.getList("keys", Tag.TAG_STRING);
+                    List<String> seen = new ArrayList<>();
+                    for (int i = 0; i < keys.size(); i++) {
+                        seen.add(keys.getString(i));
+                    }
+                    flag.seenQuests.markSeen(seen);
+                    return true;
+                },
+                flag -> flag.seenQuests.markSeen(List.of())
         );
     }
 
@@ -414,6 +435,7 @@ public class TownFlagTileData {
         write(t, NBT_CHICKEN_SUNSET_CHEST_SPAWNED, flag.serializeChickenSunsetChestSpawned());
         write(t, NBT_BOARD_AUTO_REQUEST, flag.serializeBoardAutoRequest());
         write(t, NBT_VILLAGERS_TAB_SEEN, flag.serializeVillagersTabSeen());
+        write(t, NBT_QUESTS_SEEN, flag.serializeQuestsSeen());
         write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }
 

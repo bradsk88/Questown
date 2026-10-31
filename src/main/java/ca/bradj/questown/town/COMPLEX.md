@@ -879,3 +879,14 @@ items most likely first (`LootTableDropsIndex.mostLikely` → `jobs/gatherer` `L
 whatever the town has discovered; any other job keeps `ServerJobsRegistry.getResults`. Before, a loot
 job listed only the town's known finds for its table, which was empty for the r23 hunter. The
 producer search (`getJobsKnownToProduce`) still uses the known finds.
+
+## Need bubbles only for a villager having a hard time (dev playtest 2026-10-30)
+
+"Villager is walking around with 'they need mutton to work' while happily carrying raw pork to the
+kitchen. They should only show need bubbles if they're having a hard time finding work to do."
+`TownPossibleWork.showsUnmetNeed(job, status)` now lets the unmet-need pass set UNMET_ITEM /
+MISSING_ROOM only for a villager that is seeking work, or whose job is stuck: status NO_SUPPLIES
+or NO_JOBSITE, outside downtime and the diners. A villager that is working, eating or relaxing has
+the need cleared. (2026-10-29 only hid it for downtime.) The first build allowed only
+`seeking_work`, and `farmer/harvest_wheat [no_supplies]` caught it: a farmer stuck in its own job
+for supplies must still say so. `TownPossibleWorkUnmetNeedTest` (5).

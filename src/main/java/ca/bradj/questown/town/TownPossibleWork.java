@@ -15,6 +15,9 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.jobs.IStatus;
+import ca.bradj.questown.jobs.DiningStages;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.mc.Compat;
@@ -316,7 +319,7 @@ public class TownPossibleWork {
             for (VisitorMobEntity villager : townies) {
                 boolean shownItemOrRoom = villager.getNeed() == TownieNeed.UNMET_ITEM
                         || villager.getNeed() == TownieNeed.MISSING_ROOM;
-                if (!showsUnmetNeed(villager.getJobId())) {
+                if (!showsUnmetNeed(villager.getJobId(), villager.getStatusForServer())) {
                     if (shownItemOrRoom) {
                         villager.setNeed(TownieNeed.NONE);
                     }
@@ -806,11 +809,21 @@ public class TownPossibleWork {
     }
 
     /**
-     * A relaxing villager (downtime) shows no unmet-item need (dev playtest 2026-10-29: "Relaxing
-     * villager shouldn't show a need bubble"); the next pass after it seeks work again re-applies it.
+     * Only a villager having a hard time shows an unmet-item or missing-room need: one looking for
+     * work, or one whose job is stuck for supplies or a job site. One that is working, eating or
+     * relaxing does not. Dev playtest 2026-10-30: a cook carried raw pork to the kitchen under "They
+     * need mutton to work" ("should only show need bubbles if they're having a hard time finding
+     * work to do"). 2026-10-29 hid it for relaxing villagers only. The next pass after the villager
+     * struggles again re-applies the need.
      */
-    static boolean showsUnmetNeed(JobID currentJob) {
-        return !DowntimeWork.matches(currentJob);
+    static boolean showsUnmetNeed(JobID currentJob, @Nullable IStatus<?> status) {
+        if (WorkSeekerJob.isSeekingWork(currentJob)) {
+            return true;
+        }
+        if (DowntimeWork.matches(currentJob) || DiningStages.isDiner(currentJob)) {
+            return false;
+        }
+        return ProductionStatus.NO_SUPPLIES.equals(status) || ProductionStatus.NO_JOBSITE.equals(status);
     }
 
     public void invalidate() {

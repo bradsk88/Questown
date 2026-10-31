@@ -1508,7 +1508,7 @@ Screen not yet seen in game.
 
 `WorkScreen.renderStockAndLimit` draws "6/8" (storage holds / pauses at; greyed when paused) and -
 and + between the item icon and the remove "x"; clicks ride the `removes` position map and call
-`TownWorkContainer.sendLimit` (limit - 1 / + 1). The paused tooltip names the request's own limit.
+`TownWorkContainer.sendLimitStep` (-1 / +1; a step since 2026-10-30, town/entity/COMPLEX.md "Request limit steps"). The paused tooltip names the request's own limit.
 Server side: `town/entity/COMPLEX.md` "Board requests: per-request limit". Not yet seen in game
 (gui-lint pending).
 
@@ -1643,3 +1643,18 @@ a click on either card opens the villagers tab while it exists. The SKILL_UNLOCK
 locked-level line used to sit before the flavor check for every quest type; only SKILL_UNLOCK
 cards carry `lockedUntilLevel` (`UIQuest`), so it now lives in `skillUnlockTooltip`.
 Compile-verified; not yet seen in game.
+
+## Arrival card after the villagers, on page 1 (dev playtest 2026-10-30)
+
+'".. and one more in the morning" card should be in third spot, so it renders after 2 villagers.'
+`ArrivalCard.order(villagers, card, arriving, cardsPerPage)` puts it right after the villagers but
+no later than page 1's last slot (`AbstractPagedCardScreen.cardsPerPage()`). That keeps
+2026-10-29's "always on page 1" (66d3da84 had put it first). `ArrivalCardTest` (3).
+
+## Quests: the view button is always in the footer (dev playtest 2026-10-30)
+
+'Quest UI "You will be rewarded in the morning" screen's button should be on bottom of menu.
+Button placement should be consistent.' On the all-done view the "View completed" button was
+centred under the subtitle (`emptyStateButtonY`). It now uses `footerButtonY` on every view, and
+the subtitle alone is centred in the panel. The wider ask (common layout code for every screen's
+buttons) is not done: `TownBlockofProgressScreen` and the paged screens still place their own.

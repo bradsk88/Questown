@@ -266,7 +266,7 @@ WAITING_FOR_TIMED_STATE`. The status routine passes through DROPPING_LOOT for on
 the leaving state and the trip's timer (`JobStatuses.productionRoutine` picks
 `waitingForTimedState` only when `usualRoutine` returns null/idle/no-supplies; not traced
 further). `TripVisibility` sits between `Job.shouldDisappear` and the synced `visible` flag:
-hiding is immediate, showing waits for two allowed ticks in a row, so the one-tick status no
+hiding was immediate (20 ticks since 2026-10-30: "Leaving villagers hide a second later"), showing waits for two allowed ticks in a row, so the one-tick status no
 longer shows the villager and a return is one tick later. After: each hunter stays hidden for
 its whole trip and reappears at DROPPING_LOOT on return. `TripVisibilityTest`.
 
@@ -379,3 +379,12 @@ into the %s. Is its door blocked?". A target outside every room keeps the generi
 `RoomDoorsTest` (inside, one above the floor, outside) and the
 `cook/mutton [blocked_kitchen_door]` autotest (persistent leaves outside the doorway kitchen's door;
 red with the lookup off: "unreachable room named: null").
+
+## Leaving villagers hide a second later (dev playtest 2026-10-30)
+
+"Villagers should disappear about a second later than they currently do when they leave town.
+Otherwise they disappear before actually reaching the workspot." `TripVisibility` now hides only
+after the job has asked to disappear for `HIDE_AFTER_TICKS` (20) ticks in a row. Before, it hid on
+the first tick. Showing still waits `SHOW_AFTER_TICKS` (2). The hunter's one-tick DROPPING_LOOT
+gap between hidden states resets the hide count, so the villager stays drawn and hides once, with
+no flicker. `TripVisibilityTest` (6).

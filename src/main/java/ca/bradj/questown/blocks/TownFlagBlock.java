@@ -401,7 +401,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     entity.isBopFull(),
                     info.villagersTabAttention(),
                     info.bopTabAttention() && shouldPreSelectBopTab(entity, (ServerPlayer) player),
-                    info.hasIncompleteQuests(),
+                    info.questsTabAttention(),
                     info.showEconTab() && info.bonusFoodAvailable()
             );
             if (tab == null) {

@@ -58,6 +58,9 @@ public class TownFlagMenus {
             // Clear the villagers-tab red dot before building the info the screen renders.
             flagEntity.markVillagersTabSeen();
         }
+        if (OpenFlagMenuMessage.QUESTS.equals(type)) {
+            flagEntity.markQuestsSeen();
+        }
         FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")

@@ -27,6 +27,16 @@ public final class RequestLimits<R> {
         return clamped;
     }
 
+    /**
+     * Moves the limit by {@code delta} from what is stored now, clamped; returns what was stored.
+     * The job board's - / + send a step, not a value: each click computed "limit +/- 1" from the
+     * screen's last synced limit, so clicks before the next sync all sent the same number (dev
+     * playtest 2026-10-30: "does not nicely handle rapid clicks").
+     */
+    public int adjust(R request, int delta) {
+        return set(request, get(request) + delta);
+    }
+
     public void forget(R request) {
         limits.remove(request);
     }

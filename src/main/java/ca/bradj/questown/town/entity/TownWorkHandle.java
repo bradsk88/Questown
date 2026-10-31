@@ -231,6 +231,12 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         QT.FLAG_LOGGER.info("Request limit set: {} pauses at {}", request, stored);
     }
 
+    @Override
+    public void adjustRequestLimit(WorkRequest request, int delta) {
+        int stored = limits.adjust(request, delta);
+        QT.FLAG_LOGGER.info("Request limit moved by {}: {} pauses at {}", delta, request, stored);
+    }
+
     void setStocked(ImmutableSet<WorkRequest> nowStocked) {
         if (nowStocked.equals(stocked)) {
             return;

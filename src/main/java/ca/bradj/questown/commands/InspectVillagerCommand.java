@@ -17,7 +17,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 // looking at the villager, not by opening the flag's quest tab. Surfaces each
 // villager's need (the world-space bubble: what the townie cannot do and, for an
 // UNMET_ITEM need, the item it lacks), the quests that belong to that villager,
-// and the red-dot cue (hasIncompleteQuests) that draws a human player's eye to
+// and the red-dot cue (questsTabAttention) that draws a human player's eye to
 // the quests tab. No permission gate, so it runs from the console (FIFO).
 public class InspectVillagerCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
@@ -36,7 +36,7 @@ public class InspectVillagerCommand {
             String flagId = flag.getBlockPos() != null
                     ? flag.getBlockPos().toShortString() : flag.getUUID().toString();
             QT.FLAG_LOGGER.info("[villagerinspect] flag {} (pos {}) red-dot-quests-tab={}",
-                    flag.getUUID(), flagId, flag.getInfo().hasIncompleteQuests());
+                    flag.getUUID(), flagId, flag.getInfo().questsTabAttention());
             for (LivingEntity e : flag.getVillagerHandle().entities()) {
                 if (!(e instanceof VisitorMobEntity villager)) {
                     continue;

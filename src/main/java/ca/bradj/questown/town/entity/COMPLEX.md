@@ -1851,3 +1851,43 @@ two restarts with the cook loading first both kept "Villager 2". Unit gap noted 
 
 `PendingJobSwitches.peek` (2026-10-30) reads a "switch after this trip" without taking it, for the
 villager card (`gui/COMPLEX.md` "Switch after this trip says so"); still not saved across a reload.
+
+## Starter requests skip what the board already covers (dev playtest 2026-10-30)
+
+"When jobs auto-post new requests, they should check if that request is already being covered by a
+tag." A new cook auto-posted `cooked_porkchop` beside an existing `#questown:villager_food`. Once
+the tag requests were stocked, the porkchop request was the only open one, and the idle cook
+"needed raw pork". `postStarterRequests` passes the board's current requests to
+`StarterRequests.toPost(declared, onBoard, covers)`, which drops a declared request that a request
+already on the board covers (`WorkRequest::covers`), as it already did for one covered by another
+declared request. `StarterRequestsTest`.
+
+## Request limit steps (dev playtest 2026-10-30)
+
+"Quantity adjustment on job board does not nicely handle rapid clicks." `SetRequestLimitMessage`
+carries a step (-1 / +1), and the server applies it to the stored limit
+(`TownWorkHandle.adjustRequestLimit` -> `RequestLimits.adjust`, clamped 1..64). Before, the
+message carried "synced limit +/- 1", so clicks made before the board re-synced all sent the same
+number. The board still re-opens after each step to show the new value. `RequestLimitsTest`.
+
+## Quest tab red dot clears once seen; flag opens on villagers (dev playtest 2026-10-30)
+
+"The quest tab should stop showing red once the player has seen the latest quests." / "the flag
+would default to the villagers tab unless there's something worthy of attention on another tab".
+`FlagInfo.questsTabAttention` (renamed from `hasIncompleteQuests`) is now "an open quest the
+player hasn't seen". `SeenQuests` holds the `batch UUID | wanted id` keys
+(`TownQuests.incompleteQuestKeys`) of the open quests at the last quests-tab open
+(`TownFlagMenus` -> `markQuestsSeen`), persisted as `questown_quests_seen`. A new quest re-dots
+the tab. With the dot gone, `FlagTabs.initialFlagTab` falls through to null, and the flag opens
+the villagers overview. The flag's in-world "!" bubble still reads any incomplete quest
+(`TownFlagBlockEntity.hasIncompleteQuests`). Seen: after one quests-tab visit the book tab lost
+its dot and the next right-click opened the villagers tab. `SeenQuestsTest` (3).
+
+## Mineshaft pickaxe sounds while mining (dev playtest 2026-10-30)
+
+"When standing near the mineshaft ... it should emit pickaxe hit sounds every now and then while
+a villager is mining." A miner away on its trip has no work spot, but its work-state record at
+the mineshaft runs the trip's timer. Each flag tick (`TownFlagTicker.updateWorkStatuses`),
+`MiningSounds.tick` finds mineshaft positions with a running timer in any villager's store
+(`minedShafts`) and plays `SoundEvents.STONE_HIT` there with one chance in 4. `MiningSoundsTest`
+(2). Not heard in game.

@@ -47,4 +47,12 @@ class StarterRequestsTest {
 
         Assertions.assertEquals(List.of("cooked_beef", "bread"), StarterRequests.toPost(declared, COVERS));
     }
+
+    /** Dev playtest 2026-10-30: cooked_porkchop was auto-posted under an existing #questown:villager_food. */
+    @Test
+    void aRequestTheBoardAlreadyCovers_isNotPosted() {
+        List<String> declared = List.of("#food", "cooked_mutton");
+        Assertions.assertEquals(List.of(), StarterRequests.toPost(List.of("cooked_mutton"), List.of("#food"), COVERS));
+        Assertions.assertEquals(List.of("#food"), StarterRequests.toPost(declared, List.of("#raw"), COVERS));
+    }
 }

@@ -36,7 +36,7 @@ public class InspectQuestsCommand {
             String flagId = flag.getBlockPos() != null
                     ? flag.getBlockPos().toShortString() : flag.getUUID().toString();
             QT.FLAG_LOGGER.info("[questinspect] flag {} (pos {}) red-dot-quests-tab={}",
-                    flag.getUUID(), flagId, flag.getInfo().hasIncompleteQuests());
+                    flag.getUUID(), flagId, flag.getInfo().questsTabAttention());
             for (Quest<ResourceLocation, MCRoom> q : flag.getAllQuests()) {
                 if (!(q instanceof MCQuest mcq)) {
                     continue;

@@ -45,7 +45,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
     private static final int TEXT_COLOR = 0xFF404040;
     private static final int TEXT_MARGIN = 12;
-    private static final int BLOCK_GAP = 6;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_H_PADDING = 16;
     private static final int FOOTER_GAP = 2;
@@ -114,8 +113,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         // completed quests only, so it needs a way back).
         Component link = Compat.translatable(showingCompleted ? "menu.quests.view_open" : "menu.quests.view_completed");
         int btnW = this.font.width(link) + BUTTON_H_PADDING;
-        // All done (open view): centred in the empty panel. Otherwise: in the footer, under the cards.
-        int btnY = allComplete && !showingCompleted ? emptyStateButtonY() : footerButtonY();
+        // Always in the footer, so the button sits in one place on every view (dev playtest
+        // 2026-10-30: on the all-done view it was centred under the text; "Button placement
+        // should be consistent").
+        int btnY = footerButtonY();
         this.viewCompletedButton = Compat.button(
                 link,
                 btn -> {
@@ -138,18 +139,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 : Compat.translatable("menu.quests.all_done_caught_up");
     }
 
-    // Shared layout: the subtitle block + gap + button, vertically centred in the panel. init()
-    // places the button here; render() draws the subtitle above it using the same math.
+    // The all-done subtitle, vertically centred in the panel (the button is in the footer).
     private int emptyStateTop() {
         int bgY = (this.height - backgroundHeight) / 2;
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
-        int stackHeight = wrappedHeight(subtitleComponent(), textWidth) + BLOCK_GAP + BUTTON_HEIGHT;
-        return bgY + (backgroundHeight - stackHeight) / 2;
-    }
-
-    private int emptyStateButtonY() {
-        int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
-        return emptyStateTop() + wrappedHeight(subtitleComponent(), textWidth) + BLOCK_GAP;
+        return bgY + (backgroundHeight - wrappedHeight(subtitleComponent(), textWidth)) / 2;
     }
 
     @Override
@@ -198,8 +192,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private void renderAllDoneState(RenderContext ctx) {
-        // Draw the wrapped subtitle above the "View completed" button (which is a real widget added
-        // in init() at emptyStateButtonY(), so it renders and hit-tests itself).
+        // Draw the wrapped subtitle (the "View completed" button is a real widget added in init()
+        // at footerButtonY(), so it renders and hit-tests itself).
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
         drawCenteredWrapped(ctx, subtitleComponent(), this.width / 2, emptyStateTop(), textWidth, TEXT_COLOR);
     }

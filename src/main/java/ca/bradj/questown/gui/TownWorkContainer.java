@@ -111,9 +111,9 @@ public class TownWorkContainer extends AbstractContainerMenu {
         });
     }
 
-    public void sendLimit(UIWork jobPosting, int limit) {
+    public void sendLimitStep(UIWork jobPosting, int delta) {
         QuestownNetwork.sendToServer(
-                new SetRequestLimitMessage(jobPosting.getResultWanted(), limit, flag.getX(), flag.getY(), flag.getZ())
+                new SetRequestLimitMessage(jobPosting.getResultWanted(), delta, flag.getX(), flag.getY(), flag.getZ())
         );
     }
 

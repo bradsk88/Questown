@@ -80,7 +80,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     @Override
     protected ImmutableList<UUID> cardsData() {
         return ArrivalCard.order(ImmutableList.copyOf(syncedData.villagerStatuses.keySet()),
-                MORNING_ARRIVAL_SENTINEL, syncedData.villagerArrivingInMorning());
+                MORNING_ARRIVAL_SENTINEL, syncedData.villagerArrivingInMorning(), cardsPerPage());
     }
 
     @Override

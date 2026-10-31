@@ -104,6 +104,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return questBatches.getAll().stream().anyMatch(q -> !q.isComplete());
     }
 
+    /** {@code batch UUID | wanted id} of each incomplete quest, for the quests tab's seen check. */
+    public ImmutableSet<String> incompleteQuestKeys() {
+        return questBatches.getAll().stream()
+                .filter(q -> !q.isComplete())
+                .map(q -> q.getBatchUUID() + "|" + q.getWantedId())
+                .collect(ImmutableSet.toImmutableSet());
+    }
+
     private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;

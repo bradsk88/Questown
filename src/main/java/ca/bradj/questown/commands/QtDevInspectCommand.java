@@ -286,7 +286,7 @@ public class QtDevInspectCommand {
                 info.showVillagersTab() ? "shown" : "hidden", "");
         QT.FLAG_LOGGER.info("[_qtdev inspect]   quests {}{}",
                 info.showQuestsTab() ? "shown" : "hidden",
-                info.hasIncompleteQuests() ? " (red-dot)" : "");
+                info.questsTabAttention() ? " (red-dot)" : "");
         QT.FLAG_LOGGER.info("[_qtdev inspect]   economics {}",
                 info.showEconTab() ? "shown" : "hidden");
         QT.FLAG_LOGGER.info("[_qtdev inspect]   block of progress {}{}",

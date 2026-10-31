@@ -10,10 +10,13 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 
-/** Sets a board request's pause limit from the job board (dev playtest 2026-10-29). */
+/**
+ * Moves a board request's pause limit by a step from the job board's - / + (dev playtest
+ * 2026-10-29). A step, not a value, so rapid clicks all count (2026-10-30).
+ */
 public record SetRequestLimitMessage(
         WorkRequest requested,
-        int limit,
+        int delta,
         int flagX, int flagY, int flagZ
 ) {
 
@@ -22,7 +25,7 @@ public record SetRequestLimitMessage(
             RegistryFriendlyByteBuf buffer
     ) {
         msg.requested.toNetwork(buffer);
-        buffer.writeInt(msg.limit);
+        buffer.writeInt(msg.delta);
         buffer.writeInt(msg.flagX);
         buffer.writeInt(msg.flagY);
         buffer.writeInt(msg.flagZ);
@@ -30,8 +33,8 @@ public record SetRequestLimitMessage(
 
     public static SetRequestLimitMessage decode(RegistryFriendlyByteBuf buffer) {
         WorkRequest requested = WorkRequest.fromNetwork(buffer);
-        int limit = buffer.readInt();
-        return new SetRequestLimitMessage(requested, limit, buffer.readInt(), buffer.readInt(), buffer.readInt());
+        int delta = buffer.readInt();
+        return new SetRequestLimitMessage(requested, delta, buffer.readInt(), buffer.readInt(), buffer.readInt());
     }
 
     public void handle(
@@ -46,7 +49,7 @@ public record SetRequestLimitMessage(
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Limit not set.", flagX, flagY, flagZ);
                 return;
             }
-            flag.get().getWorkHandle().setRequestLimit(requested, limit);
+            flag.get().getWorkHandle().adjustRequestLimit(requested, delta);
             flag.get().openJobsMenu(sender, false);
         });
     }

@@ -24,6 +24,20 @@ class RequestLimitsTest {
         Assertions.assertEquals(RequestLimits.MAX, l.set("food", 1000));
     }
 
+    /** Dev playtest 2026-10-30: rapid + clicks each sent "synced limit + 1", so they collapsed to one. */
+    @Test
+    void steps_accumulate_andClamp() {
+        RequestLimits<String> limits = new RequestLimits<>();
+        limits.adjust("bread", 1);
+        limits.adjust("bread", 1);
+        limits.adjust("bread", 1);
+        Assertions.assertEquals(BoardRequests.PAUSE_AT + 3, limits.get("bread"));
+        for (int i = 0; i < 100; i++) {
+            limits.adjust("bread", -1);
+        }
+        Assertions.assertEquals(RequestLimits.MIN, limits.get("bread"));
+    }
+
     @Test
     void stocked_pausesAtEachRequestsOwnLimit() {
         Map<String, Integer> stock = Map.of("food", 10, "coal", 10);

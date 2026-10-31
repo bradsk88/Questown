@@ -284,11 +284,11 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
         ctx.lightText("-", minusX + borderPadding - 1, iconY + borderPadding - 1);
         highlightAndTooltip(ctx, mouseX, mouseY, minusX, iconY, Compat.translatable("job_board.limit_down"));
-        this.removes.put(new Position(minusX, iconY), () -> menu.sendLimit(jobPosting, jobPosting.getLimit() - 1));
+        this.removes.put(new Position(minusX, iconY), () -> menu.sendLimitStep(jobPosting, -1));
 
         ctx.lightText("+", plusX + borderPadding - 1, iconY + borderPadding - 1);
         highlightAndTooltip(ctx, mouseX, mouseY, plusX, iconY, Compat.translatable("job_board.limit_up"));
-        this.removes.put(new Position(plusX, iconY), () -> menu.sendLimit(jobPosting, jobPosting.getLimit() + 1));
+        this.removes.put(new Position(plusX, iconY), () -> menu.sendLimitStep(jobPosting, 1));
     }
 
     private ImmutableList<Slot> renderJobCardIcons(

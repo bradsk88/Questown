@@ -242,3 +242,9 @@ unlocked, and vanilla unlocks each through a recipe advancement (`advancements/r
 unlock on holding a Block of Progress, `blacksmiths_table` (iron) on an iron ingot; the JSON is
 vanilla 1.20.6's shape (copied from `recipes/decorations/loom.json`). `RecipeUnlockAdvancementsTest`
 pins the files and their recipes; the in-game load is checked in a server log, not a unit test.
+
+## Mineshaft walls are stone (dev playtest 2026-10-30)
+
+"we should use the 'stone' texture for the mineshafts walls rather than the cobblestone one, since
+most mines have stone walls". `models/block/mineshaft.json` texture `#2` and the particle are now
+`minecraft:block/stone`.

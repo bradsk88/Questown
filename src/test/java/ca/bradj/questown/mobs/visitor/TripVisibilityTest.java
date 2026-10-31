@@ -7,6 +7,13 @@ import org.junit.jupiter.api.Test;
 
 class TripVisibilityTest {
 
+    private static boolean hideFully(TripVisibility tv, boolean vis) {
+        for (int i = 0; i < TripVisibility.HIDE_AFTER_TICKS; i++) {
+            vis = tv.next(vis, false);
+        }
+        return vis;
+    }
+
     /**
      * The status sequence a hunter logged leaving town (autotest hunter/sword, 2026-10-29):
      * state:1 (hidden), DROPPING_LOOT for one tick (allowed), WAITING_FOR_TIMED_STATE (hidden).
@@ -14,7 +21,7 @@ class TripVisibilityTest {
     @Test
     void oneAllowedTickBetweenHiddenStates_staysHidden() {
         TripVisibility tv = new TripVisibility();
-        boolean vis = tv.next(true, false);
+        boolean vis = hideFully(tv, true);
         Assertions.assertFalse(vis);
         vis = tv.next(vis, true);
         Assertions.assertFalse(vis, "the one-tick DROPPING_LOOT must not show the villager");
@@ -22,10 +29,22 @@ class TripVisibilityTest {
         Assertions.assertFalse(vis);
     }
 
+    /** The same one-tick gap while the leaving villager is still drawn: no flicker, it hides once. */
+    @Test
+    void oneAllowedTickWhileLeaving_neverFlickers() {
+        TripVisibility tv = new TripVisibility();
+        boolean vis = tv.next(true, false);
+        Assertions.assertTrue(vis);
+        vis = tv.next(vis, true);
+        Assertions.assertTrue(vis);
+        vis = hideFully(tv, vis);
+        Assertions.assertFalse(vis);
+    }
+
     @Test
     void returningVillager_showsOnceAllowedTwoTicksRunning() {
         TripVisibility tv = new TripVisibility();
-        boolean vis = tv.next(true, false);
+        boolean vis = hideFully(tv, true);
         vis = tv.next(vis, true);
         Assertions.assertFalse(vis);
         vis = tv.next(vis, true);
@@ -34,11 +53,16 @@ class TripVisibilityTest {
         Assertions.assertTrue(vis);
     }
 
+    /** Dev playtest 2026-10-30: villagers vanished before reaching the work spot; hide ~1 s later. */
     @Test
-    void hidingIsImmediate() {
+    void hidingWaitsASecond() {
         TripVisibility tv = new TripVisibility();
-        Assertions.assertTrue(tv.next(true, true));
-        Assertions.assertFalse(tv.next(true, false));
+        boolean vis = true;
+        for (int i = 1; i < TripVisibility.HIDE_AFTER_TICKS; i++) {
+            vis = tv.next(vis, false);
+            Assertions.assertTrue(vis, "hidden after " + i + " ticks");
+        }
+        Assertions.assertFalse(tv.next(vis, false));
     }
 
     @Test

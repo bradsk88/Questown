@@ -60,7 +60,7 @@ public class FlagTabs extends Tabs implements SubUI {
                     setScreen(questsScreenFn),
                     "tooltips.quests",
                     isSelected("tooltips.quests", activeTabKey),
-                    fi.hasIncompleteQuests()
+                    fi.questsTabAttention()
             ));
         }
         if (fi.showEconTab()) {
@@ -154,7 +154,7 @@ public class FlagTabs extends Tabs implements SubUI {
     public static ImmutableList<TabDecision> computeTabDecisions(FlagTabsEmbedding.FlagInfo fi) {
         ImmutableList.Builder<TabDecision> b = ImmutableList.builder();
         b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), fi.villagersTabAttention()));
-        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
+        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.questsTabAttention()));
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), fi.bonusFoodAvailable()));
         b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), fi.bopTabAttention()));
         b.add(new TabDecision("tooltips.crafting", true, false));
