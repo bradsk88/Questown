@@ -43,6 +43,12 @@ public abstract class DisplaySlots implements Container {
         return preferFree(here);
     }
 
+    /** How many of the display's slots at pos hold something (0 when there is no display). */
+    public static int filledAt(Level level, BlockPos pos) {
+        DisplaySlots d = at(level, pos);
+        return d == null ? 0 : (int) d.items().stream().filter(i -> !i.isEmpty()).count();
+    }
+
     /** The first display with an empty slot, else the first one, else null. */
     static @Nullable DisplaySlots preferFree(List<DisplaySlots> here) {
         for (DisplaySlots d : here) {

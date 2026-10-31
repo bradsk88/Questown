@@ -890,3 +890,31 @@ or NO_JOBSITE, outside downtime and the diners. A villager that is working, eati
 the need cleared. (2026-10-29 only hid it for downtime.) The first build allowed only
 `seeking_work`, and `farmer/harvest_wheat [no_supplies]` caught it: a farmer stuck in its own job
 for supplies must still say so. `TownPossibleWorkUnmetNeedTest` (5).
+
+## "All my requests are done" (dev ruling 2026-10-30)
+
+The dev's idle cook sat by the board saying "They need raw pork to work" with mutton in the chest:
+the board's food requests were stocked (paused), and cook:porkchop, the one job still answering an
+open request, had no pork. Ruling: an idle villager whose fillable requests are all stocked shows
+no need and says "All my requests are done". `RequestsDone.allDone` (pure, `RequestsDoneTest`)
+decides it over the villager's unlocked jobs: done when no *workable* job answers an open request
+and at least one workable job answers a stocked one. A job blocked on a room, supply or tool is
+skipped, so the porkchop request doesn't keep the cook from being done; a villager whose jobs are
+all blocked still shows its need. Support jobs (`ServerJobsRegistry.makesNothing`: fuel, extract,
+stock, display) are skipped too: the first autotest run showed cook:fuel and cook:extract
+"answering" the open porkchop request with gate Ok, so the cook was never done.
+
+- `RequestCheck.answersOpen` (`ServerJobsRegistry.answersUnpaused`: a job that makes nothing
+  answers paused requests too, so `satisfied != null` can't mean "open") and `answersStocked`
+  (`answersPaused`, checked only when no open request is answered) and the per-job `GateReason`s (now computed for every scored job, cached
+  in `refreshUnmetNeeds`) feed it.
+- `refreshUnmetNeeds` runs it for an idle villager (seeking work or downtime), clears an
+  UNMET_ITEM / MISSING_ROOM need and records the villager in `requestsDone`; any other pass for
+  that villager removes it. Server-side only: `ServerJobsRegistry.getStatusText(job, status,
+  townie)` swaps the need line for `message.questown.townie_status.requests_done` when
+  `hasDoneAllRequests(uuid)`, and no entity data was added.
+- The town-level need registry (economics item store, top-need quest beat) is unchanged: the pork
+  need is still tracked for the town, just not shown on the villager.
+- Autotest `cook/fuel [requests_done]`: cooked mutton 10 at limit 4, an open cooked-porkchop
+  request, raw mutton + coal; asserts need NONE and the done line on the first done tick (4000
+  ticks: the cook fuels the furnace first). 3/3 green.

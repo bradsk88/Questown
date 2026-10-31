@@ -180,6 +180,7 @@ public class TestBlueprintRegistry {
         // all starting jobs unlocked); realtime, so job selection is exercised.
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "requests_done", cookRequestsDoneBlueprint()));
         jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
         jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
@@ -223,7 +224,7 @@ public class TestBlueprintRegistry {
         jobs.add(new TestEntry("cook_extract_food_category", new JobID("cook", "fuel"),
                 cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(TagsInit.Items.VILLAGER_FOOD)), "loot"));
         // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
-        // LOOT quest at count 4, drives one hunter cycle (>=1 natural extraction), and
+        // LOOT quest at count 40 (LOOT_ACCUMULATE_COUNT), drives one hunter cycle (>=1 natural extraction), and
         // asserts the quest did NOT complete on the first extraction (the old
         // close-on-first-extraction semantics), then tops the counter up through the live
         // quest handle and asserts it completes exactly at the count.
@@ -2914,6 +2915,61 @@ public class TestBlueprintRegistry {
                 });
     }
 
+    /**
+     * Dev playtest 2026-10-30: an idle cook said "They need raw pork to work" with mutton in the
+     * chest, and the dev ruled it should say "All my requests are done". Storage holds cooked
+     * mutton past its request limit (paused) and the board also asks for cooked porkchop, which
+     * no one can cook (no pork). The cook has raw mutton and coal, so every request it could fill
+     * is stocked: once it idles, it must show no need and the requests-done status line.
+     */
+    private static TestBlueprint cookRequestsDoneBlueprint() {
+        TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
+        String[] seen = new String[1];
+        TestBlueprint base = cookRealtimeBlueprint(List.of(
+                new ItemStack(Items.MUTTON, 16),
+                new ItemStack(Items.COAL, 16),
+                new ItemStack(Items.COOKED_MUTTON, 10)
+        ), realtime);
+        TestBlueprint.PostSpawnAction unlockCookJobs = base.postSpawnAction();
+        return base.withPostSpawnAction((level, flagPos, town, output) -> {
+            unlockCookJobs.run(level, flagPos, town, output);
+            ca.bradj.questown.jobs.requests.WorkRequest mutton =
+                    ca.bradj.questown.jobs.requests.WorkRequest.of(Items.COOKED_MUTTON);
+            town.getWorkHandle().requestWork(mutton);
+            town.getWorkHandle().setRequestLimit(mutton, 4);
+            town.getWorkHandle().requestWork(ca.bradj.questown.jobs.requests.WorkRequest.of(Items.COOKED_PORKCHOP));
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+                @net.neoforged.bus.api.SubscribeEvent
+                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (seen[0] != null || !(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        if (!town.getPossibleWork().hasDoneAllRequests(v.getUUID())) {
+                            continue;
+                        }
+                        String text = ServerJobsRegistry.getStatusText(v.getJobId(), v.getStatusForServer(), v).toString();
+                        seen[0] = "job=" + v.getJobId() + " need=" + v.getNeed()
+                                + " doneLine=" + text.contains("townie_status.requests_done");
+                        output.msg("[requests_done] " + seen[0]);
+                        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    output.msg("[requests_done] end: job=" + v.getJobId() + " status=" + v.getStatusForServer()
+                            + " need=" + v.getNeed() + " unmet=" + v.getUnmetItem()
+                            + " done=" + town.getPossibleWork().hasDoneAllRequests(v.getUUID()));
+                }
+            }
+            output.msg("[requests_done] first done tick: " + seen[0]);
+            return seen[0] != null && seen[0].contains("need=NONE") && seen[0].contains("doneLine=true");
+        }).withRealtimeTicks(4000);
+    }
+
     private static TestBlueprint bakerBlueprint() {
         return indoorRoomBlueprint(
                 BlocksInit.BREAD_OVEN_BLOCK.get().defaultBlockState(),
@@ -3583,6 +3639,8 @@ public class TestBlueprintRegistry {
                 });
     }
 
+    private static final int LOOT_ACCUMULATE_COUNT = 40;
+
     private static TestBlueprint lootOnExtractAccumulateBlueprint() {
         TestBlueprint base = hunterBlueprint();
         return new TestBlueprint(
@@ -3594,12 +3652,14 @@ public class TestBlueprintRegistry {
         )
                 .withSetupHook((level, flagPos, town, output) -> {
                     ResourceLocation tag = rawFoodTag();
-                    town.getQuestHandle().addLootQuest(tag, 4);
+                    // 40, not 4: since hunters bring twice the meat (2026-10-30) one natural
+                    // cycle delivers ~25 raw food and completed a count-4 quest before the check.
+                    town.getQuestHandle().addLootQuest(tag, LOOT_ACCUMULATE_COUNT);
                     boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
                             .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
                                     && tag.equals(e.getKey().getWantedId())
                                     && !e.getKey().isComplete());
-                    output.msg("loot_on_extract_accumulate: raw-food LOOT quest count 4 posted=" + posted);
+                    output.msg("loot_on_extract_accumulate: raw-food LOOT quest count " + LOOT_ACCUMULATE_COUNT + " posted=" + posted);
                     return posted;
                 })
                 .withCustomAssertion((level, flagPos, town, output) -> {

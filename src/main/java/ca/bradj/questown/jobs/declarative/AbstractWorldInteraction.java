@@ -473,7 +473,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra,
             Preferred<WorkPosition<POS>> workSpots
     ) {
-        ArrayList<WorkPosition<POS>> shuffled = shuffle(extra, workSpots.alternates());
+        ArrayList<WorkPosition<POS>> shuffled = orderSpots(extra, workSpots.alternates());
         if (workSpots.preferredValue() != null) {
             shuffled.removeIf(v -> v.equals(workSpots.preferredValue()));
             shuffled.add(0, workSpots.preferredValue());
@@ -501,6 +501,23 @@ public abstract class AbstractWorldInteraction<
      */
     protected @Nullable ServerLevel getServerLevel(EXTRA extra) {
         return null;
+    }
+
+    /**
+     * The order a villager tries its work spots in. Random by default; a lane may rank them (the
+     * realtime lane puts the fullest display first for a display job).
+     */
+    protected ArrayList<WorkPosition<POS>> orderSpots(
+            EXTRA extra,
+            Collection<WorkPosition<POS>> workSpots
+    ) {
+        return shuffle(extra, workSpots);
+    }
+
+    /** Whether this job dresses displays (the {@code dress_display} rule on any stage). */
+    protected boolean dressesDisplays() {
+        return specialRules.values().stream()
+                .anyMatch(rules -> rules.stream().anyMatch(r -> r.endsWith(SpecialRules.DRESS_DISPLAY)));
     }
 
     protected ArrayList<WorkPosition<POS>> shuffle(

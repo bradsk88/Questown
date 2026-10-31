@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
@@ -34,7 +35,10 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -171,6 +175,27 @@ public class RealtimeWorldInteraction extends
             MCExtra extra
     ) {
         return extra.work();
+    }
+
+    /**
+     * A display job tries the fullest display first (dev playtest 2026-10-30: "prefer adding
+     * pieces to the most well-equipped stand"). findJobSite only chose the walk target; the spot
+     * worked on arrival came from this shuffled list, so the piece went to either stand.
+     */
+    @Override
+    protected ArrayList<WorkPosition<BlockPos>> orderSpots(
+            MCExtra extra,
+            Collection<WorkPosition<BlockPos>> workSpots
+    ) {
+        ArrayList<WorkPosition<BlockPos>> spots = super.orderSpots(extra, workSpots);
+        ServerLevel level = getServerLevel(extra);
+        if (level == null || spots.size() < 2 || !dressesDisplays()) {
+            return spots;
+        }
+        Map<BlockPos, Integer> filled = new HashMap<>();
+        spots.sort(Comparator.comparingInt((WorkPosition<BlockPos> s) ->
+                filled.computeIfAbsent(s.jobBlock(), p -> DisplaySlots.filledAt(level, p))).reversed());
+        return spots;
     }
 
     @Override

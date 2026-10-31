@@ -1238,6 +1238,15 @@ was random); with it, green. The display fixture now clears earlier scenarios' d
 entities first: in a shared server they made `fullest_stand` (a second dressed stand) and
 `corner_frames` (old drops) fail. `crafter/display` 5/5.
 
+**That steered only the walk (fixed later that night).** The night's full suite failed
+`fullest_stand`, and 4 repeats failed 2: `findJobSite` picks the walk target, but on arrival
+`AbstractWorldInteraction.tryWorking(extra, Preferred)` tries the work spots in shuffled order
+(the preferred value is the last spot worked, null on a first visit), and two stands two blocks
+apart are both in reach. The 5/5 above was luck. Now the shuffle goes through an `orderSpots` hook;
+`RealtimeWorldInteraction` stable-sorts it by filled slots (`DisplaySlots.filledAt`, shared with
+`DeclarativeJob`) for a job carrying the `dress_display` rule (`dressesDisplays`), so other jobs
+skip the entity lookups. `fullest_stand` 7/7 (one more run died on flag init, not the scenario).
+
 ## Diamonds only on deep miner trips (dev ruling 2026-10-30)
 
 "Two diamonds already. Too easy." -> "Deep trips only". The diamond (weight 1) is gone from

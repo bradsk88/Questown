@@ -26,6 +26,7 @@ import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.needs.GateReason;
+import ca.bradj.questown.town.needs.RequestsDone;
 import ca.bradj.questown.town.needs.UnmetNeedTracker;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.VillagerHolder;
@@ -91,6 +92,8 @@ public class TownPossibleWork {
      * idempotent per (townie, item key), since-at-first-enter, bounded by the roster.
      */
     private final UnmetNeedTracker unmetNeeds = new UnmetNeedTracker();
+    // Idle villagers whose fillable requests are all stocked (RequestsDone), refreshed per root pass.
+    private final Set<UUID> requestsDone = new HashSet<>();
 
     /** Half a millisecond: a tenth of what a hitch needs to be visible, out of a 50ms server tick. */
     private static final long RECOMPUTE_NANOS_PER_TICK = 500_000;
@@ -275,10 +278,13 @@ public class TownPossibleWork {
             long tick = Util.getTick(sl);
             Map<String, GateReason> liveKeys = new HashMap<>();
             Map<String, Set<JobID>> keyJobs = new HashMap<>();
+            Map<JobID, GateReason> reasons = new HashMap<>();
             for (JobPossibility p : unfilteredJobs) {
                 if (p.facts() == null || p.board() == null) {
                     continue;
                 }
+                GateReason reason = gateReason(t, p);
+                reasons.put(p.jobID(), reason);
                 // Town-level needs must come from a variant the town can actually run:
                 // at least one villager has unlocked it. Without this, locked tool
                 // variants (e.g. gatherer:axe on day one) register needs the town can
@@ -286,7 +292,6 @@ public class TownPossibleWork {
                 if (!t.getVillagerHandle().isUnlocked(p.jobID())) {
                     continue;
                 }
-                GateReason reason = gateReason(t, p);
                 String key = reason.itemKey();
                 if (key == null) {
                     continue;
@@ -319,6 +324,14 @@ public class TownPossibleWork {
             for (VisitorMobEntity villager : townies) {
                 boolean shownItemOrRoom = villager.getNeed() == TownieNeed.UNMET_ITEM
                         || villager.getNeed() == TownieNeed.MISSING_ROOM;
+                if (isIdle(villager.getJobId()) && hasDoneAllRequests(t, villager.getUUID(), unfilteredJobs, reasons)) {
+                    requestsDone.add(villager.getUUID());
+                    if (shownItemOrRoom) {
+                        villager.setNeed(TownieNeed.NONE);
+                    }
+                    continue;
+                }
+                requestsDone.remove(villager.getUUID());
                 if (!showsUnmetNeed(villager.getJobId(), villager.getStatusForServer())) {
                     if (shownItemOrRoom) {
                         villager.setNeed(TownieNeed.NONE);
@@ -355,6 +368,38 @@ public class TownPossibleWork {
         } catch (Exception e) {
             QT.FLAG_LOGGER.error("Failed to refresh unmet needs for root: {}", root, e);
         }
+    }
+
+    private static boolean isIdle(JobID job) {
+        return WorkSeekerJob.isSeekingWork(job) || DowntimeWork.matches(job);
+    }
+
+    /** {@link RequestsDone} over the jobs this villager has unlocked. */
+    private static boolean hasDoneAllRequests(
+            TownFlagBlockEntity t,
+            UUID villager,
+            List<JobPossibility> jobs,
+            Map<JobID, GateReason> reasons
+    ) {
+        List<RequestsDone.JobView> views = jobs.stream()
+                .filter(p -> reasons.containsKey(p.jobID()))
+                .filter(p -> t.getVillagerHandle().isUnlocked(villager, p.jobID()))
+                .map(p -> new RequestsDone.JobView(
+                        p.board().answersOpen(),
+                        p.board().answersStocked(),
+                        RequestsDone.workable(reasons.get(p.jobID())),
+                        ServerJobsRegistry.makesNothing(p.jobID())
+                ))
+                .toList();
+        return RequestsDone.allDone(views);
+    }
+
+    /**
+     * Whether this idle villager's fillable requests are all stocked (dev ruling 2026-10-30): its
+     * status says "All my requests are done" and it shows no need. Server-side only.
+     */
+    public boolean hasDoneAllRequests(UUID townie) {
+        return requestsDone.contains(townie);
     }
 
     /**
@@ -526,7 +571,18 @@ public class TownPossibleWork {
         }
     }
 
-    private record RequestCheck(boolean boardEmpty, @Nullable WorkRequest satisfied) {
+    /**
+     * @param satisfied      the request the job may work for (a job that makes nothing may take a
+     *                       paused one: {@link BoardRequests#toWorkFor})
+     * @param answersOpen    the job answers an unpaused request ({@link RequestsDone})
+     * @param answersStocked the job answers only paused (stocked) requests ({@link RequestsDone})
+     */
+    private record RequestCheck(
+            boolean boardEmpty,
+            @Nullable WorkRequest satisfied,
+            boolean answersOpen,
+            boolean answersStocked
+    ) {
         String description() {
             if (boardEmpty) {
                 return " [No items requested on job board]";
@@ -541,10 +597,14 @@ public class TownPossibleWork {
     private static RequestCheck boardCheck(TownFlagBlockEntity t, JobID jobId) {
         BoardRequests requests = t.getWorkHandle().getBoardRequests();
         if (requests.isEmpty()) {
-            return new RequestCheck(true, null);
+            return new RequestCheck(true, null, false, false);
         }
         WorksBehaviour.TownData td = t.getTownData();
-        return new RequestCheck(false, ServerJobsRegistry.firstAnswerable(td, jobId, requests).orElse(null));
+        WorkRequest satisfied = ServerJobsRegistry.firstAnswerable(td, jobId, requests).orElse(null);
+        // A job that makes nothing answers paused requests too, so "open" is checked on its own.
+        boolean open = satisfied != null && ServerJobsRegistry.answersUnpaused(td, jobId, requests);
+        boolean stocked = !open && ServerJobsRegistry.answersPaused(td, jobId, requests);
+        return new RequestCheck(false, satisfied, open, stocked);
     }
 
     /**

@@ -108,16 +108,23 @@ public class ServerJobsRegistry {
 
     /**
      * {@link #getStatusText(JobID, IStatus)} for a specific townie: while it is not working, the
-     * item it is blocked on replaces the generic second line ({@code StatusNeedLine}).
+     * item it is blocked on replaces the generic second line ({@code StatusNeedLine}), or "All my
+     * requests are done" when its fillable requests are all stocked (dev ruling 2026-10-30).
      */
     public static @NotNull ImmutableList<Component> getStatusText(
             JobID job,
             IStatus<?> status,
             VisitorMobEntity townie
     ) {
-        Component need = TownieNeedDetail.of(townie);
+        Component need = hasDoneAllRequests(townie)
+                ? Compat.translatable("message.questown.townie_status.requests_done")
+                : TownieNeedDetail.of(townie);
         boolean keep = StatusNeedLine.keepsOwnLines(isWorking(status), DiningStages.isDiner(job));
         return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, keep));
+    }
+
+    private static boolean hasDoneAllRequests(VisitorMobEntity townie) {
+        return townie.getTown() != null && townie.getTown().getPossibleWork().hasDoneAllRequests(townie.getUUID());
     }
 
     /**
@@ -817,6 +824,24 @@ public class ServerJobsRegistry {
         return requests.toWorkFor(makesNothing(p)).stream()
                        .filter(r -> canSatisfy(town, p, r.asIngredient()))
                        .findFirst();
+    }
+
+    /** Whether the job would answer one of the unpaused requests ({@link BoardRequests#toWork}). */
+    public static boolean answersUnpaused(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.toWork().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
+    }
+
+    /** Whether the job would answer one of the paused (stocked) requests ({@link BoardRequests#paused}). */
+    public static boolean answersPaused(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.paused().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
     }
 
     public static boolean canSatisfy(
