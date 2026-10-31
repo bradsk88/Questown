@@ -221,7 +221,65 @@ class CoreProgressionTest {
         );
 
         Assertions.assertEquals("miner", result);
+    }
 
-        // TODO: Cases for "both" and "neither"
+    @Test
+    public void testTwoRequestableFoodlessOtherOptionsWhereANeededResourceIsProducedByBoth() {
+        ImmutableMap<String, String> rooms = ImmutableMap.of(
+                "gatherer", "gate",
+                "farmer", "farm",
+                "miner", "mine"
+        );
+
+        ImmutableMap<String, ImmutableList<ItemEconomicsData>> timesNeeded = ImmutableMap.of(
+                "gatherer", ImmutableList.of(),
+                "farmer", ImmutableList.of(new ItemEconomicsData("iron", 1)),
+                "miner", ImmutableList.of(new ItemEconomicsData("iron", 1))
+        );
+
+        Predicate<String> questAlreadyExists = room -> false;
+        Predicate<String> jobMakesFood = job -> false;
+        CoreProgression<String, String> p = INSTANCE
+                .withFoodCheck(jobMakesFood)
+                .withEconomics((j, all) -> timesNeeded.get(j));
+
+        String result = p.getFirstJobChange(
+                ImmutableList.of("gatherer", "farmer", "miner"),
+                rooms::get,
+                questAlreadyExists
+        );
+
+        // Both produce the needed resource equally - tie, so pick randomly
+        Assertions.assertEquals("random from [farmer,miner]", result);
+    }
+
+    @Test
+    public void testTwoRequestableFoodlessOtherOptionsWhereANeededResourceIsProducedByNeither() {
+        ImmutableMap<String, String> rooms = ImmutableMap.of(
+                "gatherer", "gate",
+                "farmer", "farm",
+                "miner", "mine"
+        );
+
+        ImmutableMap<String, ImmutableList<ItemEconomicsData>> timesNeeded = ImmutableMap.of(
+                "gatherer", ImmutableList.of(),
+                "farmer", ImmutableList.of(),
+                "miner", ImmutableList.of()
+        );
+
+        Predicate<String> questAlreadyExists = room -> false;
+        Predicate<String> jobMakesFood = job -> false;
+        CoreProgression<String, String> p = INSTANCE
+                .withFoodCheck(jobMakesFood)
+                .withEconomics((j, all) -> timesNeeded.get(j));
+
+        String result = p.getFirstJobChange(
+                ImmutableList.of("gatherer", "farmer", "miner"),
+                rooms::get,
+                questAlreadyExists
+        );
+
+        // Neither meets any need - all are equally unneeded, so pick randomly
+        Assertions.assertEquals("random from [farmer,miner]", result);
     }
 }
