@@ -21,6 +21,7 @@
       "id": "train_crafter_3",
       "opens_after": ["train_crafter_2"],
       "quests": [
+        {"skill": "crafter/wooden_shovel"},
         {"level": "crafter", "at": 3}
       ]
     },
@@ -39,7 +40,6 @@
       "opens_after": ["train_crafter_3"],
       "quests": [
         {"room": "questown:smithy"},
-        {"skill": "crafter/wooden_shovel"},
         {"skill": "crafter/wooden_sword"},
         {"loot": "minecraft:wooden_sword", "count": 1}
       ]

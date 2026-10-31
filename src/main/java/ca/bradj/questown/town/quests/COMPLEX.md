@@ -554,3 +554,14 @@ posts `train_crafter_2` after `start` and `train_crafter_3` after that; armor an
 after `train_crafter_3`. Pins: `QuestPathDataTest.outfitterShipsTheFirstCut` (order) and the new
 `everySkillBatch_waitsOnlyForTheLevelItNeeds` (the level quest a skill batch opens directly after
 is not higher than its skills need; transitive order, like the showcase after weapons_2, is fine).
+
+## Outfitter: "unlock shovel" in the level-3 batch; the wooden shovel is a level-2 skill (dev playtest 2026-10-30)
+
+On the quests tab with "Crafter level 3" as the only open quest, the dev said: 'There should be a
+quest for "unlock shovel" here' and "shovel should be a level 2 skill".
+`crafter/wooden_shovel` (`blacksmith_wood_shovel.json`) now has `available_at_level` 2 (was 3).
+Its skill quest moves from `weapons_1` into `train_crafter_3`, beside the level-3 quest, so the
+crafter has a new thing to make while it trains. `train_crafter_3` opens after `train_crafter_2`,
+which satisfies `QuestPathDataTest.everyNamedSkill_isLearnableWhenItsBatchOpens`. The wooden
+sword stays a level-3 skill in `weapons_1`. A town whose `train_crafter_3` batch is already open
+keeps its old quests (batches are posted once).
