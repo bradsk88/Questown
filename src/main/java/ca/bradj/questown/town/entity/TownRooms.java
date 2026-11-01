@@ -121,7 +121,12 @@ public class TownRooms implements
             if (recipe.isPresent()) {
                 name = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
             }
-            entity.messages.roomCreated(name.orElse(null), doorPos);
+            // The matched-recipe case already announced via the recipe-listener path above
+            // (roomRecipeCreated -> "Built a X"), so only the unmatched case gets its own "Room
+            // created at ..." line here, or one placement would print two announcements.
+            if (name.isEmpty()) {
+                entity.messages.roomCreated(null, doorPos);
+            }
         }
     }
 
@@ -215,7 +220,7 @@ public class TownRooms implements
         for (InclusiveSpace space : room.getSpaces()) {
             RoomEffects.renderParticlesBetween(
                     space, (x, z) -> {
-                        BlockPos bp = new BlockPos(x, room.yCoord, z);
+                        BlockPos bp = new BlockPos((int) x, (int) room.yCoord, (int) z);
                         if (!sl.isEmptyBlock(bp)) {
                             return;
                         }

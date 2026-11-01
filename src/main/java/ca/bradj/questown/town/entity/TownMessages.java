@@ -5,6 +5,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.ShowTutorialToastMessage;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -15,13 +16,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
 
 public class TownMessages {
+    // Day-1 events fire in bursts (mat completion posts the basics batch, board placement completes
+    // it, each broadcasts), which would be a wall of chat within a second. Every broadcast goes
+    // through this flag-wide queue: the first line sends immediately, the rest space out at this
+    // interval, and consecutive duplicates are dropped.
+    private static final int BROADCAST_SPACING_TICKS = 100;
+    private final BroadcastPacer<Component> pacer = new BroadcastPacer<>(BROADCAST_SPACING_TICKS);
+
     private ServerLevel level;
 
     public void initialize(ServerLevel t) {
@@ -37,11 +44,34 @@ public class TownMessages {
             return;
         }
 
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+        Component line = Compat.translatable(key, args);
+        switch (pacer.offer(line, level.getGameTime(), this::sendNow)) {
+            case SENT -> QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+            case QUEUED -> QT.FLAG_LOGGER.info("Queued broadcast (waiting for a free slot): {} {}", key, args);
+            case DROPPED -> QT.FLAG_LOGGER.info("Dropped duplicate broadcast: {} {}", key, args);
+        }
+    }
+
+    /**
+     * Release one queued broadcast once the spacing interval is free. Ticked
+     * every flag tick by {@link TownFlagTicker}.
+     */
+    public void flushBroadcasts() {
+        if (pacer.isEmpty()) {
+            return;
+        }
+        if (level == null) {
+            pacer.clear();
+            return;
+        }
+        pacer.flush(level.getGameTime(), this::sendNow);
+    }
+
+    private void sendNow(Component line) {
         for (ServerPlayer p : level.getServer()
                                    .getPlayerList()
                                    .getPlayers()) {
-            p.displayClientMessage(Compat.translatable(key, args), false);
+            p.displayClientMessage(line, false);
         }
     }
 
@@ -50,23 +80,34 @@ public class TownMessages {
             QT.FLAG_LOGGER.debug("Skipping tutorial toast before TownMessages was initialized: {} {}", titleKey, descriptionKey);
             return;
         }
+        QT.FLAG_LOGGER.info("Broadcasting tutorial toast: {} {}", titleKey, descriptionKey);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> p),
-                    new ShowTutorialToastMessage(titleKey, descriptionKey)
-            );
+            QuestownNetwork.sendToPlayer(p,
+                    new ShowTutorialToastMessage(titleKey, descriptionKey));
         }
+    }
+
+    void sendTutorialToast(ServerPlayer p, String titleKey, String descriptionKey) {
+        QT.FLAG_LOGGER.info("Sending tutorial toast to {}: {} {}", p.getName().getString(), titleKey, descriptionKey);
+        QuestownNetwork.sendToPlayer(p, new ShowTutorialToastMessage(titleKey, descriptionKey));
     }
 
     public void roomRecipeCreated(
             MCRoom roomDoorPos,
             Optional<ResourceLocation> match
     ) {
+        roomRecipeCreated(roomDoorPos.getDoorPos(), match);
+    }
+
+    /** "Created X at location [x, z]" naming {@code where} (a block room names its own block). */
+    public void roomRecipeCreated(
+            Position where,
+            Optional<ResourceLocation> match
+    ) {
         broadcastMessage(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match),
-                roomDoorPos.getDoorPos()
-                           .getUIString()
+                where.getUIString()
         );
     }
 
@@ -97,24 +138,43 @@ public class TownMessages {
     }
 
     public void questCompleted(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 
+    /**
+     * The quest's name for chat, worded like its quest card ({@code UIQuest.getName}). Job quests
+     * name the job by its translated root ({@code jobs.<root>}), not the room lookup.
+     */
+    static Component questName(
+            Quest.QuestType type,
+            ResourceLocation wantedId,
+            int countNeeded
+    ) {
+        return switch (type) {
+            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), countNeeded);
+            case LOOT -> ca.bradj.questown.gui.UIQuest.lootName(wantedId);
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
+            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
+            case SKILL_UNLOCK -> MCQuest.namedSkill(wantedId)
+                    .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
+                    .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
+                            Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
+            case VILLAGER_LEVEL -> ca.bradj.questown.gui.UIQuest.villagerLevelName(wantedId, null);
+            default -> RoomRecipes.getName(wantedId);
+        };
+    }
+
+    private static Component jobName(ResourceLocation jobQuestId) {
+        return Compat.translatable("jobs." + JobID.fromRL(jobQuestId).rootId());
+    }
+
     public void questLost(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_lost",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 
@@ -122,7 +182,16 @@ public class TownMessages {
             JobID jobID,
             UUID visitorUUID
     ) {
-        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), UtilClean.truncateMiddle(visitorUUID));
+        jobChanged(jobID, UtilClean.truncateMiddle(visitorUUID));
+    }
+
+    /** Same broadcast, with an explicit display label ("Villager N"). */
+    public void jobChanged(
+            JobID jobID,
+            String villagerLabel
+    ) {
+        // The profession's name, not the raw id.
+        broadcastMessage("messages.jobs.changed", ca.bradj.questown.jobs.Jobs.getRootNameComponent(jobID), villagerLabel);
     }
 
     public void startDebugFailed() {

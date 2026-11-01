@@ -2,25 +2,42 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.town.quests.MCQuestBatches;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
 class TestTutorialTownView implements TutorialTownView {
 
+    // Arrival provisioning reads the live town's beds and rewards; the planner is pinned by
+    // ArrivalProvisionsTest, so tutorial-flow tests leave batches as built.
+    @Override
+    public void provisionArrival(
+            ca.bradj.questown.town.quests.MCReward reward,
+            java.util.Collection<net.minecraft.resources.ResourceLocation> wanted,
+            java.util.function.Consumer<net.minecraft.resources.ResourceLocation> addRoomQuest
+    ) {
+    }
+
     private int villagerCount;
+    private java.util.Set<String> villagerRoots;
     private boolean tutorialBopGranted;
     private int bopGranted;
     private final List<String> messagesSent = new ArrayList<>();
     private final List<TutorialTrigger.Triggers> triggersFired = new ArrayList<>();
     private final List<String> rewardPhaseNames = new ArrayList<>();
-    private ResourceLocation exoticWood;
-    private JobID jobForTutorial;
     private ResourceLocation roomForJob;
+    private final List<JobID> revealedSkills = new ArrayList<>();
+
+    @Override
+    public void revealSkill(JobID skill) {
+        revealedSkills.add(skill);
+    }
+
+    List<JobID> getRevealedSkills() {
+        return revealedSkills;
+    }
 
     private TestTutorialTownView() {
     }
@@ -32,6 +49,11 @@ class TestTutorialTownView implements TutorialTownView {
     @Override
     public int villagerCount() {
         return villagerCount;
+    }
+
+    @Override
+    public boolean anyVillagerOnRoot(String rootId) {
+        return villagerRoots.contains(rootId);
     }
 
     @Override
@@ -64,16 +86,6 @@ class TestTutorialTownView implements TutorialTownView {
         triggersFired.add(trigger);
     }
 
-    @Override
-    public ResourceLocation getExoticWood() {
-        return exoticWood;
-    }
-
-    @Override
-    @Nullable
-    public JobID chooseJobForTutorial(MCQuestBatches questBatches) {
-        return jobForTutorial;
-    }
 
     @Override
     public ResourceLocation getRoomForJob(JobID job) {
@@ -104,13 +116,17 @@ class TestTutorialTownView implements TutorialTownView {
 
     static class Builder {
         private int villagerCount = 1;
+        private java.util.Set<String> villagerRoots = java.util.Set.of();
         private boolean tutorialBopGranted = false;
-        private ResourceLocation exoticWood = new ResourceLocation("minecraft", "dark_oak_log");
-        private JobID jobForTutorial = new JobID("farmer", "wheat");
         private ResourceLocation roomForJob = new ResourceLocation("questown", "farm");
 
         Builder villagerCount(int count) {
             this.villagerCount = count;
+            return this;
+        }
+
+        Builder villagerRoots(String... roots) {
+            this.villagerRoots = java.util.Set.of(roots);
             return this;
         }
 
@@ -119,15 +135,6 @@ class TestTutorialTownView implements TutorialTownView {
             return this;
         }
 
-        Builder exoticWood(ResourceLocation wood) {
-            this.exoticWood = wood;
-            return this;
-        }
-
-        Builder jobForTutorial(JobID job) {
-            this.jobForTutorial = job;
-            return this;
-        }
 
         Builder roomForJob(ResourceLocation room) {
             this.roomForJob = room;
@@ -137,9 +144,8 @@ class TestTutorialTownView implements TutorialTownView {
         TestTutorialTownView build() {
             TestTutorialTownView view = new TestTutorialTownView();
             view.villagerCount = villagerCount;
+            view.villagerRoots = villagerRoots;
             view.tutorialBopGranted = tutorialBopGranted;
-            view.exoticWood = exoticWood;
-            view.jobForTutorial = jobForTutorial;
             view.roomForJob = roomForJob;
             return view;
         }

@@ -7,16 +7,17 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.WallDetection;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rooms.MultiLevelRoomDetector;
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
-import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
@@ -76,7 +77,21 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             return getBlockMetaRooms(t, blockRoom.get());
         }
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
-            return getWelcomeMatMetaRooms(t);
+            java.util.Collection<RoomRecipeMatch<MCRoom>> gateOut = getWelcomeMatMetaRooms(t);
+            return gateOut;
+        }
+        if (SpecialQuests.JOB_BOARD.equals(recipeId)) {
+            // The board quest's wanted id is the room recipe questown:job_board, but a placed board
+            // registers as a synthetic block room under block_room/<board block id>
+            // (RoomBlock.getRoomId), which the fast path above can never equal. Without this branch,
+            // a board placed outside any door-registered room is invisible to the per-tick backfill
+            // (the fallback below only scans door-registered rooms) and the quest stalls ACTIVE.
+            // Maps the quest id to the board's registered block-room key, the way TOWN_GATE maps to
+            // the welcome mat. (The event path, roomRecipeCreated's top match, can also miss it: the
+            // board's meta room ties at equal cost between the real recipe and the synthetic
+            // block_room recipe, and the winner is stream order, not merit.)
+            return getBlockMetaRooms(t, RoomBlock.getRoomId(
+                    (RoomBlock) BlocksInit.JOB_BOARD_BLOCK.get()));
         }
         if (SpecialQuests.TOWN_FLAG.equals(recipeId)) {
             return ImmutableList.of(getFlagMetaRoom(t));
@@ -107,7 +122,9 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         t.subBlocks.register(pos);
         MCRoom room = Spaces.metaRoomAround(pos, Config.META_ROOM_DIAMETER.get());
         Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
-        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()));
+        // No broadcast here: broadcastBlockRoomCreated below is the one player-facing "Created X"
+        // line (its match carries the placed block, not the meta-room's surroundings).
+        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()), false);
         t.setChanged();
         broadcastBlockRoomCreated(blockId, pos, t);
     }
@@ -122,7 +139,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
                 pos, getBlockRoomBlock(pos, t)
         );
         RoomRecipeMatch<MCRoom> m = new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet());
-        t.roomRecipeCreated(room, m);
+        t.blockRoomCreated(room, m, pos);
     }
 
     private static @NotNull Block getBlockRoomBlock(
@@ -230,25 +247,53 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return b.build();
     }
 
+    private long bedBlockCount() {
+        return roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
+                       .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+    }
+
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
-        long beds = roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
-                            .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+        long beds = bedBlockCount();
         if (beds == 0 && numVillagers == 0) {
             return false;
         }
         return (beds / 2) >= numVillagers;
     }
 
+    /**
+     * The bed shortfall: how many more <em>complete</em> beds (2 blocks each) the town needs to reach
+     * {@code beds/2 >= numVillagers}. 0 when the town already has enough. The quest garden uses this
+     * to post enough bedroom quests to cover the shortfall.
+     */
+    int missingBeds(long numVillagers) {
+        long completeBeds = bedBlockCount() / 2;
+        return (int) Math.max(0L, numVillagers - completeBeds);
+    }
+
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
-        return this.roomsMap.getAllMatches(include);
+        Collection<RoomRecipeMatch<MCRoom>> matches;
+        // The TOWN_GATE match normally comes from the gate DOOR ROOM's recipe, captured by the
+        // room-detection pump at door registration; when the pump completes before the welcome mat
+        // is placed, the door room never matches special_quest.town_gate. The welcome mat defines its
+        // own meta room (getWelcomeMatMetaRooms); when no room-map entry carries the TOWN_GATE
+        // recipe, add it so the mat's room (and the seeded mat chest inside it) is visible to the
+        // selector regardless of detection ordering.
+        java.util.List<RoomRecipeMatch<MCRoom>> result = new java.util.ArrayList<>(roomsMap.getAllMatches(include));
+        boolean hasGate = result.stream().anyMatch(m -> m.anyMatch(SpecialQuests.TOWN_GATE));
+        if (!hasGate) {
+            java.util.List<RoomRecipeMatch<MCRoom>> matRooms = getWelcomeMatMetaRooms(town.getUnsafe());
+            matRooms.stream()
+                    .filter(include)
+                    .forEach(result::add);
+        }
+        return result;
     }
 
     public void registerDoor(BlockPos clickedPos) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
-        t.setChanged();
     }
 
     @Override
