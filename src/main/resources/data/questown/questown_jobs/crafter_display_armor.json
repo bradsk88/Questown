@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "id": "crafter/display_armor",
+  "priority": 3000,
+  "experience": 0,
+  "parent": "crafter/leather_boots",
+  "icon": "minecraft:armor_stand",
+  "initial_request": "#questown:displayable_armor",
+  "note": "Dev 2026-10-28: putting armor on a stand is its own job; the villager works at the stand. Selected like cook/fuel: it answers armor requests, and scores only where a stand has an empty slot that stored armor fits. The armor comes from storage (displays are never a source).",
+  "result": {
+    "type": "uses_special_rules"
+  },
+  "block": {
+    "display": "armor_stand",
+    "accepts": "#questown:displayable_armor"
+  },
+  "room": "questown:armor_display",
+  "work_states": [
+    {
+      "tools": "#questown:displayable_armor",
+      "work": 0.1
+    },
+    {
+      "ingredients": "#questown:displayable_armor"
+    }
+  ],
+  "cooldown_ticks": 50,
+  "special": [
+    {
+      "type": "global",
+      "rules": ["exclude_from_warp"]
+    },
+    {
+      "type": "processing_state",
+      "state": 1,
+      "rules": ["dress_display"]
+    }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/item/armor_stand.png"}
+  ]
+}

@@ -6,10 +6,24 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "name": "minecraft:white_wool",
+          "weight": 11,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
           "name": "minecraft:rabbit_foot",
           "weight": 30,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         },
         {
@@ -17,7 +31,10 @@
           "name": "minecraft:rabbit_hide",
           "weight": 25,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         },
         {
@@ -25,15 +42,21 @@
           "name": "minecraft:rabbit",
           "weight": 20,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         },
         {
           "type": "minecraft:item",
           "name": "minecraft:leather",
-          "weight": 15,
+          "weight": 32,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 1
+            }
           ]
         },
         {
@@ -41,7 +64,10 @@
           "name": "minecraft:beef",
           "weight": 10,
           "functions": [
-            {"function": "minecraft:set_count", "count": 1}
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            }
           ]
         }
       ]

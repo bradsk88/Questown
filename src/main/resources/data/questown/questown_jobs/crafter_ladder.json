@@ -2,7 +2,7 @@
   "version": 1,
   "id": "crafter/ladder",
   "priority": "3000",
-  "parent": null,
+  "parent": "crafter/stick",
   "icon": "minecraft:ladder",
   "initial_request": "minecraft:ladder",
   "result": {
@@ -23,8 +23,11 @@
   ],
   "cooldown_ticks": 20,
   "sound": {
-    "id": "minecraft:block.wood.hit",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 20
-  }
+  },
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}
+  ]
 }
