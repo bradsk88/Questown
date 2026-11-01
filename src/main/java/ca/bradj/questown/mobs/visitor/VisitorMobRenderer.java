@@ -1,29 +1,20 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.Questown;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.render.BubbleRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
-import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
-
-    // TODO: Just scan the directory for files
-    static ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
-            Questown.ResourceLocation("textures/entity/1.png"),
-            Questown.ResourceLocation("textures/entity/2.png"),
-            Questown.ResourceLocation("textures/entity/3.png"),
-            Questown.ResourceLocation("textures/entity/4.png"),
-            Questown.ResourceLocation("textures/entity/5.png"),
-            Questown.ResourceLocation("textures/entity/6.png")
-    );
 
     public VisitorMobRenderer(
             EntityRendererProvider.Context ctx
@@ -40,11 +31,8 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     }
 
     public static ResourceLocation getTextureLocation(UUID uuid) {
-        int index = Math.abs(uuid.hashCode()) % (customSkins.size() + 2);
-        if (index < 2) {
-            return DefaultPlayerSkin.getDefaultSkin(uuid);
-        }
-        return customSkins.get(index - 2);
+        // Deterministic per-UUID pick from the vanilla-1.20 + custom skin pool.
+        return TownieSkins.pick(uuid);
     }
 
     @Override
@@ -59,9 +47,53 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         this.setModelProperties(entity);
         if (entity.isSitting()) {
             this.renderSiting(entity, yaw, pTicks, stack, buffer, light);
+        } else {
+            super.render(entity, yaw, pTicks, stack, buffer, light);
+        }
+        renderNeedBubble(entity, stack, buffer);
+    }
+
+    /**
+     * The bubble must be drawn out here rather than as a {@code RenderLayer}: inside a layer the
+     * pose is still under the entity's body yaw, so the icon would spin as the townie turns.
+     * Same reason the helper chicken's bubble is a plain static call from its renderer.
+     */
+    private void renderNeedBubble(
+            VisitorMobEntity entity,
+            PoseStack stack,
+            MultiBufferSource buffer
+    ) {
+        NeedBubbleFocus.forgetIfResolved(entity);
+        if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
-        super.render(entity, yaw, pTicks, stack, buffer, light);
+        var texture = entity.getNeed().iconTexture();
+        if (texture != null) {
+            BubbleRenderer.renderTextureBubbleFor(entity, texture, stack, buffer, this.entityRenderDispatcher);
+            return;
+        }
+        BubbleRenderer.renderIconBubbleFor(
+                entity, needBubbleIcon(entity), stack, buffer, this.entityRenderDispatcher
+        );
+    }
+
+    /**
+     * The bubble icon. A resolved {@code UNMET_ITEM} shows the actual missing item (a rotating
+     * representative, as the Inventory screen's "needs" row does); any other need keeps its icon.
+     */
+    private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
+        ItemStack roomBlock = NeedBubbleFocus.missingRoomIcon(entity);
+        if (roomBlock != null) {
+            return roomBlock;
+        }
+        Ingredient missing = NeedBubbleFocus.unmetNeedIngredient(entity);
+        if (missing == null) {
+            return entity.getNeed().icon();
+        }
+        ItemStack representative = Ingredients.representativeItemStack(missing);
+        return representative != null && !representative.isEmpty()
+                ? representative
+                : entity.getNeed().icon();
     }
 
     private void setModelProperties(VisitorMobEntity entity) {

@@ -6,9 +6,11 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
@@ -26,6 +28,23 @@ import java.util.Optional;
 
 public class MoveToTownTargetSink extends Behavior<Mob> {
     private static final int MAX_COOLDOWN_BEFORE_RETRYING = 5;
+
+    /**
+     * How long a townie may fail to get somewhere before it gives up and asks for help.
+     *
+     * <p>Ten seconds. Deliberately NOT {@code WanderGiveUpTicks}: that is this behaviour's maximum
+     * duration, so it caps healthy long walks too — shortening it would abandon townies mid-journey
+     * in a large town. This is keyed on <em>failure</em> instead, so a townie walking a good path is
+     * never interrupted no matter how far it has to go.
+     */
+    private static final int CANT_REACH_GIVEUP_TICKS = 200;
+
+    /**
+     * How many escalating unstick shoves may fail before the townie gives up on a target it has a
+     * path to but cannot physically follow. Counted rather than timed because each shove resets the
+     * stuck counters, so the ladder (nudge, then harder push) has to run its course first.
+     */
+    private static final int MAX_UNSTICK_ATTEMPTS = 3;
     private int remainingCooldown;
     @Nullable
     private Path path;
@@ -36,6 +55,8 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     private int stuckTicks;
     private BlockPos entityPrevPosLastUnstick;
     private int reallyStuckTicks;
+    private int failedUnsticks;
+    private final StrandedRescue stranded = new StrandedRescue();
 
     public MoveToTownTargetSink() {
         this(Compat.configGet(Config.WANDER_GIVEUP_TICKS).get(), Compat.configGet(Config.WANDER_GIVEUP_TICKS).get());
@@ -136,6 +157,9 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     ) {
         p_23610_.getBrain().setMemory(MemoryModuleType.PATH, this.path);
         p_23610_.getNavigation().moveTo(this.path, (double) this.speedModifier);
+        // A fresh attempt gets the full unstick ladder; otherwise a townie that gave up once would
+        // give up on its NEXT target immediately, on a count it earned somewhere else.
+        failedUnsticks = 0;
     }
 
     protected void tick(
@@ -174,6 +198,25 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             return;
         }
 
+        if (strandedInWater(p_23617_, vme, brain)) {
+            rescue(vme, brain, "in water without getting closer");
+            return;
+        }
+
+        if (hasGivenUpReaching(p_23617_, brain)) {
+            if (vme.isStrandedOutsideTown()) {
+                rescue(vme, brain, "gave up reaching its target outside the town");
+                return;
+            }
+            vme.setNeed(TownieNeed.CANT_REACH);
+            vme.setUnmetItem(unreachableRoomKey(vme, brain));
+            brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+            brain.eraseMemory(MemoryModuleType.PATH);
+            stuckTicks = 0;
+            reallyStuckTicks = 0;
+            return;
+        }
+
         BlockPos entityBlockPos = p_23618_.blockPosition();
         if (entityPrevPos != null && Jobs.isCloseTo(entityBlockPos, entityPrevPos)) {
             stuckTicks++;
@@ -191,6 +234,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
             QT.JOB_LOGGER.debug("Unsticking from {} by pushing MORE in direction {}", entityBlockPos, unstickTarget);
             p_23618_.push(unstickTarget.getStepX() * 2, unstickTarget.getStepY() * 2, unstickTarget.getStepZ() * 2);
+            failedUnsticks++;
             stuckTicks = 0;
             reallyStuckTicks = 0;
             brain.eraseMemory(MemoryModuleType.PATH);
@@ -206,6 +250,73 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         }
     }
 
+    private boolean strandedInWater(ServerLevel level, VisitorMobEntity vme, Brain<?> brain) {
+        Optional<WalkTarget> target = brain.getMemory(MemoryModuleType.WALK_TARGET);
+        boolean inWater = vme.isInWater()
+                || level.getFluidState(vme.blockPosition().below()).is(FluidTags.WATER);
+        if (target.isEmpty()) {
+            stranded.reset();
+            return false;
+        }
+        double distance = Math.sqrt(target.get().getTarget().currentBlockPosition().distSqr(vme.blockPosition()));
+        return stranded.observeWater(inWater, distance) && vme.isStrandedOutsideTown();
+    }
+
+    /** Outside the town nothing the player built is in the way, so skip the bubble and go home. */
+    private void rescue(VisitorMobEntity vme, Brain<?> brain, String why) {
+        vme.rescueToGate(why);
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.PATH);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        stranded.reset();
+        stuckTicks = 0;
+        reallyStuckTicks = 0;
+        failedUnsticks = 0;
+    }
+
+    /**
+     * Two ways to fail to get somewhere, both meaning "the player needs to look at this":
+     * pathfinding says the target is unreachable, or a path exists but the townie is physically
+     * wedged and the unstick nudges have not freed it.
+     */
+    /** The recipe id of the room holding the walk target, or "" when it is not in a room. */
+    private static String unreachableRoomKey(
+            VisitorMobEntity vme,
+            Brain<?> brain
+    ) {
+        if (vme.getTown() == null) {
+            return "";
+        }
+        return brain.getMemory(MemoryModuleType.WALK_TARGET)
+                    .flatMap(w -> vme.getTown().roomRecipeHolding(w.getTarget().currentBlockPosition()))
+                    .map(ResourceLocation::toString)
+                    .orElse("");
+    }
+
+    /** A townie that can get where it is going is no longer asking for help. */
+    private void clearCantReachNeed(Mob mob) {
+        failedUnsticks = 0;
+        if (!(mob instanceof VisitorMobEntity vme)) {
+            return;
+        }
+        if (vme.getNeed() == TownieNeed.CANT_REACH) {
+            vme.setNeed(TownieNeed.NONE);
+        }
+    }
+
+    private boolean hasGivenUpReaching(
+            ServerLevel level,
+            Brain<?> brain
+    ) {
+        if (failedUnsticks >= MAX_UNSTICK_ATTEMPTS) {
+            return true;
+        }
+        Optional<Long> unreachableSince = brain.getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        return unreachableSince.filter(
+                since -> level.getGameTime() - since > CANT_REACH_GIVEUP_TICKS
+        ).isPresent();
+    }
+
     private boolean tryComputePath(
             Mob p_23593_,
             WalkTarget p_23594_,
@@ -217,10 +328,12 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         Brain<?> brain = p_23593_.getBrain();
         if (this.reachedTarget(p_23593_, p_23594_)) {
             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+            clearCantReachNeed(p_23593_);
         } else {
             boolean flag = this.path != null && this.path.canReach();
             if (flag) {
                 brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                clearCantReachNeed(p_23593_);
             } else if (!brain.hasMemoryValue(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)) {
                 brain.setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, p_23595_);
             }

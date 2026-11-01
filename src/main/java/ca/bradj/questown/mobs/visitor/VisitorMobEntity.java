@@ -48,6 +48,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -61,7 +62,6 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
-import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -80,15 +80,19 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.gui.Ingredients;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -111,6 +115,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
+    private final TripVisibility tripVisibility = new TripVisibility();
+    // Built in registerGoals: Mob's constructor calls it before this class's field initializers run.
+    private @Nullable LingeringDoorGoal doorGoal;
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
@@ -129,6 +136,22 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
+    /**
+     * The townie's current unmet need, as a {@link TownieNeed} name, or empty for "nothing wrong".
+     * Synched because the bubble that renders it is client-side; a String is used for the same
+     * reason the helper chicken's bubble fields are — it serializes with no custom serializer.
+     */
+    private static final EntityDataAccessor<String> need = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
+    /**
+     * When {@link #need} is {@link TownieNeed#UNMET_ITEM}, the missing ingredient as its
+     * {@link ca.bradj.questown.gui.Ingredients#toString} form, so a client bubble can name and
+     * show it (the Inventory screen's "needs" row pattern). Empty for any other need.
+     */
+    private static final EntityDataAccessor<String> unmetItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
@@ -146,12 +169,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
-    private boolean jobChangePending;
     boolean sitting = true;
     TownInterface town;
     Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
     private int ticksWithoutJobTarget;
-    private int ticksStuckWithTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
@@ -265,6 +286,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
+        // [LOOTTRACE] grant-site trace for hunted meat.
+        QT.VILLAGER_LOGGER.info("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
+                v == null ? "null" : v.get().toString(),
+                inventoryFullStrategy,
+                UtilClean.truncateMiddle(getUUID()));
         if (job.get().addToEmptySlot(v)) {
             return true;
         }
@@ -272,8 +298,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
             return false;
         }
-        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
-        level.addFreshEntity(item);
+        ItemEntity item = new ItemEntity(getLevel(), getX(), getY(), getZ(), v.get().toMCItemStack());
+        getLevel().addFreshEntity(item);
         return false;
     }
 
@@ -326,7 +352,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
             QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
             return;
         }
@@ -341,6 +367,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         job = () -> initializedJob;
         entityData.set(jobName, initializedJob.getJobName().translationKey());
         QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
+        clearNeedWhileWorking(initializedJob.getId(), initializedJob.getStatus());
         Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
             Function<Void, Void> out = initializedJob.addStatusListener(l);
             return () -> out.apply(null);
@@ -366,7 +393,17 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> {
                     Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
-                    this.town.getVillagerHandle().addExperience(uuid, job.getExperienceEarned());
+                    int earned = ServerJobsRegistry.getExperienceEarned(job.getId(), job.getExperienceEarned());
+                    // Fires once per realtime job-completion (throttled by the world-interaction
+                    // interval, guarded by workLeft == 0, state reset after extraction) - not
+                    // per-tick. Shows whether the completion listener fires and the amount, to
+                    // split listener-not-firing vs getExperienceEarned==0 vs frozen-latch vs
+                    // starvation. See the no-experience problem (Option B).
+                    QT.VILLAGER_LOGGER.info(
+                            "[Experience] +{} from {} for {}",
+                            earned, job.getId().toNiceString(), uuid
+                    );
+                    this.town.getVillagerHandle().addExperience(uuid, earned);
                 }
         ));
     }
@@ -396,22 +433,113 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
         this.entityData.define(lastHeldItem, ItemStack.EMPTY);
+        this.entityData.define(need, TownieNeed.NONE.name());
+        this.entityData.define(unmetItem, "");
+    }
+
+    /**
+     * Records that this townie needs the player's help with something, so a bubble can say so.
+     * Silence means working, so this is set only when the townie has actually given up.
+     */
+    /**
+     * NO_STORAGE consumer: a townie stopped for lack of storage space
+     * bubbles at once. It takes precedence over UNMET_ITEM (full storage is what blocks it right
+     * now; TownPossibleWork does not overwrite it) and clears only its own need.
+     */
+    private void syncStorageNeed(IStatus<?> jobStatus) {
+        boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
+        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM || getNeed() == TownieNeed.MISSING_ROOM)) {
+            setNeed(TownieNeed.NO_STORAGE);
+        } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
+    /**
+     * An unmet-item or missing-room need set while the villager was seeking work is dropped the tick
+     * it starts working (at the job change and on every tick), not at the next recompute pass, so a
+     * cook working through beef shows no bubble. The pass re-applies it once the villager struggles
+     * again.
+     */
+    private void clearNeedWhileWorking(JobID jobId, IStatus<?> jobStatus) {
+        TownieNeed n = getNeed();
+        if (n != TownieNeed.UNMET_ITEM && n != TownieNeed.MISSING_ROOM) {
+            return;
+        }
+        if (!ca.bradj.questown.town.TownPossibleWork.showsUnmetNeed(jobId, jobStatus)) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
+    public void setNeed(TownieNeed newNeed) {
+        if (getLevel().isClientSide()) {
+            return;
+        }
+        if (newNeed.name().equals(this.entityData.get(need))) {
+            return;
+        }
+        QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
+        this.entityData.set(need, newNeed.name());
+        if (!newNeed.carriesKey()) {
+            this.entityData.set(unmetItem, "");
+        }
+    }
+
+    public TownieNeed getNeed() {
+        return TownieNeed.fromName(this.entityData.get(need));
+    }
+
+    /** Server-only: the item the {@code UNMET_ITEM} need is about, cleared by {@link #setNeed}. */
+    public void setUnmetItem(String itemKey) {
+        if (getLevel().isClientSide()) {
+            return;
+        }
+        this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
+    }
+
+    /**
+     * The item this townie is blocked on (its {@link TownieNeed#UNMET_ITEM} key), or null for any
+     * other need or when the key does not resolve. Read by the need bubble, the inventory needs
+     * row and the status tooltip.
+     */
+    public @Nullable Ingredient getUnmetItemIngredient() {
+        if (getNeed() != TownieNeed.UNMET_ITEM) {
+            return null;
+        }
+        String key = getUnmetItem();
+        if (key.isEmpty()) {
+            return null;
+        }
+        try {
+            return Ingredients.fromString(key);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    public String getUnmetItem() {
+        return this.entityData.get(unmetItem);
+    }
+
+    /** The room a CANT_REACH need could not get into, or null (the target was not in a room). */
+    public @Nullable ResourceLocation getUnreachableRoom() {
+        if (getNeed() != TownieNeed.CANT_REACH || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
+    }
+
+    /** The room a MISSING_ROOM need asks for, or null. */
+    public @Nullable ResourceLocation getMissingRoom() {
+        if (getNeed() != TownieNeed.MISSING_ROOM || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
-
-    @NotNull
-    private CompoundTag buildInitialSlotStatusesTag() {
-        CompoundTag tag = new CompoundTag();
-        ListTag statuses = new ListTag();
-        for (int i = 0; i < inventoryCapacity; i++) {
-            statuses.add(IntTag.valueOf(0));
-        }
-        tag.put("slots", statuses);
-        return tag;
-    }
 
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
@@ -432,7 +560,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return; // TODO: Confirm this is ok
         }
 
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
             return;
         }
 
@@ -530,7 +658,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             j.initializeStatusFromEntityData(s);
         }
         j.tick(town, this, getDirection());
-        if (level.isClientSide()) {
+        if (getLevel().isClientSide()) {
             return;
         }
 
@@ -546,7 +674,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             town.getVillagerHandle().validateEntity(this);
         }
 
-        boolean vis = !j.shouldDisappear(town, position());
+        if (doorGoal != null) {
+            doorGoal.tickLingeringDoor();
+        }
+        boolean vis = tripVisibility.next(this.entityData.get(visible), !j.shouldDisappear(town, position()));
         if (!vis) {
             if (job.get().getId().rootId().equals("gatherer")) {
                 AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
@@ -556,9 +687,20 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 );
             }
         }
+        if (vis != this.entityData.get(visible)) {
+            // Sparkles where the villager leaves town (or comes back), instead of silently popping
+            // out of the world. Not POOF:
+            // it "looks like a death animation".
+            Vec3 sparkle = TripVisibility.sparkleAt(vis, position(), j.getWorkSpotBlock());
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sparkle.x, sparkle.y + 0.8, sparkle.z, 12, 0.4, 0.6, 0.4, 0.0);
+            QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({}), sparkles at {}", UtilClean.truncateMiddle(uuid),
+                    vis ? "shown" : "hidden", j.getStatus(), j.getId(), sparkle);
+        }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
+            syncStorageNeed(j.getStatus());
+            clearNeedWhileWorking(j.getId(), j.getStatus());
             entityData.set(
                     heldItem, j.getInventory()
                                .getItem(0)
@@ -648,7 +790,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // only handle cosmetic stuff like position, pose, etc.
 
     private void detectNearbyDistractions(ServerLevel sl) {
-        List<Player> ps = level.getNearbyPlayers(
+        List<Player> ps = getLevel().getNearbyPlayers(
                 TargetingConditions.forNonCombat(),
                 this,
                 this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
@@ -687,39 +829,39 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
                       .isPresent()) {
             BlockPos on = blockPosition();
-            BlockState bs = level.getBlockState(on);
+            BlockState bs = getLevel().getBlockState(on);
             if (bs.getBlock() instanceof FarmBlock) {
                 on = on.above();
-                bs = level.getBlockState(on);
+                bs = getLevel().getBlockState(on);
             }
             if (bs.getBlock() instanceof FenceGateBlock) {
                 bs = bs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(on, bs, 10);
+                getLevel().setBlock(on, bs, 10);
             }
             Direction dir = getDirection();
             BlockPos front = on.relative(dir);
-            BlockState fbs = level.getBlockState(front);
+            BlockState fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getCounterClockWise());
-            fbs = level.getBlockState(front);
+            fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getClockWise());
-            fbs = level.getBlockState(front);
+            fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             BlockPos behind = on.relative(getDirection().getOpposite());
-            BlockState bbs = level.getBlockState(behind);
+            BlockState bbs = getLevel().getBlockState(behind);
             if (bbs.getBlock() instanceof FenceGateBlock) {
                 bbs = bbs.setValue(FenceGateBlock.OPEN, false);
-                level.setBlock(behind, bbs, 10);
+                getLevel().setBlock(behind, bbs, 10);
             }
         }
     }
@@ -728,13 +870,41 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
+    /**
+     * A chunk unload stops tracking the entity without calling {@link #remove} (only KILLED
+     * unregistered), so the town kept the unloaded copy and the reloaded entity registered a
+     * second time - counted twice. Unregister on unload
+     * (the loader's tracking-end hook, Forge and NeoForge alike); the entity re-registers when
+     * it loads.
+     */
+    @Override
+    public void onRemovedFromWorld() {
+        super.onRemovedFromWorld();
+        if (town == null || getLevel().isClientSide()) {
+            return;
+        }
+        RemovalReason reason = getRemovalReason();
+        if (reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER) {
+            town.getVillagerHandle().remove(this);
+        }
+    }
+
     @Override
     public void remove(RemovalReason p_146834_) {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
+            QT.VILLAGER_LOGGER.info(
+                    "Townie {} died: damageSource={} directEntity={} pos=({}, {}, {})",
+                    this.getVUID(),
+                    getLastDamageSource(),
+                    getLastDamageSource() != null ? getLastDamageSource().getDirectEntity() : null,
+                    position().x,
+                    position().y,
+                    position().z
+            );
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
-                level.addFreshEntity(new ItemEntity(
-                        level,
+                getLevel().addFreshEntity(new ItemEntity(
+                        getLevel(),
                         position().x,
                         position().y,
                         position().z,
@@ -743,6 +913,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
             if (town != null) {
                 town.getVillagerHandle().remove(this);
+            }
+            if (town instanceof TownFlagBlockEntity flag) {
+                flag.retireVillager(getUUID());
             }
         }
     }
@@ -787,7 +960,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
-        if (level.isClientSide()) {
+        if (getLevel().isClientSide()) {
             return ClientSideThrowingJob.INSTANCE;
         }
         return this.job.get();
@@ -802,11 +975,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
-        List<Entity> list = this.level.getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
+        List<Entity> list = this.getLevel().getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
         list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
         // Copied from superclass
         if (!list.isEmpty()) {
-            int i = this.level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            int i = this.getLevel().getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
             if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
                 int j = 0;
 
@@ -817,7 +990,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 }
 
                 if (j > i - 1) {
-                    this.hurt(DamageSource.CRAMMING, 6.0F);
+                    this.hurt(net.minecraft.world.damagesource.DamageSource.CRAMMING, 6.0F);
                 }
             }
 
@@ -831,8 +1004,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
+        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote a raw air tag).
+        // Keep the per-slot size by writing an empty compound for empty slots;
+        // the load side parses those back through MCHeldItem.fromMCItemStack (which
+        // maps an EMPTY stack to Air()). A saved AIR stack does NOT work either -
+        // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.serializeNBT()));
+            .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
+                : ca.bradj.questown.mc.Compat.saveItem(getLevel(), v)));
         p_21484_.put("items", items);
     }
 
@@ -842,8 +1021,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
         List<MCHeldItem> itemz = items
                 .stream()
-                .map(v -> ItemStack.of((CompoundTag) v))
-                .map(MCHeldItem::fromMCItemStack)
+                .map(v -> {
+                    CompoundTag tag = (CompoundTag) v;
+                    // Empty compound = a saved empty slot (see addAdditionalSaveData).
+                    // Parsing it would make vanilla log "Tried to load invalid item"
+                    // for every expected-empty slot on every entity load.
+                    ItemStack stack = tag.isEmpty()
+                            ? net.minecraft.world.item.ItemStack.EMPTY
+                            : ca.bradj.questown.mc.Compat.loadItem(getLevel(), tag);
+                    return MCHeldItem.fromMCItemStack(stack);
+                })
                 .toList();
         job.get().initializeItems(itemz);
         entityData.set(status, p_21450_.getString("status"));
@@ -874,6 +1061,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public ItemStack getOffhandItem() {
         return getEntityData().get(lastHeldItem);
+    }
+
+    /** Hidden by its job (away on a trip); synced, so the client can read it. */
+    public boolean isAwayOnTrip() {
+        return !this.entityData.get(visible);
     }
 
     @Override
@@ -907,7 +1099,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.load(tag);
         if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
             BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
-            if (this.level instanceof ServerLevel sl) {
+            if (this.getLevel() instanceof ServerLevel sl) {
                 BlockEntity entity = sl.getBlockEntity(bp);
                 if (!(entity instanceof TownFlagBlockEntity flag)) {
                     QT.VILLAGER_LOGGER.error("Entity at {} was not a TownFlag", bp);
@@ -932,10 +1124,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return new VillagerPathNavigation(this, p_21480_);
     }
 
+    // No door malus override: vanilla's walk evaluator treats any NEGATIVE malus as impassable
+    // (WalkNodeEvaluator `>= 0.0F` gates), so a discount on open doors would make them unwalkable.
+
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.doorGoal = new LingeringDoorGoal(this);
+        this.goalSelector.addGoal(2, doorGoal);
         this.goalSelector.addGoal(2, new OpenGateGoal(this, true));
     }
 
@@ -965,7 +1161,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         brain.addActivity(Activity.REST, getRestPackage());
         brain.addActivity(Activity.CORE, getCorePackage());
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        brain.updateActivityFromSchedule(this.level.getDayTime(), this.level.getGameTime());
+        brain.updateActivityFromSchedule(this.getLevel().getDayTime(), this.getLevel().getGameTime());
         return brain;
     }
 
@@ -979,10 +1175,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void startSleeping(BlockPos p_21141_) {
         getInBed(p_21141_);
         this.setSleepingPos(p_21141_);
-        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level.getGameTime());
+        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.getLevel().getGameTime());
         this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-        this.lastBedTime = Util.getDayTime(level);
+        this.lastBedTime = Util.getDayTime(getLevel());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -996,9 +1192,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this.stopRiding();
         }
 
-        BlockState blockstate = this.level.getBlockState(p_21141_);
-        if (blockstate.isBed(level, p_21141_, this)) {
-            blockstate.setBedOccupied(level, p_21141_, this, true);
+        BlockState blockstate = this.getLevel().getBlockState(p_21141_);
+        if (blockstate.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+            getLevel().setBlock(p_21141_, blockstate.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.TRUE), 3);
         }
 
         this.setPose(SLEEPING);
@@ -1018,13 +1214,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public void stopSleeping() {
         Optional<BlockPos> sleepingPos = getOutOfBed();
-        long curTime = this.level.getGameTime();
+        long curTime = this.getLevel().getGameTime();
         this.brain.setMemory(MemoryModuleType.LAST_WOKEN, curTime);
 
         sleepingPos.ifPresent(
                 bed -> {
                     long nightSleepTicks = lastBedTime.ticksBeforeMidnight();
-                    long ticksSlept = Util.getDayTime(level).dayTime() + nightSleepTicks;
+                    long ticksSlept = Util.getDayTime(getLevel()).dayTime() + nightSleepTicks;
                     sleepListeners.forEach(l -> l.accept(new VillagerSleptEvent(ticksSlept, bed)));
                 }
         );
@@ -1034,35 +1230,47 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private @NotNull Optional<BlockPos> getOutOfBed() {
         Optional<BlockPos> sleepingPos = this.getSleepingPos();
-        sleepingPos.filter(this.level::hasChunkAt).ifPresent((p_147228_) -> {
-            BlockState blockstate = this.level.getBlockState(p_147228_);
-            if (blockstate.isBed(level, p_147228_, this)) {
-                blockstate.setBedOccupied(level, p_147228_, this, false);
-                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level, p_147228_, this.getYRot())
-                                     .orElseGet(() -> {
-                                         BlockPos blockpos = p_147228_.above();
-                                         return new Vec3(
-                                                 (double) blockpos.getX() + 0.5D,
-                                                 (double) blockpos.getY() + 0.1D,
-                                                 (double) blockpos.getZ() + 0.5D
-                                         );
-                                     });
-                Vec3 vec32 = Vec3.atBottomCenterOf(p_147228_).subtract(vec31).normalize();
-                float f = (float) Mth.wrapDegrees(Mth.atan2(
-                        vec32.z,
-                        vec32.x
-                ) * (double) (180F / (float) Math.PI) - 90.0D);
-                this.setPos(vec31.x, vec31.y, vec31.z);
-                this.setYRot(f);
-                this.setXRot(0.0F);
-            }
-
-        });
+        sleepingPos.filter(p -> this.getLevel().hasChunkAt(p)).ifPresent(this::standUpBesideBed);
         Vec3 vec3 = this.position();
         this.setPose(Pose.STANDING);
         this.setPos(vec3.x, vec3.y, vec3.z);
         this.clearSleepingPos();
         return sleepingPos;
+    }
+
+    private void standUpBesideBed(BlockPos bedPos) {
+        BlockState bs = this.getLevel().getBlockState(bedPos);
+        Direction facing;
+        if (bs.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+            this.getLevel().setBlock(bedPos, bs.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.FALSE), 3);
+            facing = this.getDirection();
+        } else if (bs.getBlock() instanceof BedBlock) {
+            // A vanilla bed skipped the stand-up entirely: the townie woke standing on the bed top
+            // and, in a room 2 blocks tall inside, wedged under the ceiling for good.
+            this.getLevel().setBlock(bedPos, bs.setValue(BedBlock.OCCUPIED, Boolean.FALSE), 3);
+            facing = bs.getValue(BedBlock.FACING);
+        } else {
+            return;
+        }
+        Vec3 standAt = BedBlock.findStandUpPosition(this.getType(), this.getLevel(), bedPos, this.getYRot())
+                               .orElseGet(() -> doorwayOrAboveBed(bedPos));
+        Vec3 look = Vec3.atBottomCenterOf(bedPos).subtract(standAt).normalize();
+        float yRot = (float) Mth.wrapDegrees(Mth.atan2(look.z, look.x) * (double) (180F / (float) Math.PI) - 90.0D);
+        this.setPos(standAt.x, standAt.y, standAt.z);
+        this.setYRot(yRot);
+        this.setXRot(0.0F);
+    }
+
+    private Vec3 doorwayOrAboveBed(BlockPos bedPos) {
+        // No free floor beside the bed: stand in the room's doorway.
+        if (town != null) {
+            Optional<BlockPos> door = town.getRoomHandle().findDoorOfRoomContaining(bedPos);
+            if (door.isPresent()) {
+                return Vec3.atBottomCenterOf(door.get());
+            }
+        }
+        BlockPos above = bedPos.above();
+        return new Vec3(above.getX() + 0.5D, above.getY() + 0.1D, above.getZ() + 0.5D);
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -1077,12 +1285,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void customServerAiStep() {
-        this.level.getProfiler()
+        this.getLevel().getProfiler()
                   .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
         //noinspection unchecked
         Brain<VisitorMobEntity> brain1 = (Brain<VisitorMobEntity>) this.getBrain();
-        brain1.tick((ServerLevel) this.level, this);
-        this.level.getProfiler()
+        brain1.tick((ServerLevel) this.getLevel(), this);
+        this.getLevel().getProfiler()
                   .pop();
         super.customServerAiStep();
 
@@ -1174,8 +1382,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public void releasePoi(MemoryModuleType<GlobalPos> p_35429_) {
-        if (this.level instanceof ServerLevel) {
-            MinecraftServer minecraftserver = ((ServerLevel) this.level).getServer();
+        if (this.getLevel() instanceof ServerLevel) {
+            MinecraftServer minecraftserver = ((ServerLevel) this.getLevel()).getServer();
             this.brain.getMemory(p_35429_)
                       .ifPresent((p_186306_) -> {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
@@ -1195,7 +1403,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void jumpFromGround() {
-        BlockState onBlock = level.getBlockState(blockPosition());
+        BlockState onBlock = getLevel().getBlockState(blockPosition());
         if (!job.get().isJumpingAllowed(onBlock)) {
             // Jumping destroys crops. Don't do it when we don't have to
             return;
@@ -1213,7 +1421,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Vec3 p_19981_,
             InteractionHand hand
     ) {
-        boolean isClientSide = player.level.isClientSide();
+        boolean isClientSide = player.getLevel().isClientSide();
         if (!(player instanceof ServerPlayer sp)) {
             return InteractionResult.sidedSuccess(isClientSide);
         }
@@ -1242,6 +1450,44 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public IStatus<?> getStatusForServer() {
         return job.get().getStatus();
+    }
+
+    /** The current step's work done, 0..1, or -1 for no work bar (see DeclarativeJob#getWorkProgress). */
+    public float getWorkProgress() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgress(town);
+        }
+        return -1;
+    }
+
+    /**
+     * The job's current work-site progress (processing state, work/time left),
+     * for the inspect command's eyes-level readout. Null when the job is not a
+     * declarative job or has no current work spot.
+     */
+    public @Nullable String getWorkProgressDebug() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgressDebug(town);
+        }
+        return null;
+    }
+
+    /**
+     * The timed leaver trip this townie is currently on (absolute server
+     * return tick + total ticks), or null when the townie is not away on a
+     * timed trip. Delegates to the declarative job that owns the timer.
+     */
+    public @Nullable LeaverReturn getLeaverReturn() {
+        if (town == null) {
+            return null;
+        }
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj) {
+            return dj.getLeaverReturn(town);
+        }
+        return null;
     }
 
     public void addStatusListener(StatusListener l) {
@@ -1318,7 +1564,25 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return false;
         }
 
+        // The town's campfire is furniture: vanilla's CampfireBlock.entityInside burns any
+        // LivingEntity inside a lit campfire block to death in about a second (1 fire damage
+        // per tick, no armor, no burn time). Pathfinding already hard-blocks lit campfires for
+        // townies (VillagerPathNavigation), so this covers the routes it cannot: a campfire
+        // placed under a standing townie, or a stuck-unstick shove into the block. Fire from
+        // any other source (lava, real flames) still hurts.
+        if ((p_21016_ == net.minecraft.world.damagesource.DamageSource.IN_FIRE || p_21016_ == net.minecraft.world.damagesource.DamageSource.ON_FIRE) && !getLevel().isClientSide() && inOrOnLitCampfire()) {
+            return false;
+        }
+
         return super.hurt(p_21016_, p_21017_);
+    }
+
+    /** The feet block or the block below the feet is a lit campfire: the two ways a townie's
+     *  body can end up inside the campfire block's space. */
+    private boolean inOrOnLitCampfire() {
+        BlockPos feet = blockPosition();
+        return CampfireBlock.isLitCampfire(getLevel().getBlockState(feet))
+                || CampfireBlock.isLitCampfire(getLevel().getBlockState(feet.below()));
     }
 
     @Override
@@ -1362,12 +1626,79 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getId();
     }
 
+    /**
+     * Whether the current job lets the hungry->dining short-circuit snap this townie straight
+     * to a dining work. Server-only (the current job is a client-throwing stub on the client).
+     */
+    public boolean canInstantlySwitchToEating() {
+        return job.get().canInstantlySwitchToEating();
+    }
+
     public BlockPos getFlagPos() {
         return town.getTownFlagBasePos();
     }
 
     public TownInterface getTown() {
         return town;
+    }
+
+    /** Outside the town's footprint (see {@link StrandedRescue}); false while hidden on a trip. */
+    public boolean isStrandedOutsideTown() {
+        if (town == null || !entityData.get(visible)) {
+            return false;
+        }
+        return StrandedRescue.isOutsideTown(blockPosition(), town.getTownAnchors());
+    }
+
+    /**
+     * Poof a stranded villager back beside the town gate. Visible on purpose, a puff and a sound at
+     * both ends, so the player reads it as a rescue rather than a glitch.
+     */
+    public void rescueToGate(String why) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
+            return;
+        }
+        Vec3 from = position();
+        Vec3 to = town.getVisitorJoinPos();
+        poofHere(sl);
+        getNavigation().stop();
+        teleportTo(to.x + 0.5, to.y, to.z + 0.5);
+        poofHere(sl);
+        setNeed(TownieNeed.NONE);
+        QT.VILLAGER_LOGGER.info("[rescue] {} poofed from {} to the gate at {} ({})", uuid, from, to, why);
+    }
+
+    /**
+     * What the navigator is working from right now, for `_qtdev nav`: the brain's walk target,
+     * the navigation path's end and whether it reaches, and the can't-reach timestamp. Reads the
+     * same objects the nav sink reads, at the moment of the call.
+     */
+    public String describeNav() {
+        StringBuilder b = new StringBuilder();
+        b.append("pos=").append(blockPosition()).append(" status=").append(getStatusForServer());
+        getBrain().getMemory(MemoryModuleType.WALK_TARGET).ifPresentOrElse(
+                wt -> b.append(" walkTarget=").append(wt.getTarget().currentBlockPosition())
+                       .append(" closeEnough=").append(wt.getCloseEnoughDist()),
+                () -> b.append(" walkTarget=none")
+        );
+        Path path = getNavigation().getPath();
+        if (path == null) {
+            b.append(" path=none");
+        } else {
+            b.append(" pathTarget=").append(path.getTarget())
+             .append(" pathEnd=").append(path.getEndNode() == null ? "none" : path.getEndNode().asBlockPos())
+             .append(" canReach=").append(path.canReach())
+             .append(" node=").append(path.getNextNodeIndex()).append('/').append(path.getNodeCount());
+        }
+        getBrain().getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)
+                  .ifPresent(t -> b.append(" cantReachSince=").append(t));
+        b.append(" need=").append(getNeed());
+        return b.toString();
+    }
+
+    private void poofHere(ServerLevel sl) {
+        sl.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.8, getZ(), 20, 0.3, 0.5, 0.3, 0.02);
+        Compat.playNeutralSound(sl, blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT);
     }
 
     public void freeze(int ticks) {
@@ -1395,7 +1726,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .addStatsListener(villagerStatsMenu);
+            .addStatsListener(getUUID(), villagerStatsMenu);
     }
 
 
@@ -1404,7 +1735,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .removeStatsListener(villagerStatsMenu);
+            .removeStatsListener(getUUID(), villagerStatsMenu);
     }
 
     public boolean shouldStandStill() {
