@@ -1,0 +1,431 @@
+package ca.bradj.questown.mobs.helperchicken;
+
+import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.logic.TownCycle;
+import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.production.IProductionStatus;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.TownContainers;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.EmptyBlockGetter;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Predicate;
+
+/**
+ * Pure-function observers that read world state for the helper-chicken arc.
+ *
+ * <p>Each {@code isX(flag)} method samples one aspect of the world — a player
+ * inventory, a block state, a town container — and returns a boolean. The
+ * controller assembles these into a {@link ChickenArcTransitions.Observed}
+ * snapshot before calling {@link ChickenArcTransitions#advance}.
+ *
+ * <p>None of these methods mutate state. They are safe to call at any time.
+ * Most take only the flag BE and derive everything else from it (level,
+ * rotation, nearest player).
+ */
+public final class ChickenArcConditions {
+
+    /** Radius within which "nearest player" is searched for inventory checks. */
+    private static final double PLAYER_SEARCH_RADIUS = 16.0D;
+
+    private ChickenArcConditions() {
+    }
+
+    /**
+     * Builds the complete {@link ChickenArcTransitions.Observed} snapshot.
+     *
+     * <p>UI-opened and seeds-given flags come from ephemeral observation state on the flag BE. The
+     * Worldly-Seeds-in-container observation additionally flips the
+     * {@code first-gather-worldly-seeds-fired} bit at its rising edge (the loot wrappers only read
+     * the bit; they don't write it).
+     */
+    public static ChickenArcTransitions.Observed observe(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return emptyObservation();
+        }
+        BlockPos flagPos = flag.getTownFlagBasePos();
+        Rotation rotation = flag.getChickenStructureRotation();
+        Player nearestPlayer = findNearestPlayer(level, flagPos);
+
+        boolean seedsInContainer = areWorldlySeedsInAnyContainer(flag);
+        maybeFlipFirstGatherBit(flag, seedsInContainer);
+
+        return new ChickenArcTransitions.Observed(
+                hasWandInInventory(nearestPlayer),
+                isCampfireLit(level, flagPos),
+                flag.getChickenObservedSleepSinceSunset(),
+                isWallBlockPlaced(level, flagPos, rotation),
+                isDoorPlaced(level, flagPos, rotation),
+                isRoomRegistered(flag),
+                isRoomBuilt(flag),
+                isSignConvertedToJobBoard(flag),
+                isChestPlaced(flag),
+                isWelcomeMatPlaced(flag),
+                flag.getGivenBonusFood(),
+                flag.getChickenObservedVillagerUiOpen(),
+                flag.getChickenObservedFlagUiOpen(),
+                seedsInContainer,
+                flag.getChickenObservedSeedsGiven(),
+                rotation == Rotation.NONE
+        );
+    }
+
+    private static ChickenArcTransitions.Observed emptyObservation() {
+        return new ChickenArcTransitions.Observed(
+                false, false, false, false, false, false, false, false, false,
+                false, false, false, false, false, false, false
+        );
+    }
+
+    public static boolean hasWandInInventory(Player player) {
+        if (player == null) {
+            return false;
+        }
+        for (ItemStack stack : player.getInventory().items) {
+            if (stack.is(ItemsInit.TOWN_WAND.get())) {
+                return true;
+            }
+        }
+        return player.getOffhandItem().is(ItemsInit.TOWN_WAND.get());
+    }
+
+    /**
+     * Whether a lit campfire exists within the flag's campfire-search radius. This
+     * mirrors the special campfire quest's own detection ({@link TownCycle#findCampfire}
+     * with the same lit predicate), so the chicken's {@code WAITING_FOR_WAND_ON_CAMPFIRE}
+     * beat and the campfire quest agree on where the campfire is. The beat does not require
+     * the campfire at the rotation-anchored {@code CAMPFIRE_OFFSET}: on a hand-placed flag that
+     * offset is never where the player put the campfire. The offset is still the
+     * peck/animation target; only the advance condition is the radius scan.
+     */
+    public static boolean isCampfireLit(
+            ServerLevel level,
+            BlockPos flagPos
+    ) {
+        return TownCycle.findCampfire(
+                flagPos, level,
+                bs -> bs.hasProperty(CampfireBlock.LIT) && bs.getValue(CampfireBlock.LIT)
+        ).isPresent();
+    }
+
+    public static boolean isWallBlockPlaced(
+            ServerLevel level,
+            BlockPos flagPos,
+            Rotation rotation
+    ) {
+        BlockPos pos = HelperChickenBeatOffsets.resolveTarget(
+                ChickenBeatState.WAITING_FOR_WALL_BLOCK, flagPos, rotation
+        );
+        if (pos == null) {
+            return false;
+        }
+        return level.getBlockState(pos).isSolidRender(level, pos);
+    }
+
+    public static boolean isDoorPlaced(
+            ServerLevel level,
+            BlockPos flagPos,
+            Rotation rotation
+    ) {
+        BlockPos pos = HelperChickenBeatOffsets.resolveTarget(
+                ChickenBeatState.WAITING_FOR_DOOR, flagPos, rotation
+        );
+        if (pos == null) {
+            return false;
+        }
+        return level.getBlockState(pos).getBlock() instanceof net.minecraft.world.level.block.DoorBlock;
+    }
+
+    public static boolean isRoomRegistered(TownFlagBlockEntity flag) {
+        // WAITING_FOR_WAND_ON_DOOR advances on this condition. At that beat the
+        // player has wand-clicked the door but hasn't yet placed a sign (→ job
+        // board), chest, or any other recipe-matching block — so no entry
+        // exists in getMatches() (which filters to recipe-matched rooms). The
+        // semantic the beat machine wants is "a door has been wand-registered",
+        // not "a furnished room exists". Checking registered doors avoids the
+        // deadlock and lets later beats (WAITING_FOR_SIGN, WAITING_FOR_CHEST)
+        // actually add recipe blocks inside the registered perimeter.
+        if (!flag.getRoomHandle().getMatches(x -> true).isEmpty()) {
+            return true;
+        }
+        return !flag.getRoomHandle().getAllRegisteredDoors().isEmpty();
+    }
+
+    public static boolean doorHasRoom(TownFlagBlockEntity flag) {
+        Collection<MCRoom> rooms = flag.getRoomHandle().getRegisteredRooms().getAllRooms();
+        return !rooms.isEmpty();
+    }
+
+    /**
+     * Whether the helper chicken has built an enclosed room around a registered
+     * door. The room-build beat advances on this, and a room appearing in any
+     * form (the player building it themselves, or the chicken's own build) is
+     * accepted — the beat only exists to bridge the gap between "door registered"
+     * and "a room exists", which can be crossed either way.
+     */
+    public static boolean isRoomBuilt(TownFlagBlockEntity flag) {
+        return doorHasRoom(flag);
+    }
+
+    public static boolean isSignConvertedToJobBoard(TownFlagBlockEntity flag) {
+        // A placed job board registers in the flag's work handle (the same way
+        // a placed welcome mat registers in pois and isWelcomeMatPlaced reads it
+        // via getWelcomeMats). The sign -> job-board conversion installs the board
+        // via setBlockAndUpdate and registers it in the work handle, but the board
+        // also becomes its own block-room, so it is not in the matched walled room's
+        // contained blocks; reading only anyMatchedRoomContains misses it and the beat
+        // stalls even though the board is placed and the job_board quest completes.
+        // Checking the work handle's registration (hasAtLeastOneBoard) is the reliable
+        // signal, mirroring isWelcomeMatPlaced.
+        if (flag.getWorkHandle().hasAtLeastOneBoard()) {
+            return true;
+        }
+        return anyMatchedRoomContains(flag,
+                b -> b == BlocksInit.JOB_BOARD_BLOCK.get());
+    }
+
+    public static boolean isChestPlaced(TownFlagBlockEntity flag) {
+        return anyMatchedRoomContains(flag,
+                b -> b instanceof net.minecraft.world.level.block.ChestBlock);
+    }
+
+    /**
+     * Whether any room recipe currently matches a room that contains a block
+     * satisfying the predicate. Delegating to the recipe system means the
+     * beat advances regardless of which interior cell the player picked, as
+     * long as the room is recipe-active and contains the required block.
+     */
+    private static boolean anyMatchedRoomContains(
+            TownFlagBlockEntity flag,
+            java.util.function.Predicate<net.minecraft.world.level.block.Block> predicate
+    ) {
+        var matches = flag.getRoomHandle().getMatches(m -> true);
+        for (var match : matches) {
+            for (var b : match.getContainedBlocks().values()) {
+                if (predicate.test(b)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isWelcomeMatPlaced(TownFlagBlockEntity flag) {
+        return !flag.getWelcomeMats().isEmpty();
+    }
+
+    public static boolean areWorldlySeedsInAnyContainer(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return false;
+        }
+        List<ContainerTarget<MCContainer, MCTownItem>> all = TownContainers.getAllContainers(flag, level);
+        for (ContainerTarget<MCContainer, MCTownItem> ct : all) {
+            if (ct.hasItem(item -> item.get() == ItemsInit.WORLDLY_SEEDS.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether the gatherer (the town's first job, a leaver) has gone out to
+     * gather — i.e. its jobs-domain phase is an active/moving one, not
+     * {@code IDLE}. Reads the gatherer's {@link IProductionStatus#isBusy()} from
+     * its {@link VisitorMobEntity}. Feeds the seeds-delivery beat's
+     * {@code gathererLeft} input.
+     *
+     * <p>Returns false when no gatherer is loaded (not yet spawned, or the
+     * entity's chunk is unloaded) — the neutral gate-wait hint is the safe
+     * fallback in that case.
+     */
+    public static boolean isGathererLeft(TownFlagBlockEntity flag) {
+        for (LivingEntity e : flag.getVillagerHandle().entities()) {
+            if (!(e instanceof VisitorMobEntity vme)) {
+                continue;
+            }
+            if (!GathererUnmappedNoToolWorkQtrDay.ID.rootId().equals(vme.getJobId().rootId())) {
+                continue;
+            }
+            if (vme.getStatusForServer() instanceof IProductionStatus<?> ps) {
+                return ps.isBusy();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Flips {@code first-gather-worldly-seeds-fired} on the rising edge of
+     * seeds-in-container. Idempotent: once the bit is set, nothing to do.
+     *
+     * <p>The bit's write lives here rather than in the loot wrappers: the wrappers at
+     * {@code RealtimeWorldInteraction} and {@code TimeWarpWorldInteraction} check the bit but never
+     * write it, so there is no duplicate-write race across the two call sites.
+     */
+    private static void maybeFlipFirstGatherBit(
+            TownFlagBlockEntity flag,
+            boolean seedsInContainer
+    ) {
+        if (!seedsInContainer) {
+            return;
+        }
+        if (flag.getChickenFirstGatherWorldlySeedsFired()) {
+            return;
+        }
+        flag.setChickenFirstGatherWorldlySeedsFired(true);
+        flag.writeTownData(ca.bradj.questown.mc.Compat.getBlockStoredTagData(flag));
+        flag.setChanged();
+    }
+
+    private static Player findNearestPlayer(
+            ServerLevel level,
+            BlockPos flagPos
+    ) {
+        return level.getNearestPlayer(
+                flagPos.getX() + 0.5D,
+                flagPos.getY() + 0.5D,
+                flagPos.getZ() + 0.5D,
+                PLAYER_SEARCH_RADIUS,
+                false
+        );
+    }
+
+    public static Player findNearestPlayerForFlag(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        return findNearestPlayer(level, flag.getTownFlagBasePos());
+    }
+
+    /**
+     * Whether the chicken's beat-peck goal should currently run. Returns true
+     * for beats with no held-item requirement (UI beats, seeds-delivery) so the
+     * chicken pecks the location regardless; for beats with a required item
+     * (placement beats too) returns true only when the player is holding it.
+     * When false, the lower-priority follow-near-flag goal picks up and the
+     * chicken trails the player until they fetch the item.
+     *
+     * <p>The pressure-plate beat is the one exception: it pecks in BOTH the
+     * "has a pressure plate" phase (pointing at the flag base to craft the mat)
+     * and the "has a welcome mat" phase (pointing at the gate to place it), so
+     * it accepts either item. Neither item → no peck, the chicken follows.
+     */
+    public static boolean shouldPeckRun(@Nullable Player player, ChickenBeatState state) {
+        if (state == ChickenBeatState.WAITING_FOR_ROOM_BUILD) {
+            // This beat's work is the room-build goal's, not the peck goal's. The
+            // room-build goal lays the shell; if the peck goal also ran here it would
+            // hold the same goal tier and starve the room-build goal, so the peck
+            // stands down for this beat and the room-build goal gets the slot.
+            return false;
+        }
+        if (state == ChickenBeatState.WAITING_FOR_PRESSURE_PLATE) {
+            return playerHoldsPressurePlate(player) || playerHoldsRequiredItem(player, state);
+        }
+        Predicate<ItemStack> required = requiredItemPredicate(state);
+        if (required == null) {
+            return true;
+        }
+        return playerHoldsMatching(player, required);
+    }
+
+    /**
+     * Whether the player holds the item the chicken's bubble is asking for, used
+     * to flip the bubble between single-item (item only) and alternating
+     * (item ↔ target block) modes. Returns false for beats with no held-item
+     * requirement so those bubbles stay in their authored single/alternating shape.
+     */
+    public static boolean playerHoldsRequiredItem(@Nullable Player player, ChickenBeatState state) {
+        Predicate<ItemStack> required = requiredItemPredicate(state);
+        if (required == null) {
+            return false;
+        }
+        return playerHoldsMatching(player, required);
+    }
+
+    /**
+     * Whether the player holds a wooden pressure plate (main or off hand) —
+     * the item the flag base converts into a welcome mat. Only the
+     * {@code WAITING_FOR_PRESSURE_PLATE} beat reads this, to distinguish "has
+     * plate" from "has mat"; the peck still keys off the welcome-mat predicate
+     * via {@link #playerHoldsRequiredItem}, so the chicken keeps trailing the
+     * player (not pecking the gate) until a mat actually exists.
+     */
+    public static boolean playerHoldsPressurePlate(@Nullable Player player) {
+        if (player == null) {
+            return false;
+        }
+        return Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(player.getMainHandItem())
+                || Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(player.getOffhandItem());
+    }
+
+    private static boolean playerHoldsMatching(@Nullable Player player, Predicate<ItemStack> match) {
+        if (player == null) {
+            return false;
+        }
+        return match.test(player.getMainHandItem()) || match.test(player.getOffhandItem());
+    }
+
+    /**
+     * Maps each beat to the predicate matching items the player must hold for
+     * the chicken to peck the target location. Returns null when the beat has
+     * no held-item requirement (UI beats, seeds delivery, terminals, sunset).
+     *
+     * <p>For "any X" beats (wall, door, sign) the predicate matches by Block
+     * type so the player can use any vanilla variant — any solid block, any
+     * door, any sign — not just the cobblestone/oak versions the bubble shows.
+     */
+    @Nullable
+    private static Predicate<ItemStack> requiredItemPredicate(ChickenBeatState state) {
+        return switch (state) {
+            case WAITING_FOR_STICK -> s -> s.is(Items.STICK);
+            case WAITING_FOR_WAND_ON_CAMPFIRE, WAITING_FOR_WAND_ON_DOOR, SUNSET_AND_MAP ->
+                    s -> s.is(ItemsInit.TOWN_WAND.get());
+            case WAITING_FOR_WALL_BLOCK -> ChickenArcConditions::isSolidBlockItem;
+            case WAITING_FOR_DOOR -> s -> blockItemBlock(s) instanceof DoorBlock;
+            case WAITING_FOR_SIGN -> null;
+            case WAITING_FOR_CHEST -> s -> s.is(Items.CHEST);
+            case WAITING_FOR_ROOM_BUILD -> null;
+            case WAITING_FOR_PRESSURE_PLATE -> s -> s.is(ItemsInit.WELCOME_MAT_BLOCK.get());
+            case WAITING_FOR_FREE_FOOD,
+                 WAITING_FOR_VILLAGER_UI, WAITING_FOR_FLAG_UI,
+                 AWAITING_WORLDLY_SEEDS_DELIVERY, COMPLETE, FORFEIT -> null;
+        };
+    }
+
+    private static boolean isSolidBlockItem(ItemStack stack) {
+        if (!(stack.getItem() instanceof BlockItem bi)) {
+            return false;
+        }
+        BlockState defaultState = bi.getBlock().defaultBlockState();
+        return defaultState.isSolidRender(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+    }
+
+    @Nullable
+    private static net.minecraft.world.level.block.Block blockItemBlock(ItemStack stack) {
+        return stack.getItem() instanceof BlockItem bi ? bi.getBlock() : null;
+    }
+}
