@@ -2,6 +2,7 @@
   "version": 2,
   "id": "cook/stock_fuel",
   "priority": "20000",
+  "experience": 0,
   "parent": "cook/fuel",
   "icon": "minecraft:chest",
   "initial_request": "#questown:villager_food",
@@ -33,5 +34,8 @@
       "state": 1,
       "rules": ["add_item_to_container"]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "questown:textures/menu/gatherer/get_supplies.png"}
   ]
 }
