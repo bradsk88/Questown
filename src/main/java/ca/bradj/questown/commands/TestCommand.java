@@ -4,6 +4,8 @@ import ca.bradj.questown.commands.test.TestBlueprint;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.loader.forge.TestTickListener;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
@@ -16,9 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import java.util.List;
 
 public class TestCommand {
 
@@ -38,6 +38,9 @@ public class TestCommand {
             Commands.literal("_qtdev").then(
                 Commands.literal("test")
                     .requires(AddExperienceCommand::isCreative)
+                    .then(Commands.literal("list")
+                        .executes(css -> listScenarios(css.getSource()))
+                    )
                     .then(jobArg
                     .then(warpArg
                         .executes(css -> warn(css.getSource()))
@@ -52,6 +55,24 @@ public class TestCommand {
             )
         );
         // @formatter:on
+    }
+
+    private static int listScenarios(CommandSourceStack source) {
+        ServerPlayer player;
+        try {
+            player = source.getPlayerOrException();
+        } catch (Exception e) {
+            return -1;
+        }
+        List<String> names = TestBlueprintRegistry.allScenarioNames();
+        Compat.sendMessage(player, Component.literal(
+                "[qt test] " + names.size()
+                        + " scenario(s) for -Dquestown.autotest.only=<name> (substring match):")
+        );
+        for (String name : names) {
+            Compat.sendMessage(player, Component.literal("  " + name));
+        }
+        return 1;
     }
 
     private static int warn(CommandSourceStack source) {
@@ -89,7 +110,7 @@ public class TestCommand {
         TestExecutor executor = new TestExecutor(level, output, origin, jobId, warpAmount, blueprint);
 
         TestTickListener listener = new TestTickListener(executor);
-        MinecraftForge.EVENT_BUS.register(listener);
+        Loader.registerCommonHandlers(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
@@ -97,23 +118,5 @@ public class TestCommand {
         ));
 
         return 1;
-    }
-
-    static class TestTickListener {
-        private final TestExecutor executor;
-
-        TestTickListener(TestExecutor executor) {
-            this.executor = executor;
-        }
-
-        @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
-            if (executor.tick()) {
-                MinecraftForge.EVENT_BUS.unregister(this);
-            }
-        }
     }
 }
