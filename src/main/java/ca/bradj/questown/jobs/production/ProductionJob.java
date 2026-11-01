@@ -10,6 +10,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -34,7 +35,6 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
 import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.Marker;
 import org.jetbrains.annotations.NotNull;
@@ -138,13 +138,7 @@ public abstract class ProductionJob<
         if (sl == null) {
             return false;
         }
-        Material footMaterial = sl.getBlockState(bp).getMaterial();
-        boolean footSpotBlocked = footMaterial.isSolid();
-        BlockState torsoMaterial = sl.getBlockState(bp.above());
-        boolean torsoSpotBlocked = torsoMaterial.getMaterial().isSolid();
-        BlockState groundMaterial = sl.getBlockState(bp.below());
-        boolean groundSpotSolid = groundMaterial.getMaterial().isSolid();
-        return groundSpotSolid && !(footSpotBlocked || torsoSpotBlocked);
+        return WalkTargets.isStandable(sl, bp);
     }
 
     private BlockPos jobSite;
@@ -368,14 +362,14 @@ public abstract class ProductionJob<
             successTarget = getDropTargetForLoot(entityBlockPos, town);
             if (successTarget != null) {
                 this.setLookTarget(successTarget.getBlockPos());
-                return Positions.ToBlock(successTarget.getInteractPosition(), successTarget.getYPosition());
+                return navTargetForContainer(successTarget);
             }
         }
 
         setupForGetSupplies(town, entityBlockPos, Util.getTick(sl));
         if (suppliesTarget != null) {
             this.setLookTarget(suppliesTarget.getBlockPos());
-            return Positions.ToBlock(suppliesTarget.getInteractPosition(), suppliesTarget.getYPosition());
+            return navTargetForContainer(suppliesTarget);
         }
 
         if (shouldDisappear(town, entityPos)) {
@@ -409,6 +403,24 @@ public abstract class ProductionJob<
         this.lookTarget = jobSite1;
     }
 
+    /**
+     * Where the villager must actually <em>stand</em> to interact with a container target: the
+     * container's interaction spot, but at the container's own floor level, not the roof. A container
+     * in a room is reached through the room's door at the room's floor level (its {@code yCoord});
+     * the interaction spot is the air in front of the container, which is normally at that same level.
+     * When the room's roof is reachable (stairs or a run of 1-block jumps), a target kept at the
+     * container's own height lets the ground pathfinder route over the roof instead of entering the
+     * room at the door. Pinning the walk target to the room's floor level closes that escape and
+     * forces the path through the door.
+     */
+    protected static @NotNull BlockPos navTargetForContainer(ContainerTarget<MCContainer, MCTownItem> target) {
+        MCRoom room = target.getRoom();
+        if (room == null) {
+            return Positions.ToBlock(target.getInteractPosition(), target.getYPosition());
+        }
+        return Positions.ToBlock(target.getInteractPosition(), room.yCoord);
+    }
+
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);
 
     protected abstract WithReason<@Nullable BlockPos> findJobSite(
@@ -425,7 +437,7 @@ public abstract class ProductionJob<
             BlockPos pos,
             Long currentTick
     ) {
-        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
+        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> SupplyItems.shouldTakeItem(
                 journal.getCapacity(), cleanRooms(),
                 journal.getItems(), item
         );
@@ -443,10 +455,12 @@ public abstract class ProductionJob<
                     .sorted(Comparator.comparingDouble(a -> TownContainers.comparison(pos, a)))
                     .toList();
             for (ContainerTarget<MCContainer, MCTownItem> chest : closeChests) {
-                if (!chest.hasItem(checkFn)) {
+                boolean hasIt = chest.hasItem(checkFn);
+                if (!hasIt) {
                     continue;
                 }
-                if (!shouldUseBlockForSupplies(currentTick, chest.getBlockPos())) {
+                boolean useGate = shouldUseBlockForSupplies(currentTick, chest.getBlockPos());
+                if (!useGate) {
                     continue;
                 }
                 return chest;
@@ -493,6 +507,11 @@ public abstract class ProductionJob<
     protected abstract boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom);
 
     protected abstract Collection<? extends Predicate<MCTownItem>> cleanRooms();
+
+    @Override
+    public boolean leavesTown() {
+        return specialRules.values().stream().anyMatch(rules -> rules.contains(SpecialRules.REMOVE_FROM_WORLD));
+    }
 
     @Override
     public boolean shouldDisappear(
