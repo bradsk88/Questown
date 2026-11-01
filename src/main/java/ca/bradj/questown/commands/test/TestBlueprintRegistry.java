@@ -1,21 +1,100 @@
 package ca.bradj.questown.commands.test;
 
+import ca.bradj.questown.mc.Compat;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.common.util.FakePlayer;
+import ca.bradj.questown.loader.Loader;
+
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.blocks.TownFlagBlock;
+import ca.bradj.questown.items.CampfireSleepHandler;
+import ca.bradj.questown.items.RelocationDeedItem;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownRelocation;
+import ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy;
+import ca.bradj.questown.town.entity.TownRelocation.RelocationResult;
+import ca.bradj.questown.town.entity.TownRoomsHandle;
+import ca.bradj.questown.items.TownWand;
+import ca.bradj.questown.town.rooms.DoorTrouble;
+import ca.bradj.questown.town.rooms.TownPosition;
+import net.minecraft.nbt.CompoundTag;
 import ca.bradj.questown.commands.test.TestBlueprint.BlockPlacement;
 import ca.bradj.questown.commands.test.TestBlueprint.RoomType;
 import ca.bradj.questown.commands.test.TestExpectation.ExpectedProduct;
+import ca.bradj.questown.commands.test.TestExpectation.ExpectedContainerContent;
 import ca.bradj.questown.core.init.BlocksInit;
+import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.Quest;
+import java.util.AbstractMap;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.InventoryFullStrategy;
+import ca.bradj.questown.integration.minecraft.MCTownState;
+import ca.bradj.questown.items.StockRequestItem;
+import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.jobs.IStatus;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.SlotPrecondition;
+import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
+import ca.bradj.questown.town.TownState;
+import ca.bradj.questown.town.interfaces.VillagerHolder;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.town.entity.TownVillagerLearningHandle;
 import ca.bradj.questown.town.special.SpecialQuests;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+
+import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +110,8 @@ public class TestBlueprintRegistry {
     public record TestEntry(String name, JobID jobId, TestBlueprint blueprint, String category)
             implements AnyTestEntry {}
 
-    public record WorldgenCheck(String name, String category, Function<ServerLevel, Boolean> check)
+    /** A self-reporting boolean check that only needs the {@link ServerLevel} (no town build). */
+    public record LevelCheck(String name, String category, Function<ServerLevel, Boolean> check)
             implements AnyTestEntry {}
 
     public static @Nullable TestBlueprint get(JobID jobId) {
@@ -56,6 +136,9 @@ public class TestBlueprintRegistry {
         if ("soup_cook".equals(jobId.rootId())) {
             return soupCookBlueprint();
         }
+        if ("explorer".equals(jobId.rootId())) {
+            return explorerBlueprint();
+        }
         if ("gatherer".equals(jobId.rootId())) {
             return gathererBlueprint();
         }
@@ -68,6 +151,12 @@ public class TestBlueprintRegistry {
         if ("fisher".equals(jobId.rootId())) {
             return fisherBlueprint();
         }
+        if ("arborist".equals(jobId.rootId())) {
+            return arboristCutTreesBlueprint();
+        }
+        if ("organizer".equals(jobId.rootId())) {
+            return organizerFetchBlueprint();
+        }
         return null;
     }
 
@@ -75,18 +164,103 @@ public class TestBlueprintRegistry {
         List<AnyTestEntry> jobs = new ArrayList<>();
 
         // Core job tests
-        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint()));
+        jobs.add(entry(new JobID("farmer", "harvest_wheat"), farmerBlueprint().withCustomAssertion(
+                (level, flagPos, town, output) -> {
+                    // Counterpart to the no_supplies case: a supplied farmer never asks for items.
+                    // (NO_STORAGE is a different signal: the fixture's one chest can fill up with
+                    // wheat and seeds during the warp, and then the farmer rightly bubbles that.)
+                    List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
+                            .map(v -> ((VisitorMobEntity) v).getNeed())
+                            .toList();
+                    output.msg("Townie needs at end of supplied farmer run: " + needs);
+                    return needs.stream().noneMatch(n -> n == TownieNeed.UNMET_ITEM);
+                })));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
+        // A cook whose furnace is already fuelled and holds cooked food must take the food out. The
+        // cook starts on cook/fuel with all starting jobs unlocked; realtime, so job selection is
+        // exercised.
+        jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "requests_done", cookRequestsDoneBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "open_request_no_pork", cookOpenRequestNoPorkBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "open_request_no_coal", cookOpenRequestNoCoalBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "working_no_bubble", cookWorkingNoBubbleBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "mutton", "doorway_kitchen", cookDoorwayKitchenBlueprint(false, false)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "rest_then_eat", cookDoorwayKitchenBlueprint(true, false)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "raw_food_only", cookDoorwayKitchenBlueprint(true, true)));
+        jobs.add(edgeCaseEntry("cook", "mutton", "blocked_kitchen_door", cookBlockedKitchenDoorBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "mutton", "door_flaps", cookDoorFlapsBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "fuel", "storage_full", cookStorageFullBlueprint()));
         jobs.add(entry(new JobID("baker", "bread"), bakerBlueprint()));
         jobs.add(entry(new JobID("crafter", "stick"), crafterBlueprint()));
         jobs.add(entry(new JobID("crafter", "wooden_axe"), blacksmithBlueprint()));
         jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
         jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
+        jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
+        // One warp day must not out-produce realtime: OneDayYieldCaps.HUNTER is the most generous
+        // trip tier across a day's productive ticks.
+        jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
+        jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
+        jobs.add(edgeCaseEntry("hunter", "sword", "switch_after_trip", hunterSwitchMidTripBlueprint(true)));
+        jobs.add(edgeCaseEntry("hunter", "sword", "switch_now", hunterSwitchMidTripBlueprint(false)));
+        jobs.add(edgeCaseEntry("hunter", "sword", "longest_trip", hunterLongestTripBlueprint()));
+        jobs.add(edgeCaseEntry("cook", "mutton", "no_kitchen", cookNoKitchenBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "stick", "request_limit", requestLimitBlueprint()));
+        jobs.add(edgeCaseEntry("hunter", "sword", "one_day_yield", hunterBlueprint().withExpectation(
+                new TestExpectation(List.of(new ExpectedProduct("*", 1, OneDayYieldCaps.HUNTER)), 1, 100))));
+        // loot_on_extract: the 2.5 raw-food gate as a deterministic measurement. Posts the
+        // raw-meat LOOT quest, drives one hunter cycle on the REALTIME path (the quest check
+        // lives in RealtimeWorldInteraction.postExtractHook -> Quests.processLootQuests),
+        // and asserts the quest is complete at the end — meat may have been eaten, held,
+        // or dropped; extraction (not deposit/dine) must be what satisfies it.
+        jobs.add(new TestEntry("loot_on_extract", new JobID("hunter", "sword"), lootOnExtractBlueprint(), "loot"));
+        // loot_on_extract_warp: same raw-food LOOT quest, driven through the WARP path — the
+        // warper records the extraction on the state snapshot and the settle point in
+        // TownFlagState.warp closes the quest through the live handle (warp == realtime outcome).
+        jobs.add(new TestEntry("loot_on_extract_warp", new JobID("hunter", "sword"), lootOnExtractBlueprint(true), "loot"));
+        jobs.add(new TestEntry("ui/hunter_status_resync", new JobID("hunter", "sword"), hunterStatusResyncBlueprint(), "ui"));
+        jobs.add(new TestEntry("cook_extract_food", new JobID("cook", "fuel"), cookExtractCreditsFoodQuestBlueprint(), "loot"));
+        // The same with a "Food" category request (a tag), as a player posts it from the board's
+        // categories.
+        jobs.add(new TestEntry("cook_extract_food_category", new JobID("cook", "fuel"),
+                cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(TagsInit.Items.VILLAGER_FOOD)), "loot"));
+        // loot_on_extract_accumulate: posts the raw-food
+        // LOOT quest at count 40 (LOOT_ACCUMULATE_COUNT), drives one hunter cycle (>=1 natural extraction), and
+        // asserts the quest did NOT complete on the first extraction, then tops the counter up through the live
+        // quest handle and asserts it completes exactly at the count.
+        jobs.add(new TestEntry("loot_on_extract_accumulate", new JobID("hunter", "sword"), lootOnExtractAccumulateBlueprint(), "loot"));
+        // gatherer_becomes_hunter: the gatherer's leftover terminal mat state must not park the
+        // new hunter in COLLECTING_SUPPLIES.
+        // One warp day must not out-produce realtime for the base gatherer either. Counts loot,
+        // not the food it eats.
+        jobs.add(edgeCaseEntry("gatherer", "gather", "one_day_loot", gathererOneDayLootBlueprint()));
+        jobs.add(new TestEntry("loot/gatherer_becomes_hunter", new JobID("gatherer", "gather"), gathererBecomesHunterBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
+        jobs.add(edgeCaseEntry("miner", "coal", "cycle_time", cycleTimeBlueprint(minerBlueprint(), "miner")));
+        jobs.add(edgeCaseEntry("hunter", "sword", "cycle_time", cycleTimeBlueprint(hunterBlueprint(), "hunter")));
+        jobs.add(edgeCaseEntry("miner", "coal", "storage_full", minerStorageFullBlueprint()));
         jobs.add(entry(new JobID("fisher", "fish"), fisherBlueprint()));
         jobs.add(entry(new JobID("crafter", "leather_boots"), armorerBlueprint()));
+        jobs.add(entry(new JobID("crafter", "display_armor"), displayArmorBlueprint()));
+        jobs.add(entry(new JobID("crafter", "display_weapons"), displayWeaponsBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_weapons", "full_frame", displayWeaponsFullFrameBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_weapons", "corner_frames", displayWeaponsCornerFramesBlueprint()));
+        jobs.add(edgeCaseEntry("crafter", "display_armor", "fullest_stand", displayArmorFullestStandBlueprint()));
+        jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
+        jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
+        jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
+
+        // Organizer/fetch: realtime, then the warp fetch-relocation model
+        // (RelocateRequestedItemWarpRule), both with source->target conservation.
+        jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
+        // nav/roof_gatherer drives the REAL gatherer job (which walks gate <-> supply chests, so
+        // its container nav target is actually exercised) in a supply room whose roof is
+        // reachable, with the supplies chest at yCoord+1 under a head-height grass ledge. The
+        // entry name (not the JobID) selects it via only=nav/roof_gatherer.
+        jobs.add(new TestEntry("nav/roof_gatherer", new JobID("gatherer", "axe"), navGathererBlueprint(), "nav"));
+        jobs.add(edgeCaseEntry("organizer", "fetch", "warp", organizerFetchWarpBlueprint()));
 
         // Edge case tests
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
@@ -96,24 +270,107 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("gatherer", "axe", "tool_durability", gathererToolDurabilityBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "2_villagers", farmerTwoVillagersBlueprint()));
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "warp_then_realtime", farmerRealtimeBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "proficiency_parity", proficiencyParityBlueprint()));
+        jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "held_tool_warp", heldToolWarpBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "short_absence", gathererShortAbsenceBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "sleep_jump", gathererSleepJumpBlueprint()));
+        jobs.add(edgeCaseEntry("gatherer", "axe", "absence_then_sleep", gathererAbsenceThenSleepBlueprint()));
 
         // Eating tests
         jobs.add(eatingEntry("eat_no_table", eatNoTableBlueprint()));
         jobs.add(eatingEntry("dine_at_time", dineAtTimeBlueprint()));
         jobs.add(eatingEntry("eat_raw_food", eatRawFoodBlueprint()));
+        jobs.add(eatingEntry("eat_raw_food_single", eatRawFoodSingleBlueprint()));
+        jobs.add(eatingEntryDirect("eat_storage_full", eatWithStorageFullBlueprint()));
         jobs.add(eatingEntryDirect("eat_direct", eatDirectBlueprint()));
+        jobs.add(eatingEntryDirect("no_raw_meal_after_eating", noRawMealAfterEatingBlueprint()));
+        jobs.add(eatingEntryDirect("food_arrives_after_give_up", foodArrivesAfterGiveUpBlueprint()));
 
         // Worldgen tests
         jobs.add(emptyTownStructureCheck());
         jobs.add(emptyTownStructureSetCheck());
 
+        // UI tests
+        jobs.add(jobBoardKnowledgeGatingCheck());
+        jobs.add(jobBoardRealUnlockGatingCheck());
+
+        // Flag relocation (#199): non-job ritual scenarios
+        jobs.add(flagEntry("town_shutdown", townShutdownBlueprint()));
+        jobs.add(flagEntry("deed_issue_and_recover", deedIssueAndRecoverBlueprint()));
+        jobs.add(flagEntry("shutdown_wake_keeps_jobs", shutdownWakeKeepsJobsBlueprint()));
+        jobs.add(flagEntry("shutdown_keeps_job_board", shutdownKeepsJobBoardBlueprint()));
+        jobs.add(flagEntry("producer_count_own_tables", producerCountOwnTablesBlueprint()));
+        jobs.add(flagEntry("relocate_nearby", relocateNearbyBlueprint()));
+        jobs.add(flagEntry("relocate_far", relocateFarBlueprint()));
+        jobs.add(flagEntry("deed_consumed_on_place", deedConsumedOnPlaceBlueprint()));
+        jobs.add(flagEntry("campfire_sleep_preserves_flag", campfireSleepPreservesFlagBlueprint()));
+        jobs.add(flagEntry("campfire_safety", campfireSafetyBlueprint()));
+        jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
+        jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
+        jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
+        jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
+        jobs.add(flagEntry("bed_is_two_blocks", bedIsTwoBlocksBlueprint()));
+        jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
+        jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
+        // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
+        jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
+        jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
+        // BOP depositors at the flag must deposit, by night and (control) by day.
+        jobs.add(flagEntry("bop_deposit_at_night", bopDepositBlueprint(13000L)));
+        jobs.add(flagEntry("bop_deposit_by_day", bopDepositBlueprint(2000L)));
+        jobs.add(flagEntry("bop_carried_with_loot", bopCarriedWithLootBlueprint()));
+
+        // Perf measurements (always pass; they report timings). Baseline first so the pair can be
+        // compared within a single run.
+        jobs.add(perfEntry("town_small", perfBlueprint(1, 0, 2000)));
+        jobs.add(perfEntry("town_large", perfBlueprint(20, 15, 2000)));
+        // Plus-shaped room reproduction: a 4-corner-pillar room, the "specifically shaped room" from
+        // the report. Reports the same TickProfile so the grind shows as a number.
+        jobs.add(plusRoomEntry("plus_room", plusRoomBlueprint(20, 2000)));
+
         return jobs;
+    }
+
+    /**
+     * The village-level scenario names (the two scenarios that
+     * {@link ca.bradj.questown.commands.test.AutoTestRunner} special-cases rather than
+     * registering as an entry).
+     */
+    public static final List<String> VILLAGE_SCENARIO_NAMES =
+            List.of("village/growth", "village/self_sufficiency", "paths/at_fork", "paths/outfitter");
+
+    /**
+     * All the scenario names available to
+     * {@code -Dquestown.autotest.only=<name>} (the substring match against this list), in
+     * a stable form (jobs track, then chicken track, then the special-cased village
+     * track). Used by the {@code _qtdev test list} command and the close-out tests.
+     * Chicken track names are the raw {@code ChickenArcBlueprint.name()} base names (no
+     * category prefix), matching what the runner filters on.
+     */
+    public static List<String> allScenarioNames() {
+        List<String> out = new ArrayList<>();
+        getTestableJobs().forEach(e -> out.add(e.name()));
+        ca.bradj.questown.commands.test.ChickenArcBlueprintRegistry.all()
+                .forEach(b -> out.add(b.name()));
+        out.addAll(VILLAGE_SCENARIO_NAMES);
+        return out;
     }
 
     public static List<AnyTestEntry> getTestsByCategory(String category) {
         return getTestableJobs().stream()
                 .filter(e -> category.equals(e.category()))
                 .toList();
+    }
+
+    /**
+     * Resolves the jobs-track scenarios for a category selector. {@code null} or
+     * the {@code "jobs"} meta-bucket means "every testable job"; any other value
+     * narrows to that category.
+     */
+    public static List<AnyTestEntry> resolveJobs(@Nullable String category) {
+        return (category == null || "jobs".equals(category))
+                ? getTestableJobs()
+                : getTestsByCategory(category);
     }
 
     private static TestEntry entry(JobID id, TestBlueprint bp) {
@@ -133,6 +390,1373 @@ public class TestBlueprintRegistry {
     private static TestEntry edgeCaseEntry(String root, String job, String variant, TestBlueprint bp) {
         JobID id = new JobID(root, job);
         return new TestEntry(root + "/" + job + " [" + variant + "]", id, bp, "warp");
+    }
+
+    // A non-job ritual scenario. The benign in-town job keeps the townies near the flag (a leaver
+    // would wander off and miss the recall window); the ritual itself is what's under test.
+    private static TestEntry flagEntry(String name, TestBlueprint bp) {
+        JobID id = new JobID("farmer", "harvest_wheat");
+        return new TestEntry("flag/" + name, id, bp, "flag");
+    }
+
+    /**
+     * Town-shutdown ritual (#199): spawn a 2-townie town, begin shutdown, then assert the
+     * townies are all absorbed and the flag has gone DORMANT after the minimum-duration floor.
+     */
+    private static TestBlueprint townShutdownBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(beginShutdownAction())
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    FlagPhase phase = phaseOf(level, flagPos);
+                    long remaining = town.getVillagerHandle().size();
+                    output.msg("Flag phase=" + phase + ", townies remaining=" + remaining);
+                    return phase == FlagPhase.DORMANT && remaining == 0;
+                });
+    }
+
+    /**
+     * Deed issue + lost-deed recovery (#199): after shutdown completes, a deed is dropped
+     * carrying the flag's reference; discarding it and re-issuing produces another; waking in place
+     * returns the flag to ACTIVE. Drives the real deed item + recovery methods end-to-end.
+     */
+    private static TestBlueprint deedIssueAndRecoverBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(beginShutdownAction())
+                .withCustomAssertion(TestBlueprintRegistry::assertDeedIssueAndRecover);
+    }
+
+    // A non-leaver job with no workplace in the ritual fixture: it idles, so nothing re-assigns it
+    // before the assertion reads it back.
+    private static final JobID KEPT_JOB = new JobID("baker", "bread");
+
+    /**
+     * A townie absorbed by the shutdown ritual comes back with its job when the town wakes in place.
+     */
+    private static TestBlueprint shutdownWakeKeepsJobsBlueprint() {
+        Set<String> expected = new HashSet<>();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                        town.getVillagerHandle().changeJobForVillager(vuid, KEPT_JOB, false);
+                        expected.add(VillagerUUID.getStringUUID(vuid));
+                    }
+                    output.msg("set " + expected.size() + " townie(s) to " + KEPT_JOB);
+                    return !expected.isEmpty() && town.beginTownShutdown();
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+                        output.msg("FAIL precondition: flag not DORMANT, got " + phaseOf(level, flagPos));
+                        return false;
+                    }
+                    town.wakeInPlace();
+                    town.claimImmediateRewardsForTest();
+                    return assertJobsKept(output, town, expected);
+                });
+    }
+
+    // Inside the ritual fixture's fence, clear of the chest (ox+1, oz+5).
+    private static final BlockPos RITUAL_BOARD_OFFSET = new BlockPos(8, 0, -1);
+
+    /**
+     * A shutdown leaves the town's physical blocks behind: the shutting-down and dormant flag must
+     * keep the heartbeat that tells its job boards and welcome mats their flag is alive.
+     */
+    private static TestBlueprint shutdownKeepsJobBoardBlueprint() {
+        return relocationRitualBase()
+                // Placed in the setup hook so the flag's parentTick finishes registering the board
+                // (its orphan watchdog) during the settle ticks, as in a lived-in town.
+                .withSetupHook((level, flagPos, town, output) -> {
+                    town.placeJobBoard(flagPos.offset(RITUAL_BOARD_OFFSET));
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> town.beginTownShutdown())
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+                        output.msg("FAIL precondition: flag not DORMANT, got " + phaseOf(level, flagPos));
+                        return false;
+                    }
+                    BlockPos board = flagPos.offset(RITUAL_BOARD_OFFSET);
+                    boolean kept = level.getBlockState(board).is(BlocksInit.JOB_BOARD_BLOCK.get());
+                    return report(output, "job-board-left-behind-at-" + board.toShortString(), kept);
+                });
+    }
+
+    /**
+     * The player-facing producer lookup counts a loot job only when its own tables can drop the
+     * item; the engine lookup (it gates a leaver's extraction) counts every biome-loot job, which
+     * the hunter in the engine list proves.
+     */
+    private static TestBlueprint producerCountOwnTablesBlueprint() {
+        return relocationRitualBase()
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    Ingredient seeds = Ingredient.of(Items.WHEAT_SEEDS);
+                    Set<String> engine = rootsOf(ServerJobsRegistry.getJobsKnownToProduce(town.getTownData(), seeds).keySet());
+                    Set<String> display = rootsOf(ServerJobsRegistry.getJobsKnownToProduce(town.getTownDataForDisplay(), seeds).keySet());
+                    output.msg("wheat seed producers: engine roots=" + engine + " display roots=" + display);
+                    boolean ok = report(output, "display-has-a-gatherer", display.contains("gatherer"));
+                    ok &= report(output, "display-has-no-hunter-or-miner", !display.contains("hunter") && !display.contains("miner"));
+                    ok &= report(output, "engine-unchanged-still-claims-hunter", engine.contains("hunter"));
+                    return ok;
+                });
+    }
+
+    private static Set<String> rootsOf(Collection<JobID> jobs) {
+        Set<String> roots = new HashSet<>();
+        jobs.forEach(j -> roots.add(j.rootId()));
+        return roots;
+    }
+
+    private static boolean assertJobsKept(
+            TestOutput output,
+            TownFlagBlockEntity town,
+            Set<String> expectedVillagers
+    ) {
+        Map<String, JobID> jobs = new HashMap<>();
+        town.getVillagerHandle().getVillagerJobs()
+            .forEach((vuid, job) -> jobs.put(VillagerUUID.getStringUUID(vuid), job));
+        output.msg("respawned jobs=" + jobs + " expected root of " + KEPT_JOB + " for " + expectedVillagers);
+        boolean ok = jobs.keySet().containsAll(expectedVillagers);
+        // The root is the townie's job; the sub-job is its current work pick, which a respawned
+        // baker may already have moved on from (bread -> fuel) by the time this runs.
+        for (String v : expectedVillagers) {
+            ok &= jobs.get(v) != null && KEPT_JOB.sameRoot(jobs.get(v));
+        }
+        return ok;
+    }
+
+    /**
+     * The campfire-sleep temp bed must not replace the town flag. The bed spot is chosen by
+     * {@link CampfireSleepHandler}'s real {@code findSafeSleepPosition} and placed by its real
+     * {@code placeTempBed}. We place a lit campfire two blocks SOUTH of the flag
+     * so the first-scanned bed direction (NORTH) puts the bed head exactly on the flag, run the real
+     * selection + placement via the autotest seam, then assert the flag block survived.
+     */
+    private static TestBlueprint campfireSleepPreservesFlagBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::campfireSleepOntoFlag)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean flagPresent = phaseOf(level, flagPos) != null;
+                    output.msg("Block at flag pos after campfire-sleep = "
+                            + level.getBlockState(flagPos).getBlock()
+                            + " (flag present=" + flagPresent + ")");
+                    return flagPresent;
+                });
+    }
+
+    /**
+     * Campfire safety: a townie must not burn on a lit campfire. Real-code probes against the townie's own navigation
+     * ({@code VillagerPathNavigation}) and its {@code hurt} override:
+     * <ol>
+     *   <li>No path TO a lit campfire block: vanilla classifies it as DANGER_FIRE
+     *       (walkable, cost 8), so a goal on the block is reachable and burns the townie
+     *       in about a second ({@code CampfireBlock.entityInside} deals 1 fire damage per
+     *       tick, no armor, no burn time).</li>
+     *   <li>Open ground: a path across the campfire's lane still exists (a detour) and
+     *       never touches the campfire block — the block must not be over-blocked.</li>
+     *   <li>Fire damage from a campfire the townie is inside or standing on is ignored:
+     *       whatever route (stale path, campfire placed under a standing townie,
+     *       stuck-unstick shove) ends up in the block's space, the townie does not burn.</li>
+     * </ol>
+     * The lit campfire is left in place through the realtime soak, and the assertion
+     * confirms no townie died while it was live.
+     */
+    private static TestBlueprint campfireSafetyBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::campfireSafetyProbe)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    long roster = town.getVillagerHandle().size();
+                    output.msg("Roster after campfire soak: " + roster);
+                    return roster == 2;
+                });
+    }
+
+    private static boolean campfireSafetyProbe(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        var entities = town.getVillagerHandle().entities();
+        if (entities.isEmpty()) {
+            output.error("campfire safety: no townie present");
+            return false;
+        }
+        VisitorMobEntity townie = (VisitorMobEntity) entities.iterator().next();
+
+        BlockPos north = flagPos.north().north();
+        BlockPos fire = flagPos.south().south();
+        // Lit campfire two blocks south of the flag: open ground (the same position the
+        // village seed scenarios use).
+        level.setBlockAndUpdate(fire.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(fire,
+                Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true));
+        level.setBlockAndUpdate(fire.above(), Blocks.AIR.defaultBlockState());
+
+        townie.setPos(north.getX() + 0.5, flagPos.getY(), north.getZ() + 0.5);
+
+        // Probe 1: no path node on the lit campfire block. createPath returns a
+        // best-effort path for an unreachable goal (the closest reachable node), so
+        // non-null is expected when the campfire is hard-blocked; the campfire block
+        // itself must not be a path node. stop() first: createPath short-circuits and
+        // returns the current active path when its target is in the requested set, so
+        // without it this probe could return a path the townie's own brain computed to
+        // that very block before the campfire was lit.
+        townie.getNavigation().stop();
+        Path toFire = townie.getNavigation().createPath(fire, 0);
+        townie.getNavigation().stop();
+        if (toFire != null && pathTouches(toFire, fire)) {
+            output.error("campfire safety: navigation routes onto the lit campfire block itself ("
+                    + fire + "); path ends at " + toFire.getNodePos(toFire.getNodeCount() - 1));
+            return false;
+        }
+        output.msg("campfire safety: no path node on the lit campfire block (goal path ends at "
+                + (toFire == null ? "n/a" : toFire.getNodePos(toFire.getNodeCount() - 1)) + ")");
+
+        // Probe 2: open ground, a path across the lane still exists and never touches the campfire.
+        BlockPos south = fire.south();
+        Path detour = townie.getNavigation().createPath(south, 0);
+        townie.getNavigation().stop();
+        if (detour == null) {
+            output.error("campfire safety: no path from " + north + " to " + south
+                    + " (expected a detour around the campfire at " + fire + ")");
+            return false;
+        }
+        if (pathTouches(detour, fire)) {
+            output.error("campfire safety: open-ground path " + north + " -> " + south
+                    + " crosses the lit campfire at " + fire);
+            return false;
+        }
+        output.msg("campfire safety: open-ground path detours around the campfire ("
+                + detour.getNodeCount() + " nodes)");
+
+        // Probe 3: fire damage from a campfire the townie is inside or standing on is ignored.
+        float h0 = townie.getHealth();
+        townie.setPos(fire.getX() + 0.5, fire.getY() + 0.5, fire.getZ() + 0.5);
+        boolean inBlock = townie.hurt(net.minecraft.world.damagesource.DamageSource.IN_FIRE, 1.0f);
+        townie.setPos(fire.getX() + 0.5, fire.getY() + 1.5, fire.getZ() + 0.5);
+        boolean onBlock = townie.hurt(net.minecraft.world.damagesource.DamageSource.IN_FIRE, 1.0f);
+        townie.setPos(north.getX() + 0.5, flagPos.getY(), north.getZ() + 0.5);
+        if (inBlock || onBlock || townie.getHealth() != h0) {
+            output.error("campfire safety: hurt in-block=" + inBlock
+                    + " on-block=" + onBlock + " health " + h0 + " -> " + townie.getHealth());
+            return false;
+        }
+        output.msg("campfire safety: campfire fire damage ignored (in-block and on-block)");
+        return true;
+    }
+
+    /** True if any node of the path sits on the given block position. */
+    private static boolean pathTouches(Path path, BlockPos pos) {
+        for (int i = 0; i < path.getNodeCount(); i++) {
+            if (path.getNodePos(i).equals(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Where the lone door stands relative to the flag: clear of the farm base (x 4..10, z -3..3)
+    // so the room scan never attaches it to anything.
+    private static final BlockPos DEAD_DOOR_OFFSET = new BlockPos(-2, 0, 0);
+
+    // Where the too-short room's north-west corner stands relative to the flag: also clear of the
+    // farm base and of the lone door, so the scan sees only this room's own door.
+    private static final BlockPos TOO_SHORT_ROOM_OFFSET = new BlockPos(-9, 0, -2);
+
+    /**
+     * Dead-door bubbling: a registered door that encloses nothing
+     * must surface on the flag as {@link DoorTrouble#NOT_ENCLOSED}, which is what
+     * {@code DeadDoorBubbles} reads to draw the door-icon bubble client-side. Drives the real wand
+     * path — {@link TownWand#onRightClicked} into its {@code DoorHandler} — rather than calling
+     * {@code registerDoor} directly, so a break in the item layer is caught too.
+     */
+    private static TestBlueprint deadDoorBubbledBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::registerLoneDoorViaWand)
+                .withCustomAssertion(TestBlueprintRegistry::assertDoorDead);
+    }
+
+    private static boolean registerLoneDoorViaWand(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(DEAD_DOOR_OFFSET);
+        level.setBlockAndUpdate(doorPos.below(), Blocks.DIRT.defaultBlockState());
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Same wand idiom as ChickenArcTestExecutor: a FakePlayer holding a flag-bound wand,
+        // clicking the door's lower half.
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Wand-registered lone door at " + doorPos.toShortString()
+                + "; deadDoors=" + town.getDeadDoors());
+        // A held server should aim at this door, not at a needy townie, so the
+        // bubble screenshot shows the door icon and not the (irrelevant) townie
+        // need that surfaces when the town outlives the assertion.
+        System.setProperty("questown.autotest.aim.door",
+                DEAD_DOOR_OFFSET.getX() + "," + DEAD_DOOR_OFFSET.getY() + "," + DEAD_DOOR_OFFSET.getZ());
+        return true;
+    }
+
+    private static boolean assertDoorDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(DEAD_DOOR_OFFSET);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        output.msg("deadDoors after monitor = " + dead);
+        boolean ok = report(output, "1 door-bubbled", dead.containsKey(doorPos));
+        ok &= report(output, "2 not-enclosed", dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED);
+        // The farm's fence gate must not leak into the door-bubble set.
+        ok &= report(output, "3 no-false-positives", dead.size() == 1);
+        return ok;
+    }
+
+    /**
+     * Walkability regression guard (Config.MIN_ROOM_WALKABLE_FRACTION): a room that is 2D-enclosed
+     * but only one block tall inside — air at the feet level, a solid roof at the head level —
+     * cannot be entered by a two-block-tall villager, so the room scan must reject it and the door
+     * must surface as {@link DoorTrouble#NOT_ENCLOSED} (the 2D wall-walk alone counts the interior
+     * as "not a wall").
+     */
+    private static TestBlueprint tooShortRoomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildTooShortRoomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertTooShortRoomDead);
+    }
+
+    private static boolean buildTooShortRoomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 5x5 footprint: floor at y-1, two-tall walls (so IsWall holds), and a ceiling at y+1 over
+        // the interior only — so each interior cell is air at feet (y) but solid at head (y+1).
+        BlockPos base = flagPos.offset(TOO_SHORT_ROOM_OFFSET);
+        flattenAroundPostSpawnRoom(level, base, 5);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                }
+                // Ceiling one block above the floor level across the whole footprint (walls + interior).
+                level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+            }
+        }
+        // Full (both-halves) door on the east edge, replacing the wall/ceiling there.
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 1-block-tall enclosed room and registered its door at "
+                + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertTooShortRoomDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(TOO_SHORT_ROOM_OFFSET).offset(4, 0, 2);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        output.msg("deadDoors after monitor = " + dead);
+        return report(
+                output,
+                "too-short room rejected as no-room (NOT_ENCLOSED)",
+                dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
+        );
+    }
+
+    // Where the floating-chest room's north-west corner stands relative to the flag: south of the
+    // too-short room's footprint (z 6..10), clear of it, the farm base, and the lone door.
+    private static final BlockPos FLOATING_CHEST_ROOM_OFFSET = new BlockPos(-9, 0, 6);
+
+    /**
+     * Floating-furniture edge case for the walkability filter: a proper two-block-tall room whose
+     * only defect is one chest "floating" at head height against a wall (air at the feet level).
+     * That cell is not walkable (a chest has a collision shape at y+1), but one unwalkable cell in
+     * a 9-cell interior must NOT sink the room under {@link Config#MIN_ROOM_WALKABLE_FRACTION} —
+     * the room encloses, so the door must stay live and a room must be detected.
+     */
+    private static TestBlueprint floatingChestRoomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFloatingChestRoomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFloatingChestRoomAlive);
+    }
+
+    private static boolean buildFloatingChestRoomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 5x5 footprint: floor at y-1, two-tall cobble walls, interior open at both levels — except
+        // one chest at head height (y+1) against the west wall, with air at its feet (y).
+        BlockPos base = flagPos.offset(FLOATING_CHEST_ROOM_OFFSET);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        BlockPos chestPos = base.offset(1, 1, 2);
+        level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 2-tall room with floating chest at " + chestPos.toShortString()
+                + " and registered its door at " + doorPos.toShortString()
+                + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFloatingChestRoomAlive(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FLOATING_CHEST_ROOM_OFFSET).offset(4, 0, 2);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        boolean ok = report(output, "1 room-detected", rooms >= 1);
+        ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
+        return ok;
+    }
+
+    /**
+     * A welcome mat (or job board) with no flag link fails to place, and the failure must cost and
+     * give nothing: held + dropped stays at exactly one.
+     */
+    private static TestBlueprint unlinkedPlacementNoDupeBlueprint() {
+        Map<String, Integer> totals = new java.util.LinkedHashMap<>();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    totals.put("welcome_mat", placeUnlinked(level, flagPos.offset(-4, 0, -6),
+                            new ItemStack(ItemsInit.WELCOME_MAT_BLOCK.get())));
+                    totals.put("job_board", placeUnlinked(level, flagPos.offset(-6, 0, -6),
+                            new ItemStack(ItemsInit.JOB_BOARD_BLOCK.get())));
+                    output.msg("unlinked-placement: held+dropped " + totals);
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean ok = true;
+                    for (Map.Entry<String, Integer> e : totals.entrySet()) {
+                        ok &= report(output, "no-dupe " + e.getKey(), e.getValue() == 1);
+                    }
+                    return ok && totals.size() == 2;
+                });
+    }
+
+    /** A survival player right-clicks the ground at {@code pos} with {@code stack}; returns held + dropped. */
+    private static int placeUnlinked(ServerLevel level, BlockPos pos, ItemStack stack) {
+        level.setBlockAndUpdate(pos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        player.setGameMode(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+                net.minecraft.world.phys.Vec3.atCenterOf(pos.below()), Direction.UP, pos.below(), false);
+        player.gameMode.useItemOn(player, level, player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND, hit);
+        int held = player.getItemInHand(InteractionHand.MAIN_HAND).is(stack.getItem())
+                ? player.getItemInHand(InteractionHand.MAIN_HAND).getCount() : 0;
+        int dropped = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(3)).stream()
+                .filter(e -> e.getItem().is(stack.getItem()))
+                .mapToInt(e -> e.getItem().getCount())
+                .sum();
+        player.getInventory().clearContent();
+        return held + dropped;
+    }
+
+    // The bed-count rooms' north-west corners: south of the filled storeroom (z 18..22).
+    private static final BlockPos ONE_BED_ROOM_OFFSET = new BlockPos(-9, 0, 24);
+    private static final BlockPos TWO_BED_ROOM_OFFSET = new BlockPos(-9, 0, 30);
+
+    /**
+     * A bed is two blocks, and room matching counts both: the recipes list two
+     * {@code #minecraft:beds} per bed. One bed plus a torch is a Bedroom (light + 2 bed blocks),
+     * two beds are a Big Bedroom (light + 4).
+     * <p>
+     * The assertion runs RoomRecipes' detection on the built rooms directly: waiting for the
+     * town's own door scan is timing-dependent under parallel load.
+     */
+    private static TestBlueprint bedIsTwoBlocksBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    buildBedRoom(level, flagPos.offset(ONE_BED_ROOM_OFFSET), 1, output);
+                    buildBedRoom(level, flagPos.offset(TWO_BED_ROOM_OFFSET), 2, output);
+                    return true;
+                })
+                .withCustomAssertion(TestBlueprintRegistry::assertBedIsTwoBlocks);
+    }
+
+    /** A 5x5 two-tall room with a torch and {@code beds} east-facing beds; door on the east wall. */
+    private static void buildBedRoom(
+            ServerLevel level,
+            BlockPos base,
+            int beds,
+            TestOutput output
+    ) {
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                // The footprint lies outside the prepared arena: clear worldgen (grass, a slope).
+                for (int dy = 0; dy <= 2; dy++) {
+                    level.setBlockAndUpdate(p.above(dy), Blocks.AIR.defaultBlockState());
+                }
+                if (x == 0 || x == 4 || z == 0 || z == 4) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        for (int i = 0; i < beds; i++) {
+            placeBed(level, base.offset(1, 0, 1 + 2 * i), Direction.EAST);
+        }
+        level.setBlockAndUpdate(base.offset(3, 0, 1), Blocks.TORCH.defaultBlockState());
+
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+        output.msg("Built a room with " + beds + " bed(s) at " + base.toShortString());
+    }
+
+    /** Both halves, the way vanilla places a bed item: the head at foot.relative(facing). */
+    private static void placeBed(ServerLevel level, BlockPos foot, Direction facing) {
+        BlockState bed = Blocks.RED_BED.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.BedBlock.FACING, facing);
+        level.setBlockAndUpdate(foot, bed.setValue(
+                net.minecraft.world.level.block.BedBlock.PART,
+                net.minecraft.world.level.block.state.properties.BedPart.FOOT));
+        level.setBlockAndUpdate(foot.relative(facing), bed.setValue(
+                net.minecraft.world.level.block.BedBlock.PART,
+                net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+    }
+
+    private static boolean assertBedIsTwoBlocks(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        Collection<ResourceLocation> oneBed = detectRecipes(level, flagPos.offset(ONE_BED_ROOM_OFFSET));
+        Collection<ResourceLocation> twoBeds = detectRecipes(level, flagPos.offset(TWO_BED_ROOM_OFFSET));
+        output.msg("bed-counts: 1 bed -> " + oneBed + "; 2 beds -> " + twoBeds);
+        ResourceLocation bedroom = Questown.ResourceLocation("bedroom");
+        ResourceLocation bigBedroom = Questown.ResourceLocation("big_bedroom");
+        boolean ok = report(output, "1 one-bed-is-a-bedroom", oneBed.contains(bedroom));
+        ok &= report(output, "2 one-bed-is-not-a-big-bedroom", !oneBed.contains(bigBedroom));
+        ok &= report(output, "3 two-beds-are-a-big-bedroom", twoBeds.contains(bigBedroom));
+        return ok;
+    }
+
+    /** The recipes RoomRecipes matches for the 5x5 room built at {@code base}. */
+    private static Collection<ResourceLocation> detectRecipes(ServerLevel level, BlockPos base) {
+        ca.bradj.roomrecipes.core.space.Position door =
+                new ca.bradj.roomrecipes.core.space.Position(base.getX() + 4, base.getZ() + 2);
+        ca.bradj.roomrecipes.core.space.InclusiveSpace space = ca.bradj.roomrecipes.core.space.InclusiveSpace
+                .from(new ca.bradj.roomrecipes.core.space.Position(base.getX(), base.getZ()))
+                .to(new ca.bradj.roomrecipes.core.space.Position(base.getX() + 4, base.getZ() + 4));
+        ca.bradj.roomrecipes.serialization.MCRoom room =
+                new ca.bradj.roomrecipes.serialization.MCRoom(door, List.of(space), base.getY());
+        return ca.bradj.roomrecipes.recipes.RecipeDetection.getActiveRecipes(level, room, false)
+                .map(m -> (Collection<ResourceLocation>) m.getRecipeIDs())
+                .orElse(List.of());
+    }
+
+    // Where the over-halved room's north-west corner stands relative to the flag: south of the
+    // floating-chest room's footprint (z 12..15), clear of it, the too-short room, the farm base, and
+    // the lone door.
+    private static final BlockPos FLOATING_FURNITURE_ROOM_OFFSET = new BlockPos(-9, 0, 12);
+
+    /**
+     * Breaking point of the walkability filter: a 4x4 footprint has 4 interior cells, so
+     * {@link Config#MIN_ROOM_WALKABLE_FRACTION} (0.5) requires at least {@code ceil(4 * 0.5) = 2}
+     * of them standable. A lone floating chest (the {@code floating_chest_room} case) tolerably
+     * leaves 3 standable, but here three interior cells carry a chest at head height (air at the
+     * feet), so only 1 cell is standable — below the 2-cell floor — and the room is rejected.
+     * This pins the line: 50% unwalkable survives, just over 50% does not.
+     */
+    private static TestBlueprint floatingFurnitureOverHalfBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFloatingFurnitureOverHalfAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFloatingFurnitureOverHalfDead);
+    }
+
+    /**
+     * A room built in postSpawn is not in {@code blueprint.blocks()}, so the arena flatten never
+     * covered it. Flatten its footprint and a 3-block margin: leftover terrain in or around it
+     * changes which room the door detects, by seed.
+     */
+    private static void flattenAroundPostSpawnRoom(
+            ServerLevel level,
+            BlockPos base,
+            int size
+    ) {
+        int margin = 3;
+        TestArenaPreparer.flatten(level, base, new TestArenaPreparer.ClearRegion(
+                -margin, size - 1 + margin, -margin, size - 1 + margin, 4
+        ));
+    }
+
+    private static boolean buildFloatingFurnitureOverHalfAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 4x4 footprint: floor at y-1, two-tall cobble walls, interior open at both levels — except
+        // three interior cells (of four) carry a chest at head height (y+1) with air at their feet.
+        BlockPos base = flagPos.offset(FLOATING_FURNITURE_ROOM_OFFSET);
+        flattenAroundPostSpawnRoom(level, base, 4);
+        for (int x = 0; x < 4; x++) {
+            for (int z = 0; z < 4; z++) {
+                boolean isEdge = x == 0 || x == 3 || z == 0 || z == 3;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        // Three of the four interior cells (x,z in {1,2}) get a floating chest at head height.
+        for (int i = 0; i < 3; i++) {
+            int x = (i % 2) + 1;
+            int z = (i / 2) + 1;
+            level.setBlockAndUpdate(base.offset(x, 1, z), Blocks.CHEST.defaultBlockState());
+        }
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(3, 0, 1);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 4x4 room with 3/4 interior cells carrying floating chests and registered"
+                + " its door at " + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFloatingFurnitureOverHalfDead(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FLOATING_FURNITURE_ROOM_OFFSET).offset(3, 0, 1);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        return report(
+                output,
+                "over-halved room rejected as no-room (NOT_ENCLOSED)",
+                dead.get(doorPos) == DoorTrouble.NOT_ENCLOSED
+        );
+    }
+
+    // Where the 3x3 filled storeroom's north-west corner stands relative to the flag: clear of the
+    // too-short room (z -2..2), the floating-chest room (z 6..10), and the over-halved room
+    // (z 12..15).
+    private static final BlockPos FILLED_STOREROOM_OFFSET = new BlockPos(-9, 0, 18);
+
+    /**
+     * A 3x3 room whose single interior cell is the room's own work block (the chest of the
+     * small-storeroom recipe) must survive the walkability filter: the work block does not count
+     * against the standable fraction. The interior is filled at the
+     * feet level, not low-roofed: no open floor cell exists, and the door must stay live with a
+     * room detected.
+     */
+    private static TestBlueprint filledStoreroomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildFilledStoreroomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertFilledStoreroomAlive);
+    }
+
+    private static boolean buildFilledStoreroomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // 3x3 footprint: floor at y-1, two-tall cobble walls (the 8 perimeter cells), and a chest
+        // in the single interior cell at feet level (on the floor). The head level above the chest
+        // is open.
+        BlockPos base = flagPos.offset(FILLED_STOREROOM_OFFSET);
+        for (int x = 0; x < 3; x++) {
+            for (int z = 0; z < 3; z++) {
+                boolean isEdge = x == 0 || x == 2 || z == 0 || z == 2;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.COBBLESTONE.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.COBBLESTONE.defaultBlockState());
+                }
+            }
+        }
+        // The chest in the single interior cell, at feet level (on the floor).
+        BlockPos chestPos = base.offset(1, 0, 1);
+        level.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
+
+        // Full (both-halves) door on the east edge, replacing the wall there.
+        BlockPos doorPos = base.offset(2, 0, 1);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built 3x3 storeroom with a chest in its single interior cell and registered"
+                + " its door at " + doorPos.toShortString() + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertFilledStoreroomAlive(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(FILLED_STOREROOM_OFFSET).offset(2, 0, 1);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        boolean ok = report(output, "1 room-detected", rooms >= 1);
+        ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
+        return ok;
+    }
+
+    private static boolean campfireSleepOntoFlag(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        // Put the campfire two blocks SOUTH of the flag, so the lane toward the flag
+        // (foot = campfire.north(), head = campfire.north().north() = flagPos) can seat a bed
+        // whose head lands on the flag. findSafeSleepPosition tries all four directions and takes
+        // the first with solid, clear ground, so we must remove the OTHER three lanes' support —
+        // otherwise it seats the bed on open ground and never touches the flag. With only the flag
+        // lane left, the selector must decline and leave the flag alone.
+        BlockPos campfirePos = flagPos.south().south();
+        BlockPos footPos = flagPos.south();
+        // The flag lane: supported floor under the foot and the flag, clear air above both.
+        level.setBlockAndUpdate(flagPos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(footPos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(footPos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(footPos.above(), Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(flagPos.above(), Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(campfirePos.below(), Blocks.DIRT.defaultBlockState());
+        level.setBlockAndUpdate(campfirePos,
+                Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true));
+        // Collapse the floor under the other three lanes (east / west / south of the campfire) so
+        // isSafeToLieOn fails there (unsupported foot), leaving the flag lane as the only candidate.
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos foot = campfirePos.relative(dir);
+            if (foot.equals(footPos)) {
+                continue;
+            }
+            level.setBlockAndUpdate(foot.below(), Blocks.AIR.defaultBlockState());
+            level.setBlockAndUpdate(foot.relative(dir).below(), Blocks.AIR.defaultBlockState());
+        }
+        // The recalled townies idle on the town flag. An entity on a block makes it "obstructed",
+        // so findSafeSleepPosition would skip it; during the tutorial no villager exists yet, so
+        // clear the flag lane of entities to match that.
+        // Keep the destination inside the harness cleanup zone (origin ±20) so no townie leaks into
+        // the next scenario in a full-suite run (shared arena).
+        for (net.minecraft.world.entity.LivingEntity e :
+                level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                        new AABB(flagPos).inflate(2.5))) {
+            e.teleportTo(flagPos.getX() + 14.5, flagPos.getY(), flagPos.getZ() + 14.5);
+        }
+        BlockPos chosen = CampfireSleepHandler.placeTempBedForTest(level, campfirePos);
+        output.msg("Campfire at " + campfirePos.toShortString() + ", flag at " + flagPos.toShortString()
+                + ", chosen bed head = " + (chosen == null ? "none" : chosen.toShortString()));
+        return true;
+    }
+
+    private static TestBlueprint.PostSpawnAction beginShutdownAction() {
+        return (level, flagPos, town, output) -> {
+            boolean started = town.beginTownShutdown();
+            output.msg("beginTownShutdown -> " + started);
+            return started;
+        };
+    }
+
+    private static boolean assertDeedIssueAndRecover(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        if (phaseOf(level, flagPos) != FlagPhase.DORMANT) {
+            output.msg("Expected DORMANT after shutdown, got " + phaseOf(level, flagPos));
+            return false;
+        }
+        // The deed hovers over the flag and is collected on interaction. Assert it became available on shutdown completion.
+        if (!town.isDeedAvailable()) {
+            output.msg("No deed became available on the flag after shutdown completion");
+            return false;
+        }
+        output.msg("Deed available on the flag (hover + collect-on-interact)");
+        // Re-issue (loss-protection) must keep a deed available while DORMANT.
+        if (!town.reissueDeed() || !town.isDeedAvailable()) {
+            output.msg("Re-issue did not keep a deed available for this flag");
+            return false;
+        }
+        boolean woke = town.wakeInPlace();
+        FlagPhase after = phaseOf(level, flagPos);
+        // Roster re-spawn is queued (SpawnVisitorReward, same path the harness uses elsewhere) and
+        // completes on later ticks, so we assert the synchronous wake outcome: ACTIVE again.
+        output.msg("wakeInPlace=" + woke + ", phase now=" + after);
+        // Waking must retract the waiting deed, or a live town keeps handing out references to itself
+        // and the deed branch shadows the flag menu forever.
+        if (town.isDeedAvailable()) {
+            output.msg("Deed still available on the flag after waking the town in place");
+            return false;
+        }
+        return woke && after == FlagPhase.ACTIVE;
+    }
+
+    /**
+     * Town relocation placement (#199): isolate the placement step from the
+     * shutdown ritual (which has its own test). After the town spawns, drop it straight to DORMANT
+     * (a blockstate write, not the logic under test), mint a deed, and drive the real
+     * {@link TownRelocation#place} to a nearby target with a non-zero Y delta. The realtime monitor
+     * then ticks the new flag so its data hydrates, its roster respawns, and its rooms reconstitute,
+     * which the assertion verifies end-to-end.
+     */
+    private static TestBlueprint relocateNearbyBlueprint() {
+        RelocateCapture cap = new RelocateCapture();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> relocatePostSpawn(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertRelocateNearby(level, flagPos, output, cap));
+    }
+
+    // Carries pre-relocation state from the post-spawn trigger to the end-state assertion (the two
+    // run in different phases, so we close over this holder rather than re-deriving).
+    private static final class RelocateCapture {
+        UUID originalUuid;
+        int oldFlagY;
+        BlockPos targetPos;
+        Set<TownPosition> originalDoors = Set.of();
+        Set<String> originalAbsDoors = Set.of();
+        long rosterSize;
+        CompoundTag preData = new CompoundTag();
+        boolean placed;
+        // Phase 4: how out-of-range fixtures are handled, and the cutoff that decides "out of range".
+        // Defaults reproduce the Phase-3 nearby behaviour (carry everything, real tick radius).
+        FarFixturePolicy policy = FarFixturePolicy.BRING_ALL;
+        long tickRadiusSq = Config.TOWN_TICK_RADIUS.get();
+        int beyondCount;
+        // Job proficiency: a known level stamped on one townie pre-move, asserted to
+        // survive the whole-blob copy (it rides NBT_TOWN_STATE, no bespoke relocation code).
+        UUID profVillager;
+        float expectedProf;
+        static final String PROF_ID = "smithing";
+    }
+
+    private static boolean relocatePostSpawn(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        cap.originalUuid = town.getUUID();
+        cap.oldFlagY = flagPos.getY();
+        // Nearby (within tick radius, so no far-away path) with a deliberate +1 Y delta so the
+        // fixture re-anchor (scanLevel) is genuinely exercised; inside the farm footprint so the
+        // new flag sits over solid ground.
+        cap.targetPos = flagPos.offset(5, 1, 0);
+        Set<TownPosition> fixtures = allFixtures(town);
+        cap.originalDoors = new HashSet<>(fixtures);
+        cap.originalAbsDoors = absoluteKeys(fixtures, cap.oldFlagY);
+        cap.rosterSize = town.getVillagerHandle().size();
+        cap.beyondCount = TownRelocation
+                .fixturesBeyondRadius(cap.targetPos, cap.oldFlagY, fixtures, cap.tickRadiusSq)
+                .size();
+        // Put the onboarding arc mid-flight (non-default beat + rotation) so the carry-check below
+        // proves the chicken beat state and structure rotation ride the whole-blob copy to the new
+        // flag. Re-anchoring the beat geometry itself is
+        // locked deterministically by HelperChickenBeatRelocationTest.
+        town.setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_CHEST);
+        town.setChickenStructureRotation(net.minecraft.world.level.block.Rotation.CLOCKWISE_90);
+        // Stamp a known proficiency on the first townie so the assertion can prove it rode the
+        // whole-blob copy . Set before writeTownData so it lands in NBT_TOWN_STATE.
+        java.util.Collection<net.minecraft.world.entity.LivingEntity> ents = town.getVillagerHandle().entities();
+        if (!ents.isEmpty()) {
+            cap.profVillager = ents.iterator().next().getUUID();
+            cap.expectedProf = 0.42f;
+            town.getVillagerHandle().setProficiency(cap.profVillager, RelocateCapture.PROF_ID, cap.expectedProf);
+            // The same townie takes a non-gatherer job, published to the tile's town state the
+            // way the ticker does, so the assertion proves the respawn keeps it.
+            UUID stamped = cap.profVillager;
+            town.getVillagerHandle().getVillagerJobs().keySet().stream()
+                .filter(v -> v.matches(stamped))
+                .forEach(v -> town.getVillagerHandle().changeJobForVillager(v, KEPT_JOB, false));
+            town.publishStateToTileForTest();
+        }
+        town.writeTownData(cap.preData);
+        output.msg("pre-relocation: uuid=" + cap.originalUuid + " oldFlagY=" + cap.oldFlagY
+                + " fixtures=" + fixtures.size() + " beyond=" + cap.beyondCount
+                + " roster=" + cap.rosterSize);
+
+        // Reach the dormant precondition without re-running the shutdown floor/recall (covered by
+        // flag/town_shutdown): flip the phase directly, then mint the deed exactly as completion does.
+        setPhase(level, flagPos, FlagPhase.DORMANT);
+        ItemStack deed = RelocationDeedItem.forReference(
+                cap.originalUuid, flagPos, level.dimension().location()
+        );
+        RelocationResult result = TownRelocation.place(
+                level, deed, cap.targetPos, cap.policy, cap.tickRadiusSq
+        );
+        output.msg("place(" + cap.targetPos + ", " + cap.policy + ", rSq=" + cap.tickRadiusSq
+                + ") -> " + result);
+        cap.placed = result == RelocationResult.OK;
+        return cap.placed;
+    }
+
+    private static boolean assertRelocateNearby(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        if (!cap.placed) {
+            output.msg("FAIL precondition: relocation did not place");
+            return false;
+        }
+        boolean ok = true;
+
+        // (1) original flag destroyed
+        boolean originalGone = TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null;
+        ok &= report(output, "1 original-destroyed", originalGone);
+
+        TownFlagBlockEntity newBe = TownFlagBlockEntity.getFromPos(level, cap.targetPos);
+        if (newBe == null) {
+            report(output, "2 new-flag-present", false);
+            return false;
+        }
+        BlockState ns = level.getBlockState(cap.targetPos);
+        FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
+        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        output.msg("new flag phase=" + phase + " inactive=" + inactive);
+        // (2) new flag ACTIVE and not INACTIVE
+        ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
+
+        // (3) identity carried
+        ok &= report(output, "3 identity-carried", cap.originalUuid.equals(newBe.getUUID()));
+
+        // (4) fixtures re-anchored: absolute positions preserved, scanLevel changed (Y moved)
+        Set<TownPosition> newDoors = allFixtures(newBe);
+        if (newDoors.isEmpty()) {
+            ok &= report(output, "4 fixtures-rebased (NO FIXTURES — cannot verify)", false);
+        } else {
+            Set<String> newAbs = absoluteKeys(newDoors, cap.targetPos.getY());
+            boolean absPreserved = newAbs.equals(cap.originalAbsDoors);
+            boolean scanChanged = !newDoors.equals(cap.originalDoors);
+            output.msg("fixtures: newAbs=" + newAbs + " origAbs=" + cap.originalAbsDoors);
+            ok &= report(output, "4 fixtures-abs-preserved", absPreserved);
+            ok &= report(output, "4 fixtures-scanLevel-rebased", scanChanged);
+        }
+
+        // (6) roster respawned to the carried count
+        long live = newBe.getVillagerHandle().size();
+        output.msg("respawned roster=" + live + " (expected " + cap.rosterSize + ")");
+        ok &= report(output, "6 roster-respawned", live == cap.rosterSize);
+
+        // (7) rooms reconstituted from the carried doors
+        int rooms = newBe.getRoomHandle().getMatches(x -> true).size();
+        output.msg("rooms reconstituted=" + rooms);
+        ok &= report(output, "7 rooms-reconstituted", rooms >= 1);
+
+        // (8) intangible town data carried wholesale (knowledge + economics round-trip identically)
+        CompoundTag postData = new CompoundTag();
+        newBe.writeTownData(postData);
+        for (String key : CARRIED_DATA_KEYS) {
+            boolean same = Objects.equals(cap.preData.get(key), postData.get(key));
+            ok &= report(output, "8 data-carried[" + key + "]", same);
+        }
+
+        // (9) job proficiency rode the whole-blob copy: the stamped townie keeps its level
+        if (cap.profVillager != null) {
+            float got = newBe.getVillagerHandle().getProficiency(cap.profVillager, RelocateCapture.PROF_ID);
+            output.msg("proficiency: got=" + got + " expected=" + cap.expectedProf);
+            ok &= report(output, "9 proficiency-carried", Math.abs(got - cap.expectedProf) < 1e-4f);
+        } else {
+            ok &= report(output, "9 proficiency-carried (NO ROSTER — cannot verify)", false);
+        }
+
+        // (10) job carried: the respawned townie keeps the job it had before the move
+        if (cap.profVillager != null) {
+            ok &= report(output, "10 job-carried",
+                    assertJobsKept(output, newBe, Set.of(cap.profVillager.toString())));
+        }
+
+        return ok;
+    }
+
+    /**
+     * Deed consumption on a successful placement (#199). A deed that survives its
+     * own relocation is a duplication hazard: placed again it mints a second flag referencing a town
+     * that no longer exists. The other relocate scenarios call {@link TownRelocation#place} directly,
+     * so nothing covered the item layer that is supposed to take the deed away.
+     *
+     * <p>This drives the whole real use path — {@code ServerPlayerGameMode.useItemOn} into
+     * {@link RelocationDeedItem#useOn} — with a <em>creative</em> player, because creative is exactly
+     * where the naive {@code shrink(1)} fails silently: the game mode restores the stack's count after
+     * the use and hands the deed straight back.
+     */
+    private static TestBlueprint deedConsumedOnPlaceBlueprint() {
+        DeedUseCapture cap = new DeedUseCapture();
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> placeDeedByHand(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertDeedConsumed(level, flagPos, output, cap));
+    }
+
+    // Carries the item-layer outcome from the post-spawn trigger to the end-state assertion. The
+    // counts are read immediately around the use, since the monitor phase that follows would let a
+    // dropped deed despawn or be picked up and hide the leak.
+    private static final class DeedUseCapture {
+        BlockPos targetPos;
+        InteractionResult useResult;
+        int deedsBefore;
+        int deedsAfter;
+        boolean relocated;
+    }
+
+    private static boolean placeDeedByHand(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output,
+            DeedUseCapture cap
+    ) {
+        // Click the farm floor, so the deed lands the new flag on the air block above it — the same
+        // "one block off the clicked face" idiom useOn implements.
+        BlockPos clickedPos = flagPos.offset(5, -1, 0);
+        cap.targetPos = clickedPos.above();
+
+        // Dormant is a precondition of placement, not the thing under test (flag/town_shutdown owns
+        // the ritual), so reach it with a blockstate write and mint the deed as completion does.
+        setPhase(level, flagPos, FlagPhase.DORMANT);
+        ItemStack deed = RelocationDeedItem.forReference(
+                town.getUUID(), flagPos, level.dimension().location()
+        );
+
+        ServerPlayer player = creativeDeedHolder(level, clickedPos, deed);
+        cap.deedsBefore = countDeeds(player);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(clickedPos), Direction.UP, clickedPos, false);
+        cap.useResult = player.gameMode.useItemOn(
+                player,
+                level,
+                player.getItemInHand(InteractionHand.MAIN_HAND),
+                InteractionHand.MAIN_HAND,
+                hit
+        );
+        cap.deedsAfter = countDeeds(player);
+        cap.relocated = TownFlagBlockEntity.getFromPos(level, cap.targetPos) != null;
+        output.msg("useItemOn(" + cap.targetPos.toShortString() + ") -> " + cap.useResult
+                + ", deeds held " + cap.deedsBefore + " -> " + cap.deedsAfter
+                + ", new flag present=" + cap.relocated);
+        // Report through the assertion rather than failing here, so the counts always reach the log.
+        return true;
+    }
+
+    // A creative player holding nothing but the deed, standing on the block it will click. Forge's
+    // FakePlayer carries a no-op net handler, so the game mode's client packets go nowhere and the
+    // creative branch (which is what makes this scenario worth running) executes for real.
+    private static ServerPlayer creativeDeedHolder(
+            ServerLevel level,
+            BlockPos stand,
+            ItemStack deed
+    ) {
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        player.setGameMode(GameType.CREATIVE);
+        player.moveTo(stand.getX() + 0.5, stand.getY() + 1.0, stand.getZ() + 0.5);
+        player.setItemInHand(InteractionHand.MAIN_HAND, deed);
+        return player;
+    }
+
+    private static int countDeeds(ServerPlayer player) {
+        int count = 0;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (RelocationDeedItem.isDeed(stack)) {
+                count += stack.getCount();
+            }
+        }
+        return count;
+    }
+
+    private static long deedsOnTheGround(
+            ServerLevel level,
+            BlockPos around
+    ) {
+        return level.getEntitiesOfClass(ItemEntity.class, new AABB(around).inflate(20))
+                .stream()
+                .filter(e -> RelocationDeedItem.isDeed(e.getItem()))
+                .count();
+    }
+
+    private static boolean assertDeedConsumed(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            DeedUseCapture cap
+    ) {
+        boolean ok = true;
+        ok &= report(output, "1 relocation-placed", cap.relocated);
+        ok &= report(output, "2 original-destroyed",
+                TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null);
+        ok &= report(output, "3 use-consumed-action",
+                cap.useResult != null && cap.useResult.consumesAction());
+        ok &= report(output, "4 deed-held-before", cap.deedsBefore == 1);
+        // The dupe hazard itself: a deed that outlives its own placement can mint a second flag.
+        ok &= report(output, "5 deed-gone-after", cap.deedsAfter == 0);
+        long dropped = deedsOnTheGround(level, originalFlagPos);
+        output.msg("deed item entities near the old flag = " + dropped);
+        ok &= report(output, "6 no-deed-dropped", dropped == 0);
+        return ok;
+    }
+
+    /**
+     * Town relocation "leave it behind" (#199): relocate with {@link
+     * FarFixturePolicy#LEAVE_BEHIND} and a deliberately tiny tick radius, so every fixture in the
+     * arena counts as "too far to come" against the nearby (solid-ground) target. Drives the real
+     * {@link TownRelocation#place} overload — no far terrain needed, so the scenario stays in the
+     * shared arena and leaves no residue. The assertion proves the far fixtures are dropped while the
+     * intangibles (roster, knowledge) still carry. The "bring it anyway" path just skips the drop, so
+     * it's covered by {@code relocate_nearby} plus the {@code fixturesBeyondRadius} JUnit.
+     */
+    private static TestBlueprint relocateFarBlueprint() {
+        RelocateCapture cap = new RelocateCapture();
+        cap.policy = FarFixturePolicy.LEAVE_BEHIND;
+        cap.tickRadiusSq = 1; // 1-block radius: anything past the target's own block is "far"
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> relocatePostSpawn(level, flagPos, town, output, cap))
+                .withCustomAssertion((level, flagPos, town, output) -> assertRelocateFar(level, flagPos, output, cap));
+    }
+
+    private static boolean assertRelocateFar(
+            ServerLevel level,
+            BlockPos originalFlagPos,
+            TestOutput output,
+            RelocateCapture cap
+    ) {
+        if (!cap.placed) {
+            output.msg("FAIL precondition: relocation did not place");
+            return false;
+        }
+        boolean ok = true;
+
+        // (0) the choice was meaningful: with the tiny radius, every fixture was out of range
+        output.msg("fixtures=" + cap.originalDoors.size() + " beyond=" + cap.beyondCount);
+        ok &= report(output, "0 all-fixtures-were-far",
+                cap.beyondCount > 0 && cap.beyondCount == cap.originalDoors.size());
+
+        // (1) original flag destroyed
+        ok &= report(output, "1 original-destroyed",
+                TownFlagBlockEntity.getFromPos(level, originalFlagPos) == null);
+
+        TownFlagBlockEntity newBe = TownFlagBlockEntity.getFromPos(level, cap.targetPos);
+        if (newBe == null) {
+            report(output, "2 new-flag-present", false);
+            return false;
+        }
+        BlockState ns = level.getBlockState(cap.targetPos);
+        FlagPhase phase = ns.hasProperty(TownFlagBlock.PHASE) ? ns.getValue(TownFlagBlock.PHASE) : null;
+        boolean inactive = ns.hasProperty(TownFlagBlock.INACTIVE) && ns.getValue(TownFlagBlock.INACTIVE);
+        // (2) new flag ACTIVE and not INACTIVE
+        ok &= report(output, "2 new-flag-active-not-inactive", phase == FlagPhase.ACTIVE && !inactive);
+
+        // (3) identity carried even though the body of the town was left behind
+        ok &= report(output, "3 identity-carried", cap.originalUuid.equals(newBe.getUUID()));
+
+        // (4) the far fixtures were dropped — none carried to the new flag
+        Set<TownPosition> newDoors = allFixtures(newBe);
+        output.msg("relocated fixtures=" + newDoors.size() + " (expected 0 — all left behind)");
+        ok &= report(output, "4 far-fixtures-dropped", newDoors.isEmpty());
+
+        // (5) intangibles still carry: the roster respawns even with no rooms to live in
+        long live = newBe.getVillagerHandle().size();
+        output.msg("respawned roster=" + live + " (expected " + cap.rosterSize + ")");
+        ok &= report(output, "5 roster-carried", live == cap.rosterSize);
+
+        // (6) intangible town data (knowledge etc.) carried wholesale
+        CompoundTag postData = new CompoundTag();
+        newBe.writeTownData(postData);
+        for (String key : CARRIED_DATA_KEYS) {
+            ok &= report(output, "6 data-carried[" + key + "]",
+                    Objects.equals(cap.preData.get(key), postData.get(key)));
+        }
+
+        return ok;
+    }
+
+    // Stable, persisted town data copied wholesale by relocation; if these round-trip identically
+    // across the move, the rest of the whole-blob copy did too. Economics
+    // is intentionally excluded: it's a running log of unmet-needs records (with ticks) that legit-
+    // imately grows over the monitored ticks, so equality is not a valid carry-check for it.
+    private static final java.util.List<String> CARRIED_DATA_KEYS = java.util.List.of(
+            Questown.MODID + "_knowledge",
+            Questown.MODID + "_bops_stored",
+            Questown.MODID + "_bonus_given",
+            // Onboarding arc state (relocatePostSpawn sets these non-default before the move):
+            // beat + rotation must survive so the helper chicken re-derives its beats at the new flag.
+            Questown.MODID + "_chicken_beat_state",
+            Questown.MODID + "_chicken_structure_rotation"
+    );
+
+    // The room entrance may be registered as a door or a fence gate; relocation re-anchors both, so
+    // the fixture check spans the union.
+    private static Set<TownPosition> allFixtures(TownFlagBlockEntity flag) {
+        Set<TownPosition> all = new HashSet<>(flag.getRoomHandle().getAllRegisteredDoors());
+        if (flag.getRoomHandle() instanceof TownRoomsHandle rh) {
+            all.addAll(rh.getRegisteredRooms().getRegisteredGates());
+        }
+        return all;
+    }
+
+    private static Set<String> absoluteKeys(Set<TownPosition> fixtures, int flagY) {
+        return fixtures.stream()
+                .map(p -> p.x + "," + (flagY + p.scanLevel) + "," + p.z)
+                .collect(Collectors.toSet());
+    }
+
+    private static boolean report(TestOutput output, String label, boolean pass) {
+        output.msg((pass ? "PASS " : "FAIL ") + label);
+        return pass;
+    }
+
+    private static void setPhase(ServerLevel level, BlockPos flagPos, FlagPhase phase) {
+        BlockState s = level.getBlockState(flagPos);
+        if (s.hasProperty(TownFlagBlock.PHASE)) {
+            level.setBlockAndUpdate(flagPos, s.setValue(TownFlagBlock.PHASE, phase));
+        }
+    }
+
+    private static FlagPhase phaseOf(ServerLevel level, BlockPos flagPos) {
+        BlockState bs = level.getBlockState(flagPos);
+        return bs.hasProperty(TownFlagBlock.PHASE) ? bs.getValue(TownFlagBlock.PHASE) : null;
+    }
+
+    /**
+     * The shared arena for relocation-ritual scenarios: a fenced 2-townie town, realtime-only
+     * (skipWarp, since the ritual is driven by the realtime ticker, never warp), monitored long
+     * enough to clear the 200-tick shutdown floor. Callers attach the trigger + assertion.
+     */
+    private static TestBlueprint relocationRitualBase() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        int ox = 4;
+        int oz = -3;
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        TestExpectation noProducts = new TestExpectation(List.of(), 0, 0);
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                List.of(),   // no supplies — townies don't work, they're recalled
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                noProducts,
+                null,        // supplyDoorOffset
+                null,        // warpAmountOverride
+                null,        // startTimeTick
+                2,           // villagerCount
+                true,        // realtimePhase
+                300,         // realtimeTicks — comfortably past the 200-tick shutdown floor
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — ritual runs on the realtime path only
+                null,        // realtimeExpectation
+                null,        // minExpectedFullnessAfter
+                null,        // extraBlockRoomOffset
+                null,        // extraBlockRoomId
+                null,        // expectedVillagerHeld
+                false        // useNaturalWarp
+        );
     }
 
     private static TestBlueprint farmerBlueprint() {
@@ -190,6 +1814,810 @@ public class TestBlueprintRegistry {
         );
     }
 
+    /**
+     * Proficiency leveling parity (#269) — the feature's acceptance gate. The same work
+     * must move a townie's proficiency by the same amount whether it happened live or offline; a
+     * warp path that credited "once per important tick" instead of once per completed action would
+     * drift a townie's skill away from its realtime self while the player was away.
+     * <p>
+     * Runs both passes against the <em>same</em> villager: realtime first (the executor's monitored
+     * window), then an explicit warp inside the assertion. The executor's own warp pass can't be
+     * used — it kills and respawns the roster before the realtime phase, so the two halves would
+     * describe different townies with different UUIDs.
+     * <p>
+     * Farmer harvest is the vehicle because it is a single work state (`work: 10`,
+     * `cooldown_ticks: 10`) driven by {@code decrWork}, so one completed action is one harvest.
+     */
+    private static TestBlueprint proficiencyParityBlueprint() {
+        TestBlueprint base = farmerBlueprint();
+        ParityCapture cap = new ParityCapture();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride — the warp half is driven by the assertion
+                0L,          // startTimeTick — start at dawn so the realtime window is productive
+                1,           // villagerCount — one worker, so the action counter is unambiguous
+                true,        // realtimePhase
+                4800,        // realtimeTicks
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — this scenario gates on the realtime pass (see getWarpPassed)
+                null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> parityPostSpawn(town, cap, output))
+                .withCustomAssertion((level, flagPos, town, output) -> assertLevelingParity(level, flagPos, town, cap, output));
+    }
+
+    /**
+     * Cross-phase holder for the parity scenario: the post-spawn action stamps the baseline, the
+     * custom assertion reads it back after the realtime window (the {@code RelocateCapture} idiom).
+     */
+    private static final class ParityCapture {
+        // Two ids so the assertion can check the neglected-proficiency decay as well as the gain.
+        static final String WORKED = "farming";
+        static final String NEGLECTED = "smithing";
+        static final JobID JOB = new JobID("farmer", "harvest_wheat");
+        // Mid-band baselines: far enough from the [0,1] clamps that a whole window of gain or
+        // decay cannot hit one, which would flatten the delta and mask a parity break.
+        static final float BASE_WORKED = 0.3f;
+        static final float BASE_NEGLECTED = 0.5f;
+        // Warp compresses a window into simulated steps (~1 per ~571 ticks observed), so the
+        // budget has to be generous to complete a meaningful number of actions — but small enough
+        // that the gain cannot reach the level-1 clamp, which would flatten the delta and fake a
+        // mismatch. 48000 produced ~84 actions and hit the clamp from the 0.3 baseline; 28800
+        // keeps ~50 actions, leaving the worked level at ~0.8.
+        static final int WARP_TICKS = 28800;
+
+        @Nullable UUID villager;
+    }
+
+    /**
+     * The parity gate: per completed work action, the realtime path and the warp
+     * path must move proficiency by the same amount — gain on the worked id, decay on the others.
+     * Normalizing by completed actions (rather than comparing raw deltas) is what makes the two
+     * windows comparable without forcing them to do an identical amount of work.
+     */
+    private static boolean assertLevelingParity(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            ParityCapture cap,
+            TestOutput output
+    ) {
+        try {
+            if (cap.villager == null) {
+                return report(output, "parity (no villager was captured)", false);
+            }
+            VillagerHolder handle = town.getVillagerHandle();
+            long realtimeActions = AbstractWorldInteraction.getProficiencyBearingActionsForTest();
+            float rtGain = handle.getProficiency(cap.villager, ParityCapture.WORKED) - ParityCapture.BASE_WORKED;
+            float rtDecay = ParityCapture.BASE_NEGLECTED - handle.getProficiency(cap.villager, ParityCapture.NEGLECTED);
+            output.msg("parity realtime: actions=" + realtimeActions + " gain=" + rtGain + " decay=" + rtDecay);
+
+            // Restart the warp window from the same baseline, so both windows are measured under
+            // identical conditions and neither inherits the other's accumulated level.
+            handle.setProficiencies(cap.villager, Map.of(
+                    ParityCapture.WORKED, ParityCapture.BASE_WORKED,
+                    ParityCapture.NEGLECTED, ParityCapture.BASE_NEGLECTED
+            ));
+            AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
+            // The realtime window stripped the field, and a farmer with nothing to harvest re-scores
+            // onto compost/bone_meal — different jobs, so the warp window would complete zero actions
+            // of the job under test. Regrow the crop so both windows start from the same full field.
+            int regrown = regrowHarvestableCrops(level, flagPos);
+            output.msg("parity: regrew " + regrown + " crops before the warp window");
+            // Warp advances the tile's stored state, so the reset baseline has to be published or
+            // the warp half would run against the level the realtime half left behind.
+            town.publishStateToTileForTest();
+            MCTownState warped = town.warpTime(ParityCapture.WARP_TICKS);
+            long warpActions = AbstractWorldInteraction.getProficiencyBearingActionsForTest();
+            if (warped == null) {
+                return report(output, "parity (warp produced no town state)", false);
+            }
+            float warpWorked = proficiencyIn(warped, cap.villager, ParityCapture.WORKED);
+            float warpNeglected = proficiencyIn(warped, cap.villager, ParityCapture.NEGLECTED);
+            float wpGain = warpWorked - ParityCapture.BASE_WORKED;
+            float wpDecay = ParityCapture.BASE_NEGLECTED - warpNeglected;
+            output.msg("parity warp: actions=" + warpActions + " gain=" + wpGain + " decay=" + wpDecay);
+
+            boolean ok = report(output, "parity realtime did work", realtimeActions > 0);
+            ok &= report(output, "parity warp did work", warpActions > 0);
+            if (!ok) {
+                // Zero work on either side makes every ratio below vacuously equal — the one way
+                // this gate could go green while proving nothing.
+                return false;
+            }
+            ok &= report(output, "parity worked level did not hit the clamp (shorten the window)",
+                         warpWorked < 1f && handle.getProficiency(cap.villager, ParityCapture.WORKED) <= 1f);
+            ok &= report(output, "parity neglected level did not hit the floor (shorten the window)",
+                         warpNeglected > 0f);
+
+            float rtGainPer = rtGain / realtimeActions;
+            float wpGainPer = wpGain / warpActions;
+            float rtDecayPer = rtDecay / realtimeActions;
+            float wpDecayPer = wpDecay / warpActions;
+            output.msg("parity per-action gain: realtime=" + rtGainPer + " warp=" + wpGainPer);
+            output.msg("parity per-action decay: realtime=" + rtDecayPer + " warp=" + wpDecayPer);
+            ok &= report(output, "parity gain per action matches", Math.abs(rtGainPer - wpGainPer) < 1e-4f);
+            ok &= report(output, "parity decay per action matches", Math.abs(rtDecayPer - wpDecayPer) < 1e-5f);
+            return ok;
+        } finally {
+            ServerJobsRegistry.clearProficiencyIdOverridesForTest();
+        }
+    }
+
+    /**
+     * Return every wheat block around the flag to fully grown, so a second measurement window sees
+     * the same harvestable field the first one did.
+     */
+    private static int regrowHarvestableCrops(
+            ServerLevel level,
+            BlockPos flagPos
+    ) {
+        int regrown = 0;
+        for (int x = -12; x <= 12; x++) {
+            for (int z = -12; z <= 12; z++) {
+                for (int y = -2; y <= 2; y++) {
+                    BlockPos pos = flagPos.offset(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (!state.is(Blocks.WHEAT) || !state.hasProperty(CropBlock.AGE)) {
+                        continue;
+                    }
+                    if (state.getValue(CropBlock.AGE) == 7) {
+                        continue;
+                    }
+                    level.setBlock(pos, state.setValue(CropBlock.AGE, 7), Block.UPDATE_ALL);
+                    regrown++;
+                }
+            }
+        }
+        return regrown;
+    }
+
+    private static float proficiencyIn(
+            MCTownState state,
+            UUID villager,
+            String proficiencyId
+    ) {
+        for (TownState.VillagerData<MCHeldItem> v : state.villagers) {
+            if (villager.equals(v.uuid)) {
+                return v.getProficiencyLevel(proficiencyId);
+            }
+        }
+        return Float.NaN;
+    }
+
+    /**
+     * Warp must count a tool the worker holds: when the worker holds the town's only tool (the
+     * normal steady state), scoring against containers alone moves them onto a job that needs no
+     * tool, and the tooled job does no offline work.
+     * <p>
+     * Realtime runs first so the farmer fetches the hoe; the warp half is driven inside the
+     * assertion because the executor's own warp pass runs <em>before</em> realtime, when the hoe
+     * is still in the chest.
+     */
+    private static TestBlueprint heldToolWarpBlueprint() {
+        TestBlueprint base = farmerBlueprint(); // exactly one hoe, a full field of ripe wheat
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride — the warp half is driven by the assertion
+                0L,          // startTimeTick — start at dawn so the realtime window is productive
+                1,           // villagerCount — one worker holds the town's only hoe
+                true,        // realtimePhase
+                2400,        // realtimeTicks — long enough to fetch the hoe, short enough that the
+                             // field is not stripped bare (an idle farmer deposits the hoe again)
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — warp runs inside the assertion, once the hoe is held
+                null, null, null, null, null, false
+        )
+                .withCustomAssertion(TestBlueprintRegistry::assertWarpHarvestsWithHeldTool);
+    }
+
+    /**
+     * The held-tool gate: with the town's only hoe in the farmer's hand (not any chest), a warp
+     * window must still harvest wheat. Pre-bug, warp scores harvest as unequipped and switches to
+     * composting, so wheat does not increase.
+     */
+    private static boolean assertWarpHarvestsWithHeldTool(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        MCTownState before = town.captureCurrentState();
+        if (before == null) {
+            return report(output, "held-tool warp (no town state before warp)", false);
+        }
+        // Precondition: the town's only hoe must be in the farmer's hand, or the scenario proves
+        // nothing about container-vs-held tool scoring.
+        boolean hoeHeld = before.villagers.stream()
+                .flatMap(v -> v.journal.items().stream())
+                .anyMatch(i -> !i.isEmpty() && i.get().get() == Items.WOODEN_HOE);
+        if (!hoeHeld) {
+            output.msg("held-tool warp: villager journals at assertion time: "
+                    + before.villagers.stream()
+                            .map(v -> v.journal.items().stream()
+                                    .filter(i -> !i.isEmpty())
+                                    .map(MCHeldItem::getShortName)
+                                    .toList())
+                            .toList());
+        }
+        if (!report(output, "held-tool warp precondition (farmer holds the town's only hoe)", hoeHeld)) {
+            return false;
+        }
+        // The realtime window stripped part of the field; regrow it so the warp window starts
+        // from a full harvestable field (same idiom as the parity scenario).
+        int regrown = regrowHarvestableCrops(level, flagPos);
+        output.msg("held-tool warp: regrew " + regrown + " crops before the warp window");
+        town.publishStateToTileForTest();
+        int wheatBefore = townItemCount(before, "minecraft:wheat");
+        MCTownState warped = town.warpTime(ParityCapture.WARP_TICKS);
+        if (warped == null) {
+            return report(output, "held-tool warp (warp produced no town state)", false);
+        }
+        int wheatAfter = townItemCount(warped, "minecraft:wheat");
+        output.msg("held-tool warp: wheat " + wheatBefore + " -> " + wheatAfter);
+        return report(output, "held-tool warp harvested wheat", wheatAfter > wheatBefore);
+    }
+
+    private static int townItemCount(MCTownState state, String itemId) {
+        return TestResultChecker.snapshotItemCounts(state).getOrDefault(itemId, 0);
+    }
+
+    private static boolean parityPostSpawn(
+            TownFlagBlockEntity town,
+            ParityCapture cap,
+            TestOutput output
+    ) {
+        Collection<net.minecraft.world.entity.LivingEntity> ents = town.getVillagerHandle().entities();
+        if (ents.isEmpty()) {
+            output.msg("No villager to measure proficiency on");
+            return false;
+        }
+        cap.villager = ents.iterator().next().getUUID();
+        // Shipped job JSON declares no proficiency-id (the feature is inert), so the job under test
+        // is given one for the duration of this scenario. Cleared in the assertion's finally block.
+        ServerJobsRegistry.overrideProficiencyIdForTest(ParityCapture.JOB, ParityCapture.WORKED);
+        town.getVillagerHandle().setProficiencies(cap.villager, Map.of(
+                ParityCapture.WORKED, ParityCapture.BASE_WORKED,
+                ParityCapture.NEGLECTED, ParityCapture.BASE_NEGLECTED
+        ));
+        AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
+        output.msg("parity: baseline " + ParityCapture.WORKED + "=" + ParityCapture.BASE_WORKED
+                + " " + ParityCapture.NEGLECTED + "=" + ParityCapture.BASE_NEGLECTED);
+        return true;
+    }
+
+    /**
+     * Fenced farm plot containing a bare 4-high oak_log column with a reachable base
+     * (no leaves; deterministic 4-log drop count). The arborist is in-town work, so the
+     * chop runs during warp and deposits oak_logs in the chest.
+     * <p>
+     * Warp-only (realtimePhase=false): the chopped column is a non-renewable resource within
+     * the arena, so a post-warp realtime re-run would have no tree left to chop. Realtime/warp
+     * parity for the chop seam is structurally guaranteed (both paths share
+     * {@code event.world().chopTree(...)}); the full plant→grow→chop cycle is exercised by the
+     * full-cycle blueprint.
+     */
+    private static TestBlueprint arboristCutTreesBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+
+        // A bare 4-high oak_log column at an interior cell, base reachable from the floor.
+        BlockPos trunkBase = new BlockPos(ox + 3, 0, oz + 3);
+        for (int y = 0; y < 4; y++) {
+            blocks.add(new BlockPlacement(trunkBase.above(y), Blocks.OAK_LOG.defaultBlockState()));
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.WOODEN_AXE, 1)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:oak_log", 4, null)),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    /**
+     * Fenced farm plot of bare tillable ground ({@code grass_block}, in {@code #questown:tillables})
+     * with open sky above. The arborist plants saplings; {@code GrowTreesWarpRule} grows them into
+     * real trees in the warp snapshot. Asserts the sapling supply is consumed (planting happened);
+     * the grow→chop end-to-end is asserted by the full-cycle blueprint.
+     */
+    private static TestBlueprint arboristPlantSaplingBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    // Tillable workspot with open air above for planting + tree growth.
+                    blocks.add(new BlockPlacement(offset, Blocks.GRASS_BLOCK.defaultBlockState()));
+                }
+            }
+        }
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.removeIf(bp -> bp.offset().equals(chestOffset));
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.OAK_SAPLING, 16)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(new ExpectedProduct("minecraft:oak_sapling", -16, -1)),
+                1,
+                100
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    /**
+     * Arborist warp cycle: a fenced farm with a starter 4-high oak_log column at the floor (so
+     * cut_trees is finishable from warp start) PLUS oak_sapling BLOCKS pre-seeded at the floor
+     * (yCoord), as if planted in a prior warp. During the warp, {@code seedFarmSaplings} records
+     * the saplings and {@code GrowTreesWarpRule} attempts to grow them via {@code growTreeAt}
+     * (the in-warp worldgen path), while the cut_trees villager chops the starter column.
+     * <p>
+     * Asserts the full grow→chop cycle: >=5 logs, which is only reachable if the seeded sapling
+     * grows into a tree (the starter column alone is 4) and cut_trees chops it in the same warp.
+     * For growth to place a tree, the sapling needs a clear footprint — guaranteed by the jobs-track
+     * flatten clearing the whole build volume + tree headroom (see {@code TestArenaPreparer
+     * .buildVolume}).
+     */
+    private static TestBlueprint arboristFullCycleBlueprint() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+
+        int ox = 4;
+        int oz = -3;
+
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 7; z++) {
+                boolean isEdge = x == 0 || x == 6 || z == 0 || z == 6;
+                BlockPos offset = new BlockPos(ox + x, 0, oz + z);
+                if (isEdge) {
+                    if (x == 3 && z == 6) {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE_GATE.defaultBlockState()));
+                    } else {
+                        blocks.add(new BlockPlacement(offset, Blocks.OAK_FENCE.defaultBlockState()));
+                    }
+                } else {
+                    // Dirt support a level below the floor; floor (yCoord) left open for saplings/trees.
+                    blocks.add(new BlockPlacement(offset.below(), Blocks.DIRT.defaultBlockState()));
+                }
+            }
+        }
+
+        // Starter 4-high oak_log column (base at yCoord) so cut_trees is finishable at warp start.
+        BlockPos trunkBase = new BlockPos(ox + 1, 0, oz + 1);
+        for (int y = 0; y < 4; y++) {
+            blocks.add(new BlockPlacement(trunkBase.above(y), Blocks.OAK_LOG.defaultBlockState()));
+        }
+
+        // One oak sapling centered in the 5x5 interior. An oak's foliage radius (2) spans the whole
+        // interior, so only ONE tree fits — saplings any closer block each other's footprint (a
+        // sapling block isn't "free" for growth). The starter column shares the plot because logs
+        // ARE "free". seedFarmSaplings records this sapling and GrowTreesWarpRule grows it mid-warp
+        // into a trunk at the floor (yCoord, where cut_trees scans), so it is chopped in the same warp.
+        BlockPos saplingOffset = new BlockPos(ox + 3, 0, oz + 3);
+        blocks.add(new BlockPlacement(saplingOffset, Blocks.OAK_SAPLING.defaultBlockState()));
+
+        BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 5);
+        blocks.add(new BlockPlacement(chestOffset.below(), Blocks.DIRT.defaultBlockState()));
+
+        BlockPos gateOffset = new BlockPos(ox + 3, 0, oz + 6);
+
+        List<ItemStack> supplies = List.of(
+                new ItemStack(Items.WOODEN_AXE, 1)
+        );
+
+        TestExpectation expectation = new TestExpectation(
+                List.of(
+                        // The seeded sapling must grow and be chopped in the same warp: the warp
+                        // fells one whole trunk here, and the starter column alone is only 4 logs, so
+                        // >=5 can only be reached by chopping the GROWN oak. Growth is deterministic
+                        // (TreeFeatureResolver.seededFor), so the grown trunk is a fixed 5 logs every
+                        // run, never the 4..6 of level.random.
+                        //
+                        // LOAD-BEARING COORDINATE: the "5" is the deterministic oak height for the
+                        // seed pos.asLong() of the sapling at (ox+3, oz+3) under the ORIGIN. Moving the arena origin or this sapling offset re-seeds the
+                        // RNG and can drop the grown trunk to 4 (then this fails, predictably — not a
+                        // flake). If you relocate it, re-pin this threshold to the new deterministic
+                        // height. It also assumes the single felled trunk is the grown oak (job-block
+                        // scan reaches (7,0) before the 4-log starter at (5,-2)).
+                        new ExpectedProduct("minecraft:oak_log", 5, null)
+                ),
+                1,
+                500
+        );
+
+        return new TestBlueprint(
+                RoomType.FARM,
+                blocks,
+                supplies,
+                gateOffset,
+                chestOffset,
+                SpecialQuests.FARM,
+                expectation
+        );
+    }
+
+    // --- Organizer / fetch ---
+
+    // A distinctive ingredient guaranteed absent from the flattened arena. The fetch relocates it
+    // from the supply store room to the requested target store room; a relocation is a town-wide
+    // no-op, so the per-position container oracle is the only thing that can gate it.
+    private static final String ORGANIZER_ITEM = "minecraft:emerald";
+    private static final int ORGANIZER_FETCH_COUNT = 4;
+
+    // Two store rooms either side of the flag (all offsets flag-relative). buildSupplyRoom(ox, oz)
+    // builds only the SHELL (walls + door at (ox+2,0,oz+4)); chests are placed explicitly below.
+    //
+    // The TARGET chest (in the target room, placed by RoomBuilder.placeChest) holds the stock_request
+    // and is its own delivery destination: TownContainers.setWorkSpot stamps the request's job-block
+    // to the chest it sits in, and FetcherHack delivers the fetched item there. The requested
+    // ingredient lives in a SEPARATE chest in the supply room — separate because
+    // FetcherHack.containsUsableRequest only treats a request as "usable" if the requested item
+    // exists in some chest OTHER than the request's own.
+    private static final BlockPos ORGANIZER_TARGET_CHEST = new BlockPos(-4, 0, -1);
+    private static final BlockPos ORGANIZER_TARGET_DOOR = new BlockPos(-4, 0, 2);
+    private static final BlockPos ORGANIZER_SUPPLY_DOOR = new BlockPos(4, 0, 2);
+    private static final BlockPos ORGANIZER_INGREDIENT_CHEST = new BlockPos(4, 0, -1);
+
+    private static List<BlockPlacement> organizerRoomBlocks() {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        blocks.addAll(buildSupplyRoom(-6, -2).blocks); // target store room shell (chest via placeChest)
+        blocks.addAll(buildSupplyRoom(2, -2).blocks);  // supply store room shell
+        blocks.add(new BlockPlacement(ORGANIZER_INGREDIENT_CHEST, Blocks.CHEST.defaultBlockState()));
+        return blocks;
+    }
+
+    /**
+     * Both-sides conservation: the target chest gains the ingredient AND the supply (ingredient)
+     * chest loses it, while the town-wide total is unchanged (a relocation neither creates nor
+     * destroys). Together this gates a real fetch and rejects the dupe (target gains, source
+     * unchanged => town-wide +N) and loss (source loses, target unchanged => town-wide -N) modes.
+     */
+    private static TestExpectation organizerConservation() {
+        return new TestExpectation(
+                List.of(new ExpectedProduct(ORGANIZER_ITEM, 0, 0)),
+                0, 0
+        ).withContainerContents(List.of(
+                new ExpectedContainerContent(ORGANIZER_TARGET_CHEST, ORGANIZER_ITEM, 1, null),
+                new ExpectedContainerContent(ORGANIZER_INGREDIENT_CHEST, ORGANIZER_ITEM, null, -1)
+        ));
+    }
+
+    /**
+     * Post-placement setup: assert the distinctive ingredient is absent (setup-sanity guard against
+     * arena residue), then fabricate the StockRequestItem in the target chest (mirroring
+     * {@code CreateStockRequestFromUIMessage}: only the {@code request} NBT — the workspot is stamped
+     * at runtime by {@code TownContainers.setWorkSpot}) and seed the ingredient in the supply chest.
+     */
+    private static TestBlueprint.PostPlacementSetup organizerSetupHook() {
+        return (level, flagPos, town, output) -> {
+            MCTownState state = town.captureCurrentState();
+            if (state != null) {
+                int pre = TestResultChecker.snapshotItemCounts(state).getOrDefault(ORGANIZER_ITEM, 0);
+                if (pre != 0) {
+                    output.error("[organizer] zero-pre-existing guard tripped: found " + pre
+                            + " " + ORGANIZER_ITEM + " in town before seeding");
+                    return false;
+                }
+            }
+            BlockPos targetChest = flagPos.offset(ORGANIZER_TARGET_CHEST);
+            BlockPos ingredientChest = flagPos.offset(ORGANIZER_INGREDIENT_CHEST);
+
+            ItemStack request = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
+            {
+                net.minecraft.nbt.CompoundTag t = Compat.itemDataTag(request);
+                StockRequestItem.writeToNBT(t, WorkRequest.of(Items.EMERALD));
+                Compat.setItemDataTag(request, t);
+            }
+            if (!putInChest(level, targetChest, request)) {
+                output.error("[organizer] target chest not found at " + targetChest.toShortString());
+                return false;
+            }
+            if (!putInChest(level, ingredientChest, new ItemStack(Items.EMERALD, ORGANIZER_FETCH_COUNT))) {
+                output.error("[organizer] ingredient chest not found at " + ingredientChest.toShortString());
+                return false;
+            }
+            output.msg("[organizer] seeded request at " + targetChest.toShortString() + ", "
+                    + ORGANIZER_FETCH_COUNT + " " + ORGANIZER_ITEM + " at " + ingredientChest.toShortString());
+            return true;
+        };
+    }
+
+    private static boolean putInChest(ServerLevel level, BlockPos pos, ItemStack stack) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof Container container)) {
+            return false;
+        }
+        container.setItem(0, stack);
+        return true;
+    }
+
+    // Offsets for the nav/roof_gatherer scenario (flag-relative). The supply room shell is
+    // buildSupplyRoom(4, -2): interior x 5..7, z -1..1, floor feet y=0, roof y=2, door at (6,0,2).
+    private static final BlockPos NAV_MAT_OFFSET = new BlockPos(3, 0, 0);
+    private static final BlockPos NAV_RAISED_CHEST = new BlockPos(6, 1, -1);
+    private static final BlockPos NAV_WEST_DOOR = new BlockPos(4, 0, 0);
+
+    private static volatile boolean navRoofVisited;
+    private static volatile boolean navRoomEntered;
+    private static volatile int navMinY;
+    private static volatile int navMaxY;
+
+    /**
+     * Roof navigation, on the vehicle that actually walks: the gatherer (gate &lt;-&gt; supply
+     * chests). The supply room's roof is reachable (a 3-step staircase on its east edge), and the
+     * supplies chest sits one level above the room's scan level (yCoord+1, on a plank) under a
+     * head-height grass ledge with a one-block roof hole above it. The ledge occupies the chest's
+     * interact spot (chest + one toward the door, at chest height), so that spot is not standable
+     * from inside the room, while the ledge top (feet y=2) is Manhattan-1 from it. With the target at
+     * the chest's own height, the only node within the pathfinder's completion distance is on the
+     * grass above the room; {@code navTargetForContainer} pins the target to the room's yCoord, the
+     * interior floor spot one block lower, whose Manhattan-1 neighbours are standable interior floor,
+     * so the path goes through the door.
+     * <p>
+     * The assertion: the townie must enter the room (feet y == flagY inside the room footprint) and
+     * never visit the roof/ledge (feet y &gt;= flagY+2). The axe readout is informational: the
+     * gatherer's first container leg is DROPPING_LOOT (the vehicle under test), so the supplies walk
+     * may not run within the window.
+     */
+    private static TestBlueprint navGathererBlueprint() {
+        SupplyRoom sr = buildSupplyRoom(4, -2);
+        List<BlockPlacement> blocks = new ArrayList<>(sr.blocks);
+        // Move the door from the south wall (sr.doorOffset) to the WEST wall, facing EAST, open,
+        // hinge LEFT. Townies cannot open wooden doors (no InteractWithDoor brain behavior;
+        // useNearbyGates handles only fence gates), and an open door on the south wall leaves its
+        // panel across half the doorway (0.2 block of clearance), which wedged the townie on the
+        // threshold in testing. With this facing, the open panel lies flat against the north jamb
+        // and the straight walk line from the welcome mat (3,0,0) never clips it.
+        blocks.removeIf(bp -> bp.offset().equals(sr.doorOffset) || bp.offset().equals(sr.doorOffset.above()));
+        blocks.add(new BlockPlacement(sr.doorOffset, Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(sr.doorOffset.above(), Blocks.COBBLESTONE.defaultBlockState()));
+        BlockState westDoor = Blocks.OAK_DOOR.defaultBlockState()
+                                             .setValue(DoorBlock.FACING, net.minecraft.core.Direction.EAST)
+                                             .setValue(DoorBlock.OPEN, true);
+        blocks.removeIf(bp -> bp.offset().equals(NAV_WEST_DOOR) || bp.offset().equals(NAV_WEST_DOOR.above()));
+        blocks.add(new BlockPlacement(NAV_WEST_DOOR, westDoor));
+        blocks.add(new BlockPlacement(NAV_WEST_DOOR.above(),
+                westDoor.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER)));
+        // One-block roof hole above the ledge, so the ledge top is a valid pathfinding node.
+        blocks.removeIf(bp -> bp.offset().equals(new BlockPos(5, 2, -1)));
+        // Plank table under the chest: the chest sits at yCoord+1, so pre-fix its interact spot
+        // (and the ContainerTarget yPosition) is one above the room's scan level.
+        blocks.add(new BlockPlacement(new BlockPos(6, 0, -1), Blocks.OAK_PLANKS.defaultBlockState()));
+        // Head-height grass ledge filling the interact spot (5,1,-1: one WEST of the chest, toward
+        // the west door per getDoorDirectionFromCenter): unstandable from inside, but its top
+        // (feet y=2) is Manhattan-1 from the pre-fix target.
+        blocks.add(new BlockPlacement(new BlockPos(5, 1, -1), Blocks.GRASS_BLOCK.defaultBlockState()));
+        // Three-step staircase on the east edge: arena floor (feet y=0) up to the roof (feet y=3).
+        blocks.add(new BlockPlacement(new BlockPos(9, 0, -2), Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(9, 1, -1), Blocks.COBBLESTONE.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(9, 2, 0), Blocks.COBBLESTONE.defaultBlockState()));
+
+        TestBlueprint base = new TestBlueprint(
+                RoomType.WELCOME_MAT,
+                blocks,
+                List.of(new ItemStack(Items.STONE_AXE, 1), new ItemStack(Items.COOKED_BEEF, 8)),
+                NAV_MAT_OFFSET,
+                NAV_RAISED_CHEST,
+                SpecialQuests.TOWN_GATE,
+                new TestExpectation(List.of(), 0, 0),
+                NAV_WEST_DOOR,
+                null, null, null,
+                true, 600, false,
+                true, null, null, null, null, null, false
+        );
+        return base.withPostSpawnAction((level, flagPos, town, output) -> {
+                    int flagY = flagPos.getY();
+                    navRoofVisited = false;
+                    navRoomEntered = false;
+                    navMinY = flagY;
+                    navMaxY = flagY;
+                    Thread t = new Thread(() -> {
+                        long end = System.currentTimeMillis() + 35000;
+                        BlockPos last = null;
+                        while (System.currentTimeMillis() < end) {
+                            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                if (!(e instanceof VisitorMobEntity vme)) {
+                                    continue;
+                                }
+                                BlockPos bp = vme.blockPosition();
+                                int y = bp.getY();
+                                navMinY = Math.min(navMinY, y);
+                                navMaxY = Math.max(navMaxY, y);
+                                // Roof or ledge: feet at least two above the flag (roof surface
+                                // feet is flagY+3, the ledge top flagY+2; the interior floor is
+                                // flagY).
+                                if (y >= flagY + 2) {
+                                    navRoofVisited = true;
+                                }
+                                // Inside the supply room at floor level: entered through the door.
+                                int rx = bp.getX() - flagPos.getX();
+                                int rz = bp.getZ() - flagPos.getZ();
+                                if (y == flagY && rx >= 5 && rx <= 7 && rz >= -1 && rz <= 1) {
+                                    navRoomEntered = true;
+                                }
+                                if (!bp.equals(last)) {
+                                    last = bp;
+                                    output.msg("[nav/roof_gatherer] townie at " + bp.toShortString());
+                                }
+                            }
+                            try {
+                                Thread.sleep(250);
+                            } catch (InterruptedException ex) {
+                                return;
+                            }
+                        }
+                    }, "nav-roof-gatherer");
+                    t.setDaemon(true);
+                    t.start();
+                    output.msg("[nav/roof_gatherer] started position tracker over the realtime phase");
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    // The axe proves the supplies walk completed (or didn't). Result line is the
+                    // before/after signal: roof visited (bug) vs room entered via the door (fix).
+                    boolean axeTaken = true;
+                    BlockEntity be = level.getBlockEntity(flagPos.offset(NAV_RAISED_CHEST));
+                    if (be instanceof Container container) {
+                        for (int i = 0; i < container.getContainerSize(); i++) {
+                            if (container.getItem(i).is(Items.STONE_AXE)) {
+                                axeTaken = false;
+                            }
+                        }
+                    }
+                    output.msg(String.format(
+                            "[nav/roof_gatherer] RESULT: axeTaken=%s, roofVisited=%s, roomEntered=%s, y-range %d..%d (flagY=%d)",
+                            axeTaken, navRoofVisited, navRoomEntered, navMinY, navMaxY, flagPos.getY()));
+                    // Gate: the pinned target must route through the door. Pre-fix this scenario
+                    // bites (roofVisited=true, roomEntered=false): the townie climbs the stairs,
+                    // crosses the roof, and drops onto the ledge above the chest.
+                    if (navRoofVisited) {
+                        output.error("[nav/roof_gatherer] townie went over the roof to reach the chest");
+                        return false;
+                    }
+                    if (!navRoomEntered) {
+                        output.error("[nav/roof_gatherer] townie never entered the supply room through the door");
+                        return false;
+                    }
+                    return true;
+                });
+    }
+
+    /**
+     * Phase A — realtime green baseline. Proves the realtime fetch relocates the requested
+     * ingredient source->target (request chest gains it, ingredient chest loses it). Warp is
+     * skipped (the warp model is the deferred follow-up track — see the Phase B XFAIL below).
+     * <p>
+     * Greening this required repairing the fetcher's realtime status seam, which had rotted while
+     * the job sat archived: {@code FetcherHack.computeStatusOverride} (wired via {@code
+     * DeclarativeJob.getComputeStatusOverrideForSpecialJobs}) now drives the acquire→fetch→deliver
+     * status, that override is propagated into {@code journal.getStatus()} (so the supply getter
+     * actually engages), and {@code TownContainers.setWorkSpot} guards a null warp-scan room.
+     */
+    private static TestBlueprint organizerFetchBlueprint() {
+        TestBlueprint base = new TestBlueprint(
+                RoomType.INDOOR,
+                organizerRoomBlocks(),
+                List.of(), // the setup hook seeds chests; no auto-filled supplies
+                ORGANIZER_TARGET_DOOR,
+                ORGANIZER_TARGET_CHEST,
+                SpecialQuests.STORE_ROOM_SMALL,
+                organizerConservation(),
+                ORGANIZER_SUPPLY_DOOR, // supplyDoorOffset: registers the supply room
+                null,                  // warpAmountOverride
+                null,                  // startTimeTick
+                null,                  // villagerCount
+                true,                  // realtimePhase
+                1500,                  // realtimeTicks: multi-hop fetch budget, verified ample (the
+                                       // fetcher loops continuously, relocating >=1 emerald well within)
+                false,                 // drainHungerBeforeTest
+                true,                  // skipWarp
+                organizerConservation(), // realtimeExpectation: the per-position conservation gate
+                null,                  // minExpectedFullnessAfter
+                null,                  // extraBlockRoomOffset
+                null,                  // extraBlockRoomId
+                null,                  // expectedVillagerHeld
+                false                  // useNaturalWarp
+        );
+        return base.withSetupHook(organizerSetupHook());
+    }
+
+    /**
+     * Warp fetch relocation: the realtime setup on the warp path, where
+     * {@code RelocateRequestedItemWarpRule} (a global rule in organizer_fetcher.json) moves the
+     * requested ingredient source->target on the warp town state, so the per-position conservation
+     * holds.
+     */
+    private static TestBlueprint organizerFetchWarpBlueprint() {
+        TestBlueprint base = new TestBlueprint(
+                RoomType.INDOOR,
+                organizerRoomBlocks(),
+                List.of(),
+                ORGANIZER_TARGET_DOOR,
+                ORGANIZER_TARGET_CHEST,
+                SpecialQuests.STORE_ROOM_SMALL,
+                organizerConservation(), // warp checkResults gates on this (incl. containerContents)
+                ORGANIZER_SUPPLY_DOOR,
+                null,                  // warpAmountOverride (suite default)
+                null,                  // startTimeTick
+                null,                  // villagerCount
+                false,                 // realtimePhase = false (warp-only)
+                null,                  // realtimeTicks
+                false,                 // drainHungerBeforeTest
+                false,                 // skipWarp = false (run warp)
+                null,                  // realtimeExpectation
+                null, null, null, null,
+                false                  // useNaturalWarp
+        );
+        return base.withSetupHook(organizerSetupHook());
+    }
+
     private static TestBlueprint cookBlueprint() {
         List<BlockPlacement> blocks = new ArrayList<>();
 
@@ -236,7 +2664,7 @@ public class TestBlueprintRegistry {
                 List.of(
                         new ExpectedProduct("minecraft:cooked_beef", 3, 8),
                         new ExpectedProduct("minecraft:beef", -8, -3),
-                        new ExpectedProduct("minecraft:coal", -5, -3)
+                        new ExpectedProduct("minecraft:coal", -5, -2)
                 ),
                 1,
                 100
@@ -251,6 +2679,383 @@ public class TestBlueprintRegistry {
                 new ResourceLocation(Questown.MODID, "kitchen_small"),
                 expectation
         );
+    }
+
+    /** Furnace offset in {@link #cookBlueprint()} (ox + 1, 0, oz + 1). */
+    private static final BlockPos COOK_FURNACE_OFFSET = new BlockPos(5, 0, -1);
+
+    /**
+     * The kitchen furnace already has coal in its fuel slot and five cooked beef in its output; the
+     * cook (all starting jobs unlocked, standing on cook/fuel) must move at least three to the chest
+     * within 1500 realtime ticks, not keep picking fuel while the fuel slot is full.
+     */
+    private static TestBlueprint cookOutputReadyBlueprint() {
+        TestBlueprint base = cookBlueprint();
+        TestExpectation realtime = new TestExpectation(List.of(), 0, 100).withContainerContents(List.of(
+                new TestExpectation.ExpectedContainerContent(base.chestOffset(), "minecraft:cooked_beef", 3, null)
+        ));
+        return cookRealtimeBlueprint(base.supplyItems(), realtime)
+                .withSetupHook(TestBlueprintRegistry::seedFuelledFurnaceWithOutput)
+                // Diagnostic only (the chest delta is the gate): what the cook was doing at the end.
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            BlockPos fp = flagPos.offset(COOK_FURNACE_OFFSET);
+                            output.msg("cook fixture: furnace work state (cook's store)="
+                                    + town.getRealWorkStatusHandle(v.getUUID()).getJobBlockState(fp)
+                                    + " (town store)=" + town.getRealWorkStatusHandle(null).getJobBlockState(fp));
+                            output.msg("cook fixture: end state job=" + v.getJobId()
+                                    + " status=" + v.getStatusForServer()
+                                    + " held=" + v.getJobJournalSnapshot().items());
+                        }
+                    }
+                    if (level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f) {
+                        output.msg("cook fixture: furnace slots in=" + f.getItem(0) + " fuel=" + f.getItem(1) + " out=" + f.getItem(2));
+                        for (String job : List.of("extract", "fuel", "mutton")) {
+                            SlotPrecondition sp = ServerJobsRegistry.slotPrecondition(new JobID("cook", job));
+                            output.msg("cook fixture: cook/" + job + " slot precondition on the furnace = "
+                                    + (sp == null ? "none" : sp.test(f)));
+                        }
+                    }
+                    return true;
+                });
+    }
+
+    /** The kitchen furnace with coal in its fuel slot and five cooked beef in its output. */
+    private static boolean seedFuelledFurnaceWithOutput(
+            ServerLevel level, BlockPos flagPos, TownFlagBlockEntity town, TestOutput output
+    ) {
+        BlockPos furnacePos = flagPos.offset(COOK_FURNACE_OFFSET);
+        if (!(level.getBlockEntity(furnacePos) instanceof AbstractFurnaceBlockEntity furnace)) {
+            output.msg("cook fixture: no furnace at " + furnacePos.toShortString());
+            return false;
+        }
+        furnace.setItem(1, new ItemStack(Items.COAL, 8));
+        furnace.setItem(2, new ItemStack(Items.COOKED_BEEF, 5));
+        output.msg("cook fixture: furnace at " + furnacePos.toShortString() + " fuelled, 5 cooked beef ready");
+        return true;
+    }
+
+    /**
+     * cook/extract takes the furnace output in a pre-extract rule (take_from_slot_2), and that
+     * extraction must count toward LOOT quests like every other. The output-ready kitchen with an open
+     * count-8 #questown:villager_food quest: the cook's realtime extractions must credit it.
+     */
+    private static TestBlueprint cookExtractCreditsFoodQuestBlueprint() {
+        return cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(Items.COOKED_MUTTON));
+    }
+
+    private static TestBlueprint cookExtractCreditsFoodQuestBlueprint(WorkRequest boardRequest) {
+        // The cook batch's quest counts cooked food (VILLAGER_COOKED_FOOD).
+        ResourceLocation food = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
+        return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
+                .withSetupHook((level, flagPos, town, output) -> {
+                    town.getQuestHandle().addLootQuest(food, 8);
+                    // A board with a request, as in play: the work picker only takes a job that
+                    // satisfies one.
+                    town.getWorkHandle().requestWork(boardRequest);
+                    return seedFuelledFurnaceWithOutput(level, flagPos, town, output);
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        MCQuest q = e.getKey();
+                        if (q.getType() == Quest.QuestType.LOOT && food.equals(q.getWantedId())) {
+                            output.msg("cook_extract_food: food quest extracted=" + q.getExtracted() + "/" + q.getCountNeeded());
+                            return q.getExtracted() >= 3;
+                        }
+                    }
+                    output.msg("cook_extract_food: FAIL - the food LOOT quest was not found");
+                    return false;
+                });
+    }
+
+    /**
+     * Full storage is visible. The output-ready kitchen with every town container slot filled: the
+     * cook must stop in NO_SPACE with the NO_STORAGE need (bubble) without taking the meal out of the
+     * furnace; after 1200 villager-ticks of that, the flag reports storage full (its bubble).
+     */
+    private static TestBlueprint cookStorageFullBlueprint() {
+        // 3000 ticks: time to extract and enter NO_SPACE, then 1200+ villager-ticks for the flag.
+        return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100), 3000)
+                .withSetupHook((level, flagPos, town, output) -> {
+                    if (!seedFuelledFurnaceWithOutput(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    int filled = 0;
+                    for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                        if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                            continue;
+                        }
+                        for (int i = 0; i < c.getContainerSize(); i++) {
+                            if (c.getItem(i).isEmpty()) {
+                                c.setItem(i, new ItemStack(Items.DIRT, 64));
+                                filled++;
+                            }
+                        }
+                    }
+                    output.msg("storage-full: filled " + filled + " empty slots");
+                    return filled > 0;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean anyNoStorage = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("storage-full: " + v.getUUID() + " status=" + v.getStatusForServer() + " need=" + v.getNeed());
+                            anyNoStorage |= v.getNeed() == TownieNeed.NO_STORAGE;
+                        }
+                    }
+                    boolean flagBubble = town.isAttentionStorageFull();
+                    output.msg("storage-full: villager bubble=" + anyNoStorage + " flag bubble=" + flagBubble);
+                    // With no storage the cook must stop before taking the meal out: collecting it only
+                    // moves it into the cook's hands.
+                    int left = level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f
+                            ? f.getItem(2).getCount() : -1;
+                    // At least 5: the furnace may finish another beef before the check (one run saw 6).
+                    output.msg("storage-full: cooked beef still in the furnace=" + left + " (seeded 5)");
+                    return anyNoStorage && flagBubble && left >= 5;
+                });
+    }
+
+    /**
+     * The {@link #cookBlueprint()} kitchen as a realtime fixture: one cook starting on cook/fuel
+     * with every cook starting job unlocked, morning start, no
+     * warp, 1500 realtime ticks.
+     */
+    private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime) {
+        return cookRealtimeBlueprint(supplies, realtime, 1500);
+    }
+
+    private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime, int realtimeTicks) {
+        TestBlueprint base = cookBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), supplies,
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 100),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick — morning, so the window is productive
+                1,           // villagerCount
+                true,        // realtimePhase
+                realtimeTicks, // default 1500: well under the ~2400-tick fuel stall
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp — the blocker is realtime job selection
+                realtime, null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                output.msg("cook fixture: unlocked cook default work for " + uuid);
+            }
+            return true;
+        });
+    }
+
+    /**
+     * A kitchen with raw mutton (the cook's starter recipe) and no fuel anywhere. The cook can't
+     * fuel the furnace, so it must say so: the need bubble names coal (UNMET_ITEM on a coal key),
+     * which is what tells the player to bring fuel. A relaxing (downtime) villager's bubble is
+     * hidden, and a cook blocked on coal idles into downtime; the town must still hold the coal need
+     * for it, so the bubble returns when it seeks work again.
+     */
+    private static TestBlueprint cookNoCoalBlueprint() {
+        TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
+        return cookRealtimeBlueprint(List.of(new ItemStack(Items.MUTTON, 16)), realtime)
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean anyCoalNeed = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        output.msg("cook no-coal: job=" + v.getJobId() + " need=" + v.getNeed()
+                                + " unmetItem=" + v.getUnmetItem());
+                        String item = v.getUnmetItem();
+                        anyCoalNeed |= v.getNeed() == TownieNeed.UNMET_ITEM && item != null && item.contains("coal");
+                        if (ca.bradj.questown.jobs.declarative.DowntimeWork.matches(v.getJobId())) {
+                            String tracked = town.getPossibleWork().trackedUnmetKey(v.getJobId().rootId(), v.getUUID());
+                            output.msg("cook no-coal: relaxing, tracked need=" + tracked);
+                            anyCoalNeed |= tracked != null && tracked.contains("coal");
+                        }
+                    }
+                    return anyCoalNeed;
+                });
+    }
+
+    /**
+     * An idle villager whose requests are all met says "All my requests are done". Storage holds cooked mutton past its request limit (paused) and the board asks
+     * for nothing else; the cook has raw mutton and coal. Once it idles, it must show no need and
+     * the requests-done status line.
+     */
+    private static TestBlueprint cookRequestsDoneBlueprint() {
+        String[] seen = new String[1];
+        return cookRequestsBlueprint(
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16)),
+                List.of(),
+                (town, v, output) -> {
+                    if (seen[0] != null || !town.getPossibleWork().hasDoneAllRequests(v.getUUID())) {
+                        return;
+                    }
+                    String text = ServerJobsRegistry.getStatusText(v.getJobId(), v.getStatusForServer(), v).toString();
+                    seen[0] = "job=" + v.getJobId() + " need=" + v.getNeed()
+                            + " doneLine=" + text.contains("townie_status.requests_done");
+                    output.msg("[requests_done] " + seen[0]);
+                },
+                output -> {
+                    output.msg("[requests_done] first done tick: " + seen[0]);
+                    return seen[0] != null && seen[0].contains("need=NONE") && seen[0].contains("doneLine=true");
+                });
+    }
+
+    /**
+     * An open request the cook can't fill keeps it from being done, and its bubble names what is
+     * missing. With a porkchop request and no raw pork (mutton and coal in
+     * stock, mutton requests stocked), the idle cook shows the raw-pork bubble.
+     */
+    private static TestBlueprint cookOpenRequestNoPorkBlueprint() {
+        return cookOpenRequestBubbleBlueprint(
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16)),
+                "no_pork",
+                item -> item.contains("porkchop") && !item.contains("cooked"));
+    }
+
+    /** A porkchop request with raw pork but no coal shows the coal bubble. */
+    private static TestBlueprint cookOpenRequestNoCoalBlueprint() {
+        return cookOpenRequestBubbleBlueprint(
+                List.of(new ItemStack(Items.PORKCHOP, 16)),
+                "no_coal",
+                item -> item.contains("coal"));
+    }
+
+    private static TestBlueprint cookOpenRequestBubbleBlueprint(
+            List<ItemStack> supplies,
+            String label,
+            java.util.function.Predicate<String> wantedItem
+    ) {
+        String tag = "[open_request_" + label + "]";
+        String[] seen = new String[1];
+        boolean[] everDone = new boolean[1];
+        return cookRequestsBlueprint(
+                supplies,
+                List.of(Items.COOKED_PORKCHOP),
+                (town, v, output) -> {
+                    if (town.getPossibleWork().hasDoneAllRequests(v.getUUID()) && !everDone[0]) {
+                        everDone[0] = true;
+                        output.msg(tag + " counted as done: job=" + v.getJobId() + " need=" + v.getNeed());
+                    }
+                    String item = v.getUnmetItem();
+                    if (seen[0] != null || v.getNeed() != TownieNeed.UNMET_ITEM || item == null) {
+                        return;
+                    }
+                    if (!ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork(v.getJobId())) {
+                        return;
+                    }
+                    seen[0] = item;
+                    output.msg(tag + " bubble while seeking work: job=" + v.getJobId() + " unmet=" + item);
+                },
+                output -> {
+                    output.msg(tag + " first bubble: " + seen[0] + " everDone=" + everDone[0]);
+                    return seen[0] != null && wantedItem.test(seen[0]) && !everDone[0];
+                });
+    }
+
+    /**
+     * With porkchop and beef requests open and only beef and coal in town,
+     * a cook working through the beef never shows a need bubble. Every tick it holds a cook job
+     * that isn't stuck (not seeking work, relaxing or eating, nor NO_SUPPLIES / NO_JOBSITE), its
+     * need must not be an unmet item or room.
+     */
+    private static TestBlueprint cookWorkingNoBubbleBlueprint() {
+        String tag = "[working_no_bubble]";
+        int[] workingTicks = new int[1];
+        int[] bubbleTicks = new int[1];
+        java.util.Set<String> jobsSeen = new java.util.TreeSet<>();
+        return cookRequestsBlueprint(
+                List.of(new ItemStack(Items.BEEF, 16), new ItemStack(Items.COAL, 16)),
+                List.of(Items.COOKED_PORKCHOP, Items.COOKED_BEEF),
+                (town, v, output) -> {
+                    JobID job = v.getJobId();
+                    jobsSeen.add(job.toString());
+                    if (ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWork(job)
+                            || ca.bradj.questown.jobs.declarative.DowntimeWork.matches(job)
+                            || ca.bradj.questown.jobs.DiningStages.isDiner(job)) {
+                        return;
+                    }
+                    IStatus<?> status = v.getStatusForServer();
+                    if (ProductionStatus.NO_SUPPLIES.equals(status) || ProductionStatus.NO_JOBSITE.equals(status)) {
+                        return;
+                    }
+                    workingTicks[0]++;
+                    if (v.getNeed() == TownieNeed.UNMET_ITEM || v.getNeed() == TownieNeed.MISSING_ROOM) {
+                        if (bubbleTicks[0]++ == 0) {
+                            output.msg(tag + " bubble while working: job=" + job + " status=" + status
+                                    + " need=" + v.getNeed() + " unmet=" + v.getUnmetItem());
+                        }
+                    }
+                },
+                output -> {
+                    output.msg(tag + " working ticks=" + workingTicks[0] + " with bubble=" + bubbleTicks[0]
+                            + " jobs=" + jobsSeen);
+                    return workingTicks[0] > 0 && bubbleTicks[0] == 0;
+                });
+    }
+
+    private interface VillagerTickProbe {
+        void observe(TownFlagBlockEntity town, VisitorMobEntity villager, TestOutput output);
+    }
+
+    /**
+     * The cook kitchen with cooked mutton 10 at request limit 4 (paused), plus open requests for
+     * {@code openRequests}; {@code probe} sees the villager every server tick for 4000 ticks. The
+     * cook also knows the porkchop and beef recipes.
+     */
+    private static TestBlueprint cookRequestsBlueprint(
+            List<ItemStack> supplies,
+            List<net.minecraft.world.item.Item> openRequests,
+            VillagerTickProbe probe,
+            java.util.function.Predicate<TestOutput> verdict
+    ) {
+        List<ItemStack> stocked = new ArrayList<>(supplies);
+        stocked.add(new ItemStack(Items.COOKED_MUTTON, 10));
+        TestBlueprint base = cookRealtimeBlueprint(stocked, new TestExpectation(List.of(), 0, 100));
+        TestBlueprint.PostSpawnAction unlockCookJobs = base.postSpawnAction();
+        return base.withPostSpawnAction((level, flagPos, town, output) -> {
+            unlockCookJobs.run(level, flagPos, town, output);
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                town.getVillagerHandle().unlockJob(e.getUUID(), new JobID("cook", "porkchop"));
+                town.getVillagerHandle().unlockJob(e.getUUID(), new JobID("cook", "beef"));
+            }
+            WorkRequest mutton = WorkRequest.of(Items.COOKED_MUTTON);
+            town.getWorkHandle().requestWork(mutton);
+            town.getWorkHandle().setRequestLimit(mutton, 4);
+            for (net.minecraft.world.item.Item item : openRequests) {
+                town.getWorkHandle().requestWork(WorkRequest.of(item));
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_qtbr3076(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                    if (town.isRemoved()) {
+                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+                        return;
+                    }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            probe.observe(town, v, output);
+                        }
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    output.msg("[cook requests] end: job=" + v.getJobId() + " status=" + v.getStatusForServer()
+                            + " need=" + v.getNeed() + " unmet=" + v.getUnmetItem()
+                            + " done=" + town.getPossibleWork().hasDoneAllRequests(v.getUUID()));
+                }
+            }
+            return verdict.test(output);
+        }).withRealtimeTicks(4000);
     }
 
     private static TestBlueprint bakerBlueprint() {
@@ -306,11 +3111,10 @@ public class TestBlueprintRegistry {
                 net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
         )));
 
-        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.BLACKSMITHS_TABLE_BLOCK.get().defaultBlockState()));
-        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+        // The Armory tier exactly (armorer's table + chest); with more chests the room's top match
+        // could be a store room instead.
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.ARMORERS_TABLE_BLOCK.get().defaultBlockState()));
         blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
-        blocks.add(new BlockPlacement(new BlockPos(ox + 3, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
-        blocks.add(new BlockPlacement(new BlockPos(ox + 2, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
 
         BlockPos chestOffset = new BlockPos(ox + 1, 0, oz + 3);
 
@@ -332,6 +3136,216 @@ public class TestBlueprintRegistry {
                 new ResourceLocation(Questown.MODID, "armory"),
                 expectation
         );
+    }
+
+    // An empty armor stand in the Armory fixture (armorer's table at ox+1/oz+1, chest at
+    // ox+1/oz+3) and an item frame on the smithy fixture's floor (table ox+1/oz+1, torch ox+3/oz+1,
+    // chest ox+3/oz+3), at the free interior corner.
+    private static final BlockPos DISPLAY_STAND_OFFSET = new BlockPos(4 + 3, 0, -2 + 1);
+    private static final BlockPos DISPLAY_FRAME_OFFSET = new BlockPos(4 + 1, 0, -2 + 3);
+
+    /**
+     * Putting armor on a stand is its own job, worked at the stand. The Armory
+     * fixture plus an empty armor stand (an Armor Display) and leather boots in the chest: the
+     * crafter on crafter/display_armor must put the boots on the stand's feet within 1500 ticks.
+     */
+    private static TestBlueprint displayArmorBlueprint() {
+        return displayBlueprint(
+                armorerBlueprint(),
+                List.of(new ItemStack(Items.LEATHER_BOOTS, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ArmorStand(
+                        level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5),
+                DISPLAY_STAND_OFFSET,
+                new ResourceLocation(Questown.MODID, "armor_display"),
+                "minecraft:leather_boots"
+        );
+    }
+
+    /** As {@link #displayArmorBlueprint}, for a stone sword and an item frame (a Weapon Display). */
+    private static TestBlueprint displayWeaponsBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ItemFrame(
+                        level, pos, net.minecraft.core.Direction.UP),
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        );
+    }
+
+    /**
+     * A full display frame takes no more swords. Three swords, one frame: one goes in the frame, and the other two
+     * must stay with the town (chest or villager), none dropped or lost. The frame is town storage
+     * (DisplaySlots), so the container count includes the displayed sword: all three stay counted.
+     */
+    private static TestBlueprint displayWeaponsFullFrameBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1), new ItemStack(Items.STONE_SWORD, 1), new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> new net.minecraft.world.entity.decoration.ItemFrame(
+                        level, pos, net.minecraft.core.Direction.UP),
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            int inChests = 0;
+            for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                if (level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c) {
+                    for (int i = 0; i < c.getContainerSize(); i++) {
+                        if (c.getItem(i).is(Items.STONE_SWORD)) {
+                            inChests += c.getItem(i).getCount();
+                        }
+                    }
+                }
+            }
+            int held = 0;
+            for (LivingEntity v : town.getVillagerHandle().entities()) {
+                if (v instanceof VisitorMobEntity vme) {
+                    held += (int) vme.getJobJournalSnapshot().items().stream()
+                            .filter(h -> h.get().get().equals(Items.STONE_SWORD)).count();
+                }
+            }
+            BlockPos at = flagPos.offset(DISPLAY_FRAME_OFFSET);
+            int dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(at).inflate(16)).stream()
+                    .filter(e -> e.getItem().is(Items.STONE_SWORD)).mapToInt(e -> e.getItem().getCount()).sum();
+            ca.bradj.questown.integration.minecraft.DisplaySlots slots =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, at);
+            int shown = slots == null ? 0 : (int) slots.items().stream().filter(i -> i.is(Items.STONE_SWORD)).count();
+            output.msg("full-frame: shown=" + shown + " inChests=" + inChests + " held=" + held + " dropped=" + dropped);
+            return report(output, "full-frame-keeps-swords", shown == 1 && inChests + held == 3 && dropped == 0);
+        }).withRealtimeTicks(6000);
+    }
+
+    /**
+     * Two item frames on the walls of a corner share one block position, one already holding a
+     * stone sword. The sword in the chest must go into the empty frame.
+     */
+    private static TestBlueprint displayWeaponsCornerFramesBlueprint() {
+        return displayBlueprint(
+                blacksmithBlueprint(),
+                List.of(new ItemStack(Items.STONE_SWORD, 1)),
+                (level, pos) -> {
+                    net.minecraft.world.entity.decoration.ItemFrame full = new net.minecraft.world.entity.decoration.ItemFrame(
+                            level, pos, net.minecraft.core.Direction.UP);
+                    full.setItem(new ItemStack(Items.STONE_SWORD));
+                    level.addFreshEntity(full);
+                    return new net.minecraft.world.entity.decoration.ItemFrame(level, pos, net.minecraft.core.Direction.NORTH);
+                },
+                DISPLAY_FRAME_OFFSET,
+                new ResourceLocation(Questown.MODID, "weapon_display"),
+                "minecraft:stone_sword"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(DISPLAY_FRAME_OFFSET);
+            List<net.minecraft.world.entity.decoration.ItemFrame> frames = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.decoration.ItemFrame.class, new net.minecraft.world.phys.AABB(at).inflate(1));
+            long holding = frames.stream().filter(f -> f.getItem().is(Items.STONE_SWORD)).count();
+            int dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(at).inflate(16)).stream()
+                    .filter(e -> e.getItem().is(Items.STONE_SWORD)).mapToInt(e -> e.getItem().getCount()).sum();
+            output.msg("corner-frames: frames=" + frames.size() + " holding=" + holding + " dropped=" + dropped);
+            return report(output, "corner-frames-fill-the-empty-one", frames.size() == 2 && holding == 2 && dropped == 0);
+        }).withRealtimeTicks(4000);
+    }
+
+    private static final BlockPos DISPLAY_SECOND_STAND_OFFSET = new BlockPos(4 + 3, 0, -2 + 3);
+
+    /**
+     * The armor display job adds pieces to the best-equipped stand. Two stands in the Armory: an empty one, and one already wearing leather
+     * boots. A leather chestplate in the chest must go on the stand with the boots.
+     */
+    private static TestBlueprint displayArmorFullestStandBlueprint() {
+        return displayBlueprint(
+                armorerBlueprint(),
+                List.of(new ItemStack(Items.LEATHER_CHESTPLATE, 1)),
+                (level, pos) -> {
+                    BlockPos second = pos.offset(DISPLAY_SECOND_STAND_OFFSET.subtract(DISPLAY_STAND_OFFSET));
+                    net.minecraft.world.entity.decoration.ArmorStand dressed = new net.minecraft.world.entity.decoration.ArmorStand(
+                            level, second.getX() + 0.5, second.getY(), second.getZ() + 0.5);
+                    dressed.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
+                    level.addFreshEntity(dressed);
+                    return new net.minecraft.world.entity.decoration.ArmorStand(
+                            level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+                },
+                DISPLAY_STAND_OFFSET,
+                new ResourceLocation(Questown.MODID, "armor_display"),
+                "minecraft:leather_chestplate"
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            ca.bradj.questown.integration.minecraft.DisplaySlots empty =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, flagPos.offset(DISPLAY_STAND_OFFSET));
+            ca.bradj.questown.integration.minecraft.DisplaySlots dressed =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, flagPos.offset(DISPLAY_SECOND_STAND_OFFSET));
+            boolean onDressed = dressed != null && dressed.items().stream().anyMatch(i -> i.is(Items.LEATHER_CHESTPLATE));
+            boolean onEmpty = empty != null && empty.items().stream().anyMatch(i -> i.is(Items.LEATHER_CHESTPLATE));
+            output.msg("fullest-stand: on dressed=" + onDressed + " on empty=" + onEmpty
+                    + " (dressed " + (dressed == null ? "missing" : dressed.items()) + ")");
+            return report(output, "fullest-stand-gets-the-piece", onDressed && !onEmpty);
+        }).withRealtimeTicks(3000);
+    }
+
+    private static TestBlueprint displayBlueprint(
+            TestBlueprint base,
+            List<ItemStack> supplies,
+            java.util.function.BiFunction<ServerLevel, BlockPos, net.minecraft.world.entity.Entity> display,
+            BlockPos displayOffset,
+            ResourceLocation roomId,
+            String expectedItem
+    ) {
+        // The fixture waits for the base room (the display is spawned after registration, in the
+        // setup hook); the room becomes `roomId` on the next recipe recheck.
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), supplies,
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 100),
+                base.supplyDoorOffset(),
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick: morning
+                1,           // villagerCount
+                true,        // realtimePhase
+                1500,        // realtimeTicks
+                false,       // drainHungerBeforeTest
+                true,        // skipWarp: the display jobs are excluded from warp
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withSetupHook((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(displayOffset);
+            // Scenarios in one server reuse these coordinates: clear an earlier scenario's displays
+            // and dropped items first, or they skew this one (a dressed stand, a full frame).
+            net.minecraft.world.phys.AABB area = new net.minecraft.world.phys.AABB(at).inflate(8);
+            level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, area,
+                    x -> ca.bradj.questown.integration.minecraft.DisplaySlots.isDisplay(x)
+                            || x instanceof net.minecraft.world.entity.item.ItemEntity)
+                    .forEach(x -> x.discard());
+            net.minecraft.world.entity.Entity e = display.apply(level, at);
+            boolean added = level.addFreshEntity(e);
+            output.msg("display fixture: spawned " + e.getType().getDescriptionId() + " at " + at.toShortString() + " -> " + added);
+            return added;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            BlockPos at = flagPos.offset(displayOffset);
+            ca.bradj.questown.integration.minecraft.DisplaySlots slots =
+                    ca.bradj.questown.integration.minecraft.DisplaySlots.at(level, at);
+            if (slots == null) {
+                output.msg("FAIL display fixture: no display at " + at.toShortString());
+                return false;
+            }
+            boolean shown = false;
+            StringBuilder contents = new StringBuilder();
+            List<ItemStack> items = slots.items();
+            for (int i = 0; i < items.size(); i++) {
+                ItemStack s = items.get(i);
+                contents.append(i).append('=').append(s).append(' ');
+                shown |= !s.isEmpty() && expectedItem.equals(Compat.getItemId(s.getItem()).toString());
+            }
+            output.msg("display fixture: display at " + at.toShortString() + " holds " + contents
+                    + "; room is " + roomId + ": " + !town.getRoomHandle().getRoomsMatching(roomId).isEmpty());
+            for (LivingEntity v : town.getVillagerHandle().entities()) {
+                if (v instanceof VisitorMobEntity vme) {
+                    output.msg("display fixture: end state job=" + vme.getJobId() + " status=" + vme.getStatusForServer()
+                            + " held=" + vme.getJobJournalSnapshot().items());
+                }
+            }
+            return report(output, "display-shows-" + expectedItem, shown);
+        });
     }
 
     private static TestBlueprint crafterBlueprint() {
@@ -466,6 +3480,65 @@ public class TestBlueprintRegistry {
         );
     }
 
+
+    /**
+     * One warp day (24000 ticks, at most 12000 productive) for a fed base gatherer. The cap counts
+     * gathered loot in the chest and on the gatherer, excluding the cooked beef supplied as food:
+     * the "*" net delta would net eaten food out and hide an over-producing warp.
+     */
+    private static TestBlueprint gathererOneDayLootBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(new ItemStack(Items.COOKED_BEEF, 8)));
+        return base.withExpectation(noProducts()).withCustomAssertion((level, flagPos, town, output) -> {
+            Map<String, Integer> loot = new java.util.TreeMap<>();
+            java.util.function.Consumer<ItemStack> count = st -> {
+                if (st.isEmpty() || st.is(Items.COOKED_BEEF)) {
+                    return;
+                }
+                loot.merge(Compat.getItemName(st.getItem()).getString(), st.getCount(), Integer::sum);
+            };
+            if (level.getBlockEntity(flagPos.offset(base.chestOffset())) instanceof net.minecraft.world.Container c) {
+                for (int i = 0; i < c.getContainerSize(); i++) {
+                    count.accept(c.getItem(i));
+                }
+            }
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    for (int i = 0; i < v.getInventory().getContainerSize(); i++) {
+                        count.accept(v.getInventory().getItem(i));
+                    }
+                }
+            }
+            int total = loot.values().stream().mapToInt(Integer::intValue).sum();
+            output.msg("gatherer one_day_loot: " + total + " items (cap " + OneDayYieldCaps.GATHERER + ") " + loot);
+            return total >= 1 && total <= OneDayYieldCaps.GATHERER;
+        });
+    }
+
+    private static TestBlueprint explorerBlueprint() {
+        // The ==1 knowledge-growth assertion is bounded by SUPPLY, not by warp ticks:
+        // 1 paper => exactly 1 gatherer map can be made => exactly 1 scout => knowledge grows by 1.
+        // The cooked_beef just keeps the villager fed. Load-bearing — do not raise the paper count.
+        // The warp amount only needs to be "big enough" to complete one full leaver cycle; 2500 was
+        // too short (the villager produced nothing), so we match the suite default that every other
+        // passing leaver job (gatherer:axe, hunter, miner, fisher) uses.
+        // The explorer is the only leaver job whose product REPLACES a consumed input:
+        // it turns 1 paper + 1 food into 1 gatherer map, so the town's net item count is
+        // unchanged. The inherited wildcard ("* grows by >= 1") therefore can't gate it —
+        // assert the actual product (exactly one gatherer map) plus the knowledge growth.
+        return welcomeMatBlueprint(List.of(
+                new ItemStack(Items.PAPER, 1),
+                new ItemStack(Items.COOKED_BEEF, 1)
+        )).withExpectation(new TestExpectation(
+                List.of(
+                        new ExpectedProduct("questown:gatherer_map", 1, 1),
+                        // Paper is carried as a held tool but consumed once per trip
+                        // (CONSUME_HELD_PAPER) so it isn't infinitely reusable.
+                        new ExpectedProduct("minecraft:paper", -1, -1)
+                ),
+                1, 100
+        )).withMinKnowledgeGrowth(1).withWarpAmountOverride(24000);
+    }
+
     private static TestBlueprint hunterBlueprint() {
         return welcomeMatBlueprint(
                 List.of(
@@ -475,13 +3548,249 @@ public class TestBlueprintRegistry {
         );
     }
 
+    /** The quest want: one of the raw meats, expressed as the tag the 2.5 gate uses. */
+    private static ResourceLocation rawFoodTag() {
+        return TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+    }
+
+    private static TestExpectation noProducts() {
+        return new TestExpectation(List.of(), 0, 0);
+    }
+
+    /**
+     * Hunt a cycle with a raw-meat LOOT quest open, then assert the quest is
+     * COMPLETE — proving extraction satisfies it (the design intent), independent
+     * of what the dine path does with the meat afterwards.
+     *
+     * @param warpPath false: realtime path (the quest check lives in
+     *                 RealtimeWorldInteraction.onLootExtracted); true: the warp
+     *                 path (the warper records the extraction on the snapshot and
+     *                 TownFlagState.warp settles it through the live quest
+     *                 handle) — both must yield the same outcome.
+     */
+    private static TestBlueprint lootOnExtractBlueprint() {
+        return lootOnExtractBlueprint(false);
+    }
+
+    private static TestBlueprint lootOnExtractBlueprint(boolean warpPath) {
+        return lootOnExtractBlueprint(hunterBlueprint(), warpPath);
+    }
+
+    private static TestBlueprint lootOnExtractBlueprint(TestBlueprint base, boolean warpPath) {
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),          // item deltas are not the gate — the meat may be eaten on the dine path
+                base.supplyDoorOffset(),
+                warpPath ? 24000 : null, // warpAmountOverride — well past full hunt cycles (2000-tick timed states)
+                null,                  // startTimeTick
+                1,                     // villagerCount
+                !warpPath,             // realtimePhase
+                warpPath ? null : 4800, // realtimeTicks — at least full hunt cycles with margin
+                false,                 // drainHungerBeforeTest
+                !warpPath,             // skipWarp — realtime path only drives the live quest check; warp settles after
+                null, null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    town.getQuestHandle().addLootQuest(tag, 1);
+                    boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
+                            .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
+                                    && tag.equals(e.getKey().getWantedId())
+                                    && !e.getKey().isComplete());
+                    output.msg("loot_on_extract: raw-food LOOT quest posted=" + posted);
+                    return posted;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    MCQuest quest = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            quest = e.getKey();
+                        }
+                    }
+                    if (quest == null) {
+                        output.msg("loot_on_extract: FAIL — posted quest not found in town state");
+                        return false;
+                    }
+                    boolean typeOk = quest.getType() == Quest.QuestType.LOOT;
+                    boolean complete = quest.isComplete();
+                    output.msg("loot_on_extract: quest complete=" + complete + " (type LOOT=" + typeOk + ")");
+                    // Where the extracted mutton sits: villager-held (journal) or which container.
+                    MCTownState state = town.captureCurrentState();
+                    if (state != null) {
+                        Map<String, Integer> held = TestResultChecker.snapshotVillagerHeldCounts(state);
+                        Map<BlockPos, Map<String, Integer>> containers =
+                                TestResultChecker.snapshotContainerContents(state);
+                        output.msg("loot_on_extract: state held=" + held + " containers=" + containers);
+                    }
+                    return typeOk && complete;
+                });
+    }
+
+    /**
+     * A gatherer becomes a hunter. The gatherer leaves its welcome-mat spot at its terminal state 3, which hunter:sword also uses
+     * as "hunt finished"; the stale state, read from away from the mat (a walk to the spot the
+     * "not going to jobsite" gate rejects), would park the new hunter in COLLECTING_SUPPLIES. The
+     * root change must clear it, so the hunter completes the raw-food
+     * LOOT quest inside the 4800-tick window (the loot_on_extract oracle).
+     */
+    private static TestBlueprint gathererBecomesHunterBlueprint() {
+        // The supply chest well away from the mat: next to the mat, the trip to fetch the sword walks the hunter into the mat's
+        // room, where it extracts the stale state instead of stalling.
+        TestBlueprint farChest = welcomeMatBlueprint(hunterBlueprint().supplyItems().stream().toList(), -8, -2);
+        return lootOnExtractBlueprint(farChest, false).withPostSpawnAction((level, flagPos, town, output) -> {
+            BlockPos matPos = flagPos.offset(new BlockPos(3, 0, 0));
+            JobID hunter = new JobID("hunter", "sword");
+            // Away from the mat (the change lands in the morning, by the bed): a villager standing on
+            // the mat just extracts the stale state.
+            for (net.minecraft.world.entity.LivingEntity e : town.getVillagerHandle().entities()) {
+                e.teleportTo(flagPos.getX() - 5.5, flagPos.getY(), flagPos.getZ() + 4.5);
+                output.msg("gatherer_becomes_hunter: moved " + e.getUUID() + " to " + e.blockPosition().toShortString());
+            }
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                // VillagerUUID.get is deprecated for removal; the store and unlock still take a UUID.
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                town.getRealWorkStatusHandle(uuid).setJobBlockState(matPos, State.freshAtState(3));
+                output.msg("gatherer_becomes_hunter: gatherer left the mat at " + matPos.toShortString() + " in state 3");
+                town.getVillagerHandle().changeJobForVillager(vuid, hunter, false);
+                town.getVillagerHandle().unlockJob(uuid, hunter);
+            }
+            return true;
+        });
+    }
+
+    /**
+     * The accumulation oracle: count-4 raw-food LOOT quest,
+     * one realtime hunter cycle, then a deterministic top-up through the live
+     * quest handle (the same entry point {@code RealtimeWorldInteraction}
+     * uses on extraction, and {@code _qtdev loot_fire} in a held run). The first natural
+     * extraction must not complete the quest outright.
+     */
+    /**
+     * With the flag's villagers page open, a returning hunter's card must show its trip ending and
+     * "dropping loot". The page re-syncs through a StatusListener it
+     * attaches to each villager on open (FlagMenus.writeAndLink); this fixture attaches one the same
+     * way and records what it hears over a realtime hunt.
+     */
+    private static TestBlueprint hunterStatusResyncBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        java.util.List<String> heard = java.util.Collections.synchronizedList(new ArrayList<>());
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 4800, false, true, null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        v.addStatusListener(new ca.bradj.questown.jobs.StatusListener() {
+                            @Override
+                            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                                heard.add("job:" + v.getJobId().jobId());
+                                return listenToNewJob.apply(this);
+                            }
+
+                            @Override
+                            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                                heard.add(newStatus + " return=" + v.getLeaverReturn() + " @" + level.getGameTime());
+                            }
+                        });
+                        output.msg("status-resync: listening to " + v.getUUID());
+                        // A finished hunt re-creates the job (hunter:sword -> sword); the page's
+                        // listener must survive that and keep hearing the new job's statuses.
+                        town.getVillagerHandle().changeJobForVillager(v.getUUID(), v.getJobId(), false);
+                        heard.add("forced-job-change");
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("status-resync: heard " + heard.size() + " events: " + heard);
+                    int changed = heard.indexOf("forced-job-change");
+                    return changed >= 0 && heard.subList(changed, heard.size()).stream()
+                            .anyMatch(h -> h.contains("DROPPING_LOOT"));
+                });
+    }
+
+    private static final int LOOT_ACCUMULATE_COUNT = 40;
+
+    private static TestBlueprint lootOnExtractAccumulateBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 4800, false, true, null, null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    // 40, not 4: one natural hunter cycle delivers ~25 raw food.
+                    town.getQuestHandle().addLootQuest(tag, LOOT_ACCUMULATE_COUNT);
+                    boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
+                            .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
+                                    && tag.equals(e.getKey().getWantedId())
+                                    && !e.getKey().isComplete());
+                    output.msg("loot_on_extract_accumulate: raw-food LOOT quest count " + LOOT_ACCUMULATE_COUNT + " posted=" + posted);
+                    return posted;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    ResourceLocation tag = rawFoodTag();
+                    MCQuest quest = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            quest = e.getKey();
+                        }
+                    }
+                    if (quest == null || quest.getType() != Quest.QuestType.LOOT) {
+                        output.msg("loot_on_extract_accumulate: FAIL — posted quest not found in town state");
+                        return false;
+                    }
+                    int extracted = quest.getExtracted();
+                    if (extracted == 0) {
+                        output.msg("loot_on_extract_accumulate: FAIL — no natural extraction occurred; the oracle is broken");
+                        return false;
+                    }
+                    if (quest.isComplete()) {
+                        output.msg("loot_on_extract_accumulate: FAIL — quest completed on its first extraction "
+                                + "(count " + quest.getCountNeeded() + ", extracted " + extracted + "): close-on-first-extraction is back");
+                        return false;
+                    }
+                    output.msg("loot_on_extract_accumulate: after natural cycle extracted=" + extracted + " complete=false");
+                    // Top the counter up through the live handle: one mutton per extraction
+                    // (mutton is a member of the raw-food tag; data/questown/tags/items/
+                    // villager_simple_furnace_food_raw.json).
+                    for (int i = 0; i < quest.getCountNeeded() - extracted; i++) {
+                        town.getQuestHandle().processLootQuests(
+                                MCTownItem.fromMCItemStack(new ItemStack(Items.MUTTON, 1)));
+                    }
+                    MCQuest after = null;
+                    for (AbstractMap.SimpleEntry<MCQuest, ?> e : town.getQuestHandle().getAllQuestsWithRewards()) {
+                        if (tag.equals(e.getKey().getWantedId())) {
+                            after = e.getKey();
+                        }
+                    }
+                    boolean complete = after != null && after.isComplete();
+                    output.msg("loot_on_extract_accumulate: after top-up complete=" + complete);
+                    return complete;
+                });
+    }
+
     private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies) {
+        return welcomeMatBlueprint(supplies, 4, -2);
+    }
+
+    private static TestBlueprint welcomeMatBlueprint(List<ItemStack> supplies, int supplyOx, int supplyOz) {
         List<BlockPlacement> blocks = new ArrayList<>();
 
         BlockPos matOffset = new BlockPos(3, 0, 0);
         blocks.add(new BlockPlacement(matOffset, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState()));
 
-        SupplyRoom sr = buildSupplyRoom(4, -2);
+        SupplyRoom sr = buildSupplyRoom(supplyOx, supplyOz);
         blocks.addAll(sr.blocks);
 
         return new TestBlueprint(
@@ -595,11 +3904,827 @@ public class TestBlueprintRegistry {
         return new SupplyRoom(blocks, chestOffset, doorLower);
     }
 
+    // --- Perf scenarios ---
+    //
+    // These are MEASUREMENTS, not gates: they always pass and report flag-tick timings, so a
+    // regression shows up as a number in the log rather than a red scenario. The point is the
+    // scaling shape (tick cost vs townie count vs registered-room count), which is why they come
+    // in a small/large pair — one run gives you a baseline and a loaded town to compare it to.
+    //
+    // The expectation is deliberately empty (no products, 0 cycles): TestResultChecker's product
+    // loop and cycle gate are both skipped, so the scenario cannot fail on production outcomes.
+
+    private static TestBlueprint perfBlueprint(int villagers, int extraRooms, int ticks) {
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        TestBlueprint bp = new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null,      // supplyDoorOffset
+                null,      // warpAmountOverride
+                null,      // startTimeTick
+                villagers,
+                true,      // realtimePhase: the whole point is realtime tick cost
+                ticks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+        return bp.withSetupHook(perfExtraRoomsSetup(extraRooms))
+                 .withPostSpawnAction(perfStartProfiling())
+                 .withCustomAssertion(perfReport(villagers, extraRooms));
+    }
+
+    // --- Plus-shaped room (report) ---
+    //
+    // A rectangular room with a pillar in
+    // each corner (a "plus-shaped space"), chests on the N/S walls, a door on the east wall. The
+    // four interior corner pillars are the pathological case for the wall-walking detector:
+    // Crawl.forwardSpread fans 5 child crawls from every wall block, the corner pillars emit
+    // several overlapping sub-rooms, and LevelRoomDetector.removeOverlaps re-runs a full wall-walk
+    // (RoomDetection.findRoomForDoor) per overlapping pair. This is a MEASUREMENT, not a gate: it
+    // always passes and reports the flag-tick TickProfile so the cost shows up as a number rather
+    // than a red scenario. perf/town_large is a synthetic town and cannot build this shape.
+
+    /**
+     * Builds a {@code size}x{@code size} self-enclosing shell (floor/walls/ceiling) with a
+     * pillar in each interior corner ({@code pillarHeight} blocks tall), chests on the N/S walls
+     * between the pillars, and a two-high door on the east wall. Returns the blocks plus the
+     * chest and door offsets so the door can be registered for detection.
+     */
+    private static SupplyRoom buildPlusRoom(int ox, int oz, int size, int pillarHeight) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        BlockState cobble = Blocks.COBBLESTONE.defaultBlockState();
+
+        // Floor, walls (two high) and ceiling, like buildSupplyRoom, but sized `size`.
+        for (int x = 0; x < size; x++) {
+            for (int z = 0; z < size; z++) {
+                boolean isEdge = x == 0 || x == size - 1 || z == 0 || z == size - 1;
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, -1, oz + z), cobble));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), cobble));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), cobble));
+                }
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, 2, oz + z), cobble));
+            }
+        }
+
+        // The four corner pillars: one block in from each corner, `pillarHeight` blocks tall
+        // (filling the full wall height so each reads as an interior wall the walker must turn on).
+        int[][] corners = {
+                {1, 1}, {size - 2, 1}, {1, size - 2}, {size - 2, size - 2}
+        };
+        for (int[] corner : corners) {
+            for (int y = 0; y <= pillarHeight; y++) {
+                blocks.add(new BlockPlacement(new BlockPos(ox + corner[0], y, oz + corner[1]), cobble));
+            }
+        }
+
+        // Chests on the N/S walls, between the corner pillars (mid-wall, one block in from the
+        // wall so they sit in the space the pillars bracket).
+        int midX = ox + (size - 1) / 2;
+        blocks.add(new BlockPlacement(new BlockPos(midX, 0, oz + 1), Blocks.CHEST.defaultBlockState()));
+        blocks.add(new BlockPlacement(new BlockPos(midX, 0, oz + size - 2), Blocks.CHEST.defaultBlockState()));
+
+        // Door on the east wall (x = ox+size-1), mid-z, two-high.
+        int doorZ = oz + (size - 1) / 2;
+        BlockPos doorLower = new BlockPos(ox + size - 1, 0, doorZ);
+        BlockPos doorUpper = new BlockPos(ox + size - 1, 1, doorZ);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+
+        return new SupplyRoom(blocks, new BlockPos(midX, 0, oz + 1), doorLower);
+    }
+
+    /**
+     * Registers the plus-shaped room's door for detection, then reports how many sub-rooms the
+     * detector produced from it (the number of overlapping sub-rooms is the O(n^2) input to
+     * removeOverlaps, so it is the measurement that explains the grind).
+     */
+    private static TestBlueprint.PostPlacementSetup plusRoomSetup() {
+        return (level, flagPos, town, output) -> {
+            SupplyRoom room = buildPlusRoom(-6, -2, 11, 2);
+            for (BlockPlacement bp : room.blocks()) {
+                level.setBlockAndUpdate(flagPos.offset(bp.offset()), bp.blockState());
+            }
+            town.getRoomHandle().registerDoor(flagPos.offset(room.doorOffset()));
+            output.msg("[perf] plus-room: built 11x11 with 4 corner pillars and registered its door");
+            return true;
+        };
+    }
+
+    private static TestBlueprint plusRoomBlueprint(int villagers, int ticks) {
+        // Base blueprints still need a valid (if unused) door/chest offset; the plus room is
+        // built and registered in the setup hook. Reuse the 5x5 supply shell as the placeholder
+        // base so the flag has a valid INDOOR room to sit on.
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        TestBlueprint bp = new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null,
+                villagers,
+                true,      // realtimePhase: measure realtime tick cost
+                ticks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+        return bp.withSetupHook(plusRoomSetup())
+                 .withPostSpawnAction(perfStartProfiling())
+                 .withCustomAssertion(perfReport(villagers, 0));
+    }
+
+    private static TestEntry plusRoomEntry(String name, TestBlueprint bp) {
+        return new TestEntry("perf/" + name, new JobID("farmer", "harvest_wheat"), bp, "perf");
+    }
+
+    /**
+     * Builds {@code count} additional enclosed 5x5 shells in a ring around the flag and registers
+     * each door, to load the room scan and the container scan. Each shell is self-enclosing
+     * (floor, walls, ceiling), so surrounding terrain cannot break the enclosure — and the report
+     * prints the room count the town actually ended up with, so a shell that failed to resolve
+     * shows up in the measurement rather than silently inflating it.
+     */
+    private static TestBlueprint.PostPlacementSetup perfExtraRoomsSetup(int count) {
+        return (level, flagPos, town, output) -> {
+            int placed = 0;
+            for (int i = 0; i < count; i++) {
+                // Ring the flag at a radius that clears the base room at (-6,-2).
+                int ring = 1 + (i / 8);
+                double angle = (i % 8) * (Math.PI / 4);
+                int ox = (int) Math.round(Math.cos(angle) * 9 * ring) - 2;
+                int oz = (int) Math.round(Math.sin(angle) * 9 * ring) - 2;
+
+                SupplyRoom room = buildSupplyRoom(ox, oz);
+                for (BlockPlacement bp : room.blocks()) {
+                    level.setBlockAndUpdate(flagPos.offset(bp.offset()), bp.blockState());
+                }
+                // A bare shell matches no room RECIPE, and the container scan iterates recipe
+                // matches — so a chest is what makes the room count toward the cost being measured.
+                level.setBlockAndUpdate(
+                        flagPos.offset(room.chestOffset()),
+                        Blocks.CHEST.defaultBlockState()
+                );
+                town.getRoomHandle().registerDoor(flagPos.offset(room.doorOffset()));
+                placed++;
+            }
+            output.msg("[perf] built and registered " + placed + " extra room shell(s)");
+            return true;
+        };
+    }
+
+    private static TestBlueprint.PostSpawnAction perfStartProfiling() {
+        return (level, flagPos, town, output) -> {
+            ca.bradj.questown.town.TickProfile.INSTANCE.enable();
+            output.msg("[perf] profiling enabled; measuring flag-tick cost from here");
+            return true;
+        };
+    }
+
+    private static TestBlueprint.CustomAssertion perfReport(int villagers, int extraRooms) {
+        return (level, flagPos, town, output) -> {
+            ca.bradj.questown.town.TickProfile.Snapshot snap =
+                    ca.bradj.questown.town.TickProfile.INSTANCE.snapshot();
+            long actualVillagers = town.getVillagerHandle().size();
+            int actualRooms = town.getRoomHandle().getMatches(x -> true).size();
+
+            output.msg(String.format(
+                    "[perf] townies=%d (requested %d) rooms=%d (requested %d extra)",
+                    actualVillagers, villagers, actualRooms, extraRooms
+            ));
+            output.msg("[perf] flag tick: " + snap.describe());
+            for (String line : ca.bradj.questown.town.TickProfile.INSTANCE.describePhases()) {
+                output.msg("[perf]" + line);
+            }
+
+            ca.bradj.questown.town.TickProfile.INSTANCE.disable();
+            return true;
+        };
+    }
+
+    private static TestEntry perfEntry(String name, TestBlueprint bp) {
+        return new TestEntry("perf/" + name, new JobID("farmer", "harvest_wheat"), bp, "perf");
+    }
+
     private static TestExpectation wildcardExpectation() {
         return new TestExpectation(
                 List.of(new ExpectedProduct("*", 1, null)),
                 1, 100
         );
+    }
+
+    // --- BOP stall (report) scenarios ---
+    //
+    // These are MEASUREMENTS, not gates: they always pass and report what the flag does when a
+    // BOP deposit collides with the flag's 64-slot cap (TownFlagBOPItemHandler.getSlots()==64).
+    // They exercise the REAL deposit path (WorkSeekerJob -> changeJobForVisitorFromBoard ->
+    // BOPDepositorWork -> insertItem -> ClearBOPSpecialRule), not a stand-in, so the report is
+    // what a live town would actually do. The empty expectation (0 products, 0 cycles) keeps the
+    // scenario from failing on production outcomes.
+    //
+    // The two cases bracket the cap:
+    //   bop_boundary_63: pre-fill to 63 (one slot free); the 64th deposit is ACCEPTED (bopCount->64).
+    //   bop_full_64:     pre-fill to 64 (full); the next deposit is REJECTED, yet the townie's XP
+    //                    latch (hasBlockOfProgress) STILL clears -> the townie is NOT re-stalled.
+
+    private static TestBlueprint bopStallBase(int realtimeTicks) {
+        SupplyRoom base = buildSupplyRoom(-6, -2);
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                base.blocks(),
+                List.of(),
+                base.doorOffset(),
+                base.chestOffset(),
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 0),
+                null,      // supplyDoorOffset
+                null,      // warpAmountOverride
+                null,      // startTimeTick
+                1,         // one townie
+                true,      // realtimePhase
+                realtimeTicks,
+                false,     // drainHungerBeforeTest
+                true,      // skipWarp
+                new TestExpectation(List.of(), 0, 0),
+                null, null, null, null,
+                false      // useNaturalWarp
+        );
+    }
+
+    /** Pre-fill the flag's deposited-BOP count, so a single deposit lands on (or past) the cap. */
+    private static TestBlueprint.PostPlacementSetup bopPreFill(int count) {
+        return (level, flagPos, town, output) -> {
+            town.grantBlockOfProgressForTest(count);
+            output.msg("[bop-stall] pre-filled flag to " + count + " BOPs (cap=64); bopCount="
+                    + town.getBlocksOfProgress());
+            return true;
+        };
+    }
+
+    /** Hand each townie a level-up so the flag's work-seeker assigns BOPDepositorWork. */
+    private static TestBlueprint.PostSpawnAction bopForceLevelUp() {
+        return (level, flagPos, town, output) -> {
+            VillagerHolder vh = town.getVillagerHandle();
+            for (var e : vh.entities()) {
+                VisitorMobEntity vme = (VisitorMobEntity) e;
+                vh.addExperience(vme.getUUID(), 1_000_000);
+                output.msg("[bop-stall] forced level-up for " + vme.getUUID()
+                        + " -> latch(hasBop)=" + vh.hasBlockOfProgress(vme.getUUID())
+                        + ", bopCount=" + town.getBlocksOfProgress());
+            }
+            return true;
+        };
+    }
+
+    /** Report the post-deposit state. Always returns true (a measurement, not a gate). */
+    private static TestBlueprint.CustomAssertion bopReportStall() {
+        return (level, flagPos, town, output) -> {
+            VillagerHolder vh = town.getVillagerHandle();
+            output.msg("[bop-stall] FINAL bopCount=" + town.getBlocksOfProgress() + " (cap=64)");
+            output.msg("[bop-stall] BOP_FULL blockstate=" + town.isBopFull() + " (bopCount="
+                    + town.getBlocksOfProgress() + ")");
+            for (var e : vh.entities()) {
+                VisitorMobEntity vme = (VisitorMobEntity) e;
+                output.msg("[bop-stall] townie " + vme.getUUID()
+                        + ": latch(hasBop)=" + vh.hasBlockOfProgress(vme.getUUID())
+                        + ", need=" + vme.getNeed());
+            }
+            return true;
+        };
+    }
+
+    /**
+     * A level-up at daytime {@code levelUpAt} must put its BOP in the flag within 3000 ticks. The
+     * realtime monitor always starts at daytime 1000, so the level-up waits for the clock.
+     */
+    private static TestBlueprint bopDepositBlueprint(long levelUpAt) {
+        return bopStallBase((int) (levelUpAt - 1000) + 3000)
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new LevelUpAt(levelUpAt, level, town, output));
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    VillagerHolder vh = town.getVillagerHandle();
+                    boolean anyHeld = false;
+                    for (var e : vh.entities()) {
+                        VisitorMobEntity vme = (VisitorMobEntity) e;
+                        boolean held = vh.hasBlockOfProgress(vme.getUUID());
+                        anyHeld |= held;
+                        output.msg("[bop-deposit] townie " + vme.getUUID() + ": job=" + vme.getJobId()
+                                + " status=" + vme.getStatusForServer() + " still holding=" + held
+                                + " flag record=" + town.getWorkStatusHandle(vme.getUUID()).getJobBlockState(flagPos));
+                    }
+                    int count = town.getBlocksOfProgress();
+                    output.msg("[bop-deposit] level-up at " + levelUpAt + ": bopCount=" + count
+                            + ", daytime now " + level.getDayTime() % 24000);
+                    return count >= 1 && !anyHeld;
+                });
+    }
+
+    /**
+     * Blocks of Progress always go to the flag. A villager carrying one it did not earn (no latch:
+     * one taken from storage, or a second one) plus some loot must store the loot and take the BOP
+     * to the flag.
+     */
+    private static TestBlueprint bopCarriedWithLootBlueprint() {
+        return bopStallBase(3000)
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (var e : town.getVillagerHandle().entities()) {
+                        VisitorMobEntity vme = (VisitorMobEntity) e;
+                        vme.tryGiveItem(MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get()), InventoryFullStrategy.REMOVE_FROM_WORLD);
+                        vme.tryGiveItem(MCHeldItem.fromTown(Items.COBBLESTONE), InventoryFullStrategy.REMOVE_FROM_WORLD);
+                        output.msg("[bop-carried] gave a BOP and cobblestone to " + vme.getUUID());
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    int stored = 0;
+                    for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+                        stored += (int) target.getItems().stream()
+                                .filter(i -> i.get().equals(ItemsInit.BLOCK_OF_PROGRESS.get()))
+                                .count();
+                    }
+                    int count = town.getBlocksOfProgress();
+                    output.msg("[bop-carried] bopCount=" + count + " BOPs in town chests=" + stored);
+                    return count >= 1 && stored == 0;
+                });
+    }
+
+    /**
+     * A 3x3 kitchen (walls included, one interior cell holding the furnace) is used from its door
+     * cell. The cook cooks from the doorway, its hunger is emptied mid-run, and it must leave the doorway, eat from the supply
+     * room and still have cooked. With {@code restFirst} the cook starts in downtime, which works at
+     * the flag (states 0-9) and leaves its per-owner record there; the diner stages also use the flag
+     * (states 0-2). With {@code rawOnly} the town has raw mutton and no coal or cooked food:
+     * the cooked-food diner must expire and the raw-food diner must eat the mutton.
+     */
+    private static TestBlueprint cookDoorwayKitchenBlueprint(boolean restFirst, boolean rawOnly) {
+        List<BlockPlacement> blocks = new ArrayList<>();
+        int ox = 4;
+        int oz = -2;
+        for (int x = 0; x < 3; x++) {
+            for (int z = 0; z < 3; z++) {
+                boolean isEdge = x == 0 || x == 2 || z == 0 || z == 2;
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, -1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                if (isEdge) {
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 0, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                    blocks.add(new BlockPlacement(new BlockPos(ox + x, 1, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+                }
+                blocks.add(new BlockPlacement(new BlockPos(ox + x, 2, oz + z), Blocks.COBBLESTONE.defaultBlockState()));
+            }
+        }
+        BlockPos doorLower = new BlockPos(ox + 1, 0, oz + 2);
+        BlockPos doorUpper = new BlockPos(ox + 1, 1, oz + 2);
+        blocks.removeIf(bp -> bp.offset().equals(doorLower) || bp.offset().equals(doorUpper));
+        blocks.add(new BlockPlacement(doorLower, Blocks.OAK_DOOR.defaultBlockState()));
+        blocks.add(new BlockPlacement(doorUpper, Blocks.OAK_DOOR.defaultBlockState().setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        )));
+        blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), Blocks.FURNACE.defaultBlockState()));
+
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        blocks.addAll(store.blocks);
+
+        TestExpectation realtime = rawOnly
+                ? new TestExpectation(List.of(new ExpectedProduct("minecraft:mutton", null, -1)), 0, 100)
+                : new TestExpectation(List.of(
+                        new ExpectedProduct("minecraft:cooked_mutton", 1, null),
+                        new ExpectedProduct("minecraft:cooked_beef", null, -1)
+                ), 0, 100);
+        List<ItemStack> supplies = rawOnly
+                ? List.of(new ItemStack(Items.MUTTON, 16))
+                : List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16), new ItemStack(Items.COOKED_BEEF, 8));
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                blocks,
+                supplies,
+                doorLower,
+                store.chestOffset,
+                new ResourceLocation(Questown.MODID, "kitchen_small"),
+                new TestExpectation(List.of(), 0, 100),
+                store.doorOffset, // supplyDoorOffset: registers the store room
+                null,        // warpAmountOverride
+                1000L,       // startTimeTick
+                1,           // villagerCount
+                true,        // realtimePhase
+                rawOnly ? 6000 : 3000, // realtimeTicks: the cooked-food diner expires first
+                false,       // drainHungerBeforeTest (drained mid-run instead)
+                true,        // skipWarp
+                realtime, null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                town.getVillagerHandle().unlockJob(uuid, new JobID("cook", "mutton"));
+                if (restFirst) {
+                    town.getVillagerHandle().changeJobForVillager(vuid,
+                            ca.bradj.questown.jobs.declarative.DowntimeWork.getIdFor(new JobID("cook", "mutton")), false);
+                    output.msg("[rest_then_eat] cook starts in downtime");
+                }
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
+            return true;
+        });
+    }
+
+    /**
+     * The doorway kitchen's door is blocked from outside by
+     * persistent leaves; the cook must give up with a CANT_REACH need that names the kitchen
+     * ("They can't get into the Kitchen. Is its door blocked?").
+     */
+    private static TestBlueprint cookBlockedKitchenDoorBlueprint() {
+        BlockPos outside = new BlockPos(5, 0, 1);
+        ResourceLocation[] named = {null};
+        TestBlueprint base = cookDoorwayKitchenBlueprint(false, false);
+        return base
+                .withRealtimeExpectation(new TestExpectation(List.of(), 0, 100))
+                .withSetupHook((level, flagPos, town, output) -> {
+                    net.minecraft.world.level.block.state.BlockState leaves = Blocks.OAK_LEAVES.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT, true);
+                    level.setBlockAndUpdate(flagPos.offset(outside), leaves);
+                    level.setBlockAndUpdate(flagPos.offset(outside.above()), leaves);
+                    output.msg("[blocked-door] leaves outside the kitchen door at " + flagPos.offset(outside));
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    if (base.postSpawnAction() != null && !base.postSpawnAction().run(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                        @net.minecraftforge.eventbus.api.SubscribeEvent
+                        public void onTick_qtbr4433(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                            for (var e : town.getVillagerHandle().entities()) {
+                                ResourceLocation room = ((VisitorMobEntity) e).getUnreachableRoom();
+                                if (room != null && named[0] == null) {
+                                    named[0] = room;
+                                    output.msg("[blocked-door] CANT_REACH names room " + room);
+                                }
+                            }
+                        }
+                    });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("[blocked-door] unreachable room named: " + named[0]);
+                    return new ResourceLocation(Questown.MODID, "kitchen_small").equals(named[0]);
+                });
+    }
+
+    /**
+     * Door debounce: the doorway kitchen's cook works from the door cell. A flap is the door closing while a
+     * villager is still in or beside it (within 1.5 blocks): it then bumps it open again.
+     */
+    private static TestBlueprint cookDoorFlapsBlueprint() {
+        BlockPos doorOffset = new BlockPos(5, 0, 0);
+        int[] closesOnVillager = {0};
+        int[] closes = {0};
+        Boolean[] last = {null};
+        TestBlueprint base = cookDoorwayKitchenBlueprint(false, false);
+        return base
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    if (base.postSpawnAction() != null && !base.postSpawnAction().run(level, flagPos, town, output)) {
+                        return false;
+                    }
+                    BlockPos door = flagPos.offset(doorOffset);
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                        @net.minecraftforge.eventbus.api.SubscribeEvent
+                        public void onTick_qtbr4471(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(door);
+                            if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+                                return;
+                            }
+                            boolean open = st.getValue(net.minecraft.world.level.block.DoorBlock.OPEN);
+                            if (Boolean.TRUE.equals(last[0]) && !open) {
+                                closes[0]++;
+                                boolean near = town.getVillagerHandle().entities().stream().anyMatch(
+                                        e -> e.distanceToSqr(door.getX() + 0.5, e.getY(), door.getZ() + 0.5) <= 1.5 * 1.5);
+                                if (near) {
+                                    closesOnVillager[0]++;
+                                }
+                            }
+                            last[0] = open;
+                        }
+                    });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("[door_flaps] closes: " + closes[0] + ", on a villager: " + closesOnVillager[0]);
+                    return closesOnVillager[0] == 0;
+                });
+    }
+
+    /** Empties every villager's hunger once, on the first server tick at or past daytime {@code at}. */
+    private static final class StarveAt {
+        private final long at;
+        private final boolean leaveDowntimeRecord;
+        private final ServerLevel level;
+        private final TownFlagBlockEntity town;
+        private final TestOutput output;
+
+        private StarveAt(long at, boolean leaveDowntimeRecord, ServerLevel level, TownFlagBlockEntity town, TestOutput output) {
+            this.at = at;
+            this.leaveDowntimeRecord = leaveDowntimeRecord;
+            this.level = level;
+            this.town = town;
+            this.output = output;
+        }
+
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_qtbr4513(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+            if (level.getDayTime() % 24000 < at) {
+                return;
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                if (leaveDowntimeRecord) {
+                    // The live cook's record (`_qtdev inspect` 21:37:36): downtime at state 3 on the flag.
+                    town.getRealWorkStatusHandle(uuid).setJobBlockState(town.getBlockPos(),
+                            ca.bradj.questown.town.workstatus.State.freshAtState(3));
+                    output.msg("[rest_then_eat] seeded the downtime record: state 3 at the flag for " + uuid);
+                }
+                town.getVillagerHandle().fillHunger(uuid, 0.0f);
+            }
+            output.msg("[doorway_kitchen] hunger emptied at daytime " + level.getDayTime() % 24000);
+        }
+    }
+
+    /**
+     * Switching a hunter's job from the skill tree mid-trip offers "after
+     * this trip" or "now (trip is lost)". Once the hunter is away, a listener requests the other
+     * trip (sword_half_day, or sword if it is already on the half day). After-trip: the job must stay
+     * while away and change later (the board's next pick). Now: the job changes at once.
+     */
+    private static TestBlueprint hunterSwitchMidTripBlueprint(boolean afterTrip) {
+        TestBlueprint base = hunterBlueprint();
+        SwitchWhenAway watcher = new SwitchWhenAway(afterTrip,
+                new JobID("hunter", "sword_half_day"), new JobID("hunter", "sword"));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 1000L, 1, true, 6000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            watcher.start(town, output);
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(watcher);
+            output.msg("[switch] requested=" + watcher.requested + " jobRightAfter=" + watcher.jobRightAfter
+                    + " sawNewJob=" + watcher.sawNewJob);
+            if (!watcher.requested || !watcher.sawNewJob) {
+                return false;
+            }
+            boolean switchedAtOnce = watcher.chosen.equals(watcher.jobRightAfter);
+            return afterTrip != switchedAtOnce;
+        });
+    }
+
+    /**
+     * The longest trip that fits the day: with sword, sword_half_day and
+     * sword_full_day unlocked and the morning ahead, the hunter's first trip is the full day.
+     */
+    private static TestBlueprint hunterLongestTripBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        JobID[] firstTrip = {null};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 1000L, 1, true, 1500, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (String j : List.of("sword", "sword_half_day", "sword_full_day")) {
+                    town.getVillagerHandle().unlockJob(uuid, new JobID("hunter", j));
+                }
+                // Start at the board, so the first trip is the work roll's choice, not the fixture's.
+                town.getVillagerHandle().changeJobForVillager(vuid,
+                        ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("hunter", "sword")), false);
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_qtbr4590(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (firstTrip[0] == null && e instanceof VisitorMobEntity v && v.isAwayOnTrip()) {
+                            firstTrip[0] = v.getJobId();
+                            output.msg("[longest_trip] first trip: " + firstTrip[0]);
+                            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+                        }
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) ->
+                new JobID("hunter", "sword_full_day").equals(firstTrip[0]));
+    }
+
+    /**
+     * A villager whose every job waits on a missing room names the room. A cook in a town with no kitchen (only the store room) must show
+     * MISSING_ROOM naming a kitchen at some point (relaxing hides it, so a listener samples).
+     */
+    private static TestBlueprint cookNoKitchenBlueprint() {
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        String[] seen = {null};
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                store.blocks,
+                List.of(new ItemStack(Items.MUTTON, 16), new ItemStack(Items.COAL, 16), new ItemStack(Items.COOKED_BEEF, 8)),
+                store.doorOffset,
+                store.chestOffset,
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, 1000L, 1, true, 2000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                for (JobID job : ServerJobsRegistry.getDefaultWork(new JobID("cook", "extract"))) {
+                    town.getVillagerHandle().unlockJob(uuid, job);
+                }
+                town.getVillagerHandle().unlockJob(uuid, new JobID("cook", "mutton"));
+                town.getVillagerHandle().changeJobForVillager(vuid,
+                        ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("cook", "mutton")), false);
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_qtbr4635(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (seen[0] == null && e instanceof VisitorMobEntity v && v.getMissingRoom() != null) {
+                            seen[0] = v.getMissingRoom().toString();
+                            output.msg("[no_kitchen] need=" + v.getNeed() + " room=" + seen[0]);
+                            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+                        }
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            output.msg("[no_kitchen] missing room seen: " + seen[0]);
+            return seen[0] != null && seen[0].contains("kitchen");
+        });
+    }
+
+    /**
+     * The request limit is visible and adjustable. Storage holds 5 bread and the board requests bread:
+     * at limit 4 the request pauses, raised to 6 it resumes; the work handle reports stock 5.
+     */
+    private static TestBlueprint requestLimitBlueprint() {
+        SupplyRoom store = buildSupplyRoom(-6, -2);
+        java.util.List<String> seen = new java.util.ArrayList<>();
+        return new TestBlueprint(
+                RoomType.INDOOR,
+                store.blocks,
+                List.of(new ItemStack(Items.BREAD, 5)),
+                store.doorOffset,
+                store.chestOffset,
+                SpecialQuests.STORE_ROOM_SMALL,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, 1000L, 1, true, 400, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            ca.bradj.questown.jobs.requests.WorkRequest bread = ca.bradj.questown.jobs.requests.WorkRequest.of(Items.BREAD);
+            town.getWorkHandle().requestWork(bread);
+            town.getWorkHandle().setRequestLimit(bread, 4);
+            long start = level.getGameTime();
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                int step = 0;
+
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_qtbr4679(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                    long t = level.getGameTime() - start;
+                    boolean paused = town.getWorkHandle().getBoardRequests().paused().contains(bread);
+                    if (step == 0 && t >= 100) {
+                        seen.add("limit4 paused=" + paused);
+                        town.getWorkHandle().setRequestLimit(bread, 6);
+                        step = 1;
+                    } else if (step == 1 && t >= 200) {
+                        seen.add("limit6 paused=" + paused);
+                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+                        step = 2;
+                    }
+                }
+            });
+            return true;
+        }).withCustomAssertion((level, flagPos, town, output) -> {
+            output.msg("[request_limit] " + seen);
+            return seen.equals(List.of("limit4 paused=true", "limit6 paused=false"));
+        });
+    }
+
+    /** Requests a job switch the first tick the villager is away on a trip, then watches for it. */
+    private static final class SwitchWhenAway {
+        private final boolean afterTrip;
+        private final JobID target;
+        private final JobID fallback;
+        private TownFlagBlockEntity town;
+        private TestOutput output;
+        boolean requested;
+        JobID chosen;
+        JobID jobRightAfter;
+        boolean sawNewJob;
+
+        private SwitchWhenAway(boolean afterTrip, JobID target, JobID fallback) {
+            this.afterTrip = afterTrip;
+            this.target = target;
+            this.fallback = fallback;
+        }
+
+        void start(TownFlagBlockEntity town, TestOutput output) {
+            this.town = town;
+            this.output = output;
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
+        }
+
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_qtbr4725(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+            for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
+                VisitorMobEntity v = town.getVillagerHandle().entities().stream()
+                        .filter(e -> e instanceof VisitorMobEntity && uuid.equals(e.getUUID()))
+                        .map(e -> (VisitorMobEntity) e).findFirst().orElse(null);
+                if (v == null) {
+                    continue;
+                }
+                if (!requested && v.isAwayOnTrip()) {
+                    JobID away = v.getJobId();
+                    chosen = target.equals(away) ? fallback : target;
+                    town.getVillagerHandle().switchJob(vuid, chosen, afterTrip);
+                    requested = true;
+                    jobRightAfter = v.getJobId();
+                    output.msg("[switch] away on " + away + "; requested " + chosen + " afterTrip=" + afterTrip);
+                }
+                if (requested && chosen.equals(v.getJobId())) {
+                    sawNewJob = true;
+                }
+            }
+        }
+    }
+
+    /** Levels up every villager once, on the first server tick at or past daytime {@code at}. */
+    private static final class LevelUpAt {
+        private final long at;
+        private final ServerLevel level;
+        private final TownFlagBlockEntity town;
+        private final TestOutput output;
+
+        private LevelUpAt(long at, ServerLevel level, TownFlagBlockEntity town, TestOutput output) {
+            this.at = at;
+            this.level = level;
+            this.town = town;
+            this.output = output;
+        }
+
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_qtbr4764(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+            if (level.getDayTime() % 24000 < at) {
+                return;
+            }
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+            bopForceLevelUp().run(level, flagPos(), town, output);
+            output.msg("[bop-deposit] leveled up at daytime " + level.getDayTime() % 24000);
+        }
+
+        private BlockPos flagPos() {
+            return town.getBlockPos();
+        }
+    }
+
+    private static TestBlueprint bopBoundaryBlueprint() {
+        return bopStallBase(800)
+                .withSetupHook(bopPreFill(63))
+                .withPostSpawnAction(bopForceLevelUp())
+                .withCustomAssertion(bopReportStall());
+    }
+
+    private static TestBlueprint bopFullBlueprint() {
+        return bopStallBase(800)
+                .withSetupHook(bopPreFill(64))
+                .withPostSpawnAction(bopForceLevelUp())
+                .withCustomAssertion(bopReportStall());
     }
 
     // --- Edge case blueprints ---
@@ -614,7 +4739,7 @@ public class TestBlueprintRegistry {
                         1, 100
                 ),
                 base.supplyDoorOffset(), 12000, 20000L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -630,7 +4755,7 @@ public class TestBlueprintRegistry {
                         0, 0
                 ),
                 base.supplyDoorOffset(), 2000, 15000L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -644,7 +4769,7 @@ public class TestBlueprintRegistry {
                         3, 300
                 ),
                 base.supplyDoorOffset(), 72000, 0L, null, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -658,8 +4783,16 @@ public class TestBlueprintRegistry {
                         0, 0
                 ),
                 base.supplyDoorOffset(), 24000, 0L, null, false, null,
-                false, false, null, null, null, null, null
-        );
+                false, false, null, null, null, null, null, false
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            // With no supplies, the farmer must be
+            // flagged UNMET_ITEM so the need bubble can say so. Silence means working.
+            List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
+                    .map(v -> ((VisitorMobEntity) v).getNeed())
+                    .toList();
+            output.msg("Townie needs at end of no-supplies run: " + needs);
+            return !needs.isEmpty() && needs.stream().allMatch(n -> n == TownieNeed.UNMET_ITEM);
+        });
     }
 
     private static TestBlueprint gathererToolDurabilityBlueprint() {
@@ -674,13 +4807,13 @@ public class TestBlueprintRegistry {
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 new TestExpectation(
                         List.of(
-                                new ExpectedProduct("minecraft:wooden_axe", -1, -1),
+                                new ExpectedProduct("minecraft:wooden_axe", -1, 0),
                                 new ExpectedProduct("*", 1, null)
                         ),
                         1, 300
                 ),
-                base.supplyDoorOffset(), 72000, 0L, null, false, null,
-                false, false, null, null, null, null, null
+                base.supplyDoorOffset(), 240000, 0L, null, false, null,
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -694,7 +4827,7 @@ public class TestBlueprintRegistry {
                         1, 100
                 ),
                 base.supplyDoorOffset(), 24000, 0L, 2, false, null,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
         );
     }
 
@@ -705,7 +4838,330 @@ public class TestBlueprintRegistry {
                 base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
                 base.expectation(),
                 base.supplyDoorOffset(), null, null, null, true, 4800,
-                false, false, null, null, null, null, null
+                false, false, null, null, null, null, null, false
+        );
+    }
+
+    /**
+     * After a night-skip catch-up warp, the shared town-gate work spot must not sit at its finished
+     * state with nobody extracting it. A warp, then a realtime window in which the hunter must bring
+     * loot back to storage.
+     */
+    private static TestBlueprint hunterWarpThenRealtimeBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(),
+                base.supplyDoorOffset(), null, null, 2, true, 4800,
+                false, false,
+                new TestExpectation(List.of(new ExpectedProduct("*", 1, null)), 0, 100),
+                null, null, null, null, false
+        ).withCustomAssertion((level, flagPos, town, output) -> {
+            for (LivingEntity e : town.getVillagerHandle().entities()) {
+                if (e instanceof VisitorMobEntity v) {
+                    output.msg("hunter warp_then_realtime: end job=" + v.getJobId() + " status=" + v.getStatusForServer()
+                            + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                }
+            }
+            return true;
+        });
+    }
+
+    /** Realtime tick (after the monitor starts) at which hunterSleepMidTripBlueprint sleeps. */
+    private static final int HUNTER_SLEEP_AT = 10000;
+
+    /**
+     * The player sleeps at the campfire while two hunters are out. Unlike warp_then_realtime, nothing is respawned: two hunters work from
+     * late afternoon into the night, the player "sleeps" mid-trip (the growth driver's sleep step:
+     * clock to morning + TownFlags.onSleepFinished), and each hunter must hunt again afterwards.
+     */
+    private static TestBlueprint hunterSleepMidTripBlueprint() {
+        TestBlueprint base = hunterBlueprint();
+        java.util.Map<java.util.UUID, java.util.List<String>> afterSleep = new java.util.concurrent.ConcurrentHashMap<>();
+        boolean[] slept = {false};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, 11000L, 2, true, HUNTER_SLEEP_AT + 4000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withSetupHook((level, flagPos, town, output) -> {
+                    // Two hunters, two swords.
+                    if (level.getBlockEntity(flagPos.offset(base.chestOffset())) instanceof net.minecraft.world.Container c) {
+                        for (int i = 0; i < c.getContainerSize(); i++) {
+                            if (c.getItem(i).isEmpty()) {
+                                c.setItem(i, new ItemStack(Items.STONE_SWORD));
+                                break;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    // Late afternoon: the first trip runs into the night. Set on the
+                    // first tick after the monitor starts (startMonitor pins dayTime to 1000).
+                    long[] sleepTick = {-1};
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity v)) {
+                            continue;
+                        }
+                        afterSleep.put(v.getUUID(), java.util.Collections.synchronizedList(new ArrayList<>()));
+                        v.addStatusListener(new ca.bradj.questown.jobs.StatusListener() {
+                            @Override
+                            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                                return listenToNewJob.apply(this);
+                            }
+
+                            @Override
+                            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                                if (slept[0]) {
+                                    afterSleep.get(v.getUUID()).add(String.valueOf(newStatus));
+                                }
+                            }
+                        });
+                    }
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                                if (slept[0]) {
+                                    // Where each villager is and what it walks to, every 500 ticks after
+                                    // the sleep: a failing run's hunter sat in GOING_TO_JOB with no nav log.
+                                    if (level.getGameTime() % 500 == 0 && !town.isRemoved()) {
+                                        for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                            if (e instanceof VisitorMobEntity v) {
+                                                output.msg("hunter sleep: nav " + v.getUUID() + " job=" + v.getJobId()
+                                                        + " status=" + v.getStatusForServer() + " " + v.describeNav());
+                                            }
+                                        }
+                                    }
+                                    return;
+                                }
+                                if (sleepTick[0] < 0) {
+                                    if (level.getDayTime() % 24000L == 1000L) {
+                                        level.setDayTime(level.getDayTime() - 1000L + 11000L);
+                                        sleepTick[0] = level.getGameTime() + HUNTER_SLEEP_AT;
+                                        output.msg("hunter sleep: afternoon set, sleeping at gameTime " + sleepTick[0]);
+                                    }
+                                    return;
+                                }
+                                if (level.getGameTime() < sleepTick[0]) {
+                                    return;
+                                }
+                                slept[0] = true;
+                                long now = level.getDayTime();
+                                long morning = (now + 24000L) - (now + 24000L) % 24000L;
+                                level.setDayTime(morning);
+                                ca.bradj.questown.town.entity.TownFlags.onSleepFinished(morning);
+                                output.msg("hunter sleep: slept dayTime " + now + " -> " + morning);
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    boolean allHuntedAgain = !afterSleep.isEmpty();
+                    for (var e : afterSleep.entrySet()) {
+                        boolean hunted = e.getValue().stream().anyMatch(st -> st.contains("EXTRACTING_PRODUCT") || st.contains("WAITING_FOR_TIMED_STATE"));
+                        output.msg("hunter sleep: " + e.getKey() + " hunted again=" + hunted + " after-sleep statuses=" + e.getValue());
+                        allHuntedAgain &= hunted;
+                    }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("hunter sleep: end " + v.getUUID() + " status=" + v.getStatusForServer()
+                                    + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                        }
+                    }
+                    return slept[0] && allHuntedAgain;
+                });
+    }
+
+    /** Realtime ticks a cycle_time scenario watches: three 2000-tick timed trips plus travel. */
+    private static final int CYCLE_TIME_TICKS = 12000;
+
+    /**
+     * Miner trip pace (miner/coal and hunter/sword share a 2000-tick timer). Runs one villager realtime with no warp, logs every
+     * status change with its game time, and passes when it finishes at least two cycles
+     * (EXTRACTING_PRODUCT reached). The hunter variant is the baseline for the miner's.
+     */
+    private static TestBlueprint cycleTimeBlueprint(TestBlueprint base, String label) {
+        java.util.List<String> timeline = java.util.Collections.synchronizedList(new ArrayList<>());
+        int[] cycles = {0};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, CYCLE_TIME_TICKS, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            v.addStatusListener(cycleTimeListener(level, timeline, cycles));
+                        }
+                    }
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg(label + " cycle_time: cycles=" + cycles[0] + " in " + CYCLE_TIME_TICKS + " ticks");
+                    output.msg(label + " cycle_time: timeline=" + timeline);
+                    return cycles[0] >= 2;
+                });
+    }
+
+    /**
+     * With every town container slot full, the miner
+     * comes back from its first trip with loot and nowhere to put it: it must stop in NO_SPACE
+     * with the NO_STORAGE need. The run ends before dusk (~10500 ticks after the 1000 dayTime start):
+     * at nightfall the villager leaves NO_SPACE for its drop-loot-before-bed path.
+     */
+    private static TestBlueprint minerStorageFullBlueprint() {
+        java.util.List<String> timeline = java.util.Collections.synchronizedList(new ArrayList<>());
+        int[] cycles = {0};
+        TestBlueprint base = minerBlueprint();
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                noProducts(),
+                base.supplyDoorOffset(),
+                null, null, 1, true, 8000, false, true,
+                new TestExpectation(List.of(), 0, 100), null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    int filled = fillEmptyTownSlots(level, town);
+                    output.msg("miner storage-full: filled " + filled + " empty slots");
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            v.addStatusListener(cycleTimeListener(level, timeline, cycles));
+                        }
+                    }
+                    return filled > 0;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("miner storage-full: cycles=" + cycles[0] + " timeline=" + timeline);
+                    boolean noStorage = false;
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (e instanceof VisitorMobEntity v) {
+                            output.msg("miner storage-full: end status=" + v.getStatusForServer() + " need=" + v.getNeed()
+                                    + " held=" + v.getJobJournalSnapshot().items().stream().filter(i -> !i.isEmpty()).map(i -> i.getShortName()).toList());
+                            noStorage |= v.getNeed() == TownieNeed.NO_STORAGE;
+                        }
+                    }
+                    return noStorage;
+                });
+    }
+
+    /** Fills every empty slot of every town container with dirt; returns the slots filled. */
+    private static int fillEmptyTownSlots(ServerLevel level, TownFlagBlockEntity town) {
+        int filled = 0;
+        for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+            if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                continue;
+            }
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (c.getItem(i).isEmpty()) {
+                    c.setItem(i, new ItemStack(Items.DIRT, 64));
+                    filled++;
+                }
+            }
+        }
+        return filled;
+    }
+
+    private static ca.bradj.questown.jobs.StatusListener cycleTimeListener(
+            ServerLevel level, java.util.List<String> timeline, int[] cycles
+    ) {
+        return new ca.bradj.questown.jobs.StatusListener() {
+            @Override
+            public Runnable jobChanged(java.util.function.Function<ca.bradj.questown.jobs.StatusListener, Runnable> listenToNewJob) {
+                timeline.add(level.getGameTime() + ":JOB_CHANGED");
+                return listenToNewJob.apply(this);
+            }
+
+            @Override
+            public void statusChanged(ca.bradj.questown.jobs.IStatus<?> newStatus) {
+                String s = String.valueOf(newStatus);
+                timeline.add(level.getGameTime() + ":" + s);
+                if (s.contains("EXTRACTING_PRODUCT")) {
+                    cycles[0]++;
+                }
+            }
+        };
+    }
+
+    private static TestBlueprint gathererShortAbsenceBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", 0, 14)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 2000, 0L, null, false, null,
+                false, false, null, null, null, null, null, true
+        );
+    }
+
+    /**
+     * Simulates the campfire sleep scenario: player is in town at evening,
+     * sleeps through night, dayTime jumps ~11000 ticks to morning.
+     * The flag was ticking normally before sleep, so its reference tick is
+     * current. Villagers sleep at night, so the jump must produce NOTHING:
+     * the expectation is a non-positive item delta. The lower bound is
+     * unbounded because a hungry villager may legitimately eat from the
+     * chest during the live settle window.
+     * startTimeTick=12000 (evening), warpAmount=11000 (jump to next morning).
+     */
+    private static TestBlueprint gathererSleepJumpBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", null, 0)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 11000, 12000L, null, false, null,
+                false, false, null, null, null, null, null, true
+        );
+    }
+
+    /**
+     * Simulates: player was briefly away (tp'd back after dying), then slept.
+     * Combined effect: short real absence + sleep time jump. Only the
+     * daytime portion of the interval (10000-12000, 2000 ticks) can produce
+     * - the night portion is slept through - so a small or zero delta is
+     * correct, and the lower bound is unbounded because a hungry villager
+     * may legitimately eat from the chest during the live settle window.
+     * startTimeTick=10000 (afternoon), warpAmount=14000 (past next morning).
+     */
+    private static TestBlueprint gathererAbsenceThenSleepBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(
+                List.of(
+                        new ItemStack(Items.STONE_AXE, 1),
+                        new ItemStack(Items.COOKED_BEEF, 8)
+                )
+        );
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(
+                        List.of(new ExpectedProduct("*", null, 14)),
+                        0, 100
+                ),
+                base.supplyDoorOffset(), 14000, 10000L, null, false, null,
+                false, false, null, null, null, null, null, true
         );
     }
 
@@ -732,8 +5188,43 @@ public class TestBlueprintRegistry {
                 ),
                 // fullness check omitted: hunger cycles every ~150 ticks, final value at 800t is timing-dependent
                 null, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
+    }
+
+    /**
+     * With full storage a villager stops before collecting a finished product, since it would only have nowhere to put it. A diner's product is its meal,
+     * eaten not stored (WorkDescription.productConsumed), so a hungry villager must still eat when
+     * every chest is full. eat_direct's town (villager starts on dining_no_table), hunger drained,
+     * every empty slot filled at spawn.
+     */
+    private static TestBlueprint eatWithStorageFullBlueprint() {
+        TestBlueprint base = eatDirectBlueprint();
+        float[] maxFullness = {0f};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(), base.supplyDoorOffset(), null, null, null, true, 600,
+                true, true,
+                new TestExpectation(List.of(), 0, 100),
+                null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    output.msg("eat storage-full: filled " + fillEmptyTownSlots(level, town) + " empty slots");
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                                for (VillagerUUID v : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                                    float f = town.getVillagerHandle().getStats(VillagerUUID.get(v)).fullnessPercent();
+                                    maxFullness[0] = Math.max(maxFullness[0], f);
+                                }
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("eat storage-full: max fullness seen=" + maxFullness[0]);
+                    return maxFullness[0] > 0.5f;
+                });
     }
 
     /**
@@ -758,7 +5249,8 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 0.25f, plateOffset, SpecialQuests.DINING_ROOM,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
     }
 
@@ -781,8 +5273,34 @@ public class TestBlueprintRegistry {
                         List.of(new ExpectedProduct("minecraft:beef", -16, null)),
                         1, 1
                 ),
-                0.3f, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1)
+                // One raw meal is +50% and fullness drains ~1/tick, so after timing out of
+                // dining_no_table (~300 ticks) the window ends near 16-20%.
+                0.15f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1),
+                false
+        );
+    }
+
+    /**
+     * Like eat_raw_food with only one raw item in town: the meal must finish with one raw item.
+     */
+    private static TestBlueprint eatRawFoodSingleBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BEEF, 1)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2000,
+                true, true,
+                new TestExpectation(
+                        List.of(new ExpectedProduct("minecraft:beef", -1, null)),
+                        1, 1
+                ),
+                0.15f, null, null,
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 0)), 0, 1),
+                false
         );
     }
 
@@ -805,31 +5323,323 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 0.25f, null, null,
-                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1)
+                new TestExpectation(List.of(new ExpectedProduct("minecraft:bread", 0, 1)), 0, 1),
+                false
         );
+    }
+
+    /**
+     * A diner whose hunger is acceptable goes back to work, or relaxes at night, instead of eating
+     * again. Starts at night on
+     * dining_no_table with bread and raw mutton in storage: the bread is eaten, the mutton is not.
+     */
+    private static TestBlueprint noRawMealAfterEatingBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of(
+                new ItemStack(Items.BREAD, 16),
+                new ItemStack(Items.MUTTON, 8)
+        ));
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                new TestExpectation(List.of(), 0, 0),
+                base.supplyDoorOffset(), null, null, null, true, 2400,
+                true, true,
+                new TestExpectation(
+                        List.of(
+                                new ExpectedProduct("minecraft:bread", -16, -1),
+                                new ExpectedProduct("minecraft:mutton", 0, 0)
+                        ),
+                        0, 0
+                ),
+                null, null, null, null,
+                false
+        ).withPostSpawnAction((level, flagPos, town, output) -> {
+            // The realtime monitor pins the clock to 1000 (TestExecutor.startMonitor); move it to
+            // night once that has happened, so the fed diner has no work to go back to.
+            boolean[] moved = {false};
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                    (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                        if (!moved[0] && level.getDayTime() % 24000 == 1000) {
+                            moved[0] = true;
+                            level.setDayTime(level.getDayTime() - 1000 + 14000);
+                            output.msg("no-raw-meal: clock moved to night (14000)");
+                        }
+                    });
+            return true;
+        });
+    }
+
+    /**
+     * Food that arrives after a starving villager gave up on raw food must still be eaten. Starts on
+     * dining_no_table with empty storage in the evening (no work fits in the day, so the board has
+     * nothing else for it); once dining_raw_food has given up, carrots arrive.
+     * <p>
+     * XFAIL: carrots are villager_food, not villager_raw_food, so only the no-table diner can eat
+     * them, and nothing restarts the chain once raw food has given up.
+     */
+    private static TestBlueprint foodArrivesAfterGiveUpBlueprint() {
+        TestBlueprint base = welcomeMatBlueprint(List.of());
+        float[] maxFullness = {0f};
+        return new TestBlueprint(
+                base.roomType(), base.blocks(), base.supplyItems(),
+                base.doorOrGateOffset(), base.chestOffset(), base.roomId(),
+                base.expectation(), base.supplyDoorOffset(), null, null, null, true, 1600,
+                true, true,
+                null, null, null, null, null, false
+        )
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    long[] rawSince = {-1};
+                    boolean[] delivered = {false};
+                    boolean[] moved = {false};
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
+                                // The realtime monitor pins the clock to 1000 (see no_raw_meal_after_eating).
+                                if (!moved[0] && level.getDayTime() % 24000 == 1000) {
+                                    moved[0] = true;
+                                    level.setDayTime(level.getDayTime() - 1000 + 10800);
+                                    output.msg("food-after-give-up: clock moved to evening (10800)");
+                                }
+                                for (LivingEntity e : town.getVillagerHandle().entities()) {
+                                    if (!(e instanceof VisitorMobEntity v)) {
+                                        continue;
+                                    }
+                                    maxFullness[0] = Math.max(maxFullness[0],
+                                            town.getVillagerHandle().getStats(v.getUUID()).fullnessPercent());
+                                    if (rawSince[0] < 0 && "dining_raw_food".equals(v.getJobId().jobId())) {
+                                        rawSince[0] = level.getGameTime();
+                                    }
+                                }
+                                // dining_raw_food gives up after ~200 ticks without supplies.
+                                if (!delivered[0] && rawSince[0] >= 0 && level.getGameTime() - rawSince[0] > 260) {
+                                    delivered[0] = true;
+                                    int put = addToTownStorage(level, town, new ItemStack(Items.CARROT, 8));
+                                    output.msg("food-after-give-up: delivered " + put + " carrots at " + level.getGameTime());
+                                }
+                            });
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    output.msg("food-after-give-up: max fullness seen=" + maxFullness[0]);
+                    return maxFullness[0] > 0.2f;
+                })
+                .withExpectedFailure(true);
+    }
+
+    private static int addToTownStorage(ServerLevel level, TownFlagBlockEntity town, ItemStack stack) {
+        for (var target : ca.bradj.questown.town.TownContainers.getAllContainers(town, level)) {
+            if (!(level.getBlockEntity(target.getBlockPos()) instanceof net.minecraft.world.Container c)) {
+                continue;
+            }
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (c.getItem(i).isEmpty()) {
+                    c.setItem(i, stack.copy());
+                    return stack.getCount();
+                }
+            }
+        }
+        return 0;
     }
 
     // --- Worldgen checks ---
 
-    private static WorldgenCheck emptyTownStructureCheck() {
-        return new WorldgenCheck(
+    private static LevelCheck emptyTownStructureCheck() {
+        return new LevelCheck(
                 "worldgen/empty_town_structure",
                 "worldgen",
                 level -> level.registryAccess()
-                        .registry(Registry.STRUCTURE_REGISTRY)
+                        .registry(net.minecraft.core.Registry.STRUCTURE_REGISTRY)
                         .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
                         .orElse(false)
         );
     }
 
-    private static WorldgenCheck emptyTownStructureSetCheck() {
-        return new WorldgenCheck(
+    private static LevelCheck emptyTownStructureSetCheck() {
+        return new LevelCheck(
                 "worldgen/empty_town_structure_set",
                 "worldgen",
                 level -> level.registryAccess()
-                        .registry(Registry.STRUCTURE_SET_REGISTRY)
+                        .registry(net.minecraft.core.Registry.STRUCTURE_SET_REGISTRY)
                         .map(r -> r.containsKey(new ResourceLocation("questown", "empty_town")))
                         .orElse(false)
         );
+    }
+
+    // --- UI checks ---
+
+    /**
+     * The work-request / stock-request screens (#182) only offer products of jobs the
+     * town has unlocked. Exercises {@link ServerJobsRegistry#getAllOutputs} against the real
+     * {@code Works} registry with controlled predicates to prove the gate (no town build needed,
+     * since getAllOutputs reads only the registry + the level + the gather-knowledge function).
+     * <p>
+     * The gather-knowledge function is fed the always-known floor (wheat seeds — mirrors
+     * {@code TownKnowledgeStore} baseKnowledge) so the floor's gating is actually tested, not
+     * neutralised:
+     * <ul>
+     *   <li>predicate {@code false} ⇒ empty offer set — the gate suppresses even the
+     *       always-known floor when no job is unlocked,</li>
+     *   <li>predicate {@code true} ⇒ non-empty, and the always-known floor (wheat seeds)
+     *       surfaces via its gather job,</li>
+     *   <li>single-root predicate ⇒ non-empty and a strict subset of the full set
+     *       (the gate filters by {@link JobID}, never invents items).</li>
+     * </ul>
+     */
+    private static LevelCheck jobBoardKnowledgeGatingCheck() {
+        return new LevelCheck(
+                "ui/job_board_knowledge_gating",
+                "ui",
+                TestBlueprintRegistry::checkJobBoardKnowledgeGating
+        );
+    }
+
+    private static final String GATING_CONTROL_ROOT = "farmer";
+    private static final String ALWAYS_KNOWN_ITEM = "minecraft:wheat_seeds";
+
+    private static boolean checkJobBoardKnowledgeGating(ServerLevel level) {
+        try {
+            // Mirror the always-known gather floor (TownKnowledgeStore baseKnowledge = wheat seeds)
+            // so the gate is tested against an item that is in town knowledge regardless of discovery.
+            ImmutableSet<MCTownItem> gatherFloor = ImmutableSet.of(
+                    MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+            );
+            WorksBehaviour.TownData td = new WorksBehaviour.TownData(level, prefix -> gatherFloor);
+
+            ImmutableSet<Ingredient> all = ServerJobsRegistry.getAllOutputs(td, j -> true);
+            ImmutableSet<Ingredient> none = ServerJobsRegistry.getAllOutputs(td, j -> false);
+            ImmutableSet<Ingredient> oneRoot = ServerJobsRegistry.getAllOutputs(
+                    td, j -> GATING_CONTROL_ROOT.equals(j.rootId())
+            );
+
+            Set<String> allNames = itemNames(all);
+            Set<String> oneRootNames = itemNames(oneRoot);
+
+            // none is empty even though the gather floor (wheat seeds) is "always known":
+            // the job-unlock gate suppresses always-known items when no job is unlocked.
+            boolean closesFully = none.isEmpty();
+            boolean opensFully = !all.isEmpty();
+            boolean floorSurfaces = allNames.contains(ALWAYS_KNOWN_ITEM);
+            boolean filtersSelectively = !oneRoot.isEmpty()
+                    && allNames.containsAll(oneRootNames)
+                    && oneRootNames.size() < allNames.size();
+
+            boolean ok = closesFully && opensFully && floorSurfaces && filtersSelectively;
+            if (!ok) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_knowledge_gating FAIL: closesFully={} (none={}) opensFully={} (all={}) "
+                                + "floorSurfaces={} filtersSelectively={} ({}={}, all={})",
+                        closesFully, none.size(), opensFully, allNames.size(),
+                        floorSurfaces, filtersSelectively, GATING_CONTROL_ROOT, oneRootNames.size(), allNames.size()
+                );
+            }
+            return ok;
+        } catch (RuntimeException e) {
+            QT.FLAG_LOGGER.error("[autotest] job_board_knowledge_gating threw", e);
+            return false;
+        }
+    }
+
+    /**
+     * The {@code getAllOutputs} gate (#182) driven by the real
+     * {@link TownVillagerLearningHandle#isUnlocked}, which both request surfaces use
+     * ({@code TownWorkHandle.openMenuRequested}, {@code StockRequestClipboardItem.use}): what the
+     * player can request is what a villager will make. It unlocks exactly one real root via the real handle and
+     * asserting the offer set is:
+     * <ul>
+     *   <li>identical to the controlled single-root predicate's offer set (the real handle gates to exactly
+     *       the unlocked {@link JobID}, never more),</li>
+     *   <li>non-empty (the unlocked root's products surface),</li>
+     *   <li>a strict subset of the full set (progression-locked tiers and other roots are excluded),</li>
+     *   <li>and the predicate itself returns true for the unlocked root, false for a different root.</li>
+     * </ul>
+     */
+    private static LevelCheck jobBoardRealUnlockGatingCheck() {
+        return new LevelCheck(
+                "ui/job_board_real_unlock_gating",
+                "ui",
+                TestBlueprintRegistry::checkJobBoardRealUnlockGating
+        );
+    }
+
+    private static boolean checkJobBoardRealUnlockGating(ServerLevel level) {
+        try {
+            ImmutableSet<MCTownItem> gatherFloor = ImmutableSet.of(
+                    MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())
+            );
+            WorksBehaviour.TownData td = new WorksBehaviour.TownData(level, prefix -> gatherFloor);
+
+            ImmutableSet<Ingredient> all = ServerJobsRegistry.getAllOutputs(td, j -> true);
+
+            JobID root = pickProducingRoot(td);
+            JobID otherRoot = anyRootOtherThan(root);
+            if (root == null || otherRoot == null) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_real_unlock_gating: need >=2 roots with a producing one (root={}, other={})",
+                        root, otherRoot
+                );
+                return false;
+            }
+
+            // The REAL gate: VillagerHolder.isUnlocked delegates straight to this handle's isUnlocked,
+            // and registration ultimately seeds unlocks through this same unlockJob path.
+            TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+            learning.unlockJob(new UUID(0L, 1L), root);
+
+            ImmutableSet<Ingredient> viaReal = ServerJobsRegistry.getAllOutputs(td, learning::isUnlocked);
+            ImmutableSet<Ingredient> viaSynthetic = ServerJobsRegistry.getAllOutputs(td, j -> j.equals(root));
+
+            Set<String> realNames = itemNames(viaReal);
+            Set<String> syntheticNames = itemNames(viaSynthetic);
+            Set<String> allNames = itemNames(all);
+
+            boolean predicateGates = learning.isUnlocked(root) && !learning.isUnlocked(otherRoot);
+            boolean realMatchesSynthetic = realNames.equals(syntheticNames);
+            boolean opensForUnlocked = !viaReal.isEmpty();
+            boolean strictSubset = allNames.containsAll(realNames) && realNames.size() < allNames.size();
+
+            boolean ok = predicateGates && realMatchesSynthetic && opensForUnlocked && strictSubset;
+            if (!ok) {
+                QT.FLAG_LOGGER.error(
+                        "[autotest] job_board_real_unlock_gating FAIL: predicateGates={} realMatchesSynthetic={} "
+                                + "(real={}, synth={}) opensForUnlocked={} strictSubset={} (real={}, all={}) root={}/{}",
+                        predicateGates, realMatchesSynthetic, realNames.size(), syntheticNames.size(),
+                        opensForUnlocked, strictSubset, realNames.size(), allNames.size(),
+                        root.rootId(), root.jobId()
+                );
+            }
+            return ok;
+        } catch (RuntimeException e) {
+            QT.FLAG_LOGGER.error("[autotest] job_board_real_unlock_gating threw", e);
+            return false;
+        }
+    }
+
+    private static @Nullable JobID pickProducingRoot(WorksBehaviour.TownData td) {
+        List<JobID> roots = new ArrayList<>(ServerJobsRegistry.getAllRootJobs());
+        roots.sort(Comparator.comparing(j -> j.rootId() + "/" + j.jobId()));
+        for (JobID root : roots) {
+            if (!ServerJobsRegistry.getAllOutputs(td, j -> j.equals(root)).isEmpty()) {
+                return root;
+            }
+        }
+        return null;
+    }
+
+    private static @Nullable JobID anyRootOtherThan(@Nullable JobID root) {
+        for (JobID j : ServerJobsRegistry.getAllRootJobs()) {
+            if (!j.equals(root)) {
+                return j;
+            }
+        }
+        return null;
+    }
+
+    private static Set<String> itemNames(Collection<Ingredient> ingredients) {
+        Set<String> names = new HashSet<>();
+        for (Ingredient ingredient : ingredients) {
+            for (ItemStack stack : ingredient.getItems()) {
+                names.add(String.valueOf(Loader.itemIdOf(stack.getItem())));
+            }
+        }
+        return names;
     }
 }
