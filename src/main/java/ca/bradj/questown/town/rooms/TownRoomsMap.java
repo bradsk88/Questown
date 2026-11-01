@@ -29,7 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.Tags;
+import net.minecraft.tags.ItemTags;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -45,9 +45,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Map<Integer, ActiveRecipes<MCRoom, RoomRecipeMatch<MCRoom>>> activeRecipes = new HashMap<>();
     private final ArrayList<Integer> times = new ArrayList<>();
     private @Nullable MultiLevelRoomDetector pendingRooms;
+    private boolean scannedSinceLoad = false;
     private final List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
+    private final Map<TownPosition, DoorTrouble> deadDoors = new HashMap<>();
+    private final Map<Integer, Map<Position, String>> lastLoggedRoomShapes = new HashMap<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -60,6 +63,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final Set<TownPosition> registeredDoors = new HashSet<>();
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
+
+    private static long kitchenDiagN = 0L;
 
     private void updateActiveFarms(
             ServerLevel level,
@@ -95,16 +100,12 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             BlockPos bPos
     ) {
         BlockState bs = level.getBlockState(bPos);
-        return Ingredient.of(Tags.Items.FENCES)
+        return Ingredient.of(ItemTags.FENCES)
                          .test(new ItemStack(
                                  bs.getBlock()
                                    .asItem(), 1
                          )) ||
-                Ingredient.of(Tags.Items.FENCE_GATES)
-                          .test(new ItemStack(
-                                  bs.getBlock()
-                                    .asItem(), 1
-                          ));
+                bs.is(net.minecraft.tags.BlockTags.FENCE_GATES);
     }
 
     private TownRooms getOrCreateRooms(int scanLevel) {
@@ -119,6 +120,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeCreated(room, mcRoomRoomRecipeMatch));
+                    self.recomputeDeadDoors();
                 }
 
                 @Override
@@ -129,6 +131,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> key1
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeChanged(room, mcRoomRoomRecipeMatch, room1, key1));
+                    self.recomputeDeadDoors();
                 }
 
                 @Override
@@ -137,6 +140,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeDestroyed(room, mcRoomRoomRecipeMatch));
+                    self.recomputeDeadDoors();
                 }
             });
         }
@@ -205,6 +209,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             boolean finished = pendingRooms.proceed(activeRooms::get);
             if (finished) {
                 this.pendingRooms = null;
+                this.scannedSinceLoad = true;
             }
             profileTick("PTR.proceed", start);
             return;
@@ -234,6 +239,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
                 (scanLevel, rooms) -> {
                     getOrCreateRooms(scanLevel).update(rooms);
+                    recomputeDeadDoors();
                     // TODO[Performance]: Drop registered doors if they haven't been assigned to a room in 100 ticks
 //                    registeredDoors.stream().map(v -> new Pair<>(v, rooms.values().stream()
 //                                                                    .noneMatch(z -> z.isPresent() && v.toPosition()
@@ -251,8 +257,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),
-                false
+                true
         );
+        pendingRooms.setArtSink(this::logRoomShapes);
 
         long start = System.currentTimeMillis();
 
@@ -317,6 +324,39 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
             times.clear();
         }
+    }
+
+    /**
+     * Mirrors the shape output of {@code qt debug doors_all}: logs the ASCII art of a
+     * room's shape. Only fires for a scan level whose shape changed since the last logged
+     * scan, so a newly registered door (a bare "D") or a room that forms/changes walls
+     * logs once, while a stable town stays quiet. Always on while we diagnose the
+     * room-crash/lag issue; to disable, pass false to the detector and drop the art sink.
+     */
+    private void logRoomShapes(
+            int scanLevel,
+            ImmutableMap<Position, String> shapes
+    ) {
+        Map<Position, String> prev = lastLoggedRoomShapes
+                .computeIfAbsent(scanLevel, k -> new HashMap<>());
+        boolean changed = shapes.entrySet()
+                                .stream()
+                                .anyMatch(e -> !Objects.equals(prev.get(e.getKey()), e.getValue()));
+        if (!changed) {
+            return;
+        }
+        shapes.forEach((door, art) -> {
+            if (!Objects.equals(prev.get(door), art)) {
+                QT.FLAG_LOGGER.debug(
+                        "Room shape at {} (scan level {}):\n{}",
+                        door.getUIString(),
+                        scanLevel,
+                        art
+                );
+                prev.put(door, art);
+            }
+        });
+        prev.keySet().retainAll(shapes.keySet());
     }
 
     public void initializeNew(
@@ -404,6 +444,14 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return this.activeRecipes.size();
     }
 
+    /**
+     * True once a full room-detection pass has finished in this session. Room recipe
+     * matches (and so the beds the town provides) are rebuilt by that pass after a load.
+     */
+    public boolean hasScannedSinceLoad() {
+        return scannedSinceLoad;
+    }
+
     public Collection<RoomRecipeMatch<MCRoom>> getAllMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
         Stream<RoomRecipeMatch<MCRoom>> objectStream = this.activeRecipes
                 .values()
@@ -420,6 +468,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         registeredDoors.add(new TownPosition(p.x, p.z, scanLevel));
         Questown.LOGGER.debug("Door was registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
+        recomputeDeadDoors();
     }
 
     public void deRegisterDoor(
@@ -432,6 +481,48 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         TownRooms rooms = getOrCreateRooms(scanLevel);
         Optional<MCRoom> oldRoom = rooms.get(p);
         oldRoom.ifPresent(mcRoom -> rooms.roomDestroyed(p, mcRoom));
+        recomputeDeadDoors();
+    }
+
+    /**
+     * Recomputes which registered doors have no room, and why, then pushes the set to the flag
+     * so clients can bubble it. A door with no room at all is
+     * {@link DoorTrouble#NOT_ENCLOSED}; a door with a room that matches no recipe is
+     * {@link DoorTrouble#NO_RECIPE}. A half-built room is a normal state, so a freshly
+     * registered door is expected to appear here until its scan attaches it — the bubble is
+     * diagnosis, never deregistration (zombie cleanup is the block-gone check in tick).
+     */
+    private void recomputeDeadDoors() {
+        Set<MCRoom> matchedRooms = getAllMatches(m -> true).stream()
+                                                             .map(RoomRecipeMatch::getRoom)
+                                                             .collect(Collectors.toSet());
+        Map<TownPosition, DoorTrouble> updated = new HashMap<>();
+        for (TownPosition tp : registeredDoors) {
+            TownRooms rooms = activeRooms.get(tp.scanLevel);
+            Optional<MCRoom> room = rooms == null ? Optional.empty() : rooms.get(tp.toPosition());
+            if (room.isEmpty()) {
+                updated.put(tp, DoorTrouble.NOT_ENCLOSED);
+            } else if (!matchedRooms.contains(room.get())) {
+                updated.put(tp, DoorTrouble.NO_RECIPE);
+            }
+        }
+        if (!deadDoors.equals(updated)) {
+            deadDoors.clear();
+            deadDoors.putAll(updated);
+            pushDeadDoors();
+        }
+    }
+
+    private void pushDeadDoors() {
+        if (town == null) {
+            return;
+        }
+        int flagY = town.getBlockPos().getY();
+        ImmutableMap.Builder<BlockPos, DoorTrouble> b = ImmutableMap.builder();
+        deadDoors.forEach((tp, trouble) -> b.put(
+                new BlockPos(tp.x, flagY + tp.scanLevel, tp.z), trouble
+        ));
+        town.setDeadDoors(b.build());
     }
 
     public void registerFenceGate(
@@ -480,7 +571,38 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 }
             }
         }
-        return b.build();
+        Collection<RoomRecipeMatch<MCRoom>> out = b.build();
+        // Dev-only: for the kitchen recipe, break down WHY 0 (or few)
+        // match the (door-registered /& room-with-that-doorPos /& recipe) join. Gated + sampled (log
+        // always when empty, otherwise every 300th). Remove with the rest of the cook-soft-lock probes.
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null && recipeId.toString().contains("kitchen")) {
+            if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
+                int doors = registeredDoors.size() + registeredFenceGates.size();
+                int doorsWithRoom = 0;
+                for (TownPosition p : all) {
+                    Position pz = new Position(p.x, p.z);
+                    if (getOrCreateRooms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))
+                            || getOrCreateFarms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))) {
+                        doorsWithRoom++;
+                    }
+                }
+                int totalRooms = 0;
+                for (TownRooms tr : activeRooms.values()) {
+                    totalRooms += tr.getAll().size();
+                }
+                int roomsMatchingRecipe = 0;
+                for (var lvl : activeRecipes.values()) {
+                    for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : lvl.entrySet()) {
+                        if (m.getValue().getRecipeIDs().contains(recipeId)) {
+                            roomsMatchingRecipe++;
+                        }
+                    }
+                }
+                Questown.LOGGER.warn("[DEV-DIAG:kitchen] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
+                        recipeId, out.size(), doors, doorsWithRoom, totalRooms, roomsMatchingRecipe);
+            }
+        }
+        return out;
     }
 
     public Collection<MCRoom> getFarms() {

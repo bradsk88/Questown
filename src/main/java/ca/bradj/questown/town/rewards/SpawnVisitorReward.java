@@ -20,6 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
+import java.util.Optional;
 
 public class SpawnVisitorReward extends MCReward {
 
@@ -54,6 +55,15 @@ public class SpawnVisitorReward extends MCReward {
         return () -> spawnVisitorNearby(town, villagerUUID);
     }
 
+    /**
+     * Dev/test hook: spawn a fresh visitor for this flag using the reward's
+     * own path. Lets a headless run build a minimal flag + villager fixture
+     * without driving the village-arc gameplay.
+     */
+    public static void spawnNew(TownInterface town) {
+        spawnVisitorNearby(town, null);
+    }
+
     private static void spawnVisitorNearby(
             TownInterface entity,
             @Nullable VillagerUUID villagerUUID
@@ -69,17 +79,24 @@ public class SpawnVisitorReward extends MCReward {
             initUUID = vEntity.getVUID();
         }
         Vec3 vjp = entity.getVisitorJoinPos();
-        ImmutableSnapshot<MCHeldItem, ?> initJournal = ServerJobsRegistry.getNewJournal(
+        // A returning townie (wake, cancelled shutdown, relocation) keeps its journal.
+        ImmutableSnapshot<MCHeldItem, ?> initJournal = Optional.ofNullable(villagerUUID)
+                .flatMap(entity::takeRespawnJournal)
+                .orElseGet(SpawnVisitorReward::newVisitorJournal);
+        vEntity.initialize(entity, VillagerUUID.get(initUUID), vjp.x, vjp.y, vjp.z, initJournal);
+        entity.getVillagerHandle().register(vEntity);
+        sl.addFreshEntity(vEntity);
+        QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
+    }
+
+    private static ImmutableSnapshot<MCHeldItem, ?> newVisitorJournal() {
+        return ServerJobsRegistry.getNewJournal(
                 GathererUnmappedNoToolWorkQtrDay.ID,
                 ProductionStatus.IDLE.name(),
                 ImmutableList.copyOf(
                         Collections.nCopies(6, MCHeldItem.Air())
                 )
         );
-        vEntity.initialize(entity, VillagerUUID.get(initUUID), vjp.x, vjp.y, vjp.z, initJournal);
-        entity.getVillagerHandle().register(vEntity);
-        sl.addFreshEntity(vEntity);
-        QT.QUESTS_LOGGER.debug("Spawned visitor {} at {}", vEntity.getUUID(), vEntity.getOnPos());
     }
 
     @Override

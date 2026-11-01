@@ -60,6 +60,79 @@ public class TownRoomsMapSerializer {
         roomsMap.initialize(owner, doorsB.build(), gatesB.build(), doorsWithRecipes.build());
     }
 
+    /**
+     * Re-anchor registered doors and fence gates to a flag at a new Y, preserving their absolute
+     * world Y (flag relocation, #199). The stored {@code position_y} is a flag-relative
+     * {@code scanLevel}; rewrite it so {@code oldFlagY + scanLevel} (the absolute Y) is unchanged
+     * under {@code newFlagY}. X/Z are absolute and untouched. Doors-with-active-recipes are stored
+     * as absolute {@link BlockPos} and so need no rebase.
+     */
+    public void rebaseFixtureY(
+            CompoundTag roomsTag,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_DOORS, oldFlagY, newFlagY);
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_FENCE_GATES, oldFlagY, newFlagY);
+    }
+
+    private static void rebaseScanLevels(
+            CompoundTag roomsTag,
+            String key,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            int absoluteY = oldFlagY + ct.getInt(NBT_POS_Y);
+            ct.putInt(NBT_POS_Y, absoluteY - newFlagY);
+        }
+    }
+
+    /**
+     * Drop registered doors and fence gates whose absolute world position satisfies {@code dropIf}
+     * (the "leave it behind" choice, #199): when a town moves so far that some fixtures fall
+     * outside the new flag's tick radius, the player can choose to leave them. The fixtures' stored
+     * {@code position_y} is the flag-relative {@code scanLevel}, so it is rebased to absolute via
+     * {@code flagY} before the predicate sees it — pass the NEW flag Y, after {@link #rebaseFixtureY}.
+     * The geometric decision lives in the caller; this only edits NBT.
+     */
+    public void dropFixtures(
+            CompoundTag roomsTag,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        dropFrom(roomsTag, NBT_REGISTERED_DOORS, flagY, dropIf);
+        dropFrom(roomsTag, NBT_REGISTERED_FENCE_GATES, flagY, dropIf);
+    }
+
+    private static void dropFrom(
+            CompoundTag roomsTag,
+            String key,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        ListTag kept = new ListTag();
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            BlockPos absolute = new BlockPos(
+                    ct.getInt(NBT_POS_X), flagY + ct.getInt(NBT_POS_Y), ct.getInt(NBT_POS_Z)
+            );
+            if (!dropIf.test(absolute)) {
+                kept.add(ct);
+            }
+        }
+        roomsTag.put(key, kept);
+    }
+
     public CompoundTag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();
