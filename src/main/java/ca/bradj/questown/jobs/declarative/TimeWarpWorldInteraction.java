@@ -4,7 +4,6 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -33,7 +32,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +53,7 @@ public class TimeWarpWorldInteraction extends
     private final @Nullable BlockPos assignedWorkBlock;
     private final Map<ProductionStatus, Collection<String>> specialRulesMap;
     private final @Nullable ca.bradj.questown.world.QTWorldAccess warpWorld;
+    private int experiencePerCompletion = 0;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -84,6 +83,29 @@ public class TimeWarpWorldInteraction extends
         this.warpWorld = warpWorld;
     }
 
+    /** XP a completed cycle earns this townie during warp (the realtime grant's value). */
+    public TimeWarpWorldInteraction withExperiencePerCompletion(int experiencePerCompletion) {
+        this.experiencePerCompletion = experiencePerCompletion;
+        return this;
+    }
+
+    /**
+     * Records the cycle's XP on the warp state for {@code TownFlagState.warp} to grant once
+     * (realtime's completion listener has no warp counterpart). Pinned by
+     * {@code TimeWarpExperienceTest}.
+     */
+    @Override
+    protected MCTownState onJobCompleted(
+            Inputs inputs,
+            MCTownState town
+    ) {
+        if (town == null || experiencePerCompletion <= 0) {
+            return town;
+        }
+        town.recordExperience(town.getVillager(villagerIndex).uuid, experiencePerCompletion);
+        return town;
+    }
+
     private ca.bradj.questown.world.QTWorldAccess resolveWorld(Inputs inputs) {
         if (warpWorld != null) {
             return warpWorld;
@@ -110,9 +132,19 @@ public class TimeWarpWorldInteraction extends
 
     @Override
     protected int getWorkSpeedOf10(Inputs inputs) {
-        Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
-                                           .getEffectsAndClearExpired(Util.getTick(inputs.level()));
-        return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
+        TownState.VillagerData<MCHeldItem> villager = inputs.town().getVillager(villagerIndex);
+        Collection<Effect> effects = villager.getEffectsAndClearExpired(Util.getTick(inputs.level()));
+        int base = TownVillagerMoods.compute(effects) / 10;
+        float mult = proficiencyMultiplier(
+                getProficiencyId(),
+                villager::getProficiencyLevel
+        );
+        return applyProficiencyToWorkSpeed(base, mult);
+    }
+
+    @Override
+    protected @Nullable String getProficiencyId() {
+        return ServerJobsRegistry.getProficiencyId(getJobId());
     }
 
     @Override
@@ -121,6 +153,22 @@ public class TimeWarpWorldInteraction extends
             Integer nextStepTime
     ) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
+    }
+
+    @Override
+    protected MCTownState onWorkActionCompleted(
+            Inputs inputs,
+            MCTownState town
+    ) {
+        String profId = getProficiencyId();
+        if (profId == null || town == null) {
+            return town;
+        }
+        TownState.VillagerData<MCHeldItem> villager = town.getVillager(villagerIndex);
+        return town.withVillagerData(
+                villagerIndex,
+                villager.withProficiencies(levelProficiencies(villager.getProficiencies(), profId))
+        );
     }
 
     private float getTimeFactor(Inputs inputs) {
@@ -164,7 +212,7 @@ public class TimeWarpWorldInteraction extends
             if (!itemStack.isDamageableItem()) {
                 return tuwn;
             }
-            itemStack.hurt(1, mcTownState.level.getRandom(), null);
+            itemStack.setDamageValue(itemStack.getDamageValue() + 1);
             if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
                 itemStack = ItemStack.EMPTY;
             }
@@ -190,19 +238,16 @@ public class TimeWarpWorldInteraction extends
     }
 
     @Override
+    protected @Nullable ServerLevel getServerLevel(Inputs inputs) {
+        return inputs.level();
+    }
+
+    @Override
     protected WorkOutput<MCTownState, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
             Inputs inputs,
             WorkOutput<MCTownState, WorkPosition<BlockPos>> v
     ) {
-        return Util.workWithSurfaceInteractionPos(inputs.level(), v);
-    }
-
-    @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            Inputs inputs,
-            Collection<WorkPosition<BlockPos>> workSpots
-    ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), inputs.level));
+        return Util.workWithSurfaceInteractionPos(getServerLevel(inputs), v);
     }
 
     @Override
@@ -302,15 +347,32 @@ public class TimeWarpWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
+        // Post-extract rules apply item-data / hunger / mood / knowledge — none touch the
+        // deferred block state the WarpWorldAccess holds, but non-migrated rules (SCOUT_LOOT)
+        // DO need a real ServerLevel for loot-table RNG via asServerLevel(). The realtime path
+        // passes a real-level world here too; resolveWorld() would hand back the WarpWorldAccess
+        // whose asServerLevel() is null, so use the real level directly.
+        ca.bradj.questown.world.QTWorldAccess postExtractWorld = inputs.level != null
+                ? MinecraftWorldAccess.silent(inputs.level)
+                : resolveWorld(inputs);
         return PostExtractHook.run(
-                mcTownState, townPos, rules, resolveWorld(inputs), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, postExtractWorld, position, (ctx, itemData) -> {
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return ctx;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = Compat.itemDataTag(extractedItem.get().toMCItemStack());
                     itemData.forEach(t::putInt);
                     return ctx;
-                }, (in, up) -> in
+                }, (in, up) -> in,
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.level) + durationTicks;
+                    return in.withVillagerData(
+                            villagerIndex,
+                            in.getVillager(villagerIndex).withEffect(new Effect(effect, expiry))
+                    );
+                },
+                extractedItem,
+                (in, foundLoot) -> in.withKnowledge(foundLoot)
         );
     }
 
@@ -322,38 +384,6 @@ public class TimeWarpWorldInteraction extends
             State fresh
     ) {
         return ts.setJobBlockState(position, fresh);
-    }
-
-    @Override
-    protected MCTownState withEffectApplied(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack s = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(s);
-        return ts.withVillagerData(
-                villagerIndex,
-                ts.getVillager(villagerIndex)
-                  .withEffect(new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level))))
-        );
-    }
-
-    @Override
-    protected MCTownState withKnowledge(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        return ts.withKnowledge(newItem);
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get().asItem());
     }
 
     @Override
@@ -371,7 +401,15 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.level, mcHeldItems);
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = flagBlockEntityAt(inputs.level(), townPos);
+        return withLootGuarantees(
+                flag,
+                withRequestedLootPreference(
+                        flag, inputs.level(),
+                        resultGenerator.apply(inputs.level(), mcHeldItems),
+                        () -> resultGenerator.apply(inputs.level(), mcHeldItems)
+                )
+        );
     }
 
     @Override
@@ -410,6 +448,31 @@ public class TimeWarpWorldInteraction extends
     @Override
     protected void registerUnmetRoom(Inputs inputs) {
         // TODO[WARP]: Implement tracking of needs
+    }
+
+    /**
+     * Warp-path mirror of {@code RealtimeWorldInteraction.onLootExtracted}:
+     * instead of closing the matching LOOT quest immediately (the warper must
+     * stay pure — no live quest handle), record non-empty extractions onto the
+     * {@link MCTownState} snapshot. The settle point in
+     * {@code TownFlagState.warp} applies them through
+     * {@code getQuestHandle().processLootQuests(...)} so warp and realtime
+     * yield the same quest outcome. Same {@link LootExtractGuard} contract as
+     * realtime (non-empty item, independent of the job's {@code EXTRACTING_PRODUCT}
+     * rule).
+     */
+    @Override
+    protected @Nullable MCTownState postExtractHook(
+            Inputs inputs,
+            MCTownState currentState,
+            @Nullable MCHeldItem item
+    ) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            currentState.recordLootExtract(item);
+        }
+        return super.postExtractHook(inputs, currentState, item);
     }
 
     /**
@@ -582,7 +645,12 @@ public class TimeWarpWorldInteraction extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> ImmutableList.of(() -> ImmutableList.of(
-                                roomBlock)), bp -> workStates, (bp) -> true
+                                roomBlock)), bp -> workStates, (bp) -> true,
+                        state -> DeclarativeJobs.declaresUnfinishedWork(
+                                state, maxState, checks.getWorkForStep(state) != null,
+                                checks.getIngredientsForStep(state) != null
+                                        && !checks.getIngredientsForStep(state).isEmpty()
+                        )
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(state -> {
@@ -637,7 +705,7 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public boolean hasNonSupplyItems() {
-                return JobsClean.hasNonSupplyItems(
+                return SupplyItems.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),
                         checks.getAllRequiredIngredients(),
@@ -676,14 +744,6 @@ public class TimeWarpWorldInteraction extends
                 tool,
                 MCHeldItem::fromTown
         );
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     /**

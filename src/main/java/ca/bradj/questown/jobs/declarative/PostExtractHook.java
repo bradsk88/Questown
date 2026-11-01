@@ -3,10 +3,12 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.jobs.AfterExtractEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.function.BiFunction;
@@ -22,11 +24,15 @@ public class PostExtractHook {
             QTWorldAccess world,
             BlockPos position,
             BiFunction<TOWN, ImmutableMap<String, Integer>, TOWN> itemDataApplier,
-            BiFunction<TOWN, Float, TOWN> hungerUpdater
+            BiFunction<TOWN, Float, TOWN> hungerUpdater,
+            AfterExtractEvent.MoodApplier<TOWN> moodUpdater,
+            @Nullable MCHeldItem extractedItem,
+            BiFunction<TOWN, MCHeldItem, TOWN> knowledgeUpdater
     ) {
         ImmutableList<JobPhaseModifier> appliers = SpecialRulesRegistry.getRuleAppliers(rules);
         AfterExtractEvent<TOWN> bxEvent = new AfterExtractEvent<>(
-                world, position, townPos, itemDataApplier, hungerUpdater
+                world, position, townPos, itemDataApplier, hungerUpdater, moodUpdater,
+                extractedItem, knowledgeUpdater
         );
         return processMulti(town, appliers, (o, a) -> a.afterExtract(o, bxEvent));
     }

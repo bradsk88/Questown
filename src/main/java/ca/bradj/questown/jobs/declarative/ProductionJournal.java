@@ -126,6 +126,7 @@ public class ProductionJournal<
         if (status == null || status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
+        ca.bradj.questown.jobs.JobStatuses.whyDebugJobId = this.jobId.toNiceString();
         Signals sig = sigs.getSignal(townState.getDayTime());
         @Nullable ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
                 status, sig, inventory, townState, entityState, factory, prioritizeExtraction
@@ -179,7 +180,7 @@ public class ProductionJournal<
     }
 
     public boolean hasAnyLootToDrop() {
-        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.staysWithVillager());
     }
 
     public void setItem(

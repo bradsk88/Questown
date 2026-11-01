@@ -94,7 +94,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             Work w = ServerJobsRegistry.getRandomWork(
                     x.town().getServerLevel(),
                     getId().rootId(),
-                    x.town().getVillagerHandle()::isUnlocked
+                    workId -> x.town().getVillagerHandle().isUnlocked(ownerUUID, workId)
             );
             Job<?, ?, ?> job = w.jobFunc.apply(ownerUUID);
             if (job instanceof DeclarativeJob dj) {
@@ -132,11 +132,13 @@ public class WorkSeekerJob extends DeclarativeJob {
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        // A level-up's BOP goes to the flag at any hour; the deposit job itself works in the
+        // evening.
+        if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
+            town.changeJobForVisitorFromBoard(ownerUUID, getId());
+        }
         return switch (super.getSignal(Util.getDayTime(town.getServerLevel()))) {
             case MORNING, NOON, UNDEFINED -> {
-                if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
-                    town.changeJobForVisitorFromBoard(ownerUUID, getId());
-                }
                 if (town.getPossibleWork().getFor(getId()).isEmpty()) {
                     if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
                         journal.changeStatus(statusFactory.noWorkPossible());

@@ -1,5 +1,9 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
+import ca.bradj.questown.jobs.JobExperience;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -27,6 +31,7 @@ import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -34,10 +39,9 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.questown.jobs.InteractionSpots;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
-import ca.bradj.roomrecipes.rooms.XWall;
-import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -72,7 +76,11 @@ public class DeclarativeJob extends
     private final WorkLocation location;
     private final @NotNull Integer maxState;
     private final JobID jobId;
+
+    // take-driver count: feeds the [PROBE:supplies] TOOK line (psweep verdict oracle; keep)
+    private static final java.util.concurrent.atomic.AtomicLong SUPPLY_TOOK_CNT = new java.util.concurrent.atomic.AtomicLong();
     private final ExpirationRules expiration;
+    private boolean finishedProductNeedsStorage = true;
     private final long totalDuration;
     private final int workInterval;
     private final RecipeProvider recipe;
@@ -239,8 +247,9 @@ public class DeclarativeJob extends
     private boolean isJobBlock(
             JobBlockTestContext ctx
     ) {
-        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
+        boolean r = location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
                                              .withJobAlreadyStarted(true));
+        return r;
     }
 
     @NotNull
@@ -325,6 +334,92 @@ public class DeclarativeJob extends
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
+    /**
+     * The timed leaver trip this job is currently on, when its gate-mat
+     * timer is still counting down: the absolute server tick at which the
+     * timer expires and the trip's declared total duration. Null when the
+     * job has no live timed trip (no work spot, no state, no timer, or the
+     * state declares no time). Feeds the villagers-menu leaver-return
+     * progress bar.
+     */
+    public @Nullable LeaverReturn getLeaverReturn(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        Integer remaining = work.getTimeToNextState(bp);
+        if (remaining == null || remaining <= 0) {
+            return null;
+        }
+        State state = work.getJobBlockState(bp);
+        if (state == null) {
+            return null;
+        }
+        int total = checks.getTimeForStep(null, state.processingState(), 0);
+        if (total <= 0) {
+            return null;
+        }
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        return new LeaverReturn(level.getGameTime() + remaining, Math.max(total, remaining));
+    }
+
+    /**
+     * How far the current step's work is done, 0..1, or -1 when the job is not working off a work
+     * count right now (the status icon's progress bar). The work left can exceed the declared work
+     * (proficiency scaling), so the larger of the two is the denominator.
+     */
+    public float getWorkProgress(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return -1;
+        }
+        State state = ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+        ).getJobBlockState(spot.jobBlock());
+        if (state == null || !state.hasWorkLeft()) {
+            return -1;
+        }
+        Integer declared = checks.getWorkForStep(state.processingState());
+        int total = Math.max(declared == null ? 0 : declared, state.workLeft());
+        return WorkProgress.fraction(state.workLeft(), total);
+    }
+
+    public @Nullable String getWorkProgressDebug(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        State state = work.getJobBlockState(bp);
+        Integer timeToNext = work.getTimeToNextState(bp);
+        StringBuilder sb = new StringBuilder();
+        sb.append("job block ").append(bp.getX()).append(',').append(bp.getY()).append(',').append(bp.getZ());
+        if (state == null) {
+            sb.append(" (no state yet)");
+        } else {
+            sb.append(" state=").append(state.processingState());
+            if (state.hasWorkLeft()) {
+                sb.append(" work-left=").append(state.workLeft());
+            }
+        }
+        if (timeToNext != null && timeToNext > 0) {
+            sb.append(" time-left=").append(timeToNext);
+        }
+        return sb.toString();
+    }
+
 
     @Override
     protected boolean grabbedSuppliesRecently(Predicate<Long> isTickRecent) {
@@ -338,11 +433,12 @@ public class DeclarativeJob extends
 
     @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
-        return roomsNeedingIngredientsOrTools.cleanFns(
+        Collection<? extends Predicate<MCTownItem>> r = roomsNeedingIngredientsOrTools.cleanFns(
                 checks::getIngredientsForStep,
                 checks::getToolsForStep,
                 MCHeldItem::fromTown
         );
+        return r;
     }
 
 //    private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
@@ -496,6 +592,40 @@ public class DeclarativeJob extends
         return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state);
     }
 
+    /**
+     * {@link #hasRoomsAtState} for the warp's job list: job blocks are tested without their slot
+     * precondition ({@code blockAlreadyUsed=true} skips it in {@code ResourceJobLoader.isJobBlockV2}),
+     * because the warp simulates the slot contents step by step. A furnace with an empty output
+     * slot is still a cook/extract site for a warp that will fill it.
+     */
+    public WithReason<Boolean> hasRoomsAtStateIgnoringSlot(
+            TownFlagBlockEntity town,
+            int state
+    ) {
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return WithReason.always(false, "No server level");
+        }
+        WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(null);
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle()
+                .getRoomsMatching(location.baseRoom());
+        if (rooms.isEmpty()) {
+            return WithReason.always(false, "No rooms match base room " + location.baseRoom());
+        }
+        JobBlockTestContext ctx = new JobBlockTestContext(
+                new MinecraftWorldAccess(level), info(level), BlockPos.ZERO, journal::getItems, ImmutableList::of, true, true
+        );
+        ImmutableList<RoomRecipeMatch<MCRoom>> roomsWithState = DeclarativeJobs.roomsWithState(
+                ImmutableList.copyOf(rooms),
+                bp -> location.isJobBlock().test(ctx.withPos(bp)),
+                bp -> Integer.valueOf(state).equals(JobBlock.getState(ws::getJobBlockState, bp))
+        );
+        if (roomsWithState.isEmpty()) {
+            return WithReason.always(false, rooms.size() + " rooms match " + location.baseRoom() + " but none have job blocks at state " + state + " (slot ignored)");
+        }
+        return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state + " (slot ignored)");
+    }
+
     private boolean hasInserted(Integer action) {
         for (int i = 1; i < action; i++) {
             //noinspection DataFlowIssue
@@ -524,7 +654,7 @@ public class DeclarativeJob extends
         if (suppliesTarget == null) {
             return;
         }
-        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<BlockPos, MCTownItem> st = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
@@ -561,6 +691,8 @@ public class DeclarativeJob extends
                 recipe::getRecipe,
                 journal.getItems(),
                 (item) -> {
+                    SUPPLY_TOOK_CNT.incrementAndGet();
+                    QT.JOB_LOGGER.warn("[PROBE:supplies] job={} TOOK item={} (totalTakes={})", jobId, item, SUPPLY_TOOK_CNT.get());
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
                 },
@@ -594,10 +726,11 @@ public class DeclarativeJob extends
         };
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
-        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
+        Function<BlockPos, State> states = DeclarativeJobs.inRange(town, getMaxState());
+        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(states, bp, b, is, isJobBlock);
 
         jobSite.room().getSpaces().stream()
-               .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY)
+               .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS)
                                                 .stream())
                .forEach(v -> {
                    BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);
@@ -658,40 +791,11 @@ public class DeclarativeJob extends
             Room jobSite,
             Predicate<BlockPos> isEmpty
     ) {
-        Direction d = getDoorDirectionFromCenter(jobSite);
-        if (isEmpty.test(bp.relative(d))) {
-            return bp.relative(d);
-        }
-        for (Direction dd : Direction.Plane.HORIZONTAL) {
-            if (isEmpty.test(bp.relative(dd))) {
-                return bp.relative(dd);
-            }
-        }
-        if (InclusiveSpaces.calculateArea(jobSite.getSpaces()) == 9) {
-            // 1x1 room (plus walls)
-            return Positions.ToBlock(jobSite.getDoorPos(), bp.getY());
-        }
-        return null;
+        return InteractionSpots.find(bp, jobSite, isEmpty);
     }
 
     public static Direction getDoorDirectionFromCenter(Room jobSite) {
-        Optional<XWall> backXWall = jobSite.getBackXWall();
-        if (backXWall.isPresent() && backXWall.get().getZ() > jobSite.doorPos.z) {
-            return Direction.NORTH;
-        }
-        if (backXWall.isPresent()) {
-            return Direction.SOUTH;
-        }
-
-
-        Optional<ZWall> backZWall = jobSite.getBackZWall();
-        if (backZWall.isPresent() && backZWall.get().getX() > jobSite.doorPos.x) {
-            return Direction.WEST;
-        }
-        if (backZWall.isPresent()) {
-            return Direction.EAST;
-        }
-        return Direction.NORTH;
+        return InteractionSpots.doorDirectionFromCenter(jobSite);
     }
 
     @Override
@@ -728,6 +832,12 @@ public class DeclarativeJob extends
     }
 
     @Override
+    public @Nullable BlockPos getWorkSpotBlock() {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        return spot == null ? null : spot.jobBlock();
+    }
+
+    @Override
     protected @NotNull WithReason<@Nullable BlockPos> findJobSite(
             TownInterface town,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> blocksSrc,
@@ -758,7 +868,7 @@ public class DeclarativeJob extends
                     return jbs != null && maxState.equals(jbs.processingState());
                 }
         );
-        return JobsClean.findJobSite(
+        return DeclarativeJobs.findJobSite(
                 maxState,
                 prioritizesExtraction(),
                 statusItems,
@@ -767,8 +877,14 @@ public class DeclarativeJob extends
                 blocksSrc,
                 work,
                 isJobBlock,
-                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent)
+                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent),
+                bp -> filledDisplaySlots(town, bp)
         );
+    }
+
+    private static int filledDisplaySlots(TownInterface town, BlockPos bp) {
+        ServerLevel level = town.getServerLevel();
+        return level == null ? 0 : ca.bradj.questown.integration.minecraft.DisplaySlots.filledAt(level, bp);
     }
 
     private Dependencies4<MCHeldItem> getSupplyDeps() {
@@ -808,6 +924,11 @@ public class DeclarativeJob extends
                 gcb,
                 maxState
         );
+    }
+
+    /** The job works at the town flag (downtime, the diners, BOP depositing), whose record it shares. */
+    public boolean worksAtTheFlag() {
+        return ca.bradj.questown.town.special.SpecialQuests.TOWN_FLAG.equals(location.baseRoom());
     }
 
     @Override
@@ -867,18 +988,15 @@ public class DeclarativeJob extends
 
     @Override
     public int getExperienceEarned() {
-        if (specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED)) {
-            return 0;
-        }
-        int workPart = initialWork.values().stream().reduce(0, Integer::sum) * workInterval;
-        long timePart = workPart + Math.max((totalDuration / 10), 1);
-        QT.JOB_LOGGER.debug(
-                "{} gained experience: {} from work, {} from time",
-                UtilClean.truncateMiddle(ownerUUID),
-                workPart,
-                timePart
+        // The warp grant uses the same formula.
+        int earned = JobExperience.formula(
+                specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED),
+                initialWork.values(),
+                workInterval,
+                List.of(Math.toIntExact(totalDuration))
         );
-        return (int) timePart;
+        QT.JOB_LOGGER.debug("{} gained experience: {}", UtilClean.truncateMiddle(ownerUUID), earned);
+        return earned;
     }
 
     public int getMaxState() {
@@ -907,6 +1025,19 @@ public class DeclarativeJob extends
 
     // Package-accessible delegates for DeclarativeJobTickerDependencies
 
+    /**
+     * False for a job whose finished product is consumed, not stored (a diner's meal); set by
+     * {@code WorksBehaviour} from {@code WorkDescription.productConsumed}. Full storage never stops such a job.
+     */
+    public DeclarativeJob withFinishedProductNeedsStorage(boolean needsStorage) {
+        this.finishedProductNeedsStorage = needsStorage;
+        return this;
+    }
+
+    boolean finishedProductNeedsStorage() {
+        return finishedProductNeedsStorage;
+    }
+
     ProductionJournal<MCTownItem, MCHeldItem> getJournal() {
         return journal;
     }
@@ -923,7 +1054,94 @@ public class DeclarativeJob extends
             BlockPos entityBlockPos,
             long currentTick
     ) {
+        Long before = this.lastSupplyTick; // nullable until the first take
         this.tryGetSupplies(town, roomsNeedingInput, entityBlockPos, currentTick);
+        collectingStall.observe(
+                journal.getStatus().isCollectingSupplies(),
+                !java.util.Objects.equals(this.lastSupplyTick, before),
+                currentTick,
+                () -> describeCollectingStall(town, roomsNeedingInput, entityBlockPos),
+                msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg)
+        );
+    }
+
+    private final CollectingStallTrace collectingStall = new CollectingStallTrace();
+
+    /** What the job sees while stuck collecting: its own and the town's non-zero spots, and the input it is told about. */
+    private String describeCollectingStall(
+            TownInterface town,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput,
+            BlockPos entityBlockPos
+    ) {
+        StringBuilder b = new StringBuilder();
+        b.append("status=").append(journal.getStatus())
+         .append(" held=").append(journal.getItems().stream().filter(i -> !i.isEmpty()).map(MCHeldItem::getShortName).toList())
+         .append(" suppliesTarget=").append(suppliesTarget == null ? "none" : suppliesTarget.toShortString(false))
+         .append(" statesNeedingInput=").append(roomsNeedingInput.getNonEmptyStates());
+        appendSupplyWalk(b, entityBlockPos);
+        appendNavigation(b, town);
+        appendSpots(b, "own", town.getWorkStatusHandle(ownerUUID));
+        appendSpots(b, "town", town.getWorkStatusHandle(null));
+        return b.toString();
+    }
+
+    /**
+     * Where the villager stands, the walk target the job computes for the supply chest, the distance
+     * between them, and the chest's room.
+     */
+    private void appendSupplyWalk(StringBuilder b, BlockPos entityBlockPos) {
+        b.append(" pos=").append(entityBlockPos.toShortString());
+        if (suppliesTarget == null) {
+            return;
+        }
+        BlockPos walk = navTargetForContainer(suppliesTarget);
+        b.append(" walkTarget=").append(walk.toShortString())
+         .append(" dist=").append(String.format("%.1f", Math.sqrt(entityBlockPos.distSqr(walk))))
+         .append(" chestRoom=").append(suppliesTarget.getRoom());
+    }
+
+    /** What the live entity is doing: its brain's walk target and its current path's end. */
+    private void appendNavigation(StringBuilder b, TownInterface town) {
+        net.minecraft.world.entity.Mob mob = town.getVillagerHandle().entities().stream()
+                .filter(e -> e.getUUID().equals(ownerUUID))
+                .filter(e -> e instanceof net.minecraft.world.entity.Mob)
+                .map(e -> (net.minecraft.world.entity.Mob) e)
+                .findFirst().orElse(null);
+        if (mob == null) {
+            b.append(" entity=none");
+            return;
+        }
+        b.append(" brainWalkTarget=").append(mob.getBrain()
+                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(w -> w.getTarget().currentBlockPosition().toShortString())
+                .orElse("none"));
+        net.minecraft.world.level.pathfinder.Path path = mob.getNavigation().getPath();
+        b.append(" navDone=").append(mob.getNavigation().isDone());
+        if (path == null || path.getEndNode() == null) {
+            b.append(" pathEnd=none");
+            return;
+        }
+        b.append(" pathEnd=").append(path.getEndNode().asBlockPos().toShortString())
+         .append(" pathReaches=").append(path.canReach());
+    }
+
+    private void appendSpots(StringBuilder b, String label, Object handle) {
+        if (!(handle instanceof ca.bradj.questown.town.AbstractWorkStatusStore<?, ?, ?, ?> store)) {
+            b.append(" ").append(label).append("=?");
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?> s = (ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?>) store;
+        b.append(" ").append(label).append("=[");
+        s.getAll().forEach((pos, st) -> {
+            if (st == null || st.processingState() == 0) {
+                return;
+            }
+            b.append(pos.toShortString()).append(":").append(st.processingState())
+             .append(" timer=").append(s.getTimeToNextState(pos))
+             .append(" claimable=").append(s.canClaim(pos, () -> makeClaim(ownerUUID))).append("; ");
+        });
+        b.append("]");
     }
 
     boolean isValidWalkTargetForDeps(TownInterface town, BlockPos bp) {
@@ -978,7 +1196,10 @@ public class DeclarativeJob extends
     @Override
     public Iterable<MCHeldItem> getItemsForDrop() {
         if (!FetcherHack.isFetcher(jobId)) {
-            return super.getItemsForDrop();
+            // Store the work output and keep the job's own supplies.
+            return HeldWorkOutput.<MCHeldItem, MCTownItem>ofStates(
+                    maxState, checks::getIngredientsForStep, checks::getToolsForStep
+            ).itemsToDrop(super.getItemsForDrop());
         }
         return FetcherHack.getItemsForDrop(super.getItemsForDrop(), successTarget);
     }
@@ -1023,6 +1244,11 @@ public class DeclarativeJob extends
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        if (FetcherHack.isFetcher(jobId)) {
+            // The fetcher's bespoke status (acquire request → fetch ingredient → deliver) is not
+            // expressible in the generic pipeline; drive it here so the supply getter engages.
+            return FetcherHack.computeStatusOverride(town, journal.getItems());
+        }
         return null; // Default: use standard status computation
     }
 }

@@ -4,7 +4,6 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
@@ -14,7 +13,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.Collection;
@@ -40,7 +38,7 @@ public class DinerWork {
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_EAT, 50,
+            BLOCK_STATE_NEED_EAT, 10,
             BLOCK_STATE_DONE, 0
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -49,12 +47,6 @@ public class DinerWork {
             BLOCK_STATE_DONE, 0
     );
 
-    private static final Collection<ItemStack> RESULTS = ImmutableList.of(
-            EffectMetaItem.withLastingEffect(
-                    EffectMetaItem.MoodEffects.COMFORTABLE_EATING,
-                    Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get()
-            )
-    );
     public static final int PAUSE_FOR_ACTION = 10;
 
     public static Work asWork(
@@ -82,7 +74,7 @@ public class DinerWork {
                                     ServerLevel level,
                                     Collection<MCHeldItem> heldItems
                             ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                                return ImmutableList.of();
                             }
 
                             @Override
@@ -94,9 +86,15 @@ public class DinerWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.HUNGER_FILL)
+                                ImmutableList.of(
+                                        SpecialRules.HUNGER_FILL,
+                                        SpecialRules.APPLY_COMFORTABLE_EATING
+                                )
                         ),
+                        // Finish the meal (extract at the done state) before fetching more food;
+                        // JSON jobs get this by default.
                         ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.SHARED_WORK_STATUS,
                                 SpecialRules.CLAIM_SPOT,
                                 SpecialRules.WORK_IN_EVENING,
