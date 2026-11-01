@@ -9,7 +9,7 @@ logs
 # Claude Code project config (versioned separately)
 .claude/
 /.claude.json
-CLAUDE.md
+.context/
 /.env
 /META-INF/MANIFEST.MF
 /vazkii/patchouli/api/stub/package-info.class
@@ -56,3 +56,14 @@ CLAUDE.md
 /vazkii/patchouli/api/VariableHelper$1.class
 /vazkii/patchouli/api/VariableHelper.class
 /vazkii/patchouli/api/VariableHelper.java
+
+# Ad-hoc terminal/sensor captures from local dev sessions (throwaway)
+/log.txt
+/log[0-9]*.txt
+/output.txt
+
+# local agent/client/Python runtime noise
+.pi/prompts/
+/assets/
+/run-client/
+__pycache__/

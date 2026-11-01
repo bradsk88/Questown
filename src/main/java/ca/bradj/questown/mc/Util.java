@@ -1,4 +1,5 @@
 package ca.bradj.questown.mc;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
@@ -13,9 +14,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.world.level.block.DoorBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.client.renderer.GameRenderer;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
@@ -27,8 +29,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -295,10 +295,11 @@ public class Util {
             ServerLevel sl,
             WorkOutput<X, WorkPosition<BlockPos>> v
     ) {
-        BlockPos feet = v.spot().entityFeetPos();
-        if (sl.getBlockState(feet).getMaterial().isSolid()) {
-            feet = feet.above();
-        }
+        BlockPos feet = WalkTargets.surfaceFeet(
+                v.spot().entityFeetPos(),
+                p -> sl.getBlockState(p).getMaterial().isSolid(),
+                p -> sl.getBlockState(p).getBlock() instanceof DoorBlock
+        );
         return new WorkOutput<>(
                 v.worked(),
                 v.claimed(),
@@ -308,8 +309,60 @@ public class Util {
     }
 
 
+    /**
+     * Force the default GUI blit state, so a prior draw (a dimming or tinted fill) cannot leave the
+     * state the next blit renders with.
+     */
+    public static void blitState() {
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
     public static void blit(
             PoseStack stack,
+            ResourceLocation texture,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY
+    ) {
+        // All questown sheet textures are 256x256.
+        blitState();
+        blit19(stack, texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
+    }
+
+    /** {@link #blit(GuiGraphics, ResourceLocation, int, int, float, float, int, int)} tinted grey by {@code shade} (1 = unchanged). */
+    public static void blitShaded(
+            PoseStack stack,
+            ResourceLocation texture,
+            int screenX,
+            int screenY,
+            float firstPixelInFilex,
+            float firstPixelInFileY,
+            int drawNumPixelsX,
+            int drawNumPixelsY,
+            float shade
+    ) {
+        blitState();
+        RenderSystem.setShaderColor(shade, shade, shade, 1f);
+        blit19(stack, texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, 256, 256);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+    }
+
+    /**
+     * Blit of a region of a texture that is not the 256x256 sheet, passing the texture's
+     * true native size as "widthOfEntireFile"/"texFileHeight".
+     *
+     * <p>u/v are normalised by that declared size, so 32x32 art must pass "32, 32": with 256 it
+     * samples only its leftmost 4 px, stretched over the box.
+     */
+    public static void blit(
+            PoseStack stack,
+            ResourceLocation texture,
             int screenX,
             int screenY,
             float firstPixelInFilex,
@@ -319,48 +372,11 @@ public class Util {
             int widthOfEntireFile,
             int texFileHeight
     ) {
-        blit(
-                stack,
-                screenX,
-                screenY,
-                firstPixelInFilex,
-                firstPixelInFileY,
-                drawNumPixelsX,
-                drawNumPixelsY,
-                widthOfEntireFile,
-                texFileHeight,
-                drawNumPixelsX,
-                drawNumPixelsY
-        );
+        blitState();
+        blit19(stack, texture, screenX, screenY, firstPixelInFilex, firstPixelInFileY, drawNumPixelsX, drawNumPixelsY, widthOfEntireFile, texFileHeight);
     }
 
-    public static void blit(
-            PoseStack stack,
-            int screenX,
-            int screenY,
-            float firstPixelInFilex,
-            float firstPixelInFileY,
-            int drawNumPixelsX,
-            int drawNumPixelsY,
-            int widthOfEntireFile,
-            int texFileHeight,
-            int drawWidth,
-            int drawHeight
-    ) {
-        GuiComponent.blit(
-                stack,
-                screenX,
-                screenY,
-                drawWidth,
-                drawHeight,
-                firstPixelInFilex,
-                firstPixelInFileY,
-                drawNumPixelsX,
-                drawNumPixelsY,
-                widthOfEntireFile,
-                texFileHeight
-        );
-    }
+    private static final int TABS_PNG_SOURCE_SIZE = 256;
 
     public static void blitTab(
             PoseStack stack,
@@ -368,8 +384,17 @@ public class Util {
             Integer y,
             int i
     ) {
-        RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/tabs.png"));
-        blit(stack, x + 12, y + 10, i * 16, 0, 16, 16, 256, 256);
+        blit19(stack,
+                Questown.ResourceLocation("textures/menu/tabs.png"),
+                x + 12,
+                y + 10,
+                i * 16,
+                0,
+                16,
+                16,
+                TABS_PNG_SOURCE_SIZE,
+                TABS_PNG_SOURCE_SIZE
+        );
     }
 
     public static void onScreenText(
@@ -377,8 +402,7 @@ public class Util {
             String msgKey,
             Object... msgArgs
     ) {
-        QuestownNetwork.CHANNEL.send(
-                PacketDistributor.PLAYER.with(player),
+        QuestownNetwork.sendToPlayer(player.get(),
                 new OnScreenTextMessage(msgKey, msgArgs)
         );
     }
@@ -401,25 +425,14 @@ public class Util {
             int y,
             int scale
     ) {
-        float texStartX = 8;
-        float texStartY = 8;
-        int texFileWidth = 64;
-        int texFileHeight = 64;
         ResourceLocation texture = VisitorMobRenderer.getTextureLocation(uuid);
-        RenderSystem.setShaderTexture(0, texture);
-        Util.blit(
-                stack,
-                x,
-                y,
-                texStartX,
-                texStartY,
-                faceWidth,
-                faceWidth,
-                texFileWidth,
-                texFileHeight,
-                faceWidth * scale,
-                faceWidth * scale
-        );
+        // Player skins are 64x64 with the face at (8,8)-(16,16): blit that 8x8 region 1:1 under a
+        // pose scale (scaling the UV region instead grabs more of the skin and squishes the face).
+        stack.pushPose();
+        stack.translate(x, y, 0f);
+        stack.scale(scale, scale, 1f);
+        blit19(stack, texture, 0, 0, 8, 8, faceWidth, faceWidth, 64, 64);
+        stack.popPose();
     }
 
     public static <X> X ifNull(
@@ -442,10 +455,10 @@ public class Util {
                     continue;
                 }
             }
-            if (ForgeRegistries.ITEMS.getKey(item) == null) {
+            if (Loader.itemIdOf(item) == null) {
                 names.add("<No ID>");
             } else {
-                names.add(ForgeRegistries.ITEMS.getKey(item).getPath());
+                names.add(Loader.itemIdOf(item).getPath());
             }
         }
         return String.join(", ", names.build());
@@ -478,5 +491,22 @@ public class Util {
             Function<@NotNull X, Y> whenNotNull
     ) {
         return texts == null ? whenNull.get() : whenNotNull.apply(texts);
+    }
+
+    /** 1.19.2 blit: bind the texture, then the static GuiComponent blit over the pose. */
+    private static void blit19(
+            PoseStack pose,
+            net.minecraft.resources.ResourceLocation texture,
+            int x,
+            int y,
+            float u,
+            float v,
+            int width,
+            int height,
+            int textureWidth,
+            int textureHeight
+    ) {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, texture);
+        net.minecraft.client.gui.GuiComponent.blit(pose, x, y, u, v, width, height, textureWidth, textureHeight);
     }
 }
