@@ -30,7 +30,10 @@ public class TestRoomMatch implements IRoomRecipeMatch<Room, String, Position, S
         return new TestRoomMatch(
                 room,
                 ImmutableList.of(recipeId),
-                ImmutableMap.of(IntegrationTestWorld.DEFAULT_WORKSPOT_POS, "job_block")
+                ImmutableMap.of(
+                        IntegrationTestWorld.DEFAULT_WORKSPOT_POS, "job_block",
+                        TestTickerDependencies.HELD_ITEMS_STORE_POS, "held_items_store"
+                )
         );
     }
 

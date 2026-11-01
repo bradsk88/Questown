@@ -17,7 +17,6 @@ import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -212,7 +211,7 @@ public class TestWorldInteraction extends
                         new IPredicateCollection<GathererJournalTest.TestItem>() {
                             @Override
                             public boolean test(GathererJournalTest.TestItem item) {
-                                return v.equals(item.value);
+                                return TestTagResolver.matches(item, v);
                             }
 
                             @Override
@@ -283,7 +282,7 @@ public class TestWorldInteraction extends
             value = value.substring(1);
         }
         ResourceLocation rl = new ResourceLocation(value);
-        net.minecraft.world.item.Item mcItem = ForgeRegistries.ITEMS.getValue(rl);
+        net.minecraft.world.item.Item mcItem = net.minecraft.core.Registry.ITEM.get(rl);
         if (mcItem == null) {
             return ItemStack.EMPTY;
         }
@@ -307,7 +306,7 @@ public class TestWorldInteraction extends
             return PreExtractHook.run(
                     aBoolean, rules, worldAccess,
                     (town, mcHeldItem, strategy) -> {
-                        ResourceLocation itemRL = ForgeRegistries.ITEMS.getKey(mcHeldItem.get().get());
+                        ResourceLocation itemRL = net.minecraft.core.Registry.ITEM.getKey(mcHeldItem.get().get());
                         if (itemRL == null) {
                             return town;
                         }
@@ -348,32 +347,6 @@ public class TestWorldInteraction extends
             State fresh
     ) {
         return workStatuses.setJobBlockState(position, fresh);
-    }
-
-    @Override
-    protected Boolean withEffectApplied(
-            @NotNull Void inputs,
-            Boolean ts,
-            GathererJournalTest.TestItem newItem
-    ) {
-        return null;
-    }
-
-    @Override
-    protected Boolean withKnowledge(
-            @NotNull Void inputs,
-            Boolean ts,
-            GathererJournalTest.TestItem newItem
-    ) {
-        return null;
-    }
-
-    @Override
-    protected boolean isInstanze(
-            GathererJournalTest.TestItem testItem,
-            Class<?> clazz
-    ) {
-        return false;
     }
 
     @Override
