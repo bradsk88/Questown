@@ -17,8 +17,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -67,7 +71,7 @@ class JobLogicTest {
 
         private TestWorldInteraction wi;
         private Map<Integer, Collection<WorkPosition<Position>>> allWorkSpots = ImmutableMap.of();
-        private boolean inserted;
+        boolean inserted;
 
         private TestLogicWorld(JobDefinition definition) {
             this.wi = TestWorldInteraction.forDefinition(
@@ -94,6 +98,11 @@ class JobLogicTest {
         @Override
         public void changeToNextJob() {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean fitsInDay(JobID id) {
+            return true;
         }
 
         @Override
@@ -150,6 +159,20 @@ class JobLogicTest {
             return false;
         }
 
+        boolean holdsWorkOutput = false;
+
+        @Override
+        public boolean holdsWorkOutput() {
+            return holdsWorkOutput;
+        }
+
+        boolean starving = false;
+
+        @Override
+        public boolean isStarving() {
+            return starving;
+        }
+
         @Override
         public void tryGetSupplies() {
 
@@ -204,6 +227,303 @@ class JobLogicTest {
                     Integer.MAX_VALUE
             );
         }
+
+        /** Dropping loot with items in hand, as {@code job}. */
+        public void tickDropping(JobID job) {
+            tick(
+                    null,
+                    () -> ProductionStatus.DROPPING_LOOT,
+                    job,
+                    false,
+                    false,
+                    false,
+                    true,
+                    maxTicksOf(3000),
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+
+        /** No work spot, not in the job site - the leaver-away shape - under the given rules. */
+        public void tickAway(
+                ProductionStatus status,
+                ExpirationRules expiration
+        ) {
+            tick(
+                    null,
+                    () -> status,
+                    definition.jobId(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    expiration,
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+    }
+
+    private static ExpirationRules maxTicksOf(long maxTicks) {
+        return new ExpirationRules(
+                () -> Long.MAX_VALUE,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID,
+                () -> maxTicks,
+                jobID -> jobID
+        );
+    }
+
+    /**
+     * While the job waits on a timer its cycle is in progress (a leaver is away, so there is no
+     * work spot): the max-ticks watchdog must not re-create it.
+     */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedState() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
+    }
+
+    /**
+     * The board, which sends a starving townie to dine, is asked only between jobs, so a deposit is
+     * a decision point for a starving townie.
+     */
+    @Test
+    void tick_starvingTownieAsksTheBoard_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertTrue(handedOff.get(), "a starving townie should re-decide after a deposit");
+    }
+
+    @Test
+    void tick_fedTownieCarriesOn_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestJobLogic logic = new TestJobLogic(droppingWorld(handedOff), DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertFalse(handedOff.get(), "a fed townie keeps its job after a deposit");
+    }
+
+    /** A starving diner is already going to eat: re-deciding would skip it to the next diner stage. */
+    @Test
+    void tick_starvingDinerCarriesOn_afterADeposit() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "dining"));
+
+        Assertions.assertFalse(handedOff.get(), "a diner must not be sent back to the board by its own hunger");
+    }
+
+    private static TestLogicWorld droppingWorld(AtomicBoolean handedOff) {
+        return new TestLogicWorld(DEFINITION) {
+            @Override
+            public boolean tryDropLoot() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+    }
+
+    /**
+     * A trip timer completing on the tick the watchdog's window runs out: the extract tick finishes
+     * the cycle, so the watchdog must not fire on it.
+     */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job on the extract tick");
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board before the product was extracted");
+    }
+
+    /** A trip that outlasts the job's window: the extract grace counts from the first extract tick. */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick_AfterATripLongerThanTheWindow() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 100; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+        logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board on the extract tick of a long trip");
+    }
+
+    /** The extract grace is a window, not an exemption: a job stuck extracting still hands off. */
+    @Test
+    void tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 5; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(handedOff.get(), "a job stuck extracting must not stall forever");
+    }
+
+    /** A max-ticks fallback that won't fit in the day hands off to the board instead. */
+    @Test
+    void tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog restarted a job that won't fit in the day");
+        Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
+    }
+
+    /** A job stuck past its max ticks asks the board once per max-ticks window, not every tick. */
+    @Test
+    void tick_maxTicksHandOff_asksTheBoardOncePerWindow_whenTheBoardKeepsTheJob() {
+        AtomicInteger handOffs = new AtomicInteger();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handOffs.incrementAndGet();
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(handOffs.get() <= 4, "asked the board " + handOffs.get() + " times in 20 ticks");
+    }
+
+    @Test
+    void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
+        // Control: the watchdog still moves a job with no cycle in progress to a declared
+        // fallback that is a different job (e.g. seeking_work -> downtime).
+        JobID other = new JobID("other_root", "other_job");
+        AtomicReference<JobID> changedTo = new AtomicReference<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedTo.set(id);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5).withMaxTickFallback(id -> other));
+        }
+
+        Assertions.assertEquals(other, changedTo.get());
+    }
+
+    /**
+     * The default fallback is the same job; re-creating it must ask the board, which re-rolls the
+     * job when nothing more urgent (a BOP deposit, a starving villager) applies.
+     */
+    @Test
+    void tick_sameJobMaxTicksFallback_asksTheBoard() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the same job without the board");
+        Assertions.assertTrue(handedOff.get(), "the board should decide what comes next");
     }
 
     @Test
@@ -320,6 +640,58 @@ class JobLogicTest {
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+
+    /** A diner that gave up waiting for ingredients must not re-run its extract hooks (the meal). */
+    private static int extractsAfterGivingUp(boolean insertedBeforeGivingUp) {
+        AtomicInteger extracts = new AtomicInteger();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void tryExtractWithNoItem() {
+                extracts.incrementAndGet();
+            }
+
+            @Override
+            public boolean tryGrabbingInsertedSupplies() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                // The board has nothing else for this townie: the job stays.
+            }
+        };
+        world.inserted = insertedBeforeGivingUp;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        world.allWorkSpots = ImmutableMap.of(STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT));
+
+        for (int i = 0; i < 50; i++) {
+            logic.tick(
+                    null,
+                    () -> ProductionStatus.NO_SUPPLIES,
+                    new JobID("test", "tester"),
+                    true,
+                    false,
+                    insertedBeforeGivingUp,
+                    false,
+                    getNever().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                    DEFAULT_DETAILS,
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+        return extracts.get();
+    }
+
+    @Test
+    void tick_givingUpWithNothingInserted_neverRunsTheExtractHooks() {
+        Assertions.assertEquals(0, extractsAfterGivingUp(false), "a meal without food");
+    }
+
+    @Test
+    void tick_givingUpAfterInserting_runsTheExtractHooksOnce() {
+        Assertions.assertEquals(1, extractsAfterGivingUp(true), "the extract hooks ran every tick");
     }
 
     private static @NotNull ExpirationRules getNever() {
@@ -481,6 +853,73 @@ class JobLogicTest {
         // Then, change job
         ticker.accept(DEFINITION.maxState());
         Assertions.assertTrue(changedJob.get());
+    }
+
+    /**
+     * A job that finished its cycle hands off; it does not fetch supplies for another cycle in the
+     * same tick.
+     */
+    @Test
+    void tick_shouldNotGetSupplies_WhileWrappingUp() {
+        List<String> events = new ArrayList<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                events.add("next");
+            }
+
+            @Override
+            public void tryGetSupplies() {
+                events.add("supplies");
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        Consumer<Integer> ticker = (state) -> {
+            world.allWorkSpots = ImmutableMap.of(state, ImmutableList.of(ARBITRARY_WORKSPOT));
+            logic.defaultTick(
+                    ProductionStatus.fromJobBlockStatus(state),
+                    true,
+                    (Position b) -> world.states.getJobBlockState(b).processingState()
+            );
+        };
+        ticker.accept(STATE_NEED_WIDGET);
+        ticker.accept(STATE_NEED_WORK);
+        ticker.accept(DEFINITION.maxState());
+
+        events.clear();
+        ticker.accept(DEFINITION.maxState());
+
+        Assertions.assertEquals(List.of("next"), events);
+    }
+
+    /**
+     * A villager holding work output must not hand off: its own status carries the output to
+     * storage first.
+     */
+    @Test
+    void tick_shouldNotHandOff_WhileHoldingWorkOutput() {
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        Consumer<Integer> ticker = (state) -> {
+            world.allWorkSpots = ImmutableMap.of(state, ImmutableList.of(ARBITRARY_WORKSPOT));
+            logic.defaultTick(
+                    ProductionStatus.fromJobBlockStatus(state),
+                    true,
+                    (Position b) -> world.states.getJobBlockState(b).processingState()
+            );
+        };
+        world.holdsWorkOutput = true;
+        for (int state : List.of(STATE_NEED_WIDGET, STATE_NEED_WORK, DEFINITION.maxState(), DEFINITION.maxState(), DEFINITION.maxState())) {
+            ticker.accept(state);
+        }
+        Assertions.assertFalse(handedOff.get(), "handed off while holding work output");
+        Assertions.assertFalse(logic.isWrappingUp(), "a cycle that ends holding output carries on as a fresh one");
     }
 
     @Test

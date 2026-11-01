@@ -44,7 +44,8 @@ public class WorksBehaviour {
             int pauseForAction,
             WorkStates states,
             BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator,
-            Map<ProductionStatus, Collection<String>> specialRules
+            Map<ProductionStatus, Collection<String>> specialRules,
+            int experiencePerCompletion
     ) {
         TimeWarpWorldInteraction wi = new TimeWarpWorldInteraction(
                 townPos,
@@ -59,7 +60,7 @@ public class WorksBehaviour {
                 warpInput.roomPositions(),
                 warpInput.assignedWorkBlock(),
                 warpInput.warpWorld()
-        );
+        ).withExperiencePerCompletion(experiencePerCompletion);
         return DeclarativeJobs.warper(wi, states.maxState(), prioritizeExtraction, warpInput.slotPrecondition());
     }
 
@@ -108,7 +109,8 @@ public class WorksBehaviour {
     public static WorkDescription noResultDescription() {
         return new WorkDescription(
                 (td) -> ImmutableSet.of(MCTownItem.Air()),
-                null
+                null,
+                true
         );
     }
 
@@ -197,7 +199,7 @@ public class WorksBehaviour {
                 jobId,
                 parentID,
                 icon,
-                getJobFunc(jobId, location, states, world, special, workSound, expiration),
+                getJobFunc(jobId, location, states, world, special, workSound, expiration, description.productConsumed()),
                 productionJobSnapshot(jobId),
                 location.isJobBlock(),
                 location.shouldInitializeWorkState(),
@@ -220,7 +222,15 @@ public class WorksBehaviour {
                         world.actionDuration(),
                         states,
                         world.resultGenerator()::generate,
-                        special.specialStatusRules()
+                        special.specialStatusRules(),
+                        // Resolved per warp (the registry is loaded by then): the same value the
+                        // realtime grant pays.
+                        ServerJobsRegistry.getExperienceEarned(jobId, JobExperience.formula(
+                                special.containsGlobal(SpecialRules.NO_EXPERIENCE_GAINED),
+                                states.workRequired().values(),
+                                world.actionDuration(),
+                                states.timeRequired().values()
+                        ))
                 ),
                 1,
                 world.resultGenerator().isResultAlwaysEmpty(),
@@ -235,7 +245,8 @@ public class WorksBehaviour {
             WorkWorldInteractions world,
             WorkSpecialRules special,
             @Nullable SoundInfo workSound,
-            ExpirationRules expiration
+            ExpirationRules expiration,
+            boolean productConsumed
     ) {
 
         return new JobFunc() {
@@ -256,7 +267,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
 
             @Override
@@ -275,7 +286,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
         };
     }
@@ -302,9 +313,7 @@ public class WorksBehaviour {
                 Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES,
                 Config.MAX_TICKS_WITHOUT_SUPPLIES,
                 WorkSeekerJob::getIDForRoot,
-                // FIXME: This should be 3000 to make sure crafters don't get stuck
-                //  Can we add this to the JSON definition spec?
-                () -> 6000L,
+                () -> 3000L,
                 jobId -> jobId
         );
     }

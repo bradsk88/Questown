@@ -1,6 +1,7 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.jobs.declarative.ContainersClean;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -21,6 +22,7 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
     private final Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms;
     private final Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks;
     private final Function<ITEM, HELD> convert;
+    private final Supplier<Boolean> townHasAnyJobBlock;
 
     public TownHasSupplies(
             Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
@@ -29,7 +31,25 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
             Function<ITEM, HELD> convert
     ) {
+        this(ingredients, tools, rooms, roomsHaveWorkableBlocks, convert, () -> true);
+    }
+
+    /**
+     * @param townHasAnyJobBlock whether the town has at least one block this job could work at,
+     *                           whatever its state. When none qualifies (cook/fuel with every furnace
+     *                           already fuelled: the empty-fuel-slot precondition fails), there is no
+     *                           cycle to resume, so the full-requirement fallback must not apply.
+     */
+    public TownHasSupplies(
+            Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
+            Function<Integer, PredicateCollection<ITEM, ITEM>> tools,
+            Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms,
+            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
+            Function<ITEM, HELD> convert,
+            Supplier<Boolean> townHasAnyJobBlock
+    ) {
         super("town has supplies");
+        this.townHasAnyJobBlock = townHasAnyJobBlock;
         this.ingredients = ingredients;
         this.tools = tools;
         this.rooms = () -> rooms.get().stream().collect(ImmutableList.toImmutableList());
@@ -40,6 +60,21 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
     @Override
     public String describe() {
         return "TODO"; // TODO?
+    }
+
+    private void collectStateNeeds(
+            Integer state,
+            List<PredicateCollection<HELD, HELD>> neededIngredients,
+            List<PredicateCollection<ITEM, ITEM>> neededTools
+    ) {
+        PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
+        if (ingt != null) {
+            neededIngredients.add(ingt);
+        }
+        PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
+        if (tool != null) {
+            neededTools.add(tool);
+        }
     }
 
     @Override
@@ -55,15 +90,19 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             if (!v.getValue().apply(() -> null).value) {
                 continue;
             }
-            PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
-            if (ingt != null) {
-                neededIngredients.add(ingt);
-            }
-            PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
-            if (tool != null) {
-                neededTools.add(tool);
-            }
+            collectStateNeeds(state, neededIngredients, neededTools);
+        }
 
+        // ...only while the town has a block to resume at. With no job block at all, collecting
+        // supplies is pointless: the cook sat in COLLECTING_SUPPLIES on cook/fuel with every furnace
+        // fuelled, never reaching NO_JOBSITE, so it never moved on to extract.
+        if (neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty() && townHasAnyJobBlock.get()) {
+            // No state currently has a workable block (every job block sits at a timer or
+            // terminal state). The requirement set must still be the FULL set, otherwise
+            // the town can never acquire the tools needed to resume the cycle.
+            for (Integer state : needs.keySet()) {
+                collectStateNeeds(state, neededIngredients, neededTools);
+            }
         }
 
         b.put("relevant ingredients", neededIngredients);

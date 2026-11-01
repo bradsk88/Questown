@@ -21,6 +21,15 @@ import java.util.stream.Stream;
 
 public class JobStatuses {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobStatuses.class);
+    private static final java.util.concurrent.ConcurrentHashMap<String, Long> whyLast = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long WHY_INTERVAL_MS = 4000;
+    // [WHY] status-circuit decision dump: when whyDebugJobId is set (ProductionJournal sets it
+    // each recompute), logs the root gates and nested detail maps of the leaver's status decision
+    // for that job. Gated to gatherer:/hunter:/miner: leavers, throttled to one line per label per
+    // WHY_INTERVAL_MS.
+    public static volatile String whyDebugJobId = null; // set by ProductionJournal before each status recompute, so the WHY log can attribute to the real leaver
+
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
             return true;
@@ -34,6 +43,23 @@ public class JobStatuses {
 
         @Nullable
         STATUS tryUsingSupplies(Map<SUP_CAT, SupplyItemStatus> supplyItemStatus);
+
+        /**
+         * A finished product waits at one of the job's sites: extract it if the villager is there,
+         * else go there. Null when nothing is finished. Default: jobs without products.
+         */
+        default @Nullable STATUS tryCollectingFinishedProduct() {
+            return null;
+        }
+
+        /**
+         * Whether collecting this job's finished product puts something in the villager's hands
+         * that needs storage. False for products that are consumed instead (a diner's meal), so full
+         * storage never stops them. Default: true.
+         */
+        default boolean finishedProductNeedsStorage() {
+            return true;
+        }
     }
 
     /**
@@ -72,7 +98,60 @@ public class JobStatuses {
     ) {
         LZCD<STATUS> root = usualRoutineRoot(ctx);
         root.initializeAll();
-        return nullIfUnchanged(ctx.currentStatus, root.resolve());
+        STATUS resolved = root.resolve();
+        maybeLogWhy(ctx.currentStatus, resolved, root);
+        return nullIfUnchanged(ctx.currentStatus, resolved);
+    }
+
+    // [WHY] See the whyDebugJobId note — dumps every gate (condition) in the leaver's status
+    // decision circuit, each with its boolean value + reason, so we can see "why" a stuck
+    // leaver stays in a status, not just "what" status it is.
+    private static <STATUS extends IStatus<STATUS>, SUP_CAT> void maybeLogWhy(
+            STATUS current, STATUS resolved, LZCD<STATUS> root) {
+        String label = whyDebugJobId;
+        if (label == null) return;
+        if (!(label.startsWith("gatherer:") || label.startsWith("hunter:") || label.startsWith("miner:"))) return;
+        long now = System.currentTimeMillis();
+        Long last = whyLast.get(label);
+        if (last != null && now - last < WHY_INTERVAL_MS) return;
+        whyLast.put(label, now);
+        try {
+            StringBuilder gates = new StringBuilder();
+            collectWhy(root.populate(), gates, 0);
+            log.warn("[WHY] job={} current={} → {}\n{}", label, current, resolved, gates);
+        } catch (Throwable t) {
+            log.warn("[WHY] job={} current={} → {} (dump failed: {})", label, current, resolved, t.toString());
+        }
+    }
+
+    private static void collectWhy(Populated<?> pop, StringBuilder out, int depth) {
+        if (pop == null || depth > 60) return;
+        for (java.util.Map.Entry<String, Object> e : pop.conditions().entrySet()) {
+            Object val = e.getValue();
+            if (val instanceof Populated<?> cp) {
+                Object wrObj = cp.value();
+                if (wrObj instanceof WithReason<?> wr) {
+                    out.append("  gate[").append(e.getKey()).append("=").append(wr.value()).append("] (").append(wr.reason()).append(")\n");
+                } else {
+                    out.append("  gate[").append(e.getKey()).append("=").append(wrObj).append("]\n");
+                }
+                for (java.util.Map.Entry<String, Object> d : cp.conditions().entrySet()) {
+                    if (d.getValue() instanceof Populated<?> nested) {
+                        out.append("    ").append(d.getKey()).append(":\n");
+                        collectWhy(nested, out, depth + 1);
+                    } else {
+                        out.append("    ").append(d.getKey()).append(" = ").append(d.getValue()).append("\n");
+                    }
+                }
+            } else {
+                out.append("  gate[").append(e.getKey()).append("=").append(val).append("]\n");
+            }
+        }
+        Populated<?> fb = pop.ifCondFailOrNull();
+        if (fb != null) {
+            out.append("  else →\n");
+            collectWhy(fb, out, depth + 1);
+        }
     }
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> @NotNull LZCD<STATUS> usualRoutineRoot(
@@ -88,6 +167,14 @@ public class JobStatuses {
         LZCD<LZCD.Dependency<STATUS>> dHasNonWorkItems = prePopAble(
                 new Pair<>(ctx.jobId, "hasNonWorkItems"),
                 inventory::hasNonSupplyItems
+        );
+        LZCD<LZCD.Dependency<STATUS>> dHoldsWorkOutput = prePopAble(
+                new Pair<>(ctx.jobId, "holdsWorkOutput"),
+                inventory::holdsWorkOutput
+        );
+        LZCD<LZCD.Dependency<STATUS>> dFinishedProductWaiting = prePopAble(
+                new Pair<>(ctx.jobId, "finished product waiting"),
+                () -> ctx.job.finishedProductNeedsStorage() && ctx.job.tryCollectingFinishedProduct() != null
         );
         LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 new Pair<>(ctx.jobId, "hasAnyItems"),
@@ -114,11 +201,50 @@ public class JobStatuses {
         ILZCD<LZCD.Dependency<STATUS>> dTimerActive = fromVoid(town.isTimerActive());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = fromVoid(town.hasSupplies());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSupplies = fromVoid(LZCDs.invert(town.hasSupplies()));
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSpace = fromVoid(LZCDs.invert(town.hasSpace()));
         ILZCD<LZCD.Dependency<STATUS>> dHasWorkableBlocks = fromVoid(town.containsWorkableBlocksAtAnyState());
         ILZCD<LZCD.Dependency<STATUS>> dHasNoWorkableBlocks = fromVoid(LZCDs.invert(town.containsWorkableBlocksAtAnyState()));
         Job<STATUS, SUP_CAT> job = ctx.job;
         IStatusFactory<STATUS> factory = ctx.factory;
         LZCD<STATUS> root = new LZCD<>(
+                // A villager holding work output (items no state uses) takes it to storage before
+                // any more work. Below this, "use items" (a leaver holding its tool) sent hunters
+                // and miners out with the loot in hand, and itemless work (the root
+                // below) sent a miner woken with full hands back to the mineshaft.
+                // A cook therefore carries each meal out before taking the next.
+                new Pair<>(ctx.jobId, "drop loot before more work"),
+                leaf(factory::droppingLoot),
+                ImmutableList.of(
+                        dHoldsWorkOutput,
+                        dTownHasSpace
+                ),
+                LZCDs.oneDep(
+                        // Holding output with nowhere to put it: stop, visibly, rather than work on
+                        // with the loot in hand.
+                        new Pair<>(ctx.jobId, "stop when holding output and the town has no space"),
+                        leaf(factory::noSpace),
+                        dHoldsWorkOutput,
+                        new LZCD<>(
+                                // A finished product waiting while the town has no space: collecting it
+                                // only moves it into the villager's hands, so stop visibly here too. Without
+                                // this a miner holding nothing left its coal at the mineshaft and wandered as
+                                // "going to work" with no storage signal.
+                                new Pair<>(ctx.jobId, "stop when a finished product waits and the town has no space"),
+                                leaf(factory::noSpace),
+                                ImmutableList.of(
+                                        dFinishedProductWaiting,
+                                        dTownHasNoSpace
+                                ),
+                                new LZCD<>(
+                                // A finished product waiting at a job site is collected before anything
+                                // else, even if the villager must walk there. The itemless-work root
+                                // below only takes it when already on site; away from it (home after a
+                                // sleep, or back from the storeroom) "collect supplies" won, and a
+                                // villager already holding every supply stood at the chests forever.
+                                new Pair<>(ctx.jobId, "collect a finished product"),
+                                LZCDs.leaf(job::tryCollectingFinishedProduct, Objects::isNull),
+                                ImmutableList.of(),
+                                new LZCD<>(
                 new Pair<>(ctx.jobId, "work without items"),
                 LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
@@ -230,6 +356,10 @@ public class JobStatuses {
                                 )
                         )
                 )
+        )
+                                )
+                        )
+                )
         );
         return root;
     }
@@ -312,6 +442,24 @@ public class JobStatuses {
                             }
                         }
 
+                        return factory.goingToJobSite();
+                    }
+
+                    @Override
+                    public boolean finishedProductNeedsStorage() {
+                        return town.finishedProductNeedsStorage();
+                    }
+
+                    @Override
+                    public @Nullable STATUS tryCollectingFinishedProduct() {
+                        Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                        if (rooms.isEmpty()) {
+                            return null;
+                        }
+                        ROOM location = entity.getEntityCurrentJobSite();
+                        if (location != null && rooms.contains(location)) {
+                            return factory.extractingProduct();
+                        }
                         return factory.goingToJobSite();
                     }
 
