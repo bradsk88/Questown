@@ -5,10 +5,13 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.FlagMenus;
+import ca.bradj.questown.gui.QuestCompletion;
+import ca.bradj.questown.gui.QuestScreenSummary;
 import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
@@ -54,6 +57,15 @@ public class TownQuestsHandle implements QuestsHolder {
             ServerPlayer sender,
             boolean promptUser
     ) {
+        // Only procedurally generated batches are discardable (the quest card shows no x for the
+        // rest); refuse the others in case a stale client still sends the request.
+        boolean discardable = unsafeGetTown().quests.questBatches.getAllBatches().stream()
+                .filter(v -> batchID.equals(v.getBatchUUID()))
+                .anyMatch(v -> v.getAll().stream().anyMatch(MCQuest::isDiscardable));
+        if (!discardable) {
+            QT.QUESTS_LOGGER.warn("Refusing to remove quest batch {}: it is not discardable", batchID);
+            return;
+        }
         if (promptUser) {
             Optional<MCQuestBatch> first = unsafeGetTown().quests.questBatches.getAllBatches()
                                                                               .stream()
@@ -74,7 +86,17 @@ public class TownQuestsHandle implements QuestsHolder {
     public void showQuestsUI(ServerPlayer player) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         ImmutableList<HashMap.SimpleEntry<MCQuest, MCReward>> aQ = unsafeGetTown().getAllQuestsWithRewards();
-        @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(t.getServerLevel(), aQ);
+        @SuppressWarnings("DataFlowIssue") List<UIQuest> quests = UIQuest.fromLevel(
+                t.getServerLevel(),
+                aQ,
+                t.quests.openQuestProgress(),
+                t.lockedSkillQuestLevels()
+        );
+
+        QuestScreenSummary summary = new QuestScreenSummary(
+                QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
+                t.hasPendingMorningReward()
+        );
 
         Collection entities = t.getVillagerHandle().entities();
         Compat.openScreen(
@@ -94,6 +116,7 @@ public class TownQuestsHandle implements QuestsHolder {
                                 windowId,
                                 quests,
                                 t.getInfo(),
+                                summary,
                                 () -> triggerAdvancement(player, t)
                         );
                     }
@@ -112,8 +135,9 @@ public class TownQuestsHandle implements QuestsHolder {
                         );
                     }
                 }, data ->
-                        FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.bopCount,
-                                () -> t.hasVillagerArrivingInMorning())
+                        FlagMenus.writeAndLink(data, quests, t.getInfo(), player, entities, t.depositedBopRootJobs(),
+                                () -> t.hasVillagerArrivingInMorning(), summary,
+                                t.getVillagerHandle().displayNamesForAll())
         );
     }
 
@@ -140,9 +164,30 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID) {
+    public void addEmptyRoomBatch() {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        t.quests.addEmptyRoomBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addBasicsBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addBasicsBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addFirstWorkRequestBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addFirstWorkRequestBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID, declinedFrom);
         t.setChanged();
     }
 
@@ -153,6 +198,25 @@ public class TownQuestsHandle implements QuestsHolder {
     ) {
         TownFlagBlockEntity t = unsafeGetTown();
         TownQuests.addItemQuest(t, t.quests, itemId, count);
+    }
+
+    @Override
+    public void addLootQuest(
+            ResourceLocation itemId,
+            int count
+    ) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addLootQuest(t, t.quests, itemId, count);
+    }
+
+    @Override
+    public void processLootQuests(MCTownItem extracted) {
+        unsafeGetTown().quests.processLootQuests(extracted);
+    }
+
+    @Override
+    public Map<ResourceLocation, Integer> openQuestProgress() {
+        return unsafeGetTown().quests.openQuestProgress();
     }
 
     @Override
@@ -194,11 +258,15 @@ public class TownQuestsHandle implements QuestsHolder {
                                 windowId,
                                 quests,
                                 t.getTownFlagBasePos(),
-                                batch.getBatchUUID()
+                                batch.getBatchUUID(),
+                                ((TownFlagBlockEntity) t).getVillagerHandle().displayNamesForAll()
                         );
                     }
                 }, data ->
-                        TownRemoveQuestsContainer.write(data, quests, t.getTownFlagBasePos(), batch.getBatchUUID())
+                        TownRemoveQuestsContainer.write(
+                                data, quests, t.getTownFlagBasePos(), batch.getBatchUUID(),
+                                ((TownFlagBlockEntity) t).getVillagerHandle().displayNamesForAll()
+                        )
         );
     }
 
@@ -206,24 +274,34 @@ public class TownQuestsHandle implements QuestsHolder {
             UUID batchID,
             ServerPlayer sender
     ) {
+        if (!removeBatch(batchID)) {
+            return;
+        }
+        if (!unsafeGetTown().getAllQuests().isEmpty()) {
+            showQuestsUI(sender);
+            return;
+        }
+        sender.closeContainer();
+    }
+
+    @Override
+    public boolean removeBatch(UUID batchID) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         for (MCQuestBatch b : t.quests.getBatches()) {
-            if (batchID.equals(b.getBatchUUID())) {
-                if (t.quests.questBatches.decline(b)) {
-                    t.quests.playerDiscardedLastBatch = true;
-                    QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    addReplacementQuestBatch(t, b);
-                    t.setChanged();
-                    if (!t.getAllQuests().isEmpty()) {
-                        showQuestsUI(sender);
-                    } else {
-                        sender.closeContainer();
-                    }
-                    t.messages.batchRemoved();
-                }
-                return;
+            if (!batchID.equals(b.getBatchUUID())) {
+                continue;
             }
+            if (!t.quests.questBatches.decline(b)) {
+                return false;
+            }
+            t.quests.playerDiscardedLastBatch = true;
+            QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
+            addReplacementQuestBatch(t, b);
+            t.setChanged();
+            t.messages.batchRemoved();
+            return true;
         }
+        return false;
     }
 
     private void addReplacementQuestBatch(
@@ -235,15 +313,20 @@ public class TownQuestsHandle implements QuestsHolder {
             return;
         }
 
+        // The upgrade replacement must not repost what was just declined.
+        ImmutableSet<ResourceLocation> declinedFrom = b.getAll().stream()
+                .map(MCQuest::fromRecipeID)
+                .flatMap(Optional::stream)
+                .collect(ImmutableSet.toImmutableSet());
         if (b.getOwner() != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner(), declinedFrom));
             return;
         }
 
         QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
         UUID owner = t.getRandomVillager();
         if (owner != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.from(owner), declinedFrom));
             return;
         }
 

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -8,22 +9,31 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.town.quests.paths.QuestPath;
+import ca.bradj.questown.town.quests.paths.QuestPathProgress;
+import ca.bradj.questown.town.quests.paths.QuestPaths;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.*;
-import ca.bradj.questown.town.special.SpecialQuests;
-import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.questown.town.special.SpecialQuests;import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
@@ -37,16 +47,18 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -82,6 +94,24 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     };
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
+
+    /**
+     * Whether any of the current quest batches still holds an incomplete quest (the "!" attention
+     * bubble above the flag). Completed quests stay in their batch marked complete until the batch
+     * is declined, so the check is per-quest, not per-batch.
+     */
+    public boolean hasIncompleteQuests() {
+        return questBatches.getAll().stream().anyMatch(q -> !q.isComplete());
+    }
+
+    /** {@code batch UUID | wanted id} of each incomplete quest, for the quests tab's seen check. */
+    public ImmutableSet<String> incompleteQuestKeys() {
+        return questBatches.getAll().stream()
+                .filter(q -> !q.isComplete())
+                .map(q -> q.getBatchUUID() + "|" + q.getWantedId())
+                .collect(ImmutableSet.toImmutableSet());
+    }
+
     private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;
@@ -91,19 +121,226 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.addChangeListener(this);
     }
 
+    /**
+     * The day-one quest batches, added when the flag is placed, in the order the chicken's arc asks
+     * for them: the campfire batch first (its reward is the "your camp is ready" toast; no spawn,
+     * since arrival is gated on the welcome mat), then the gate batch: the TOWN_GATE quest, which
+     * completes when a welcome mat is registered with the flag ({@code registerWelcomeMat}). Its
+     * reward is the first villager at the next morning tick plus the empty-room batch, so the
+     * player learns "a room with a registered door" before the basics batch (job board + store
+     * room), which posts when the empty-room quest completes. On the chicken-assisted path the
+     * chicken builds the gate room before the mat, so the empty-room quest completes on the next
+     * tick; on the no-chicken path the player builds a small room and wands the door.
+     */
     public static void setUpQuestsForNewlyPlacedFlag(
             TownInterface town,
             TownQuests quests
     ) {
-        MCRewardList reward = defaultQuestCompletionRewards(town);
-
-        MCQuestBatch fireQuest = new MCQuestBatch(null, null, new MCDelayedReward(town, reward));
+        MCQuestBatch fireQuest = new MCQuestBatch(null, null, new MCInstantReward(town, new CampfireReadyReward(town)));
         fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
-
         quests.questBatches.add(fireQuest);
+
+        UUID gateUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs gate = new MCQuestBatch.Inputs(gateUUID, null);
+        MCQuest gateQuest = MCQuest.standalone(gateUUID, null, SpecialQuests.TOWN_GATE);
+        gateQuest.setFlavorText("Craft a welcome mat at the town flag (flag > crafting tab) and place it at your town's gate - someone will arrive here in the morning.");
+        gate.addNewQuest(gateQuest);
+        MCRewardList gateReward = new MCRewardList(
+                town,
+                new MCDelayedReward(town, new SpawnVisitorReward(town, VillagerUUID.random())),
+                new MCInstantReward(town, new AddEmptyRoomBatchReward(town))
+        );
+        MCQuestBatch gateBatch = gate.withRewardUponCompletion(gateReward);
+        markOnboarding(gateBatch);
+        quests.questBatches.add(gateBatch);
+    }
+
+    /**
+     * The "empty room" batch: a single ROOM quest that matches the zero-ingredient
+     * {@code empty_room} room recipe, so it completes on any room with a registered door. Posted by
+     * the welcome-mat gate reward; its reward is the basics batch (job board + store room).
+     */
+    void addEmptyRoomBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        MCQuest emptyRoomQuest = roomQuest(batchUUID, SpecialQuests.EMPTY_ROOM);
+        emptyRoomQuest.setFlavorText(
+                "Build a room: four walls and a door. Use your town wand to register the door.");
+        q.addNewQuest(emptyRoomQuest);
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                new MCInstantReward(t, new AddBasicsBatchReward(t)));
+        markOnboarding(qb);
+        questBatches.add(qb);
+        t.messages.broadcastMessage("New quest is available: build a small room and register its door.");
+        QT.QUESTS_LOGGER.info("Empty-room batch posted (onboarding beat between gate and basics)");
+    }
+
+    /**
+     * The "basics" batch the welcome-mat reward posts (job board + store room).
+     * Town-owned; completes on a superset room like the other onboarding
+     * quests. Its reward is the old PHASE_KICKOFF reward (second villager at
+     * the next morning + a batch request), which drives the tutorial phase
+     * machine into the hunter-gatherer batch.
+     */
+    void addBasicsBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
+        // No flavor text: the card tooltip is the two-line mat-format key
+        // menu.quests.roomblock.job_board.
+        q.addNewQuest(jobBoardQuest);
+
+        MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
+        storeRoomQuest.setFlavorText("Place a chest in a room with a wand-registered door.");
+        q.addNewQuest(storeRoomQuest);
+
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                new MCRewardList(
+                        t,
+                        TownFlagTutorialAdapter.from(t, questBatches).makeReward(TutorialTownView.PHASE_KICKOFF),
+                        // Day-2 beat: once the basics land, the job board needs its first
+                        // request. The quest posts here (not on a morning tick) so the board
+                        // exists by the time it is posted.
+                        new MCInstantReward(t, new PostFirstWorkRequestQuestReward(t))
+                ));
+        markOnboarding(qb);
+        questBatches.add(qb);
+        t.messages.broadcastMessage("New quests are available! Right-click the town flag to see them.");
+        QT.QUESTS_LOGGER.info("Basics batch posted (job board + store room) on welcome-mat completion");
+    }
+
+    /**
+     * The day-2 "post your first work request" quest. A single standalone quest in its own batch;
+     * completes from {@link #markFirstWorkRequestCompleteIfActive} when the player posts a request
+     * while it is active ({@code TownFlagBlockEntity.requestWorkFromPlayer}). Auto-posted starter
+     * requests do not count. Reward: one Block of Progress, the currency the board's other beats run
+     * on.
+     */
+    void addFirstWorkRequestBatch() {
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        q.addNewQuest(MCQuest.firstWorkRequest(batchUUID, null));
+        MCQuestBatch qb = q.withRewardUponCompletion(
+                new MCInstantReward(t, new GrantBlockOfProgressReward(t, 1)));
+        questBatches.add(qb);
+        // No broadcast of its own: the morning's "New quests are available!" covers it.
+        QT.QUESTS_LOGGER.info("First-work-request batch posted (day-2 board introduction)");
+    }
+
+    /**
+     * Completes the active day-2 "first work request" quest when the player posts a request
+     * ({@code TownFlagBlockEntity.requestWorkFromPlayer}). No-op when the quest is absent or
+     * already complete.
+     */
+    public void markFirstWorkRequestCompleteIfActive() {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.FIRST_WORK_REQUEST || q.isComplete()) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("First-work-request quest completed on first posted request");
+                return;
+            }
+        }
+    }
+
+    /**
+     * Completes every open SKILL_UNLOCK quest on {@code unlocked}'s skill tree (same root) when the
+     * player spends a Block of Progress on a skill ({@code TownFlagBlockEntity.unlockSkillFromPlayer}).
+     * A quest that names a skill ({@link MCQuest#namedSkill}) completes only for that skill.
+     */
+    public void markSkillUnlocked(JobID unlocked) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.SKILL_UNLOCK || q.isComplete()) {
+                    continue;
+                }
+                if (!MCQuest.skillTreeRoot(q.getWantedId()).equals(unlocked.rootId())) {
+                    continue;
+                }
+                if (MCQuest.namedSkill(q.getWantedId()).map(s -> !s.equals(unlocked)).orElse(false)) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("Skill-unlock quest completed: {} unlocked", unlocked.toNiceString());
+            }
+        }
+    }
+
+    /**
+     * Completes every open VILLAGER_LEVEL quest whose job root has a villager at its level
+     * ({@link VillagerLevelQuests}). Runs from the tick's backfill pass, so a quest posted after
+     * the level was reached closes on the next tick.
+     */
+    void markVillagerLevelsReached(Map<String, Integer> highestLevelByRoot) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.VILLAGER_LEVEL || q.isComplete()) {
+                    continue;
+                }
+                Optional<VillagerLevelQuests.Target> t = VillagerLevelQuests.target(q.getWantedId());
+                if (t.isEmpty() || !VillagerLevelQuests.met(t.get(), highestLevelByRoot)) {
+                    continue;
+                }
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info("Villager-level quest completed: a {} reached level {}", t.get().root(), t.get().level());
+            }
+        }
     }
 
     @NotNull
+    /** Storage room recipes: any of them answers an arrival's storage quest. */
+    private static final ImmutableSet<ResourceLocation> STORAGE_ROOMS = ImmutableSet.of(
+            SpecialQuests.STORE_ROOM_SMALL,
+            new ResourceLocation("questown", "store_room_medium"),
+            new ResourceLocation("questown", "store_room_big"),
+            new ResourceLocation("questown", "store_room_huge"),
+            new ResourceLocation("questown", "storeage_facility")
+    );
+
+    /**
+     * When {@code reward} brings a villager, add the bedroom quests its bed needs and a storage
+     * room quest. {@code wanted}
+     * is the batch's room ids so far; {@code addRoomQuest} adds one room quest to it.
+     */
+    static void provisionArrival(
+            TownInterface town,
+            MCReward reward,
+            Collection<ResourceLocation> wanted,
+            Consumer<ResourceLocation> addRoomQuest
+    ) {
+        ServerLevel level = town.getServerLevel();
+        ArrivalProvisions plan = ArrivalProvisions.plan(
+                reward.contains(RewardsInit.VISITOR.get()),
+                town.missingBedsWithArrivals(1),
+                (int) wanted.stream().filter(id -> QuestBatchSeed.isBedRoom(level, id)).count(),
+                wanted.stream().anyMatch(STORAGE_ROOMS::contains)
+        );
+        for (int i = 0; i < plan.bedQuests(); i++) {
+            addRoomQuest.accept(SpecialQuests.BEDROOM);
+        }
+        if (plan.storageQuest()) {
+            addRoomQuest.accept(SpecialQuests.STORE_ROOM_SMALL);
+        }
+        if (!ArrivalProvisions.NONE.equals(plan)) {
+            QT.QUESTS_LOGGER.info("Batch brings a villager: added {} bedroom quest(s), storage quest: {}",
+                    plan.bedQuests(), plan.storageQuest());
+        }
+    }
+
+    private static void provisionArrival(TutorialTownView view, MCQuestBatch batch) {
+        view.provisionArrival(
+                batch.getReward(),
+                batch.getAll().stream().map(Quest::getWantedId).toList(),
+                id -> batch.addNewQuest(null, id)
+        );
+    }
+
     public static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
@@ -142,20 +379,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             TownQuests quests,
             VillagerUUID visitorUUID
     ) {
+        addUpgradeQuest(town, quests, visitorUUID, Set.of());
+    }
+
+    /**
+     * @param declinedFrom rooms whose upgrade the player just declined: a discard's replacement
+     *                     must not repost it
+     */
+    public static void addUpgradeQuest(
+            TownInterface town,
+            TownQuests quests,
+            VillagerUUID visitorUUID,
+            Set<ResourceLocation> declinedFrom
+    ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
-                                                                .filter(Quest::isComplete).toList();
-        List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
-                                                                               // TODO: Filter out recipes that have already been slated for upgrade?
-                                                                               .filter(v -> v.fromRecipeID().isEmpty())
-                                                                               .toList();
-        Collection<MCQuest> villagerQuests = doneAndReadyForFirstUpgrade;
-
-        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
-        if (villagerQuests.isEmpty()) {
-            villagerQuests = doneAndMaybeAlreadyUpgraded;
-        }
+        Collection<MCQuest> villagerQuests = upgradeSources(quests.getAllForVillager(visitorUUID), declinedFrom);
 
         if (villagerQuests.isEmpty()) {
             QT.QUESTS_LOGGER.error(
@@ -163,6 +402,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     visitorUUID
             );
             QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
+            // The request is what makes that true: tick() only grows a procedural batch for a
+            // queued request.
+            addBatchForVisitor(town, quests, visitorUUID);
             return;
         }
 
@@ -188,6 +430,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         QT.QUESTS_LOGGER.info("No upgrade paths could be determined.");
         QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
+        addBatchForVisitor(town, quests, visitorUUID);
     }
 
     public static void addJobQuest(
@@ -219,23 +462,16 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
         NonNullList<Ingredient> fromIngredients = fromRecipe.get().getIngredients();
 
-
-        List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
-
-        ImmutableList.Builder<ResourceLocation> possibleUpgrades = ImmutableList.builder();
-
-        for (RoomRecipe aRecipe : all) {
-            Collection<List<String>> toIng = getItemKeyStrings(aRecipe.getIngredients());
-            Collection<List<String>> fromIng = getItemKeyStrings(fromIngredients);
-            if (toIng.equals(fromIng)) {
-                continue; // Perfect overlap. So not an upgrade.
-            }
-            if (RoomRecipes.containsAllTags(fromIng, toIng)) {
-                possibleUpgrades.add(aRecipe.getId());
-            }
+        // The holder owns the id in 1.20.2+; the seam pair carries both. (The recipe
+        // object's getId() is null for every codec-constructed recipe — the old
+        // raw-list loop NPE'd inside ImmutableList.Builder.add on the first match.)
+        Map<ResourceLocation, Collection<List<String>>> all = new HashMap<>();
+        for (RecipeRef.RecipePair<RoomRecipe> p : RecipeRef.pairsOf(level.getRecipeManager(), RecipesInit.ROOM)) {
+            all.put(p.id(), getItemKeyStrings(p.value().getIngredients()));
         }
 
-        ImmutableList<ResourceLocation> upgrades = possibleUpgrades.build();
+        List<ResourceLocation> upgrades = RoomRecipes.upgradeCandidates(
+                getItemKeyStrings(fromIngredients), all);
         if (upgrades.isEmpty()) {
             return null;
         }
@@ -246,8 +482,35 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     @NotNull
     private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(ForgeRegistries.ITEMS::getKey)
+                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(Loader::itemIdOf)
                                   .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
+    }
+
+    /** Batch requests waiting for {@link #tick} to grow them into procedural batches. */
+    int pendingBatchRequests() {
+        return questRequests.size();
+    }
+
+    /**
+     * The completed room quests an upgrade may build on: first-tier rooms (not themselves upgrades)
+     * when there are any, else the upgraded ones, minus the rooms in {@code declinedFrom}. Pinned by
+     * {@code TownQuestsUpgradeSourcesTest}.
+     */
+    static List<MCQuest> upgradeSources(
+            Collection<MCQuest> villagerQuests,
+            Set<ResourceLocation> declinedFrom
+    ) {
+        List<MCQuest> done = villagerQuests.stream()
+                .filter(Quest::isComplete)
+                .filter(q -> !declinedFrom.contains(q.getWantedId()))
+                .toList();
+        // TODO: Filter out recipes that have already been slated for upgrade?
+        List<MCQuest> firstTier = done.stream().filter(q -> q.fromRecipeID().isEmpty()).toList();
+        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
+        if (firstTier.isEmpty()) {
+            return done;
+        }
+        return firstTier;
     }
 
     public static void addBatchForVisitor(
@@ -273,25 +536,21 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         quests.addBatch(batch);
     }
 
+    public static void addLootQuest(
+            TownFlagBlockEntity t,
+            TownQuests quests,
+            ResourceLocation itemId,
+            int count
+    ) {
+        @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
+        MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
+        batch.addLootQuest(null, itemId, count);
+        quests.addBatch(batch);
+    }
+
     public static ImmutableSet<VillagerUUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
-    }
-
-    private static boolean sameItem(
-            ItemEconomicsData v,
-            MCTownItem z
-    ) {
-        return Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
-    }
-
-    private static boolean producesFood(
-            TownFlagBlockEntity town,
-            JobID j
-    ) {
-        return ServerJobsRegistry.getResults(town.getTownData(), j).stream().anyMatch(
-                i -> Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
-        );
     }
 
     private static boolean isNotSpecial(ResourceLocation id) {
@@ -313,6 +572,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public void tick(TownInterface town) {
+        retireJobUnlockQuests();
+        backfillSatisfiedQuests(town);
+        postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
+        postPathBatchesIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
+
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
@@ -353,19 +617,20 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = null;
 
         boolean canGrowMore = pop.grow(
-                town::hasEnoughBeds,
+                town::missingBeds,
                 () -> getNeededRooms(town.getEconomicsHandle()).stream().filter(v -> TownQuests.isNotSpecial(v.id()))
                                                                .toList(),
                 () -> {
-                    List<RoomRecipe> rs = level.getRecipeManager()
-                                               .getAllRecipesFor(RecipesInit.ROOM).stream()
-                                               .filter(v -> TownQuests.isNotSpecial(v.getId()))
-                                               .toList();
-                    List<RoomRecipe> recipes = new ArrayList<>(rs);
+                    // The recipe id lives on the holder on 1.20.2+, so look it up through Compat
+                    // (RoomRecipe.getId() is null for registry recipes there).
+                    List<ResourceLocation> ids = new ArrayList<>(
+                            RecipeRef.idsOf(level.getRecipeManager(), RecipesInit.ROOM).stream()
+                                    .filter(TownQuests::isNotSpecial)
+                                    .toList()
+                    );
                     for (Supplier<RoomBlock> roomBlockSupplier : BlockAsRoomEntity.ALL) {
-                        recipes.add(roomBlockSupplier.get().asRecipe());
+                        ids.add(roomBlockSupplier.get().asRecipe().getId());
                     }
-                    List<ResourceLocation> ids = recipes.stream().map(RoomRecipe::getId).toList();
                     return ids;
                 }
         );
@@ -394,6 +659,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             PendingReward pr = questRequests.pop();
             MCDelayedReward rw = new MCDelayedReward(town, pr.reward());
             MCQuestBatch q = pop.get(rw, pr.owner());
+            provisionArrival(town, rw, q.getAll().stream().map(Quest::getWantedId).toList(),
+                    id -> q.addNewQuest(null, id));
+            q.getAll().forEach(quest -> quest.setDiscardable(true));
             questBatches.add(q);
             QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());
             playerDiscardedLastBatch = false;
@@ -403,8 +671,142 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
+    /**
+     * Withdraw every open JOB_UNLOCK quest: a Block of Progress rolls a random root, so such a quest
+     * rarely delivered its job, and post-onboarding quests are room quests only. None are posted any
+     * more; this drains the ones a saved town still carries. A top-need batch keeps its room quest,
+     * tagged with the producer so the top-need beat still sees it as in flight.
+     */
+    void retireJobUnlockQuests() {
+        retireJobUnlockQuests(questBatches.getAllBatches(), questBatches::decline);
+    }
+
+    static void retireJobUnlockQuests(
+            Collection<MCQuestBatch> batches,
+            Consumer<MCQuestBatch> decline
+    ) {
+        for (MCQuestBatch batch : ImmutableList.copyOf(batches)) {
+            for (MCQuest q : ImmutableList.copyOf(batch.getAll())) {
+                if (q.getType() != Quest.QuestType.JOB_UNLOCK || q.isComplete()) {
+                    continue;
+                }
+                String producer = JobID.fromRL(q.getWantedId()).rootId();
+                if (q.unlockStuckRoot().isEmpty()) {
+                    tagTopNeedRoomQuests(batch, producer);
+                }
+                QT.QUESTS_LOGGER.info("Withdrawing retired JOB_UNLOCK quest for root {}", producer);
+                if (batch.withdrawQuest(q) && batch.getAll().isEmpty()) {
+                    decline.accept(batch);
+                }
+            }
+        }
+    }
+
+    private static void tagTopNeedRoomQuests(
+            MCQuestBatch batch,
+            String producer
+    ) {
+        batch.getAll().stream()
+             .filter(q -> q.getType() == Quest.QuestType.ROOM)
+             .forEach(q -> q.setTopNeedProducer(producer));
+    }
+
+    /** The top-need beat is in flight: one of its room quests is still open. */
+    static boolean topNeedBeatOpen(Collection<? extends Quest<?, ?>> quests) {
+        return quests.stream().anyMatch(q -> !q.isComplete() && q.topNeedProducer().isPresent());
+    }
+
+    /**
+     * Producers whose top-need room the town already built. Building the room does not staff it
+     * (no unlock quest any more), so the need can stay on top; without this the beat would post
+     * the same room again.
+     */
+    static Set<String> builtTopNeedProducers(Collection<? extends Quest<?, ?>> quests) {
+        Set<String> built = new HashSet<>();
+        quests.stream()
+              .filter(Quest::isComplete)
+              .forEach(q -> q.topNeedProducer().ifPresent(built::add));
+        return built;
+    }
+
+    /**
+     * The producer root a JOB_UNLOCK quest should target: the first candidate in sorted
+     * order that is not the stuck root itself and not already unlocked by some townie
+     * (an unlocked producer means the town already holds the capacity, so the stuck
+     * state has a different cause and an unlock quest would not help).
+     *
+     * @param stuckRoot the root to exclude, or {@code null} for a town-wide need (the
+     *                  top-need batch — it has no stuck root to exclude).
+     */
+    @Nullable
+    static String chooseProducerRoot(
+            Set<String> producerRoots,
+            @Nullable String stuckRoot,
+            Set<String> unlockedRoots
+    ) {
+        return producerRoots.stream()
+                            .filter(r -> stuckRoot == null || !r.equals(stuckRoot))
+                            .filter(r -> !unlockedRoots.contains(r))
+                            .sorted()
+                            .findFirst()
+                            .orElse(null);
+    }
+
+    /**
+     * The outcome of the top-need walk: the first need with an unlockable producer
+     * (plus the root to unlock). Null {@code need()} means no ranked item was
+     * actionable — the town already holds the capacity, or the supply is player input
+     * — and the batch falls through to the fixed phases.
+     */
+    record TopNeedChoice(@Nullable ItemEconomicsData need, @Nullable String producer) {
+    }
+
+    /**
+     * Walk the ranked unmet-need queue (most-needed first) to the first need a not-yet-unlocked job
+     * can produce. Needs with no producer at all (e.g. player inputs) or with only already-unlocked
+     * producers are <em>skipped</em>, not dead-ends, so one of them never skips the whole batch.
+     * <p>
+     * The walk stops at the <em>first</em> actionable need; the caller checks whether an unlock
+     * quest for its producer is already open and ends the phase: the walk must not reach past an
+     * in-flight one to post for a lower-ranked need.
+     */
+    static TopNeedChoice chooseTopNeed(
+            List<ItemEconomicsData> needs,
+            Function<String, Set<String>> producerRootsFor,
+            Set<String> unlockedRoots
+    ) {
+        for (ItemEconomicsData need : needs) {
+            String key = need.ingredientKey();
+            if (key == null || key.isEmpty()) {
+                continue;
+            }
+            Set<String> roots = producerRootsFor.apply(key);
+            if (roots == null || roots.isEmpty()) {
+                continue;
+            }
+            String producer = chooseProducerRoot(roots, null, unlockedRoots);
+            if (producer != null) {
+                return new TopNeedChoice(need, producer);
+            }
+        }
+        return new TopNeedChoice(null, null);
+    }
+
+    private static Set<String> unlockedRoots(TownInterface town) {
+        Set<String> roots = new HashSet<>();
+        for (ImmutableSet<JobID> jobs : town.getVillagerHandle().getUnlockedJobs().values()) {
+            jobs.forEach(j -> roots.add(j.rootId()));
+        }
+        return roots;
+    }
+
     public boolean isWaitingForHunterGathererTutorial() {
-        if (questBatches.getAllBatches().size() > 3) {
+        // Calibrated to the day-one batch layout: the early tutorial has at most
+        // four batches (campfire + gate + basics + this hunter-gatherer batch;
+        // the old single-kickoff layout had three). Once the town moves past the
+        // tutorial and visitor batches start piling up, the overnight hunter
+        // override must stop dictating BOP-driven job changes.
+        if (questBatches.getAllBatches().size() > 4) {
             return false;
         }
         return questBatches.getAll().stream()
@@ -424,35 +826,33 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
 
         Tutorial r;
-        r = tryPhase1_campfireToKickoff(view);       if (r != null) return r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
+        r = tryPhase2_4_emptyRooms(view);             if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
+        r = tryPhase2_7_miner(view);                  if (r != null) return r;
+        if (!curatedPaths.get().isEmpty()) {
+            // The fork: the top-need, crafter and supply-chain phases left the trunk; the curated
+            // paths follow the miner beat.
+            r = tryPhase3_newJobRoom(view);           if (r != null) return r;
+            r = tryCuratedPaths(view);                if (r != null) return r;
+            return Tutorial.DONE;
+        }
+        r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
         r = tryPhase5_supplyChain(view);              if (r != null) return r;
-        r = tryPhase6_storageUpgrade(view);           if (r != null) return r;
-        r = tryPhase7_exoticWood(view);               if (r != null) return r;
+        // The supply chain is the last scripted beat.
+        if (!supplyChainsTriggerFired) {
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
+            supplyChainsTriggerFired = true;
+        }
         return Tutorial.DONE;
     }
 
-    private @Nullable Tutorial tryPhase1_campfireToKickoff(TutorialTownView view) {
-        if (questBatches.hasOneQuestOnly(SpecialQuests.CAMPFIRE::equals)) {
-            addQuestsForVillagerKickoff(view);
-            view.broadcastTutorialToast(
-                    "tutorial.visitor_arrived.title",
-                    "tutorial.visitor_arrived.description"
-            );
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!allVillagerKickoffQuestsDone()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
-    }
-
     private @Nullable Tutorial tryPhase2_hunterGatherer(TutorialTownView view) {
-        if (view.villagerCount() < 2) {
+        // One villager: this batch posts the raw-food quest, and the second villager is
+        // held until that quest completes (isArrivalGateOpen) - waiting for two deadlocks.
+        if (view.villagerCount() < 1) {
             return Tutorial.SKIPPED;
         }
         if (questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE)) {
@@ -464,12 +864,102 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return Tutorial.APPLIED;
     }
 
+    /**
+     * A bedroom quest between the hunter-gatherer batch and the cook batch, filling the wait for
+     * villager 2's morning arrival (a good time to build a bedroom). Posted once the hunter-gatherer
+     * batch is fully done; the cook batch waits for it. A town whose cook batch is already out skips
+     * it.
+     */
+    private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
+        if (cookBatchPosted()) {
+            return null;
+        }
+        if (!hunterGathererBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        if (!emptyRoomsBatchPosted()) {
+            addNewcomerBedroomBatch(view);
+            notifyNewQuests(view);
+            return Tutorial.APPLIED;
+        }
+        if (!emptyRoomsBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        return null;
+    }
+
+    private boolean cookBatchPosted() {
+        return questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() >= 2;
+    }
+
+    private boolean hunterGathererBatchComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    /**
+     * The post-hunter room batch: a BEDROOM-only batch (EMPTY_ROOM-only in older worlds) posted after
+     * the hunter-gatherer batch. Order is the marker, because the day-1 batch (`addEmptyRoomBatch`,
+     * posted by the gate reward before the basics) is also a single EMPTY_ROOM quest; older worlds
+     * hold a two-quest batch here, which this still finds.
+     */
+    private @Nullable MCQuestBatch emptyRoomsBatch() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        boolean afterHunterGatherer = false;
+        for (MCQuestBatch b : questBatches.getAllBatches()) {
+            if (b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId()))) {
+                afterHunterGatherer = true;
+                continue;
+            }
+            if (afterHunterGatherer && !b.getAll().isEmpty()
+                    && b.getAll().stream().allMatch(q -> POST_HUNTER_ROOMS.contains(q.getWantedId()))) {
+                return b;
+            }
+        }
+        return null;
+    }
+
+    private boolean emptyRoomsBatchPosted() {
+        return emptyRoomsBatch() != null;
+    }
+
+    private boolean emptyRoomsBatchComplete() {
+        MCQuestBatch b = emptyRoomsBatch();
+        return b != null && b.getAll().stream().allMatch(Quest::isComplete);
+    }
+
+    private static final Set<ResourceLocation> POST_HUNTER_ROOMS = Set.of(SpecialQuests.BEDROOM, SpecialQuests.EMPTY_ROOM);
+
+    void addNewcomerBedroomBatch(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        // A NEW bedroom: a room quest never completes on a room that already completed a quest for
+        // the same recipe (isClaimedFor), so the hunter-gatherer bedroom does not satisfy it. With
+        // it the town has a bed each for villagers 1 and 2. No flavor text: the standard
+        // room-recipe tooltip.
+        q.addNewQuest(roomQuest(batchUUID, SpecialQuests.BEDROOM));
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_EMPTY_ROOMS));
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Tutorial bedroom batch added (a new bedroom before the cook batch)");
+    }
+
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
-        if (view.villagerCount() < 3) {
+        // Two villagers: the hunter and the one who becomes the cook. Villager 2 is the
+        // hunter-gatherer batch's reward, villager 3 this batch's.
+        if (view.villagerCount() < 2) {
             return Tutorial.SKIPPED;
         }
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
+            if (!hunterRawFoodLootComplete()) {
+                return Tutorial.SKIPPED;
+            }
             addQuestsForJobChangeAndFood(view);
+            // The batch carries the first room upgrade (Small Storeroom -> Storeroom): open
+            // the upgrades lesson (entries/lesson_upgrades) with it.
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
@@ -477,6 +967,307 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         return null;
+    }
+
+    /**
+     * The fixed post-cook miner beat: same pattern as the hunter and cook beats (the room the miner
+     * needs + the pickaxes it holds + N of its initial item (coal), and a JOB_CHANGE that the
+     * BOP-spend onboarding guarantee (markOnboarding) routes to miner/coal). Posted after the two
+     * onboarding job changes (hunter + cook) have landed, while no JOB_CHANGE is open. Coal becomes
+     * the town's top need the moment the kitchen starts feeding, so this beat lands where the coal
+     * pain starts; the need-driven top-need batch picks up whatever need is NOT coal.
+     */
+    private @Nullable Tutorial tryPhase2_7_miner(TutorialTownView view) {
+        if (jobChangesComplete() < 2) {
+            // Two completed job changes (hunter + cook) = "after cook".
+            return Tutorial.SKIPPED;
+        }
+        if (view.villagerCount() < 3) {
+            return Tutorial.SKIPPED;
+        }
+        if (minerBeatPosted()) {
+            // Posted once. Re-posting it on every batch request let backfill close each copy at
+            // once and its reward bring another villager.
+            return null;
+        }
+        if (questBatches.includes(q -> !q.isComplete() && q.getType() == Quest.QuestType.JOB_CHANGE)) {
+            // A job change is in flight; wait for it to land (or be dropped) before
+            // the miner beat's BOP spend has a clean guarantee slot.
+            return null;
+        }
+        addMiner(view);
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    /** The loaded curated paths; a test substitutes its own. */
+    Supplier<List<QuestPath>> curatedPaths = QuestPaths::all;
+    // Paths whose finish has fired its advancement this session (announceIfFinished); not saved.
+    private final Set<String> announcedPaths = new HashSet<>();
+
+    /**
+     * The fork: the onboarding miner batch is complete. Each path's starter batches post there, so
+     * the paths follow the trunk.
+     */
+    boolean atTheFork() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.isOnboarding()
+                        && q.getType() == Quest.QuestType.JOB_CHANGE
+                        && minerJob.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    /**
+     * Posts every path batch that is due: starters at the fork, then any batch whose opens_after
+     * batches are complete ({@link QuestPathProgress}). Runs every tick, because a batch with no
+     * arrival queues no batch request for the ladder to answer (like {@link #postCookFollowUpIfDue}).
+     */
+    void postPathBatchesIfDue(TutorialTownView view) {
+        if (!atTheFork()) {
+            return;
+        }
+        boolean postedAny = false;
+        for (QuestPath path : curatedPaths.get()) {
+            Set<String> posted = pathBatchIds(path, false);
+            Set<String> done = pathBatchIds(path, true);
+            for (QuestPath.Batch b : QuestPathProgress.toPost(path, posted, done)) {
+                if (b.isStarter()) {
+                    view.fireTutorialTrigger(TutorialTrigger.Triggers.TutorialComplete);
+                }
+                addPathBatch(view, path, b);
+                postedAny = true;
+            }
+            announceIfFinished(view, path, posted, done);
+        }
+        if (postedAny) {
+            notifyNewQuests(view);
+        }
+    }
+
+    /**
+     * A finished path fires its advancement once per session: a
+     * path batch's reward queues no ladder pass, so this per-tick step is where the end is seen.
+     * A reload fires it again; the grant is once per player.
+     */
+    private void announceIfFinished(TutorialTownView view, QuestPath path, Set<String> posted, Set<String> done) {
+        if (announcedPaths.contains(path.id()) || !QuestPathProgress.taken(path, done)) {
+            return;
+        }
+        if (!QuestPathProgress.finished(path, posted, done)) {
+            return;
+        }
+        announcedPaths.add(path.id());
+        TutorialTrigger.Triggers.forPath(path.id()).ifPresent(view::fireTutorialTrigger);
+        QT.QUESTS_LOGGER.info("Quest path finished: {}", path.id());
+    }
+
+    /**
+     * The ladder's path step: holds the garden while a taken path has batches left. Until a path is
+     * taken the garden waits too, so the starters are the only new quests.
+     */
+    @Nullable Tutorial tryCuratedPaths(TutorialTownView view) {
+        if (!atTheFork()) {
+            return Tutorial.SKIPPED;
+        }
+        postPathBatchesIfDue(view);
+        boolean anyTaken = false;
+        for (QuestPath path : curatedPaths.get()) {
+            Set<String> done = pathBatchIds(path, true);
+            if (!QuestPathProgress.taken(path, done)) {
+                continue;
+            }
+            anyTaken = true;
+            if (!QuestPathProgress.finished(path, pathBatchIds(path, false), done)) {
+                return Tutorial.SKIPPED;
+            }
+        }
+        return anyTaken ? null : Tutorial.SKIPPED;
+    }
+
+    /** The batch ids of {@code path} this town has posted, or (completeOnly) completed. */
+    Set<String> pathBatchIds(QuestPath path, boolean completeOnly) {
+        String prefix = path.id() + "/";
+        Map<String, Boolean> allComplete = new HashMap<>();
+        for (MCQuest q : questBatches.getAll()) {
+            q.pathBatch()
+             .filter(t -> t.startsWith(prefix))
+             .ifPresent(t -> allComplete.merge(t.substring(prefix.length()), q.isComplete(), Boolean::logicalAnd));
+        }
+        if (!completeOnly) {
+            return allComplete.keySet();
+        }
+        return allComplete.entrySet().stream()
+                          .filter(Map.Entry::getValue)
+                          .map(Map.Entry::getKey)
+                          .collect(Collectors.toSet());
+    }
+
+    private void addPathBatch(TutorialTownView view, QuestPath path, QuestPath.Batch batch) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        for (QuestPath.Step s : batch.quests()) {
+            q.addNewQuest(pathQuest(batchUUID, s));
+            if (s.kind() == QuestPath.Kind.SKILL) {
+                view.revealSkill(pathJob(s.id()));
+            }
+        }
+        String phase = batch.arrival() ? TutorialTownView.PHASE_PATH_ARRIVAL : TutorialTownView.PHASE_PATH;
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(phase));
+        if (batch.arrival()) {
+            provisionArrival(view, qq);
+        }
+        // Tag after provisioning, so the arrival's bed and storeroom quests count toward the batch.
+        qq.getAll().forEach(quest -> quest.setPathBatch(path.batchTag(batch)));
+        // Onboarding-flagged: a path's job change gets the trunk's guaranteed root and applies at
+        // the spend.
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Quest path batch posted: {}", path.batchTag(batch));
+    }
+
+    private static MCQuest pathQuest(UUID batchUUID, QuestPath.Step s) {
+        return switch (s.kind()) {
+            case ROOM -> MCQuest.standalone(batchUUID, null, new ResourceLocation(s.id()));
+            case JOB_CHANGE -> {
+                MCQuest job = MCQuest.jobChange(batchUUID, null, pathJob(s.id()));
+                job.setFlavorText("Right-click a villager and use Blocks of Progress");
+                yield job;
+            }
+            case LOOT -> MCQuest.loot(batchUUID, null, new ResourceLocation(s.id()), s.count());
+            case SKILL -> MCQuest.namedSkillUnlock(batchUUID, null, pathJob(s.id()));
+            case LEVEL -> MCQuest.villagerLevel(batchUUID, null, s.id(), s.count());
+        };
+    }
+
+    private static JobID pathJob(String rootSlashJob) {
+        String[] parts = rootSlashJob.split("/");
+        return new JobID(parts[0], parts[1]);
+    }
+
+    private boolean minerBeatPosted() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE
+                && minerJob.equals(q.getWantedId()));
+    }
+
+    void addMiner(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        MCQuest minerJobQuest = MCQuest.jobChange(batchUUID, null, ONBOARDING_MINER_JOB);
+        minerJobQuest.setFlavorText("Your town needs a miner. Teach a villager the miner job so coal stops being hand-fed.");
+        q.addNewQuest(minerJobQuest);
+
+        MCQuest pickaxeQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_PICKAXE), 4);
+        pickaxeQuest.setFlavorText("Craft 4 wooden pickaxes and place them in your store room chest. Each miner carries one.");
+        q.addNewQuest(pickaxeQuest);
+
+        // A LOOT quest, counted as the miner extracts coal (as a stock quest the cook would burn
+        // each coal within seconds). Three, not eight: coal is ~27% of a miner's trip
+        // (jobs/miner/default.json, weight 50 of 182).
+        MCQuest coalQuest = MCQuest.loot(batchUUID, null, Compat.getItemId(Items.COAL), 3);
+        coalQuest.setFlavorText("Your miner will dig coal so the furnaces keep running. This completes once they have mined 3.");
+        q.addNewQuest(coalQuest);
+
+        MCQuest mineshaftQuest = MCQuest.standalone(batchUUID, null, view.getRoomForJob(new JobID("miner", "coal")));
+        // A mineshaft is a block-room: the block itself is the room, no walls or door.
+        mineshaftQuest.setFlavorText("The miner needs a mineshaft to work in. Craft one at the town flag from stone stairs and place it near the flag.");
+        q.addNewQuest(mineshaftQuest);
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_MINER));
+        provisionArrival(view, qq);
+        // Onboarding-flow quest: like the other tutorial-phase batches, it is
+        // onboarding-flagged so the open miner JOB_CHANGE quest fills the BOP-spend
+        // guarantee slot (onboardingJobChangeGuarantee) instead of a pre-roll.
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.debug("Tutorial batch #2.5 (miner) was added to town: {}", qq.toNiceString());
+    }
+
+    /**
+     * The emergent batch after the cook lands: names the town's most-requested
+     * unmet supply (ranked from the economics need queue) and posts "build the
+     * base room of the job that produces it". The content is need-driven, not
+     * scripted: whichever root produces the top need wins (coal -> miner today),
+     * and if nothing can produce the top supply the batch is skipped and the
+     * fixed phases continue. One beat at a time (an open top-need room quest
+     * locks it); a producer some townie already has, or whose room was already
+     * built for this beat, is skipped.
+     */
+    private @Nullable Tutorial tryPhase2_75_topNeedUnlock(TutorialTownView view) {
+        if (jobChangesComplete() < 2) {
+            // Two completed job changes (hunter + cook) = "after cook".
+            return Tutorial.SKIPPED;
+        }
+        if (!town.isInitialized()) {
+            // No town state to read from; nothing to name yet. Continue the fixed phases.
+            return null;
+        }
+        TownFlagBlockEntity t = town.getUnsafe();
+        TownInterface ti = town.getUnsafe();
+        NoMCEconomics econ = t.getEconomicsHandle();
+        econ.update();
+        ImmutableList<ItemEconomicsData> needs = econ.getAggregatedItems(null);
+        if (needs.isEmpty()) {
+            // No unmet supply registered yet; nothing to name. Continue the fixed phases.
+            QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
+            return null;
+        }
+        if (topNeedBeatOpen(questBatches.getAll())) {
+            // Lock-until-complete: the in-flight top-need room quest stays pinned to its target.
+            // Don't re-roll the top need or post a fresh quest until it completes.
+            return Tutorial.SKIPPED;
+        }
+        ServerLevel level = t.getServerLevel();
+        Set<String> unlocked = unlockedRoots(ti);
+        Set<String> excluded = new HashSet<>(unlocked);
+        excluded.addAll(builtTopNeedProducers(questBatches.getAll()));
+        TopNeedChoice choice = chooseTopNeed(
+                needs,
+                key -> ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(key)),
+                excluded
+        );
+        if (choice.need() == null) {
+            // Nothing in the ranking has a producer the town could unlock (player input
+            // or already-unlocked capacity); nothing to name. Continue the fixed phases.
+            QT.QUESTS_LOGGER.info("Top-need batch: walked {} need(s); none actionable (unlocked or built {})",
+                    needs.size(), excluded);
+            return null;
+        }
+        ItemEconomicsData top = choice.need();
+        String producer = choice.producer();
+        QT.QUESTS_LOGGER.info("Top-need batch: chose need {} (x{}) -> producer {} (unlocked {})",
+                top.ingredientKey(), top.timesNeeded(), producer, unlocked);
+        JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
+                .filter(j -> producer.equals(j.rootId()))
+                .findFirst()
+                .orElse(new JobID(producer, producer));
+        ResourceLocation room = view.getRoomForJob(rootJob);
+        String itemName = Ingredients.getName(Ingredients.fromString(top.ingredientKey())).getString();
+
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        // Room only: the old "Unlock job" quest asked for a BOP spend that rolls
+        // a random root, so it rarely delivered the producer.
+        MCQuest roomQuest = MCQuest.standalone(batchUUID, null, room);
+        roomQuest.setTopNeedProducer(producer);
+        roomQuest.setFlavorText("Your town keeps running out of " + itemName + ". A " + producer
+                + " can make it. Build the " + producer + " room and register its door so one has a place to work.");
+        q.addNewQuest(roomQuest);
+        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_NEW_JOB_ROOM));
+        provisionArrival(view, qb);
+        questBatches.add(qb);
+        QT.QUESTS_LOGGER.info("Top-need batch posted: {} room {} (top need {})",
+                producer, room, top.ingredientKey());
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    private int jobChangesComplete() {
+        return (int) questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete())
+                .count();
     }
 
     private @Nullable Tutorial tryPhase3_newJobRoom(TutorialTownView view) {
@@ -514,31 +1305,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return null;
     }
 
-    private @Nullable Tutorial tryPhase6_storageUpgrade(TutorialTownView view) {
-        if (!phase6Started()) {
-            view.fireTutorialTrigger(TutorialTrigger.Triggers.SecondJobType);
-            addPhase6StorageUpgradeQuest(view);
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!phase6Complete()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
-    }
 
-    private @Nullable Tutorial tryPhase7_exoticWood(TutorialTownView view) {
-        if (!phase7Started()) {
-            view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
-            addPhase7ExoticWoodQuest(view);
-            notifyNewQuests(view);
-            return Tutorial.APPLIED;
-        }
-        if (!phase7Complete()) {
-            return Tutorial.SKIPPED;
-        }
-        return null;
-    }
 
     private static final ResourceLocation CRAFTER_STICK_JOB = JobID.toRL(new JobID("crafter", "stick"));
     private static final ResourceLocation CRAFTER_BOWL_JOB = JobID.toRL(new JobID("crafter", "bowl"));
@@ -546,9 +1313,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static final ResourceLocation FARMER_JOB = JobID.toRL(new JobID("farmer", "wheat"));
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
     private static final ResourceLocation KITCHEN_SMALL = new ResourceLocation("questown", "kitchen_small");
+    private static final ResourceLocation BIG_BEDROOM = new ResourceLocation("questown", "big_bedroom");
+    // Per load; the advancement grant itself is idempotent.
+    private boolean supplyChainsTriggerFired = false;
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
 
-    static final String PHASE_7_FLAVOR_KEYWORD = "flagpole";
 
     private boolean phase4Started() {
         return questBatches.includes(q -> CRAFTER_STICK_JOB.equals(q.getWantedId()) && q.getType() == Quest.QuestType.JOB_CHANGE);
@@ -566,21 +1335,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return questBatches.includes(q -> q.getType() == Quest.QuestType.CONCURRENT_JOBS && q.isComplete());
     }
 
-    private boolean phase6Started() {
-        return questBatches.includes(q -> STORE_ROOM_MEDIUM.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM);
-    }
 
-    private boolean phase6Complete() {
-        return questBatches.includes(q -> STORE_ROOM_MEDIUM.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM && q.isComplete());
-    }
-
-    private boolean phase7Started() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD));
-    }
-
-    private boolean phase7Complete() {
-        return questBatches.includes(q -> q.getType() == Quest.QuestType.ITEM && q.getFlavorText() != null && q.getFlavorText().contains(PHASE_7_FLAVOR_KEYWORD) && q.isComplete());
-    }
 
     private void grantTutorialBop(TutorialTownView view) {
         if (view.tutorialBopGranted()) {
@@ -593,6 +1348,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     private void notifyNewQuests(TutorialTownView view) {
         view.broadcastMessage("New quests are available! Right-click the town flag to see them.");
+    }
+
+    /**
+     * Flags a batch's quests as onboarding so they complete on a room that is a superset of the
+     * wanted recipe ("any storeroom"), unlike random/procedural quests which require an exact recipe
+     * match.
+     */
+    private static void markOnboarding(MCQuestBatch batch) {
+        for (MCQuest q : batch.getAll()) {
+            q.setOnboarding(true);
+        }
     }
 
     private void addPhase4CrafterQuests(TutorialTownView view) {
@@ -609,6 +1375,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         batchA.addNewQuest(craftingRoomQuest);
 
         MCQuestBatch batchAQ = batchA.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4A));
+        markOnboarding(batchAQ);
         questBatches.add(batchAQ);
 
         // Batch B: Specialize crafter to bowl
@@ -620,6 +1387,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         batchB.addNewQuest(bowlJobQuest);
 
         MCQuestBatch batchBQ = batchB.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_4B));
+        markOnboarding(batchBQ);
         questBatches.add(batchBQ);
 
         QT.QUESTS_LOGGER.info("Tutorial phase 4 quests added (crafter + bowl)");
@@ -640,48 +1408,12 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         q.addNewQuest(kitchenQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_5));
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial phase 5 quests added (supply chain)");
     }
 
-    private void addPhase6StorageUpgradeQuest(TutorialTownView view) {
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest upgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
-        upgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
-        q.addNewQuest(upgradeQuest);
-
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_6));
-        questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial phase 6 quest added (storage upgrade)");
-    }
-
-    private void addPhase7ExoticWoodQuest(TutorialTownView view) {
-        ResourceLocation exoticWood = view.getExoticWood();
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-
-        MCQuest woodQuest = MCQuest.item(batchUUID, null, exoticWood, 1);
-        String woodName = exoticWood.getPath().replace("_", " ");
-        woodQuest.setFlavorText("Your village deserves a proper " + PHASE_7_FLAVOR_KEYWORD + ". Bring back " + woodName + " from the lands beyond.");
-        q.addNewQuest(woodQuest);
-
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_7));
-        questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Tutorial phase 7 quest added (exotic wood: {})", exoticWood);
-    }
-
-    private boolean allVillagerKickoffQuestsDone() {
-        return VILLAGER_KICKOFF_QUESTS.stream().allMatch(k -> questBatches.includes(q -> isDoneRoom(q, k)));
-    }
-
-    private static boolean isDoneRoom(
-            MCQuest v,
-            ResourceLocation bedroom
-    ) {
-        return v.isComplete() && v.getType() == Quest.QuestType.ROOM && bedroom.equals(v.getWantedId());
-    }
 
     private record JobHaver(VillagerUUID villager, JobID job) {
     }
@@ -741,37 +1473,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return batch.getAll().stream().allMatch(v -> v.getWantedId().equals(room));
     }
 
-    static final ImmutableList<ResourceLocation> VILLAGER_KICKOFF_QUESTS = ImmutableList.of(
-            SpecialQuests.TOWN_GATE,
-            SpecialQuests.JOB_BOARD,
-            SpecialQuests.STORE_ROOM_SMALL
-    );
-
-    private void addQuestsForVillagerKickoff(TutorialTownView view) {
-        UUID batchUUID = UUID.randomUUID();
-        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-
-        MCQuest jobBoardQuest = roomQuest(batchUUID, SpecialQuests.JOB_BOARD);
-        jobBoardQuest.setFlavorText("Place a wooden sign in a registered room. It will become a Job Board — this is how villagers find work.");
-        q.addNewQuest(jobBoardQuest);
-
-        MCQuest storeRoomQuest = roomQuest(batchUUID, SpecialQuests.STORE_ROOM_SMALL);
-        storeRoomQuest.setFlavorText("Place a chest in a room and register the door. Villagers store their work here.");
-        q.addNewQuest(storeRoomQuest);
-
-        MCQuest gateQuest = roomQuest(batchUUID, SpecialQuests.TOWN_GATE);
-        gateQuest.setFlavorText("Build a fence gate entrance for your town. Villagers need a way in.");
-        q.addNewQuest(gateQuest);
-
-        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.WOODEN_SWORD), 1);
-        swordQuest.setFlavorText("Craft a wooden sword and place it in your store room chest. Your villager will need it.");
-        q.addNewQuest(swordQuest);
-
-        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_KICKOFF));
-        questBatches.add(qb);
-        QT.QUESTS_LOGGER.debug("Tutorial quests added to town: {}", qb.toNiceString());
-    }
-
     private MCQuest roomQuest(
             UUID batchUUID,
             ResourceLocation roomId
@@ -779,47 +1480,161 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return MCQuest.standalone(batchUUID, null, roomId);
     }
 
-    private void addHunterGatherer(TutorialTownView view) {
+    /**
+     * The onboarding cook beat's job: a REGISTERED cook job (not the simple-furnace template's
+     * source id, which ResourceJobLoader expands and never registers). cook/extract is the cook
+     * progression root.
+     */
+    public static final JobID ONBOARDING_COOK_JOB = new JobID("cook", "extract");
+
+    /** The post-cook miner beat's job (phase 2.7). */
+    static final JobID ONBOARDING_MINER_JOB = new JobID("miner", "coal");
+
+    void addHunterGatherer(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
 
-        MCQuest muttonQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.MUTTON), 1);
-        muttonQuest.setFlavorText("Hunt a sheep and place the mutton in a store room chest. Your villagers need food.");
-        q.addNewQuest(muttonQuest);
+        MCQuest rawFoodQuest = MCQuest.loot(
+                batchUUID, null, TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location(), 1
+        );
+        rawFoodQuest.setFlavorText("Your villagers need food. A villager must bring back raw food.");
+        q.addNewQuest(rawFoodQuest);
 
-        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 1);
-        swordQuest.setFlavorText("Upgrade your villager's weapon. Craft a stone sword and place it in a store room chest.");
+        // One sword quest: "4 stone swords".
+        MCQuest swordQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.STONE_SWORD), 4);
+        swordQuest.setFlavorText("Craft 4 stone swords and place them in your store room chest. Each hunter carries one.");
         q.addNewQuest(swordQuest);
 
         MCQuest hunterQuest = MCQuest.jobChange(batchUUID, null, new JobID("hunter", "sword"));
         hunterQuest.setFlavorText("Right-click a villager and use Blocks of Progress");
         q.addNewQuest(hunterQuest);
 
+        // No flavor text: the card shows the standard room-recipe tooltip ("Build a room
+        // containing the blocks shown here").
         MCQuest bedroomQuest = MCQuest.standalone(batchUUID, null, SpecialQuests.BEDROOM);
-        bedroomQuest.setFlavorText("Place a bed in a room and register the door. Villagers need rest.");
         q.addNewQuest(bedroomQuest);
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_HUNTER_GATHERER));
+        // Onboarding-flow quest: like the other tutorial-phase batches (see
+        // addQuestsForJobChangeAndFood), it is onboarding-flagged. Without the flag the
+        // open hunter JOB_CHANGE quest is invisible to onboardingJobChangeGuarantee, and
+        // a BOP spend pre-rolls arbitrarily instead of promising the hunter the quest names.
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
+    }
+
+    private boolean hunterRawFoodLootComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAll().stream().anyMatch(
+                q -> q.getType() == Quest.QuestType.LOOT
+                        && rawFood.equals(q.getWantedId())
+                        && q.isComplete()
+        );
     }
 
     private void addQuestsForJobChangeAndFood(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
-        JobID jc = view.chooseJobForTutorial(questBatches);
 
-        MCQuest appleQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.APPLE), 10);
-        appleQuest.setFlavorText("Gather apples and place them in a store room chest. A growing village needs supplies.");
-        q.addNewQuest(appleQuest);
+        MCQuest cookJobQuest = MCQuest.jobChange(batchUUID, null, ONBOARDING_COOK_JOB);
+        cookJobQuest.setFlavorText("Your town needs a cook. Teach a villager the cook job so raw food becomes a meal.");
+        q.addNewQuest(cookJobQuest);
 
-        MCQuest jobQuest = MCQuest.jobChange(batchUUID, null, jc);
-        jobQuest.setFlavorText("Your town needs variety. Open a villager's skill tree and assign a new job.");
-        q.addNewQuest(jobQuest);
+        // Cooked Food x5, the cook skill and villager 3's bed wait for the cook: they ride the
+        // follow-up batch (postCookFollowUpIfDue), so the cook's batch stays small.
 
-        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
+        MCQuest kitchenQuest = MCQuest.standalone(batchUUID, null, KITCHEN_SMALL);
+        kitchenQuest.setFlavorText("The cook needs a kitchen. Place a furnace in a room and register the door.");
+        q.addNewQuest(kitchenQuest);
+
+        // Storage starts to fill around the kitchen beat, so
+        // the Small Storeroom (1 chest) -> Storeroom (2 chests) upgrade rides this batch. It
+        // replaces the old storage-upgrade phase 6.
+        MCQuest storageUpgradeQuest = MCQuest.upgrade(batchUUID, null, SpecialQuests.STORE_ROOM_SMALL, STORE_ROOM_MEDIUM);
+        storageUpgradeQuest.setFlavorText("Storage fills fast. Upgrade before production stops.");
+        q.addNewQuest(storageUpgradeQuest);
+
+        // Villager 3 is the follow-up's reward. This one grants a Block of Progress: the cook
+        // skill the follow-up asks for costs one.
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_COOK_JOB));
+        // Onboarding-flow quest: like the other tutorial-phase batches, it is
+        // onboarding-flagged.
+        // The cook it staffs gets the starter recipe (cook/mutton) through the
+        // root's default work — the simple-furnace template's `starter_recipes`
+        // lists it, so every cook (onboarding or not) unlocks extract + fuel +
+        // mutton at staff (see ChangeJobReward.getApplier / ServerJobsRegistry).
+        // Its room quest completes on a superset room per the
+        // storeroom design.
+        markOnboarding(qq);
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
+    }
+
+    /**
+     * Posts the cook follow-up batch (Cooked Food x5, a cook skill, villager 3's bed) once the
+     * onboarding cook JOB_CHANGE is complete, by whatever path it completed, and a villager is on
+     * the cook root (a BOP spend closes the quest at once but the job changes the next morning).
+     * Runs every tick;
+     * a no-op once any onboarding cooked-food quest exists, so an old-shape cook batch (which
+     * carried these quests itself) never gets a second copy.
+     */
+    void postCookFollowUpIfDue(TutorialTownView view) {
+        ResourceLocation cookJob = JobID.toRL(ONBOARDING_COOK_JOB);
+        ResourceLocation cookedFood = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
+        List<MCQuest> all = questBatches.getAll();
+        boolean cookUnlocked = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.JOB_CHANGE
+                && cookJob.equals(q.getWantedId())
+                && q.isComplete());
+        if (!cookUnlocked) {
+            return;
+        }
+        if (!view.anyVillagerOnRoot(ONBOARDING_COOK_JOB.rootId())) {
+            return;
+        }
+        boolean posted = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.LOOT
+                && cookedFood.equals(q.getWantedId()));
+        if (posted) {
+            return;
+        }
+        addCookFollowUpBatch(view);
+        notifyNewQuests(view);
+    }
+
+    /**
+     * Five cooks at 200 XP each (cook:mutton) reach the default first level (Level1ExperienceRequired
+     * 1000), so the quest ends on a Block of Progress.
+     */
+    static final int COOKED_FOOD_COUNT = 5;
+
+    private void addCookFollowUpBatch(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        // Cooked food only: with #villager_food a gatherer's apples and carrots could fill it.
+        MCQuest cookedFoodQuest = MCQuest.loot(
+                batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), COOKED_FOOD_COUNT
+        );
+        cookedFoodQuest.setFlavorText("Feed your growing village. Produce five pieces of food from the raw food you have gathered.");
+        q.addNewQuest(cookedFoodQuest);
+
+        // A skill on the cook's tree, beside the food quest it helps fill: the cook knows only mutton, and a second recipe cooks the other
+        // raw meat the hunter brings. Teaches skill unlocking with a BOP. The cook can take a skill
+        // once its first meals level it (skills unlock from level 2).
+        q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB.rootId()));
+
+        // This batch brings villager 3, so it carries a bed for them: the hunter-gatherer
+        // bedroom (2 beds) becomes a big bedroom (4 beds). Onboarding rule:
+        // a batch that brings a villager carries the bed that villager will sleep in.
+        // No flavor text: the standard room-upgrade tooltip.
+        q.addNewQuest(MCQuest.upgrade(batchUUID, null, SpecialQuests.BEDROOM, BIG_BEDROOM));
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Cook follow-up batch posted (cooked food + cook skill) on cook unlock");
     }
 
     private void addQuestForNewJobRoom(
@@ -848,7 +1663,36 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             ResourceLocation q
     ) {
+        if (isClaimedFor(room, q)) {
+            return;
+        }
         questBatches.markRecipeAsComplete(room, q);
+    }
+
+    /**
+     * Whether {@code room} is already spent for a quest wanting {@code q}: an empty-room quest needs a
+     * room no completed quest claimed; any other room quest needs a room that has not completed a
+     * quest for the same recipe, so two bedroom quests take two bedrooms (ArrivalProvisions' bed
+     * quests too).
+     */
+    boolean isClaimedFor(MCRoom room, ResourceLocation q) {
+        if (SpecialQuests.EMPTY_ROOM.equals(q)) {
+            return isClaimedByACompletedQuest(room);
+        }
+        return questBatches.getAll().stream()
+                .filter(done -> q.equals(done.getWantedId()))
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
+    }
+
+    /**
+     * An "empty room" quest asks for a NEW room: it matches any registered room, so without this
+     * every later empty-room quest would close at once on rooms the town already has.
+     */
+    boolean isClaimedByACompletedQuest(MCRoom room) {
+        return questBatches.getAll().stream()
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
     }
 
     public void markAsConverted(
@@ -869,6 +1713,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questCompleted(MCQuest quest) {
+        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
+            QT.QUESTS_LOGGER.warn("[DEV-DIAG:quest-done] {} {}", quest.getType(), quest.getWantedId());
+        }
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         t.messages.questCompleted(quest);
         t.setChanged();
@@ -908,12 +1755,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /**
+     * Chapter triggers at 5/10/20 completed procedural batches. The first batch posts no broadcast
+     * of its own: the per-quest "Quest completed: …" lines already say it.
+     */
     private void fireChapterMilestonesIfNeeded() {
         TownFlagBlockEntity t = town.getUnsafe();
         t.completedProceduralBatches++;
-        if (t.completedProceduralBatches == 1) {
-            t.messages.broadcastMessage("messages.tutorial.complete");
-        } else if (t.completedProceduralBatches == 5) {
+        if (t.completedProceduralBatches == 5) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter2);
         } else if (t.completedProceduralBatches == 10) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter3);
@@ -927,6 +1776,98 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return;
         }
         AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(sl, trigger, t.getBlockPos());
+    }
+
+    /**
+     * Whether a villager arrival may land in a town that already has
+     * {@code villagerCount} villagers: in an onboarding town the second villager arrives ONLY after the raw-food quest
+     * has been completed. The first villager is never held, and a town that never ran
+     * onboarding (test harnesses, hand-grown towns) is never held. "No raw-food quest
+     * posted yet" is NOT satisfied, or the gate's and the kickoff's arrivals would land on the
+     * same morning.
+     */
+    public boolean isArrivalGateOpen(long villagerCount) {
+        if (villagerCount == 0) {
+            return true;
+        }
+        if (getAll().stream().noneMatch(Quest::isOnboarding)) {
+            return true;
+        }
+        return hunterRawFoodLootComplete();
+    }
+
+    public record ArrivalRelease<R>(List<R> others, List<R> arrivals, List<R> held) {
+    }
+
+    /**
+     * The change-profession tab's red dot: a JOB_CHANGE quest is open
+     * and this villager is still on the gatherer root every arriving townie starts on
+     * ({@code SpawnVisitorReward}), i.e. it is a candidate to spend the BOP on.
+     */
+    public boolean wantsJobChangeFrom(JobID villagerJob) {
+        if (!GATHERER_ROOT.equals(villagerJob.rootId())) {
+            return false;
+        }
+        return getAll().stream().anyMatch(
+                q -> q.getType() == Quest.QuestType.JOB_CHANGE && !q.isComplete()
+        );
+    }
+
+    /**
+     * The change-job tab is hidden from non-gatherers until the onboarding trunk reaches the fork
+     *: the trunk's job changes all start from a gatherer. Curated path
+     * quests are onboarding-flagged too, so "onboarding" here ends at {@link #atTheFork}.
+     */
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        if (GATHERER_ROOT.equals(villagerJob.rootId())) {
+            return false;
+        }
+        return getAll().stream().anyMatch(Quest::isOnboarding) && !atTheFork();
+    }
+
+    private static final String GATHERER_ROOT = "gatherer";
+
+    /** The campfire quest is posted and not yet complete: the flag keeps looking for a lit campfire. */
+    public boolean isCampfireQuestOpen() {
+        return getAll().stream().anyMatch(
+                q -> SpecialQuests.CAMPFIRE.equals(q.getWantedId()) && !q.isComplete()
+        );
+    }
+
+    /** The day-one campfire quest is posted and complete (a flag with its camp). */
+    public boolean isCampfireQuestComplete() {
+        return getAll().stream().anyMatch(
+                q -> SpecialQuests.CAMPFIRE.equals(q.getWantedId()) && q.isComplete()
+        );
+    }
+
+    /**
+     * Splits one morning's queued rewards: arrivals pass {@link #isArrivalGateOpen} one at
+     * a time, each released arrival counting toward the next check, so two queued spawns
+     * on an empty town release one and hold the other. Non-arrival rewards always pass.
+     */
+    public <R> ArrivalRelease<R> releaseArrivals(
+            List<R> queued,
+            Predicate<R> isArrival,
+            long villagerCount
+    ) {
+        List<R> others = new ArrayList<>();
+        List<R> arrivals = new ArrayList<>();
+        List<R> held = new ArrayList<>();
+        long count = villagerCount;
+        for (R r : queued) {
+            if (!isArrival.test(r)) {
+                others.add(r);
+                continue;
+            }
+            if (!isArrivalGateOpen(count)) {
+                held.add(r);
+                continue;
+            }
+            arrivals.add(r);
+            count++;
+        }
+        return new ArrivalRelease<>(others, arrivals, held);
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
@@ -1064,6 +2005,147 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
     }
 
+    /**
+     * Open-quest progress: wantedId -> how close the town is to the count. For
+     * ITEM quests that is how many matching items the town containers already
+     * hold (the "(n/target)" numerator on the quest card); for LOOT quests it is
+     * the quest's own extraction total (containers are irrelevant: extracted food may have been eaten or cooked
+     * in the meantime). Same container scan and ingredient matching as the ITEM
+     * completion path ({@code processItemQuests}), so the displayed ITEM count
+     * is the one that completes the quest. Empty when no open ITEM/LOOT quest.
+     */
+    public Map<ResourceLocation, Integer> openQuestProgress() {
+        List<MCQuest> open = questBatches.getAll().stream()
+                .filter(q -> (q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT
+                        || q.getType() == Quest.QuestType.VILLAGER_LEVEL)
+                        && !q.isComplete())
+                .toList();
+        if (open.isEmpty()) {
+            return ImmutableMap.of();
+        }
+        boolean anyItems = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.ITEM);
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        ImmutableList<MCTownItem> stacks = anyItems
+                ? TownContainers.getAllStacks(t, t.getServerLevel())
+                : ImmutableList.of();
+        boolean anyLevels = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL);
+        Map<String, Integer> levels = anyLevels ? t.highestLevelByRoot() : Map.of();
+        Map<ResourceLocation, Integer> out = new HashMap<>();
+        for (MCQuest q : open) {
+            if (q.getType() == Quest.QuestType.LOOT) {
+                out.put(q.getWantedId(), q.getExtracted());
+            } else if (q.getType() == Quest.QuestType.VILLAGER_LEVEL) {
+                VillagerLevelQuests.target(q.getWantedId())
+                        .ifPresent(l -> out.put(q.getWantedId(), levels.getOrDefault(l.root(), 0)));
+            } else {
+                out.put(q.getWantedId(), stacks.stream()
+                        .filter(s -> questMatchesStack(q.getWantedId(), s))
+                        .mapToInt(s -> s.toQTItemStack().getCount())
+                        .sum());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Which board requests an open quest still needs, so they never pause on a full store
+     * ({@link ca.bradj.questown.jobs.requests.BoardRequests}). An ITEM or LOOT quest needs a
+     * request for its item. An open villager-level quest needs every request: its villager
+     * levels by filling them.
+     */
+    public Predicate<WorkRequest> requestsOpenQuestsNeed() {
+        List<MCQuest> open = questBatches.getAll().stream().filter(q -> !q.isComplete()).toList();
+        if (open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL)) {
+            return r -> true;
+        }
+        List<ItemStack> wanted = open.stream()
+                .filter(q -> q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT)
+                .flatMap(q -> Arrays.stream(Ingredients.asIngredient(q.getWantedId()).getItems()))
+                .toList();
+        return r -> {
+            Ingredient requested = r.asIngredient();
+            return wanted.stream().anyMatch(requested);
+        };
+    }
+
+    /**
+     * Completes open ROOM and ITEM quests that the current town state already satisfies (a
+     * registered room for the recipe, or enough item copies in town containers).
+     *
+     * <p>Quest completion is otherwise event-driven at satisfaction time: a room recipe fires a
+     * one-shot {@code roomRecipeCreated} on registration, and item counts are tallied only on
+     * stored-data changes. When a quest is added <em>after</em> the satisfying state already
+     * exists (the tutorial issues the kickoff quests after the rooms and swords were placed),
+     * that one-shot event never fires for them and they stall ACTIVE forever. Re-evaluating open
+     * quests against current state each tick closes the ordering gap; the early-out makes the
+     * steady state (no open room/item quests) a single list scan.
+     */
+    private void backfillSatisfiedQuests(TownInterface town) {
+        ServerLevel level = town.getServerLevel();
+        if (questBatches.isEmpty()) {
+            return;
+        }
+        // Walk the journal LAZILY (no full copy): collect only the open ROOM
+        // matches (usually zero in steady state) and test for an open ITEM
+        // quest. This was questBatches.getAll() — a per-tick O(journal) copy of
+        // EVERY quest — and the journal is unbounded (completed batches are never
+        // pruned), so the steady-state cost was a growing flat copy every tick.
+        final boolean[] openItems = {false};
+        final boolean[] openLevels = {false};
+        List<MCQuest> openRooms = new ArrayList<>();
+        questBatches.getAllBatches().stream()
+            .flatMap(b -> QuestBatch.stream(b))
+            .forEach(q -> {
+                if (q.isComplete()) {
+                    return;
+                }
+                switch (q.getType()) {
+                    case ROOM -> openRooms.add(q);
+                    case ITEM -> openItems[0] = true;
+                    case VILLAGER_LEVEL -> openLevels[0] = true;
+                    default -> { }
+                }
+            });
+        if (openLevels[0]) {
+            markVillagerLevelsReached(this.town.getUnsafe().highestLevelByRoot());
+        }
+        if (openRooms.isEmpty() && !openItems[0]) {
+            return;
+        }
+        for (MCQuest q : openRooms) {
+            Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(q.getWantedId());
+            Optional<MCRoom> eligible = rooms.stream()
+                    .map(RoomRecipeMatch::getRoom)
+                    .filter(r -> !isClaimedFor(r, q.getWantedId()))
+                    .findFirst();
+            if (eligible.isPresent()) {
+                markQuestAsComplete(eligible.get(), q.getWantedId());
+            } else {
+                probeNoRoomMatch(q);
+            }
+        }
+        if (openItems[0]) {
+            processItemQuests(TownContainers.getAllStacks(this.town.getUnsafe(), level));
+        }
+    }
+    // Dev-only backfill probe, gated on ENABLE_DEV_COMMANDS.
+    private static final Object BackfillProbeLock = new Object();
+    private static long BackfillProbeLastNanos = 0L;
+    private void probeNoRoomMatch(MCQuest q) {
+        if (System.getenv("ENABLE_DEV_COMMANDS") == null) {
+            return;
+        }
+        synchronized (BackfillProbeLock) {
+            long now = System.nanoTime();
+            if (now - BackfillProbeLastNanos <= 10_000_000_000L) {
+                return;
+            }
+            BackfillProbeLastNanos = now;
+        }
+        QT.QUESTS_LOGGER.warn("[DEV-DIAG:backfill] open ROOM quest {} has no matching registered room", q.getWantedId());
+    }
+    // === end backfill probe ===
+
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
         // TODO: Consider putting on QuestBatches and testing
         for (MCQuestBatch batch : questBatches.getAllBatches()) {
@@ -1091,6 +2173,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                         .map(v -> v.getKey())
                         .toList();
                 if (matches.isEmpty()) {
+                    // Fallback: the job file "source" job (e.g. cook/simple_furnace_food) is
+                    // expanded by ResourceJobLoader into per-item sub-jobs (cook/mutton, cook/beef, …).
+                    // The source JobID itself is never registered, so exact-match never fires for
+                    // it. Try matching on the job role (rootId) so the quest still completes when
+                    // a townie holds any job in the same family.
+                    matches = villagerJobs
+                            .entrySet()
+                            .stream()
+                            .filter(v -> v.getValue().sameRoot(wantedJobId))
+                            .map(v -> v.getKey())
+                            .toList();
+                }
+                if (matches.isEmpty()) {
                     continue;
                 }
                 VillagerUUID owner = Compat.shuffle(matches.iterator(), town.getServerLevelUnsafe())
@@ -1100,6 +2195,72 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 batch.markRecipeAsComplete(null, q.getWantedId());
             }
         }
+    }
+
+    /**
+     * The onboarding job-change guarantee:
+     * while an onboarding JOB_CHANGE quest is open, its wanted root is what a BOP spend promises,
+     * so it fills the guarantee slot (the only thing that fills it). Without this, a spend
+     * pre-rolls arbitrarily.
+     * The oldest open onboarding JOB_CHANGE quest for this townie wins
+     * (owner null, or this townie); empty once the onboarding job-change quests are done.
+     */
+    public Optional<JobID> onboardingJobChangeGuarantee(VillagerUUID target) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE || !q.isOnboarding() || q.isComplete()) {
+                    continue;
+                }
+                VillagerUUID owner = q.getOwner();
+                if (owner != null && !owner.equals(target)) {
+                    continue;
+                }
+                return Optional.of(JobID.fromRL(q.getWantedId()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Completes the active JOB_CHANGE quest for a townie the moment its BOP spend is
+     * requested, not when the root change applies in the morning: the reward lands on the
+     * player's act. Only a quest whose wanted root matches the decided pending root (quest
+     * guarantee or pre-roll) completes, and never one already owned by a different townie
+     * (the quest-level owner: a batch can hold several JOB_CHANGE quests for the same town
+     * with different owners). Returns whether a quest completed so the caller can log the
+     * spend outcome.
+     */
+    public boolean markJobChangeCompleteAtSpend(
+            VillagerUUID villager,
+            JobID pendingRoot
+    ) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE || q.isComplete()) {
+                    continue;
+                }
+                JobID wantedJobId = JobID.fromRL(q.getWantedId());
+                boolean matches = wantedJobId.equals(pendingRoot) || wantedJobId.sameRoot(pendingRoot);
+                if (!matches) {
+                    continue;
+                }
+                VillagerUUID owner = q.getOwner();
+                if (owner != null && !owner.equals(villager)) {
+                    continue;
+                }
+                q.setOwner(villager);
+                batch.setOwner(villager);
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info(
+                        "JOB_CHANGE quest {} completed at BOP spend for {} (pending root {})",
+                        q.getWantedId(),
+                        villager,
+                        pendingRoot
+                );
+                return true;
+            }
+        }
+        return false;
     }
 
     public void processConcurrentJobs(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
@@ -1127,6 +2288,48 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             ResourceLocation wantedId,
             MCTownItem stack
     ) {
-        return wantedId.equals(Compat.getItemId(stack.get()));
+        // asIngredient resolves item ids to item ingredients and tag ids to tag
+        // ingredients, so ITEM quests with a tag want now match their tag members.
+        return Ingredients.asIngredient(wantedId).test(stack.toQTItemStack());
+    }
+
+    /**
+     * LOOT quests accumulate on production: when a townie extracts loot matching an open
+     * LOOT quest, the extracted count is credited to the quest and it completes once the
+     * extraction total reaches its count (a count-1 quest closes on the first extraction). Every
+     * matching open LOOT quest is credited by one extraction (a re-issued ask after a
+     * batch reward is not starved by the first match). The extracted item is
+     * not consumed here; the normal deposit / eat path decides what happens to it.
+     */
+    public void processLootQuests(MCTownItem extracted) {
+        // The [LOOTTRACE] log calls below are diagnostic.
+        if (extracted == null || extracted.isEmpty()) {
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] processLootQuests: extracted is null/empty; skipping");
+            return;
+        }
+        ItemStack stack = extracted.toQTItemStack();
+        int lootQuestsSeen = 0;
+        for (MCQuest quest : questBatches.getAll()) {
+            if (quest.getType() != Quest.QuestType.LOOT || quest.isComplete()) {
+                continue;
+            }
+            lootQuestsSeen++;
+            boolean match = quest.getWantedId() != null
+                    && Ingredients.asIngredient(quest.getWantedId()).test(stack);
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {} (extracted {}/{})",
+                    stack.getItem() != null ? stack.getItem().getName(stack).getString() : "?",
+                    quest.getWantedId(), match, quest.getExtracted() + stack.getCount(), quest.getCountNeeded());
+            if (match) {
+                // No early return: this extraction also advances any sibling
+                // matching quest, and only completes a quest that reached its
+                // count.
+                if (quest.addExtracted(stack.getCount()) >= quest.getCountNeeded()) {
+                    questBatches.markRecipeAsComplete(null, quest.getWantedId());
+                }
+            }
+        }
+        if (lootQuestsSeen == 0) {
+            QT.QUESTS_LOGGER.info("[LOOTTRACE] extracted '{}' but no open LOOT quests exist", stack);
+        }
     }
 }
