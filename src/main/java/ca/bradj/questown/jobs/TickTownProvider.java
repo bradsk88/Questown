@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
+import ca.bradj.questown.jobs.declarative.ContainersClean;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -29,10 +31,12 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private final Predicate<POS> isJobBlock;
     private final Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items;
     private final Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools;
+    private final Function<Integer, Boolean> workDeclaredAt;
     private final BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock;
     private Function<TOWN_ITEM, HELD_ITEM> convert;
     private final Supplier<Signals.DayTime> dayTime;
     private final Supplier<Boolean> hasSpace;
+    private boolean finishedProductNeedsStorage = true;
     private final Supplier<ImmutableList<MATCH>> supplyRoomsFinder;
     private final Predicate<MATCH> isJobSitePredicate;
 
@@ -49,6 +53,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
             Predicate<POS> canClaim,
             Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items,
             Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools,
+            Function<Integer, Boolean> workDeclaredAt,
             Function<POS, String> stringify,
             int maxState,
             Function<TOWN_ITEM, HELD_ITEM> convert,
@@ -64,7 +69,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.roomsNeedingVillagerInput = roomsNeedingIngredientsOrTools;
         this.convert = convert;
         this.dayTime = dayTime;
-        this.roomsV2 = () -> JobsClean.rooms(
+        this.roomsV2 = () -> DeclarativeJobs.rooms(
                 roomsNeedingIngredientsOrTools::getMatches,
                 getJobBlockState,
                 isJobBlock,
@@ -75,6 +80,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.isJobBlock = isJobBlock;
         this.items = items;
         this.tools = tools;
+        this.workDeclaredAt = workDeclaredAt;
         this.toBlock = toBlock;
         this.hasSpace = hasSpace;
     }
@@ -96,17 +102,18 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public boolean isUnfinishedTimeWorkPresent() {
-        return JobsClean.isUnfinishedTimeWorkPresent(roomsFinder, getTicksLeft);
+        return DeclarativeJobs.isUnfinishedTimeWorkPresent(roomsFinder, getTicksLeft);
     }
 
     @Override
     public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
-        Collection<Integer> statesWithUnfinishedWork = JobsClean.getStatesWithUnfinishedWork(
+        Collection<Integer> statesWithUnfinishedWork = DeclarativeJobs.getStatesWithUnfinishedWork(
                 roomsFinder.get().stream()
                            .map(v -> (Supplier<Collection<POS>>) () -> v.getContainedBlocks().keySet().stream()
                                                                         .filter(isJobBlock).toList()).toList(),
                 getJobBlockState,
-                canClaim
+                canClaim,
+                workDeclaredAt
         );
         ImmutableList.Builder<Integer> b = ImmutableList.builder();
         statesWithUnfinishedWork.forEach(s -> {
@@ -121,9 +128,15 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public Collection<ROOM> roomsAtState(Integer state) {
-        return roomsNeedingVillagerInput.get().get(state).stream()
-                                        .map(RoomsNeedingVillagerInput.NVIRoom::room)
-                                        .map(IRoomRecipeMatch::getRoom).toList();
+        var atState = roomsNeedingVillagerInput.get().get(state);
+        if (atState == null) {
+            // a state absent from the room map has no rooms (the work-only state-0 admission can
+            // ask about a state the map does not hold yet, on a fresh world's morning)
+            return ImmutableList.of();
+        }
+        return atState.stream()
+                      .map(RoomsNeedingVillagerInput.NVIRoom::room)
+                      .map(IRoomRecipeMatch::getRoom).toList();
     }
 
     @Override
@@ -134,7 +147,9 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     @Override
     public LZCD.Dependency<Void> hasSuppliesV2() {
         return new TownHasSupplies<HELD_ITEM, TOWN_ITEM, CONTAINER>(
-                items, tools, this::getSupplyRooms, roomsV2, convert
+                items, tools, this::getSupplyRooms, roomsV2, convert,
+                () -> roomsFinder.get().stream()
+                                 .anyMatch(m -> m.getContainedBlocks().keySet().stream().anyMatch(isJobBlock))
         );
     }
 
@@ -156,5 +171,16 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     @Override
     public boolean hasSpace() {
         return hasSpace.get();
+    }
+
+    /** False for jobs whose product is consumed rather than stored (see JobStatuses.Job). */
+    public TickTownProvider<ROOM, POS, MATCH, HELD_ITEM, TOWN_ITEM, CONTAINER> withFinishedProductNeedsStorage(boolean needsStorage) {
+        this.finishedProductNeedsStorage = needsStorage;
+        return this;
+    }
+
+    @Override
+    public boolean finishedProductNeedsStorage() {
+        return finishedProductNeedsStorage;
     }
 }

@@ -72,6 +72,7 @@ class TickTownProviderTest {
                     p -> true,
                     s -> { throw new UnsupportedOperationException(); },
                     s -> { throw new UnsupportedOperationException(); },
+                    s -> false,
                     Position::toString,
                     maxState,
                     s -> { throw new UnsupportedOperationException(); },
@@ -109,6 +110,23 @@ class TickTownProviderTest {
         boolean result = provider.isUnfinishedTimeWorkPresent();
 
         Assertions.assertTrue(result, "BUG: isUnfinishedTimeWorkPresent() returns FALSE when timer is active");
+    }
+
+    /**
+     * Crash guard:
+     * c9e55434's work-only state-0 admission let tryChoosingItemlessWork ask
+     * roomsAtState(0) on a fresh-world morning where the room map holds no
+     * state-0 room yet (kitchen registered two seconds earlier). The unguarded
+     * Map.get(...).stream() NPE'd the server thread. A state absent from the
+     * room map answers "no rooms", not a crash.
+     */
+    @Test
+    void roomsAtState_stateAbsentFromRoomMap_yieldsEmptyCollection() {
+        // builder's roomsNeedingVillagerInput is an empty map - no state has rooms
+        TickTownProvider<?, ?, ?, ?, ?, ?> provider = new SimpleTownBuilder().build();
+
+        Assertions.assertDoesNotThrow(() ->
+                Assertions.assertTrue(provider.roomsAtState(0).isEmpty()));
     }
 
     /**
