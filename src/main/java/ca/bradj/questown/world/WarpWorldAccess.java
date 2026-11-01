@@ -1,7 +1,11 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.BreadOvenBake;
+import ca.bradj.questown._vanilla.SnapshotWorldGenLevel;
+import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown.mc.Compat;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -11,19 +15,19 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BoneMealItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeHooks;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.ToolActions;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -38,7 +42,7 @@ import java.util.function.Function;
  * <p>
  * {@link #asServerLevel()} returns {@code null} — warp rules must not rely on it.
  */
-public class WarpWorldAccess implements QTWorldAccess {
+public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.SnapshotAccess {
 
     /** Simplified smelting result used internally and in tests. */
     record SmeltResult(ItemStack result, int cookingTime) {}
@@ -51,21 +55,39 @@ public class WarpWorldAccess implements QTWorldAccess {
     private final Map<BlockPos, List<ItemStack>> containerSlots = new HashMap<>();
     // cookProgress[0] = cookTime, cookProgress[1] = litTime
     private final Map<BlockPos, int[]> cookProgress = new HashMap<>();
+    // Bread-oven bake state machines, per oven position. Bound to that position's
+    // in-memory slot list; bake progress persists across advanceProcessing calls
+    // within a warp, starting at 0 per warp (any mid-bake state is re-baked,
+    // matching the cookProgress reset).
+    private final Map<BlockPos, BreadOvenBake> ovenBakes = new HashMap<>();
 
     final Set<BlockPos> dirtyBlocks = new HashSet<>();
     final Set<BlockPos> dirtyContainers = new HashSet<>();
 
+    // Saplings planted this warp (and farm-seeded at warp start), keyed by block position,
+    // awaiting in-warp growth by GrowTreesWarpRule.
+    private final Map<BlockPos, PlantedSapling> plantedSaplings = new HashMap<>();
+    // Updated each warp tick boundary so plantings record an approximate plant tick.
+    private long currentWarpTick = 0;
+
     private final Function<ItemStack, Optional<SmeltResult>> recipeResolver;
     private final Function<ItemStack, Integer> fuelTimeProvider;
+    /**
+     * Test-only miss source for {@link #resolveBlockState(BlockPos)}: when a position is
+     * absent from the snapshot map and {@code level} is null, this stands in for the real
+     * world (which a warp never mutates) so tests can exercise the fallback path.
+     */
+    private final Function<BlockPos, @Nullable BlockState> fallbackStateProvider;
 
     private static final int MAX_PROCESSING_TICKS = 13_000;
 
     public WarpWorldAccess(ServerLevel level, Collection<BlockPos> positions) {
         this.level = level;
+        this.fallbackStateProvider = null;
         this.recipeResolver = ingredient -> level.getRecipeManager()
                 .getRecipeFor(RecipeType.SMELTING, new net.minecraft.world.SimpleContainer(ingredient), level)
                 .map(r -> new SmeltResult(r.getResultItem().copy(), r.getCookingTime()));
-        this.fuelTimeProvider = fuel -> ForgeHooks.getBurnTime(fuel, RecipeType.SMELTING);
+        this.fuelTimeProvider = fuel -> AbstractFurnaceBlockEntity.getFuel().getOrDefault(fuel.getItem(), 0);
         for (BlockPos pos : positions) {
             blockStates.put(pos, level.getBlockState(pos));
             snapshotContainer(pos);
@@ -82,7 +104,23 @@ public class WarpWorldAccess implements QTWorldAccess {
             Function<ItemStack, Optional<SmeltResult>> recipeResolver,
             Function<ItemStack, Integer> fuelTimeProvider
     ) {
+        this(blockStates, containerSlots, recipeResolver, fuelTimeProvider, null);
+    }
+
+    /**
+     * Test constructor with a miss source: positions absent from the snapshot map resolve
+     * through {@code fallbackStateProvider} instead of {@code null} (see
+     * {@code fallbackStateProvider}).
+     */
+    WarpWorldAccess(
+            Map<BlockPos, BlockState> blockStates,
+            Map<BlockPos, List<ItemStack>> containerSlots,
+            Function<ItemStack, Optional<SmeltResult>> recipeResolver,
+            Function<ItemStack, Integer> fuelTimeProvider,
+            Function<BlockPos, @Nullable BlockState> fallbackStateProvider
+    ) {
         this.level = null;
+        this.fallbackStateProvider = fallbackStateProvider;
         this.recipeResolver = recipeResolver;
         this.fuelTimeProvider = fuelTimeProvider;
         this.blockStates.putAll(blockStates);
@@ -173,8 +211,26 @@ public class WarpWorldAccess implements QTWorldAccess {
     @Nullable
     private BlockState resolveBlockState(BlockPos pos) {
         if (blockStates.containsKey(pos)) return blockStates.get(pos);
-        if (level != null) return level.getBlockState(pos);
-        return null;
+        if (level != null) return resolveLevelBlockState(level, pos);
+        return fallbackStateProvider == null ? null : fallbackStateProvider.apply(pos);
+    }
+
+    /**
+     * The real-world state at {@code pos}, or {@code null} when the containing
+     * chunk is not loaded. The presence check ({@code hasChunk}) never blocks:
+     * an unconditional {@code getBlockState} on an evicted-but-generated chunk
+     * goes through the chunk system's managed block, which waits for the main
+     * thread that is itself running the warp - a 600 s watchdog-kill hang
+     *. A warp that meets
+     * an unloaded chunk treats it as the region boundary instead of
+     * generating it.
+     */
+    static BlockState resolveLevelBlockState(ServerLevel level, BlockPos pos) {
+        net.minecraft.world.level.ChunkPos chunkPos = new net.minecraft.world.level.ChunkPos(pos);
+        if (!level.getChunkSource().hasChunk(chunkPos.x, chunkPos.z)) {
+            return null;
+        }
+        return level.getBlockState(pos);
     }
 
     @Nullable
@@ -213,7 +269,9 @@ public class WarpWorldAccess implements QTWorldAccess {
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = resolveBlockState(trunkPos);
-        if (trunkState == null || trunkState.isAir()) {
+        // Only chop logs: ChopDownTree scans every room position. A RotatedPillarBlock stand-in
+        // also took deepslate, basalt and hay bales.
+        if (trunkState == null || !trunkState.is(BlockTags.LOGS)) {
             return List.of();
         }
         Block trunkBlock = trunkState.getBlock();
@@ -222,37 +280,174 @@ public class WarpWorldAccess implements QTWorldAccess {
         return drops;
     }
 
+    /**
+     * Flood-fills a connected log region and cuts it, in memory. Iterative (explicit work stack)
+     * rather than recursive: the region can be far larger than the JVM stack budget — when the
+     * trunk's log type also occurs in real terrain beyond the in-memory snapshot, the fill reads
+     * the live level and can span tens of thousands of blocks. One stack frame per block would
+     * overflow; a heap work stack does not. Reads stop at the edge of an UNLOADED chunk
+     * ({@link #resolveLevelBlockState}): generating chunks from the warp tick would deadlock the
+     * main thread, so an unloaded chunk counts as the region boundary.
+     */
     private void chopTreeInMemory(
             BlockPos center, Block matchBlock,
             List<ItemStack> drops, Set<BlockPos> visited
     ) {
-        for (BlockPos adjacent : BlockPos.betweenClosed(
-                center.offset(-1, 0, -1), center.offset(1, 1, 1)
-        )) {
-            BlockPos immutable = adjacent.immutable();
-            if (visited.contains(immutable)) {
+        Deque<BlockPos> work = new ArrayDeque<>();
+        work.push(center);
+        while (!work.isEmpty()) {
+            BlockPos cur = work.pop();
+            if (!visited.add(cur)) {
                 continue;
             }
-            BlockState bs = resolveBlockState(immutable);
+            BlockState bs = resolveBlockState(cur);
             if (bs == null || !bs.is(matchBlock)) {
                 continue;
             }
-            visited.add(immutable);
-            blockStates.put(immutable, Blocks.AIR.defaultBlockState());
-            dirtyBlocks.add(immutable);
+            blockStates.put(cur, Blocks.AIR.defaultBlockState());
+            dirtyBlocks.add(cur);
             drops.add(matchBlock.asItem().getDefaultInstance());
-            chopTreeInMemory(immutable, matchBlock, drops, visited);
+            for (BlockPos adjacent : BlockPos.betweenClosed(
+                    cur.offset(-1, 0, -1), cur.offset(1, 1, 1)
+            )) {
+                if (!visited.contains(adjacent)) {
+                    work.push(adjacent.immutable());
+                }
+            }
         }
     }
 
+    // -------------------------------------------------------------------------
+    // Tree growth — real worldgen against the in-memory snapshot
+    // -------------------------------------------------------------------------
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        if (level == null) {
+            // Unit-test constructor: worldgen + registries are unavailable. Autotest-covered instead.
+            return false;
+        }
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        return r.feature().place(
+                r.config(), new SnapshotWorldGenLevel(level, this, true),
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
+        );
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        if (level == null) {
+            return false;
+        }
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // Clear the sapling first (as vanilla SaplingBlock.advanceTree does): TreeFeature needs the
+        // trunk base to be air/leaves, and a sapling block isn't "free". Restore it if growth fails.
+        BlockState previous = resolveBlockState(pos);
+        setBlock(pos, Blocks.AIR.defaultBlockState());
+        boolean placed = r.feature().place(
+                r.config(), new SnapshotWorldGenLevel(level, this, false),
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
+        );
+        if (!placed && previous != null) {
+            setBlock(pos, previous);
+        }
+        return placed;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        return new ArrayList<>(plantedSaplings.values());
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
+        plantedSaplings.remove(pos);
+    }
+
+    /** Set by the warp loop at each tick boundary so plantings record an approximate plant tick. */
+    public void setCurrentWarpTick(long tick) {
+        this.currentWarpTick = tick;
+    }
+
+    /**
+     * Seeds saplings that already exist in farm rooms at warp start so prior-warp arborist
+     * plantings also grow. Recorded with {@code plantTick = 0} (grows early in the warp).
+     * Non-farm (decorative) saplings are never passed here, so warp won't burst them.
+     */
+    public void seedFarmSaplings(Iterable<BlockPos> farmPositions) {
+        for (BlockPos pos : farmPositions) {
+            BlockPos immutable = pos.immutable();
+            BlockState bs = resolveBlockState(immutable);
+            if (bs == null || !(bs.getBlock() instanceof SaplingBlock)) {
+                continue;
+            }
+            ItemStack saplingItem = new ItemStack(bs.getBlock().asItem());
+            plantedSaplings.put(immutable, new PlantedSapling(immutable, saplingItem, 0L));
+        }
+    }
+
+    // SnapshotWorldGenLevel.SnapshotAccess — reads snapshot-first, writes into the snapshot/dirty-set.
+
+    @Override
+    public BlockState getBlock(BlockPos pos) {
+        BlockState bs = resolveBlockState(pos);
+        return bs != null ? bs : Blocks.AIR.defaultBlockState();
+    }
+
+    @Override
+    public void setBlock(BlockPos pos, BlockState state) {
+        blockStates.put(pos.immutable(), state);
+        dirtyBlocks.add(pos.immutable());
+    }
+
+    // Realtime bone meal rolls a random 2-5 age advance; warp uses a deterministic
+    // +3 (the floor of that 3.5 expected value) to keep warp autotests reproducible.
+    private static final int BONE_MEAL_AGE_BOOST = 3;
+
+    /**
+     * Hand-rolled in-memory planting / bone meal. We deliberately do NOT delegate to
+     * {@code Item.useOn} as realtime does: warp has no live {@code Level} to mutate
+     * (the test constructor's {@code level} is even {@code null}), and routing through
+     * the snapshot/dirty-set is what lets {@code GrowCropsWarpRule} see the planted crop
+     * in the same warp and {@code applyTo} commit it only when the warp succeeds.
+     */
     @Override
     public boolean useItemOnBlock(ItemStack item, BlockPos pos) {
-        // Complex item interactions use the real world (out of scope for in-memory simulation)
-        BlockHitResult bhr = new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false);
-        net.minecraft.world.InteractionResult result = item.getItem().useOn(
-                new UseOnContext(level, null, InteractionHand.MAIN_HAND, item, bhr)
-        );
-        return result.consumesAction();
+        if (item.getItem() instanceof BoneMealItem) {
+            return applyBoneMeal(pos);
+        }
+        if (item.getItem() instanceof BlockItem blockItem) {
+            return plantBlockAbove(item, blockItem, pos);
+        }
+        QT.JOB_LOGGER.error("useItemOnBlock: unsupported item {} during warp; no-op", item.getItem());
+        return false;
+    }
+
+    private boolean applyBoneMeal(BlockPos pos) {
+        OptionalInt age = getBlockIntProperty(pos, "age");
+        OptionalInt maxAge = getMaxBlockIntProperty(pos, "age");
+        if (age.isEmpty() || maxAge.isEmpty() || age.getAsInt() >= maxAge.getAsInt()) {
+            return false;
+        }
+        setBlockIntProperty(pos, "age", Math.min(age.getAsInt() + BONE_MEAL_AGE_BOOST, maxAge.getAsInt()));
+        return true;
+    }
+
+    private boolean plantBlockAbove(ItemStack item, BlockItem blockItem, BlockPos pos) {
+        BlockPos above = pos.above().immutable();
+        blockStates.put(above, blockItem.getBlock().defaultBlockState());
+        dirtyBlocks.add(above);
+        if (blockItem.getBlock() instanceof SaplingBlock) {
+            // Record so GrowTreesWarpRule can grow it into a real tree later this warp.
+            plantedSaplings.put(above, new PlantedSapling(above, item.copy(), currentWarpTick));
+        }
+        return true;
     }
 
     // -------------------------------------------------------------------------
@@ -262,13 +457,13 @@ public class WarpWorldAccess implements QTWorldAccess {
     @Override
     public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
-        return bs.getToolModifiedState(toolContext(pos, toolAction), forgeToolAction(toolAction), false) != null;
+        return Compat.toolModifiedState(bs, toolContext(pos, toolAction), toolAction) != null;
     }
 
     @Override
     public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = blockStates.getOrDefault(pos, level.getBlockState(pos));
-        BlockState modified = bs.getToolModifiedState(toolContext(pos, toolAction), forgeToolAction(toolAction), false);
+        BlockState modified = Compat.toolModifiedState(bs, toolContext(pos, toolAction), toolAction);
         if (modified == null) {
             return;
         }
@@ -283,15 +478,6 @@ public class WarpWorldAccess implements QTWorldAccess {
     private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(Vec3.atCenterOf(pos), net.minecraft.core.Direction.UP, pos, false);
         return new UseOnContext(level, null, InteractionHand.MAIN_HAND, toolForAction(toolAction), bhr);
-    }
-
-    private static ToolAction forgeToolAction(QTToolAction toolAction) {
-        return switch (toolAction) {
-            case HOE_TILL -> ToolActions.HOE_TILL;
-            case AXE_STRIP -> ToolActions.AXE_STRIP;
-            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
-            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
-        };
     }
 
     private static ItemStack toolForAction(QTToolAction toolAction) {
@@ -365,6 +551,22 @@ public class WarpWorldAccess implements QTWorldAccess {
         return extracted;
     }
 
+    /** No displays in warp: the display jobs are excluded from it. */
+    @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        return List.of();
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        return false;
+    }
+
+    /** No item entities in warp; the display jobs, the only callers, are excluded from it. */
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+    }
+
     @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
         List<ItemStack> slots = containerSlots.get(pos);
@@ -414,6 +616,14 @@ public class WarpWorldAccess implements QTWorldAccess {
         if (slots == null || slots.size() < 3) {
             return;
         }
+
+        BlockState blockState = blockStates.get(pos);
+        if (blockState != null
+                && blockState.getBlock() instanceof ca.bradj.questown.blocks.BreadOvenBlock) {
+            advanceBreadOven(pos, slots, ticks);
+            return;
+        }
+
 
         int[] progress = cookProgress.computeIfAbsent(pos, p -> new int[]{0, 0});
         int cookTime = progress[0];
@@ -487,6 +697,20 @@ public class WarpWorldAccess implements QTWorldAccess {
                 "[WarpWorldAccess] advanceProcessing done. Slot0={}, Slot1={}, Slot2={}",
                 slots.get(0).getItem(), slots.get(1).getItem(), slots.get(2).getItem()
         );
+    }
+
+    /**
+     * Warp-lane bake for the bread oven. Drives the SAME {@link BreadOvenBake}
+     * state machine the realtime block entity runs (1 wheat + 1 coal -> 1
+     * bread over {@link BreadOvenBake#BAKE_TICKS} ticks, partial-progress
+     * reset on a slot change) against the in-memory slot snapshot, so the
+     * warp lane cannot drift from the real-time arithmetic.
+     */
+    private void advanceBreadOven(BlockPos pos, List<ItemStack> slots, int ticks) {
+        BreadOvenBake bake = ovenBakes.computeIfAbsent(pos, p -> new BreadOvenBake(slots));
+        if (bake.advance(ticks)) {
+            dirtyContainers.add(pos);
+        }
     }
 
     // -------------------------------------------------------------------------

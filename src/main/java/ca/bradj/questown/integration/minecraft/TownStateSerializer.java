@@ -16,7 +16,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
@@ -51,26 +50,33 @@ public class TownStateSerializer {
 
         ListTag villagers = new ListTag();
         for (TownState.VillagerData<MCHeldItem> e : state.villagers) {
-            CompoundTag vTag = new CompoundTag();
-            vTag.putDouble("x", e.xPosition);
-            vTag.putDouble("y", e.yPosition);
-            vTag.putDouble("z", e.zPosition);
-            vTag.putString("journal_status", e.journal.statusStringValue());
-            ListTag journalItems = new ListTag();
-            if (e.journal.items().size() != e.getCapacity()) {
-                throw new IllegalStateException("Journal items do not match capacity");
-            }
-            for (MCHeldItem item : e.journal.items()) {
-                journalItems.add(item.serializeNBT());
-            }
-            vTag.put("journal_items", journalItems);
-            vTag.putUUID("UUID", e.uuid);
-            vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
-            villagers.add(vTag);
+            villagers.add(storeVillager(e));
         }
         tag.put("villagers", villagers);
 
         return tag;
+    }
+
+    public static CompoundTag storeVillager(TownState.VillagerData<MCHeldItem> e) {
+        CompoundTag vTag = new CompoundTag();
+        vTag.putDouble("x", e.xPosition);
+        vTag.putDouble("y", e.yPosition);
+        vTag.putDouble("z", e.zPosition);
+        vTag.putString("journal_status", e.journal.statusStringValue());
+        ListTag journalItems = new ListTag();
+        if (e.journal.items().size() != e.getCapacity()) {
+            throw new IllegalStateException("Journal items do not match capacity");
+        }
+        for (MCHeldItem item : e.journal.items()) {
+            journalItems.add(item.serializeNBT());
+        }
+        vTag.put("journal_items", journalItems);
+        vTag.putUUID("UUID", e.uuid);
+        vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
+        CompoundTag profTag = new CompoundTag();
+        e.getProficiencies().forEach(profTag::putFloat);
+        vTag.put("proficiencies", profTag);
+        return vTag;
     }
 
     public interface GatesGetter {
@@ -120,35 +126,51 @@ public class TownStateSerializer {
         ImmutableList.Builder<TownState.VillagerData<MCHeldItem>> b = ImmutableList.builder();
         ListTag villagers = tag.getList("villagers", Tag.TAG_COMPOUND);
         for (Tag vTag : villagers) {
-            CompoundTag vcTag = (CompoundTag) vTag;
-            int x = vcTag.getInt("x");
-            int y = vcTag.getInt("y");
-            int z = vcTag.getInt("z");
-            ListTag items = vcTag.getList("journal_items", Tag.TAG_COMPOUND);
-            ImmutableList.Builder<MCHeldItem> iB = ImmutableList.builder();
-            for (Tag itemTag : items) {
-                CompoundTag itemCTag = (CompoundTag) itemTag;
-                iB.add(MCHeldItem.fromTag(itemCTag));
-            }
-            ImmutableList<MCHeldItem> heldItems = iB.build();
-            String job = vcTag.getString("job");
-            UUID uuid = vcTag.getUUID("UUID");
-            if (job.isEmpty()) {
-                QT.JOB_LOGGER.error("Empty job. Falling back to gatherer for {}", uuid);
-                job = "gatherer";
-            }
-            ImmutableSnapshot<MCHeldItem, ?> journal = ServerJobsRegistry.getNewJournal(
-                    ServerJobsRegistry.parseStringValue(job),
-                    vcTag.getString("journal_status"),
-                    heldItems
-            );
-            b.add(new TownState.VillagerData<>(
-                    x, y, z,
-                    journal,
-                    uuid
-            ));
+            b.add(loadVillager((CompoundTag) vTag));
         }
 
+        return b.build();
+    }
+
+    public static TownState.VillagerData<MCHeldItem> loadVillager(CompoundTag vcTag) {
+        int x = vcTag.getInt("x");
+        int y = vcTag.getInt("y");
+        int z = vcTag.getInt("z");
+        ListTag items = vcTag.getList("journal_items", Tag.TAG_COMPOUND);
+        ImmutableList.Builder<MCHeldItem> iB = ImmutableList.builder();
+        for (Tag itemTag : items) {
+            CompoundTag itemCTag = (CompoundTag) itemTag;
+            iB.add(MCHeldItem.fromTag(itemCTag));
+        }
+        ImmutableList<MCHeldItem> heldItems = iB.build();
+        String job = vcTag.getString("job");
+        UUID uuid = vcTag.getUUID("UUID");
+        if (job.isEmpty()) {
+            QT.JOB_LOGGER.error("Empty job. Falling back to gatherer for {}", uuid);
+            job = "gatherer";
+        }
+        ImmutableSnapshot<MCHeldItem, ?> journal = ServerJobsRegistry.getNewJournal(
+                ServerJobsRegistry.parseStringValue(job),
+                vcTag.getString("journal_status"),
+                heldItems
+        );
+        return new TownState.VillagerData<>(
+                x, y, z,
+                journal,
+                uuid,
+                loadProficiencies(vcTag)
+        );
+    }
+
+    private static ImmutableMap<String, Float> loadProficiencies(CompoundTag vcTag) {
+        if (!vcTag.contains("proficiencies")) {
+            return ImmutableMap.of();
+        }
+        CompoundTag profTag = vcTag.getCompound("proficiencies");
+        ImmutableMap.Builder<String, Float> b = ImmutableMap.builder();
+        for (String key : profTag.getAllKeys()) {
+            b.put(key, profTag.getFloat(key));
+        }
         return b.build();
     }
 
@@ -165,8 +187,7 @@ public class TownStateSerializer {
             ListTag items = ccTag.getList("items", Tag.TAG_COMPOUND);
             for (Tag item : items) {
                 CompoundTag icTag = (CompoundTag) item;
-                ItemStack stack = ItemStack.of(icTag.getCompound("item"));
-                cItems.add(MCTownItem.fromMCItemStack(stack));
+                cItems.add(MCTownItem.of(icTag));
             }
 
             int x = ccTag.getInt("x");

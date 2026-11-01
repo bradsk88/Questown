@@ -2,11 +2,12 @@ package ca.bradj.questown.logic;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.electronwill.nightconfig.core.Config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
@@ -23,9 +24,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
 
+    /**
+     * A bed is two blocks and room recipes count both, so a recipe lists two {@code #minecraft:beds}
+     * per bed. The cards show one icon per bed by dropping the ingredient after each bed.
+     */
     public static Collection<Ingredient> filterSpecialBlocks(
             Iterable<Ingredient> ingredients
     ) {
@@ -48,22 +55,39 @@ public class RoomRecipes {
             Level level,
             ResourceLocation id
     ) {
-        List<RoomRecipe> recipes = getAllRecipes(level);
-        for (RoomRecipe r : recipes) {
-            if (id.equals(r.getId())) {
-                return Optional.of(r);
-            }
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        return RecipeRef.recipeById(level.getRecipeManager(), RecipesInit.ROOM, id);
+    }
+
+    /**
+     * {@link #getById}, or the built-in recipe of a special room (the town gate, the flag, the
+     * campfire), which lives in {@link SpecialQuests} rather than the recipe manager.
+     */
+    public static Optional<RoomRecipe> getByIdOrSpecial(
+            Level level,
+            ResourceLocation id
+    ) {
+        Optional<RoomRecipe> r = getById(level, id);
+        if (r.isPresent()) {
+            return r;
         }
-        return Optional.empty();
+        return Optional.ofNullable(SpecialQuests.getSpecialQuests().get(id));
     }
 
     @NotNull
     public static List<RoomRecipe> getAllRecipes(Level level) {
-        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        return RecipeRef.recipesOf(level.getRecipeManager(), RecipesInit.ROOM);
     }
 
     public static Component getName(ResourceLocation id) {
-        return Compat.translatable(String.format("room.%s", id.getPath()));
+        String path = id.getPath();
+        // A block room is registered as "block_room/block.<ns>.<block>" (RoomBlock.getRoomId);
+        // there is no "room.*" lang key for it, so its display name is the block's own
+        // lang entry (e.g. "Job Board") - not a raw key.
+        if (path.startsWith("block_room/block.")) {
+            return Compat.translatable(path.substring("block_room/".length()));
+        }
+        return Compat.translatable(String.format("room.%s", path));
     }
 
     public static Component getName(Optional<ResourceLocation> recipe) {
@@ -81,8 +105,8 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM);
-        allRecipesFor.forEach(v -> rMapB.put(v.getId(), v));
+        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
+        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.getId(), h));
         return rMapB.build();
     }
 
@@ -90,7 +114,7 @@ public class RoomRecipes {
             RoomRecipe recipe,
             int stopAt
     ) {
-        Config allWeights = RecipeItemConfig.itemWeights.get();
+        Map<String, Integer> allWeights = RecipeItemConfig.getWeights();
         int weight = 0;
         for (Ingredient in : recipe.getIngredients()) {
             if (weight > stopAt) {
@@ -99,37 +123,53 @@ public class RoomRecipes {
             boolean foundWeight = false;
             if (getAsJsonObject(in).has("item")) {
                 String id = getAsJsonObject(in).get("item").getAsString();
-                if (allWeights.contains(String.format("%s", id))) {
-                    weight += allWeights.getInt(id);
+                Integer itemWeight = allWeights.get(id);
+                if (itemWeight != null) {
+                    weight = UtilClean.saturatingAdd(weight, itemWeight);
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for item. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("item", id);
                 }
             }
             if (getAsJsonObject(in).has("tag")) {
                 String id = getAsJsonObject(in).get("tag").getAsString();
                 String tID = String.format("#%s", id);
-                if (allWeights.contains(tID)) {
-                    weight += allWeights.getInt(tID);
+                Integer tagWeight = allWeights.get(tID);
+                if (tagWeight != null) {
+                    weight = UtilClean.saturatingAdd(weight, tagWeight);
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for tag. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("tag", id);
                 }
             }
             if (!foundWeight) {
-                weight += Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get();
+                weight = UtilClean.saturatingAdd(weight, Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get());
             }
         }
         return weight;
     }
 
+    /**
+     * A missing weight entry is a config-tuning hint, not a fault: the default is applied
+     * deterministically, so warn once per id per JVM instead of erroring on every recipe that
+     * carries the id (`#c:chests` appears in most stocked rooms — a startup burst of ERRORs
+     * read as a broken server).
+     */
+    private static final Set<String> reportedUnweighted =
+            ConcurrentHashMap.newKeySet();
+
+    private static void reportUnweighted(String kind, String id) {
+        if (reportedUnweighted.add(kind + ":" + id)) {
+            QT.QUESTS_LOGGER.warn(
+                    "No weight specified for {}. Default of 100 will be used. [{}]", kind, id
+            );
+        }
+    }
+
     private static JsonObject getAsJsonObject(Ingredient js) {
         try {
-            return js.toJson().getAsJsonObject();
+            com.google.gson.JsonElement j = ca.bradj.questown.mc.Compat.ingredientToJson(js);
+            return j.getAsJsonObject();
         } catch (IllegalStateException e) {
             throw new IllegalStateException("Not a JSON object: " + js, e);
         }
@@ -157,6 +197,34 @@ public class RoomRecipes {
             return false;
         }
         return found;
+    }
+
+    /**
+     * Pure core of the room-upgrade candidate selection (extracted from
+     * {@code TownQuests.getUpgradeRecipe}; unit-testable, so it receives the recipe ids as data: the
+     * caller owns them, via the recipe holder keys on 1.20.2+, where a codec-constructed
+     * {@code RoomRecipe}'s {@code getId()} is null).
+     *
+     * <p>Selection semantics: a candidate is a recipe whose ingredient groups cover every group of
+     * the from-recipe (each from-group must contain some candidate group: the upgrade refines or
+     * extends the recipe's inputs); a perfect overlap is the recipe itself, not an upgrade, and is
+     * skipped. Every non-overlapping candidate is returned; the caller picks one (at random).
+     */
+    public static <K> List<K> upgradeCandidates(
+            Collection<List<String>> fromIng,
+            Map<K, ? extends Collection<List<String>>> allRecipes
+    ) {
+        ImmutableList.Builder<K> b = ImmutableList.builder();
+        for (Map.Entry<K, ? extends Collection<List<String>>> e : allRecipes.entrySet()) {
+            Collection<List<String>> toIng = e.getValue();
+            if (toIng.equals(fromIng)) {
+                continue; // Perfect overlap. So not an upgrade.
+            }
+            if (containsAllTags(fromIng, toIng)) {
+                b.add(e.getKey());
+            }
+        }
+        return b.build();
     }
 
     public static RoomRecipe standard(

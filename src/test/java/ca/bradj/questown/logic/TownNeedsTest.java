@@ -402,8 +402,16 @@ class TownNeedsTest {
                 2
         );
         Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.isEmpty());
-        Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.get(STATUS_0).isEmpty());
-        // TODO: Fill out assertions
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereSuppliesCanBeUsed.get(STATUS_0));
+        // No blocks in states 1 or 2, so nothing else can be supplied or worked
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).isEmpty());
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
+        // Tools are held, so the room is workable too
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_0));
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1).isEmpty());
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_2).isEmpty());
     }
 
     @Test
@@ -433,8 +441,14 @@ class TownNeedsTest {
                 2
         );
         Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.isEmpty());
-        Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.get(STATUS_0).isEmpty());
-        // TODO: Fill out assertions
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereSuppliesCanBeUsed.get(STATUS_0));
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).isEmpty());
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_0));
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1).isEmpty());
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_2).isEmpty());
     }
 
     @Test
@@ -465,8 +479,14 @@ class TownNeedsTest {
         );
         Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.isEmpty());
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_0).isEmpty());
-        Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).isEmpty());
-        // TODO: Fill out assertions
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereSuppliesCanBeUsed.get(STATUS_1));
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
+        // Tools are held, so the same room is workable
+        Assertions.assertEquals(
+                ImmutableList.of(ROOM_A), result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1));
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_0).isEmpty());
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_2).isEmpty());
     }
     @Test
     void shouldHandle_WhenJobRequiresToolAtState0_AndNullIngredientsAtState1_AndRoomHasState1_AndHasTools_AndSpecialRoomsAtState1() {
@@ -498,7 +518,12 @@ class TownNeedsTest {
         );
         Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.isEmpty());
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_0).isEmpty());
-        Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).isEmpty());
-        // TODO: Fill out assertions
+        // The room matches state 1 AND is listed as a special-rule room - it must
+        // be present (special rooms are added on top of the state matches)
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).contains(ROOM_A));
+        Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1).contains(ROOM_A));
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_0).isEmpty());
+        Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_2).isEmpty());
     }
 }

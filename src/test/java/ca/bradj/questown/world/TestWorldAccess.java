@@ -245,6 +245,34 @@ public class TestWorldAccess implements QTWorldAccess {
         return extracted;
     }
 
+    private final Map<BlockPos, List<ItemStack>> displays = new HashMap<>();
+
+    public void setDisplay(BlockPos pos, List<ItemStack> slots) {
+        displays.put(pos, new ArrayList<>(slots));
+    }
+
+    @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        return displays.getOrDefault(pos, List.of());
+    }
+
+    public final java.util.List<ItemStack> dropped = new java.util.ArrayList<>();
+
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+        dropped.add(item);
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        List<ItemStack> slots = displays.get(pos);
+        if (slots == null || slot < 0 || slot >= slots.size()) {
+            return false;
+        }
+        slots.set(slot, item);
+        return true;
+    }
+
     @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
         List<ItemStack> slots = containers.get(pos);
@@ -257,7 +285,7 @@ public class TestWorldAccess implements QTWorldAccess {
                 slots.set(i, item.copy());
                 return true;
             }
-            if (existing.sameItem(item) && existing.getCount() < existing.getMaxStackSize()) {
+            if (ca.bradj.questown.mc.Compat.isSameItem(existing, item) && existing.getCount() < existing.getMaxStackSize()) {
                 existing.grow(item.getCount());
                 return true;
             }
@@ -339,6 +367,30 @@ public class TestWorldAccess implements QTWorldAccess {
             drops.add(matchBlock.asItem().getDefaultInstance());
             chopTreeInTest(immutable, matchBlock, drops, visited);
         }
+    }
+
+    // Tree growth (canTreeGrowAt / growTreeAt) is real worldgen (TreeFeature.place) that needs a
+    // live level + registries, which are unavailable here, so these return false and the
+    // planted-sapling carrier stays empty. The autotests cover this path.
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        return List.of();
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
+        // No carrier in tests.
     }
 
     @Override

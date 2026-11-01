@@ -28,6 +28,24 @@ public interface QTWorldAccess {
     // Tree chopping — removes all connected blocks of the same type and returns drops
     List<ItemStack> chopTree(BlockPos trunkPos);
 
+    // Tree growth (real worldgen behind the seam). Both run TreeFeature.place; they differ
+    // only in the level adapter (VoidLevel / SnapshotWorldGenLevel) so realtime and warp match.
+
+    /** Plantability gate: would a tree from {@code sapling} generate at {@code pos}? (dry run, no writes) */
+    boolean canTreeGrowAt(BlockPos pos, ItemStack sapling);
+
+    /** Generates the tree from {@code sapling} at {@code pos}, writing blocks. Returns whether it placed. */
+    boolean growTreeAt(BlockPos pos, ItemStack sapling);
+
+    /** A sapling planted during warp (or farm-seeded at warp start), awaiting growth. */
+    record PlantedSapling(BlockPos pos, ItemStack sapling, long plantTick) {}
+
+    /** Saplings awaiting in-warp growth. Empty in realtime (vanilla grows saplings there). */
+    Collection<PlantedSapling> getPlantedSaplings();
+
+    /** Drops a planted-sapling entry once {@code GrowTreesWarpRule} has grown (or skipped) it. */
+    void clearPlantedSapling(BlockPos pos);
+
     // Item use on block (planting, bone meal)
     boolean useItemOnBlock(ItemStack item, BlockPos pos);
 
@@ -45,6 +63,16 @@ public interface QTWorldAccess {
     boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item);
     ItemStack extractFromSlot(BlockPos pos, int slot, int count);
     boolean insertIntoContainer(BlockPos pos, ItemStack item);
+    /**
+     * The slots of the display (armor stand: feet, legs, chest, head; item frame: one) standing at
+     * pos, or an empty list when there is none.
+     */
+    List<ItemStack> getDisplaySlots(BlockPos pos);
+    /** Puts the item in that slot of the display at pos; false when there is no such display. */
+    boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item);
+
+    /** Drops the item as an entity at pos (an item that has nowhere to go must not vanish). */
+    void dropItem(BlockPos pos, ItemStack item);
 
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);

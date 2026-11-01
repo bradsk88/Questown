@@ -1,14 +1,17 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.items.BlockOfProgressItem;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -20,16 +23,34 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
 
     private final int quantity;
     private final Item item;
+    /** the stack's CUSTOM_DATA (1.20.5+ data components) — the only per-item payload this model keeps */
     private final CompoundTag nbt;
 
     public static MCTownItem fromMCItemStack(ItemStack i) {
-        return new MCTownItem(i.getItem(), i.getCount(), i.serializeNBT());
+        return new MCTownItem(i.getItem(), i.getCount(), customData(i));
     }
 
     public static MCTownItem of(CompoundTag tag) {
-        CompoundTag nbt = tag.getCompound("item");
-        ItemStack stack = ItemStack.of(nbt);
-        return new MCTownItem(stack.getItem(), stack.getCount(), nbt);
+        CompoundTag itemTag = tag.getCompound("item");
+        Item item;
+        int quantity;
+        CompoundTag nbt;
+        if (itemTag.contains("item", Tag.TAG_STRING)) {
+            // New format (1.20.6): {item: <name>, count: <int>, data: <compound>}
+            item = Compat.itemFromId(new ResourceLocation(itemTag.getString("item")));
+            quantity = itemTag.getInt("count");
+            nbt = itemTag.getCompound("data");
+        } else if (itemTag.contains("id")) {
+            // Legacy format (1.19): {id: <name>, Count: <int>, tag: <compound>}
+            item = Compat.itemFromId(new ResourceLocation(itemTag.getString("id")));
+            quantity = itemTag.getInt("Count");
+            nbt = itemTag.getCompound("tag");
+        } else {
+            item = Items.AIR;
+            quantity = 0;
+            nbt = new CompoundTag();
+        }
+        return new MCTownItem(item == null ? Items.AIR : item, quantity, nbt);
     }
 
     public MCTownItem(
@@ -62,6 +83,11 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     @Override
     public boolean isFood() {
         return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(new ItemStack(item));
+    }
+
+    @Override
+    public boolean isBlockOfProgress() {
+        return item instanceof BlockOfProgressItem;
     }
 
     public Item get() {
@@ -102,8 +128,16 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     public CompoundTag serializeNBT() {
+        CompoundTag item = new CompoundTag();
+        ResourceLocation name = Loader.itemIdOf(this.item);
+        if (name == null) {
+            name = new ResourceLocation("minecraft:air");
+        }
+        item.putString("item", name.toString());
+        item.putInt("count", quantity);
+        item.put("data", nbt);
         CompoundTag tag = new CompoundTag();
-        tag.put("item", nbt);
+        tag.put("item", item);
         return tag;
     }
 
@@ -113,7 +147,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         }
         ItemStack stack = toQTItemStack();
         stack.shrink(1);
-        return new MCTownItem(stack.getItem(), stack.getCount(), stack.serializeNBT());
+        return new MCTownItem(stack.getItem(), stack.getCount(), customData(stack));
     }
 
     @Override
@@ -124,7 +158,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     public MCTownItem withQuantity(int qy) {
         ItemStack stack = toQTItemStack();
         stack.setCount(qy);
-        return new MCTownItem(stack.getItem(), qy, stack.serializeNBT());
+        return new MCTownItem(stack.getItem(), qy, customData(stack));
     }
 
     @Override
@@ -135,7 +169,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     @Override
     public String getShortName() {
         String name = "[unknown]";
-        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(get());
+        ResourceLocation registryName = Loader.itemIdOf(get());
         if (registryName != null) {
             name = registryName.toString();
         }
@@ -159,15 +193,14 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     private ItemStack toItemStack(StackPolicy preserveQTNBT) {
-        ItemStack newOne = ItemStack.of(nbt);
-        if (preserveQTNBT == StackPolicy.KEEP_QT_NBT) {
-            return newOne;
+        ItemStack newOne = new ItemStack(item, quantity);
+        if (!newOne.getItem().equals(item)) {
+            // item id was unregistered; an AIR stack carries the count
+            newOne = new ItemStack(Items.AIR, quantity);
         }
-        CompoundTag stripped = stripQTNBT(newOne.getOrCreateTag());
-        if (stripped.isEmpty()) {
-            newOne.setTag(null);
-        } else {
-            newOne.setTag(stripped);
+        CompoundTag data = (preserveQTNBT == StackPolicy.STRIP_QT_NBT) ? stripQTNBT(nbt) : nbt;
+        if (!data.isEmpty()) {
+            Compat.setItemDataTag(newOne, data);
         }
         return newOne;
     }
@@ -194,10 +227,14 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     }
 
     public void setNBT(Consumer<CompoundTag> adder) {
-        adder.accept(nbt.getCompound("tag"));
+        adder.accept(nbt);
     }
 
     public CompoundTag getItemNBT() {
-        return nbt.copy().getCompound("tag");
+        return nbt.copy();
+    }
+
+    private static CompoundTag customData(ItemStack stack) {
+        return Compat.itemDataTag(stack);
     }
 }

@@ -1,26 +1,25 @@
 package ca.bradj.questown._vanilla;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.JobBlockTestContext;
-import ca.bradj.questown.mc.Compat;
 import net.minecraft.core.BlockPos;
-import net.minecraft.data.BuiltinRegistries;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SaplingBlock;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.feature.TreeFeature;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
-public class CheckTreePlantable extends JobPhaseModifier {
+/**
+ * Tier 1 ({@link QTNativeRule}). Confirms that a held/town sapling can grow at the workspot:
+ * a 3x3 air gap above, then the real plantability check via {@code canTreeGrowAt} — which runs
+ * {@code TreeFeature.place} behind the {@code QTWorldAccess} seam (a {@code VoidLevel} dry run in
+ * realtime, a {@code SnapshotWorldGenLevel} dry run in warp). No {@code asServerLevel()} here.
+ */
+public class CheckTreePlantable extends JobPhaseModifier implements QTNativeRule {
 
     @Override
     public boolean postJobBlockCheckPassed(
@@ -31,11 +30,10 @@ public class CheckTreePlantable extends JobPhaseModifier {
             return false;
         }
         Collection<MCHeldItem> items = ctx.townUniqueItems().get().stream().map(MCHeldItem::fromTown).toList();
-        SaplingBlock sapling = getSapling(items);
+        ItemStack sapling = getSapling(items);
         if (sapling == null) {
             sapling = getSapling(ctx.heldItems().get());
         }
-
         if (sapling == null) {
             return false;
         }
@@ -49,71 +47,29 @@ public class CheckTreePlantable extends JobPhaseModifier {
             }
         }
 
-        String thisName = getClass().getSimpleName();
-
-        ResourceLocation saplingId = Compat.getItemId(sapling);
-        String[] idParts = saplingId.getPath().split("_sapling");
-        if (idParts.length != 1) {
-            QT.JOB_LOGGER.error("Attempted to use {} with unconventional sapling ID: {}", thisName, saplingId);
-            return false;
-        }
-
-        String treeId = idParts[0];
-        ConfiguredFeature<?, ?> cf = BuiltinRegistries.CONFIGURED_FEATURE.get(new ResourceLocation(
-                "minecraft",
-                treeId
-        ));
-        if (cf == null) {
-            cf = BuiltinRegistries.CONFIGURED_FEATURE.get(new ResourceLocation("minecraft", treeId + "_tree"));
-            if (cf == null) {
-                QT.JOB_LOGGER.error("Attempted to use {} with non-existent feature: {}", thisName, treeId);
-                return false;
-            }
-        }
-
-        if (!(cf.feature() instanceof TreeFeature tree)) {
-            QT.JOB_LOGGER.error("Attempted to use {} with non-tree feature: {}", thisName, treeId);
-            return false;
-        }
-
-        if (!(cf.config() instanceof TreeConfiguration config)) {
-            QT.JOB_LOGGER.error("Attempted to use {} with non-tree configuration: {}", thisName, treeId);
-            return false;
-        }
-
-        // TreeFeature.place() is inherently MC-coupled (runs world-gen logic to test
-        // plantability). There is no QTWorldAccess abstraction for this — it intentionally
-        // stays as an asServerLevel() call. During warp, asServerLevel() returns null and
-        // this check is skipped (handled by the null guard above).
-        ServerLevel level = ctx.world().asServerLevel();
-        return tree.place(config, new VoidLevel(level), null, level.random, above);
+        return ctx.world().canTreeGrowAt(above, sapling);
     }
 
-    private @Nullable SaplingBlock getSapling(
+    private @Nullable ItemStack getSapling(
             Collection<MCHeldItem> items
     ) {
         for (MCHeldItem item : items) {
             if (item.isEmpty()) {
                 continue;
             }
-            SaplingBlock townSapling = getSaplingBlock(item.get().toMCItemStack());
-            if (townSapling != null) {
-                return townSapling;
+            ItemStack stack = item.get().toMCItemStack();
+            if (isSapling(stack)) {
+                return stack;
             }
         }
         return null;
     }
 
-    private @Nullable SaplingBlock getSaplingBlock(
-            ItemStack heldItem
-    ) {
+    private boolean isSapling(ItemStack heldItem) {
         if (!(heldItem.getItem() instanceof BlockItem blockItem)) {
-            return null;
+            return false;
         }
         Block block = blockItem.getBlock();
-        if (!(block instanceof SaplingBlock sb)) {
-            return null;
-        }
-        return sb;
+        return block instanceof SaplingBlock;
     }
 }

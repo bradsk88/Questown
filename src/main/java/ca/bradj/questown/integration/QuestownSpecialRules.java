@@ -4,15 +4,14 @@ import ca.bradj.questown.Questown;
 import ca.bradj.questown._vanilla.VanillaSpecialRules;
 import ca.bradj.questown.jobs.SpecialRules;
 import ca.bradj.questown.jobs.special.*;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class QuestownSpecialRules {
 
-    @SubscribeEvent()
-    public static void register(FMLCommonSetupEvent event) {
+    /**
+     * The mod's own special-rule set: the neutral registration list other mods can model theirs
+     * on. The loader's common-setup binding calls it.
+     */
+    public static void registerRules() {
         // This is what other mods should do if they want to implement special rules
 
         // If this rule is enabled for the "extract product" step and the workspot
@@ -75,6 +74,31 @@ public final class QuestownSpecialRules {
                 Questown.ResourceLocation(SpecialRules.HUNGER_FILL),
                 new FillHungerSpecialRule(1f)
         );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_COMFORTABLE_EATING),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.COMFORTABLE_EATING,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_COMFORTABLY.get()
+                )
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_UNCOMFORTABLE_EATING),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.UNCOMFORTABLE_EATING,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
+                )
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.APPLY_ATE_RAW_FOOD),
+                new ApplyMoodEffectSpecialRule(
+                        ca.bradj.questown.town.MoodEffects.ATE_RAW_FOOD,
+                        () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
+                )
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.SCOUT_LOOT),
+                new ca.bradj.questown.jobs.gatherer.ScoutLootSpecialRule()
+        );
 
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("switch_to_organizer_fetcher"),
@@ -96,6 +120,10 @@ public final class QuestownSpecialRules {
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.ADD_ITEM_TO_CONTAINER),
                 new AddItemToContainerSpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.DRESS_DISPLAY),
+                new DressDisplaySpecialRule()
         );
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.CLEAR_BOP_FOR_VILLAGER),
@@ -142,6 +170,15 @@ public final class QuestownSpecialRules {
                         SpecialRules.FURNACE_SMELT_WARP
                 ),
                 new SmeltFurnaceWarpRule()
+        );
+
+        // Warp-interleaved hook: relocates a requested ingredient into the
+        // stock-request's chest during time warp (organizer/fetch).
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.RELOCATE_REQUESTED_ITEM_WARP
+                ),
+                new RelocateRequestedItemWarpRule()
         );
 
         VanillaSpecialRules.register();

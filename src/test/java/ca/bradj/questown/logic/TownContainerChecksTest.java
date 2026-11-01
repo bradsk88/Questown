@@ -139,6 +139,40 @@ public class TownContainerChecksTest {
     }
 
     @Test
+    void townHasSupplies_ShouldReturnFalse_WhenOneItemFound_AndTwoRequired_AndDifferentAllowed() {
+        // Bug #218: only one item left in town, but the job needs two of it.
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(APPLE).stream().filter(predicate).toList(),
+                isFruit,
+                2,
+                false
+        );
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    void townHasSupplies_ShouldReturnFalse_WhenStackOfTwoFound_AndThreeRequired_AndDifferentAllowed() {
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(new TestItem("apple", 2)).stream().filter(predicate).toList(),
+                isFruit,
+                3,
+                false
+        );
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    void townHasSupplies_ShouldReturnTrue_WhenStackOfTwoFound_AndTwoRequired_AndDifferentAllowed() {
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(new TestItem("apple", 2)).stream().filter(predicate).toList(),
+                isFruit,
+                2,
+                false
+        );
+        Assertions.assertTrue(result);
+    }
+
+    @Test
     void townHasSupplies_ShouldReturnFalse_WhenNoItemsFound_AndOneRequired() {
         boolean result = TownContainerChecks.townHasSuppliesForStage(
                 (predicate) -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(),
@@ -306,6 +340,28 @@ public class TownContainerChecksTest {
                 (i) -> false
         );
         Assertions.assertTrue(result);
+    }
+
+    @Test
+    void hasSupplies_ShouldReturnFalse_If_2_IngredientsRequiredAtState0_AndOnlyOneLeftInTown() {
+        // Bug #218: job needs two of an ingredient but only one remains in town (none in hand).
+        boolean result = TownContainerChecks.hasSupplies(
+                () -> ImmutableSet.of(0), // A room exists at state 0
+                ImmutableMap.of(
+                        0, required.apply("ingredient")
+                ),
+                ImmutableMap.of(
+                        0, 2 // two ingredients required
+                ),
+                ImmutableMap.of(
+                        // No tools required
+                ),
+                predicate -> ImmutableList.of(new TestItem("ingredient", 1)).stream().filter(predicate).toList(), // town
+                predicate -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(), // inventory (empty)
+                (state) -> ImmutableList.of(),
+                (i) -> false
+        );
+        Assertions.assertFalse(result);
     }
 
     @Test

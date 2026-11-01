@@ -19,8 +19,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SaplingBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.CompatBlockColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,28 +29,26 @@ public class SaplingTesterBlock extends Block {
 
     public SaplingTesterBlock(
     ) {
-        super(Properties.of(Material.GLASS, MaterialColor.SNOW).strength(1.0F, 10.0F).noOcclusion());
+        super(Compat.blockProps(CompatBlockColor.SNOW).strength(1.0F, 10.0F).noOcclusion());
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos blockPos,
             Player player,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.CONSUME;
         }
 
-        ItemStack itemInHand = player.getItemInHand(p_60507_);
+        ItemStack itemInHand = player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (!(itemInHand.getItem() instanceof BlockItem bi)) {
-            return super.use(p_60503_, level, blockPos, player, p_60507_, p_60508_);
+            return super.use(p_60503_, level, blockPos, player, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         }
         if (!(bi.getBlock() instanceof SaplingBlock)) {
-            return super.use(p_60503_, level, blockPos, player, p_60507_, p_60508_);
+            return super.use(p_60503_, level, blockPos, player, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         }
         boolean allowed = new CheckTreePlantable().postJobBlockCheckPassed(new JobBlockTestContext(
                 new MinecraftWorldAccess(sl), new WorkLocation.BlockInfo() {
@@ -74,5 +72,22 @@ public class SaplingTesterBlock extends Block {
     @Override
     protected boolean isAir(BlockState state) {
         return true;
+    }
+
+    // Forge 1.19.2 has one use(...): try useItemOn (the held stack), then useWithoutItem
+    // (main hand only), the order 1.20.5+ calls them in.
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }
