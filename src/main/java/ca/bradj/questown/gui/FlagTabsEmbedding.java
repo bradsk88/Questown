@@ -14,19 +14,34 @@ public interface FlagTabsEmbedding {
             boolean showQuestsTab,
             boolean showEconTab,
             boolean showBlockOfProgressTab,
-            boolean hasIncompleteQuests
+            // The quests tab's red dot: open quests the player has not yet seen on the tab. Not
+            // "any incomplete quest": that is the flag's "!" bubble.
+            boolean questsTabAttention,
+            boolean bopFull,
+            boolean bonusFoodAvailable,
+            boolean villagersTabAttention,
+            boolean bopTabAttention
     ) {
-        public static FlagInfo dumb(BlockPos flagPos, boolean showBOP) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, false);
+        /** The villagers tab wants attention once it is shown and no player has opened it yet. */
+        public static boolean villagersTabAttention(boolean showVillagersTab, boolean villagersTabSeen) {
+            return showVillagersTab && !villagersTabSeen;
         }
 
-        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean hasIncompleteQuests) {
-            return new FlagInfo(flagPos, true, true, true, showBOP, hasIncompleteQuests);
+        public static FlagInfo dumb(BlockPos flagPos, boolean showBOP, boolean bopFull) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, false, bopFull, false, false, true);
+        }
+
+        public static FlagInfo withQuestNotification(BlockPos flagPos, boolean showBOP, boolean questsTabAttention, boolean bopFull) {
+            return new FlagInfo(flagPos, true, true, true, showBOP, questsTabAttention, bopFull, false, false, true);
         }
 
         public static FlagInfo read(FriendlyByteBuf buf) {
             return new FlagInfo(
                     buf.readBlockPos(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
@@ -41,7 +56,11 @@ public interface FlagTabsEmbedding {
             data.writeBoolean(showQuestsTab);
             data.writeBoolean(showEconTab);
             data.writeBoolean(showBlockOfProgressTab);
-            data.writeBoolean(hasIncompleteQuests);
+            data.writeBoolean(questsTabAttention);
+            data.writeBoolean(bopFull);
+            data.writeBoolean(bonusFoodAvailable);
+            data.writeBoolean(villagersTabAttention);
+            data.writeBoolean(bopTabAttention);
         }
     }
 

@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
@@ -32,7 +33,8 @@ public class ClientAccess {
             Collection<JobID> unlockedJobs,
             Collection<JobID> unlockableJobs,
             JobID currentJob,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showInventoryTab
     ) {
         return openScreen(() -> new VillagerAdvancementsScreen(
                 flagPos,
@@ -40,7 +42,8 @@ public class ClientAccess {
                 unlockedJobs,
                 unlockableJobs,
                 currentJob,
-                showBlockOfProgressTab
+                showBlockOfProgressTab,
+                showInventoryTab
         ));
     }
 
@@ -52,12 +55,27 @@ public class ClientAccess {
         openScreen(() -> new WorkRequestConfirmScreen(itemRequested, iconsForJobsWhichProduceResult, flagPos));
     }
 
+    public static void openRelocationConfirm(
+            BlockPos targetPos,
+            int farFixtureCount
+    ) {
+        openScreen(() -> new RelocationConfirmScreen(targetPos, farFixtureCount));
+    }
+
+    public static void openDormantFlag(BlockPos flagPos) {
+        openScreen(() -> new DormantFlagScreen(flagPos));
+    }
+
     public static void openItemJobs(
             Ingredient requestedItem,
             Collection<UIJob> jobs,
             BlockPos flagPos
     ) {
         openScreen(() -> new ItemJobsScreen(requestedItem, jobs, flagPos));
+    }
+
+    public static void openSkillDetails(UIJob job, BlockPos flagPos, java.util.UUID villager, boolean locked, int flagBops) {
+        openScreen(() -> ItemJobsScreen.forSkill(job, flagPos, villager, locked, flagBops));
     }
 
     public static void syncJobsForCommands(
@@ -75,16 +93,41 @@ public class ClientAccess {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
 
+    /**
+     * Vanilla's TutorialToast stays on screen until something hides it. "Your camp is
+     * ready" is an evening instruction ("use wand on campfire"), so it stays up until the
+     * player is asleep: it lingered past the first campfire sleep and a
+     * 20s wall-clock cap made it vanish unseen.
+     */
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
+    // The active toast is the camp-ready one, which also hides at dawn (CampReadyToast).
+    private static boolean activeToastIsCampReady;
 
     public static void showTutorialToast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
-        activeTutorialToast = new net.minecraft.client.gui.components.toasts.TutorialToast(
-                net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
-                title, description, false
-        );
-        mc.getToasts().addToast(activeTutorialToast);
+        dismissTutorialToast();
+        activeToastIsCampReady = title.getContents() instanceof TranslatableContents tc
+                && CampReadyToast.TITLE_KEY.equals(tc.getKey());
+        net.minecraft.client.gui.components.toasts.TutorialToast toast =
+                new net.minecraft.client.gui.components.toasts.TutorialToast(
+                        net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
+                        title, description, false
+                );
+        activeTutorialToast = toast;
+        mc.getToasts().addToast(toast);
+    }
+
+    /** Called from the client tick: the toast's ask is done once the player is asleep. */
+    public static void tickTutorialToasts() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.player.isSleeping()) {
+            dismissTutorialToast();
+            return;
+        }
+        if (mc.level != null && CampReadyToast.hideNow(activeToastIsCampReady, mc.level.getDayTime())) {
+            dismissTutorialToast();
+        }
     }
 
     public static void dismissTutorialToast() {
@@ -92,6 +135,7 @@ public class ClientAccess {
             activeTutorialToast.hide();
             activeTutorialToast = null;
         }
+        activeToastIsCampReady = false;
     }
 
     public static void closeScreens() {

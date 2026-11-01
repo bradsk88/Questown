@@ -4,12 +4,11 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public record GiveBOPMessage(BlockPos flagPos) {
 
@@ -26,20 +25,20 @@ public record GiveBOPMessage(BlockPos flagPos) {
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            if (!(sender.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
             }
-            flag.get().ejectBlockOfProgress(sender);
+            flag.ejectBlockOfProgress(sender);
+            // Re-open the tab with the new count instead of the client closing it.
+            flag.menus.showUI(sender, OpenFlagMenuMessage.BOP, flag.getInfo(), flag.getBlocksOfProgress());
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

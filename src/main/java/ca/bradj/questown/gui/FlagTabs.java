@@ -1,8 +1,10 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -21,9 +23,17 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo showBOPTab
+            @Nullable Runnable settingsScreenFn,
+            FlagTabsEmbedding.FlagInfo showBOPTab,
+            @Nullable String activeTabKey
     ) {
-        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab));
+        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, settingsScreenFn, showBOPTab, activeTabKey));
+    }
+
+    private static boolean isSelected(String titleKey, @Nullable String activeTabKey) {
+        // The active (open) tab is the one whose title key matches; no tab is highlighted
+        // when activeTabKey is null (e.g. the multi-status overview).
+        return activeTabKey != null && activeTabKey.equals(titleKey);
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -32,63 +42,70 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo fi
+            @Nullable Runnable settingsScreenFn,
+            FlagTabsEmbedding.FlagInfo fi,
+            @Nullable String activeTabKey
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         if (fi.showVillagersTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
-                    villagerScreenFn == null,
-                    false
+                    isSelected("tooltips.villagers", activeTabKey),
+                    fi.villagersTabAttention()
             ));
         }
         if (fi.showQuestsTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                     setScreen(questsScreenFn),
                     "tooltips.quests",
-                    questsScreenFn == null,
-                    fi.hasIncompleteQuests()
+                    isSelected("tooltips.quests", activeTabKey),
+                    fi.questsTabAttention()
             ));
         }
         if (fi.showEconTab()) {
             b.add(new Tab(
                     (rc, x, y) -> {
                         int txBefore = RenderSystem.getShaderTexture(0);
-                        Util.blitTab(rc.stack(), x, y, 0);
+                        Util.blitTab(rc.gui(), x, y, 0);
                         RenderSystem.setShaderTexture(0, txBefore);
                     },
                     setScreen(econScreenFn),
                     "tooltips.economics",
-                    econScreenFn == null,
-                    false
+                    isSelected("tooltips.economics", activeTabKey),
+                    fi.bonusFoodAvailable()
             ));
         }
         if (fi.showBlockOfProgressTab()) {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
                             rc.itemRenderer(),
-                            2,
+                            0.8f,
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7
                     ),
                     setScreen(bopScreenFn),
                     "tooltips.blocks_of_progress",
-                    bopScreenFn == null,
-                    true
+                    isSelected("tooltips.blocks_of_progress", activeTabKey),
+                    fi.bopTabAttention()
             ));
         }
         b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer()
-                                .renderAndDecorateItem(Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
                 setScreen(craftingScreenFn),
                 "tooltips.crafting",
-                craftingScreenFn == null,
+                isSelected("tooltips.crafting", activeTabKey),
+                false
+        ));
+        // Town-level actions such as moving the town.
+        b.add(new Tab(
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.COMPARATOR.getDefaultInstance(), x + 10, y + 7),
+                setScreen(settingsScreenFn),
+                "tooltips.settings",
+                isSelected("tooltips.settings", activeTabKey),
                 false
         ));
         return b.build();
@@ -106,11 +123,23 @@ public class FlagTabs extends Tabs implements SubUI {
             FlagTabsEmbedding.FlagInfo fp,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenFlagMenuMessage(fp, type));
+        Runnable fn = () -> {
+            QT.LOGGER.info("[gui] flag menu request: {}", type);
+            QuestownNetwork.sendToServer(new OpenFlagMenuMessage(fp, type));
+        };
         return fn;
     }
 
     public static FlagTabs forMenu(FlagTabsEmbedding menu) {
+        return forMenu(menu, null);
+    }
+
+    /**
+     * Same as {@link #forMenu(FlagTabsEmbedding)} but marks the tab whose tooltip key equals
+     * {@code activeTabKey} as selected (highlighted). Each flag screen passes its own tab key so
+     * the open tab is visually selected.
+     */
+    public static FlagTabs forMenu(FlagTabsEmbedding menu, @Nullable String activeTabKey) {
         Collection<String> enabledTabs = menu.getEnabledTabs();
 
         Function<String, Runnable> factory = typ -> {
@@ -125,7 +154,9 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
                 factory.apply(OpenFlagMenuMessage.CRAFTING),
-                menu.getFlagInfo()
+                factory.apply(OpenFlagMenuMessage.SETTINGS),
+                menu.getFlagInfo(),
+                activeTabKey
         );
     }
 
@@ -133,12 +164,43 @@ public class FlagTabs extends Tabs implements SubUI {
 
     public static ImmutableList<TabDecision> computeTabDecisions(FlagTabsEmbedding.FlagInfo fi) {
         ImmutableList.Builder<TabDecision> b = ImmutableList.builder();
-        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), false));
-        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
-        b.add(new TabDecision("tooltips.economics", fi.showEconTab(), false));
-        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
+        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), fi.villagersTabAttention()));
+        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.questsTabAttention()));
+        b.add(new TabDecision("tooltips.economics", fi.showEconTab(), fi.bonusFoodAvailable()));
+        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), fi.bopTabAttention()));
         b.add(new TabDecision("tooltips.crafting", true, false));
+        b.add(new TabDecision("tooltips.settings", true, false));
         return b.build();
+    }
+
+    /**
+     * The tab a flag click opens on. A full flag opens the BOP tab (its warning). Otherwise the
+     * red-dotted tab wins, in the order Villagers > BOPs > Quests > Economics; with no red dot, the
+     * villagers overview.
+     */
+    public static String initialFlagTab(
+            boolean bopFull,
+            boolean villagersTabAttention,
+            boolean bopTabUnseen,
+            boolean questsTabAttention,
+            boolean economicsTabAttention
+    ) {
+        if (bopFull) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (villagersTabAttention) {
+            return OpenFlagMenuMessage.VILLAGERS;
+        }
+        if (bopTabUnseen) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (questsTabAttention) {
+            return OpenFlagMenuMessage.QUESTS;
+        }
+        if (economicsTabAttention) {
+            return OpenFlagMenuMessage.ECONOMICS;
+        }
+        return OpenFlagMenuMessage.VILLAGERS;
     }
 
     public static Collection<String> allExcept(String except) {
@@ -147,7 +209,8 @@ public class FlagTabs extends Tabs implements SubUI {
                 OpenFlagMenuMessage.QUESTS,
                 OpenFlagMenuMessage.ECONOMICS,
                 OpenFlagMenuMessage.BOP,
-                OpenFlagMenuMessage.CRAFTING
+                OpenFlagMenuMessage.CRAFTING,
+                OpenFlagMenuMessage.SETTINGS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
