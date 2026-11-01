@@ -5,18 +5,22 @@ import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.interfaces.KnowledgeHolder;
 import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class TestExecutor {
@@ -30,12 +34,15 @@ public class TestExecutor {
         BUILD_ROOM,
         REGISTER_ROOM,
         WAIT_FOR_ROOM,
+        RUN_SETUP_HOOK,
         SPAWN_VILLAGER,
         WAIT_FOR_VILLAGER,
         ASSIGN_JOB,
         SETTLE,
         CAPTURE_BEFORE,
         RUN_WARP,
+        NATURAL_WARP_FREEZE,
+        NATURAL_WARP_WAIT,
         SETTLE_AFTER_WARP,
         CHECK_RESULTS,
         KILL_FOR_INSPECT,
@@ -65,12 +72,48 @@ public class TestExecutor {
     private BlockPos flagPos;
     private TownFlagBlockEntity tfbe;
     private Map<String, Integer> beforeCounts;
+    private Map<BlockPos, Map<String, Integer>> beforeContainerContents;
+    private int beforeKnowledgeCount;
     private Map<String, Integer> warpDeltas = new java.util.HashMap<>();
     private Map<String, Integer> beforeRealtimeCounts;
+    private Map<BlockPos, Map<String, Integer>> beforeRealtimeContainerContents;
     private long monitorEndTick;
     private int lastReportedPercent = 0;
     private boolean warpPassed = false;
     private boolean realtimePassed = false;
+    // The townies the scenario assigned its job to (the flag's handle contents
+    // at the job-assignment phase). The fullness check asserts on exactly this
+    // population; strays absorbed into the handle later (post-assignment)
+    // were not put to work and are out of scope.
+    private Set<VillagerUUID> assignmentTownies;
+
+    /**
+     * The fullness-check targets: exactly the townies the scenario assigned its
+     * job to — the handle contents at the job-assignment phase, intersected
+     * with the check-time contents (a scenario townie that died before the
+     * check is simply absent). Strays from earlier scenarios register into
+     * the flag's handle *after* the assignment phase (the spawn wait already
+     * passed, so they are not in the snapshot and the scenario did not put
+     * them to work) — and a stray's job carries no HUNGER_FILL, so it can
+     * never satisfy the assertion anyway. A townie present at assignment IS
+     * in scope: the scenario's assign loop gave it the job and the drain left
+     * it hungry, so it is part of the scenario's world. Null snapshot (no
+     * assignment snapshot was taken for this flow) falls back to all townies.
+     *
+     * @param currentTownies the flag's handle contents at check time
+     * @param assignmentTownies the handle contents at the job-assignment
+     *                          phase, or null when no snapshot was taken
+     */
+    static Set<VillagerUUID> scenarioTownieTargets(
+            Collection<VillagerUUID> currentTownies,
+            @Nullable Set<VillagerUUID> assignmentTownies) {
+        if (assignmentTownies == null) {
+            return new HashSet<>(currentTownies);
+        }
+        Set<VillagerUUID> targets = new HashSet<>(currentTownies);
+        targets.retainAll(assignmentTownies);
+        return targets;
+    }
 
     public TestExecutor(
             ServerLevel level,
@@ -99,6 +142,18 @@ public class TestExecutor {
         this.warpAmount = warpAmount;
         this.blueprint = blueprint;
         this.warpOnly = warpOnly;
+        clearProficiencyTestSeams();
+    }
+
+    /**
+     * Both proficiency test seams are process-global, so a scenario that leaves one set would
+     * silently skew the next one's measurements rather than fail it. Clearing on construction
+     * (not teardown) is what makes that impossible: a scenario that throws mid-run cannot poison
+     * its successor, because the successor cleans up before it starts.
+     */
+    private static void clearProficiencyTestSeams() {
+        AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
+        ServerJobsRegistry.clearProficiencyIdOverridesForTest();
     }
 
     private int effectiveWarpAmount() {
@@ -117,7 +172,20 @@ public class TestExecutor {
     }
 
     public boolean getWarpPassed() {
-        return blueprint.skipWarp() ? realtimePassed : warpPassed;
+        // skipWarp scenarios report through the realtime check (the custom assertion runs there),
+        // so XFAIL must flip that result too — warpPassed is never set on the skipWarp path.
+        boolean effective = blueprint.skipWarp() ? realtimePassed : warpPassed;
+        if (blueprint.expectedFailure()) {
+            // XFAIL: the path under test is expected to fail, so the scenario passes only when it
+            // does. An unexpected pass (XPASS) flips this to false → a suite failure that flags
+            // the bug has been fixed and the expectedFailure marker should be removed.
+            return !effective;
+        }
+        return effective;
+    }
+
+    public boolean isExpectedFailure() {
+        return blueprint.expectedFailure();
     }
 
     public JobID getJobId() {
@@ -137,12 +205,15 @@ public class TestExecutor {
             case BUILD_ROOM -> buildRoom();
             case REGISTER_ROOM -> registerRoom();
             case WAIT_FOR_ROOM -> waitForRoom();
+            case RUN_SETUP_HOOK -> runSetupHook();
             case SPAWN_VILLAGER -> spawnVillager();
             case WAIT_FOR_VILLAGER -> waitForVillager();
             case ASSIGN_JOB -> assignJob();
             case SETTLE -> settle();
             case CAPTURE_BEFORE -> captureBefore();
             case RUN_WARP -> runWarp();
+            case NATURAL_WARP_FREEZE -> naturalWarpFreeze();
+            case NATURAL_WARP_WAIT -> naturalWarpWait();
             case SETTLE_AFTER_WARP -> settleAfterWarp();
             case CHECK_RESULTS -> checkResults();
             case KILL_FOR_INSPECT -> killForInspect();
@@ -161,57 +232,34 @@ public class TestExecutor {
     }
 
     private void destroyNearbyFlags() {
-        int destroyed = 0;
-        BlockPos firstFlagPos = null;
-        for (int x = -7; x <= 7; x++) {
-            for (int z = -7; z <= 7; z++) {
-                for (int y = -1; y <= 4; y++) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (!(be instanceof TownFlagBlockEntity tf)) {
-                        continue;
-                    }
-                    if (firstFlagPos == null) {
-                        firstFlagPos = pos;
-                    }
-                    tf.getVillagerHandle().entities().forEach(LivingEntity::kill);
-                    level.destroyBlock(pos, false);
-                    destroyed++;
-                }
-            }
+        TestArenaPreparer.PreparerResult result = TestArenaPreparer.destroyNearbyFlags(
+                level, origin, TestArenaPreparer.PreparerOptions.jobsTrackDefaults(), null
+        );
+        if (result.strayVisitorsKilled() > 0) {
+            msg("Killed " + result.strayVisitorsKilled() + " stray visitor(s)");
         }
-        // Kill any stray VisitorMobEntity in the test area that may have lost their flag reference
-        AABB area = new AABB(origin.offset(-20, -5, -20), origin.offset(20, 10, 20));
-        int stray = 0;
-        for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
-            e.kill();
-            stray++;
+        if (result.flagsDestroyed() > 0) {
+            msg("Destroyed " + result.flagsDestroyed() + " nearby flag(s)");
         }
-        if (stray > 0) {
-            msg("Killed " + stray + " stray visitor(s)");
-        }
-        if (destroyed > 0) {
-            msg("Destroyed " + destroyed + " nearby flag(s)");
-        }
-        if (firstFlagPos != null) {
-            origin = firstFlagPos;
+        if (result.newOrigin() != null) {
+            origin = result.newOrigin();
             msg("Using existing flag position as origin: " + origin.toShortString());
         }
         phase = Phase.FLATTEN;
     }
 
+    // Vertical clearance above the tallest blueprint block, so a grown arborist tree (small oak
+    // needs ~9) has room and no prior-scenario residue survives into this scenario's build volume.
+    private static final int TREE_HEADROOM = 10;
+
     private void flatten() {
-        msg("Flattening 15x15 area...");
-        for (int x = -7; x <= 7; x++) {
-            for (int z = -7; z <= 7; z++) {
-                for (int y = 4; y >= 0; y--) {
-                    BlockPos pos = origin.offset(x, y, z);
-                    level.destroyBlock(pos, false);
-                }
-                BlockPos groundPos = origin.offset(x, -1, z);
-                level.setBlockAndUpdate(groundPos, Blocks.COBBLESTONE.defaultBlockState());
-            }
-        }
+        msg("Flattening arena (full build volume + tree headroom)...");
+        TestArenaPreparer.ClearRegion region = TestArenaPreparer.buildVolume(
+                TestArenaPreparer.PreparerOptions.jobsTrackDefaults().halfWidth(),
+                blueprint.blocks(),
+                TREE_HEADROOM
+        );
+        TestArenaPreparer.flatten(level, origin, region);
         phase = Phase.SETTLE_BEFORE_PLACE;
         waitTicks = 0;
         maxWaitTicks = 5;
@@ -257,6 +305,12 @@ public class TestExecutor {
 
     private void buildRoom() {
         msg("Building room...");
+        // Fixture crops wither on a random tick in the dark, so a night start would kill the
+        // planted field before the monitor/warp window sees it. Pin noon for unpinned scenarios;
+        // time-pinned variants (night_start, all_night, 3_day) set their own start time.
+        if (blueprint.startTimeTick() == null) {
+            level.setDayTime(6000);
+        }
         RoomBuilder.build(level, flagPos, blueprint);
         phase = Phase.REGISTER_ROOM;
     }
@@ -299,13 +353,28 @@ public class TestExecutor {
     private void waitForRoom() {
         if (!tfbe.getRoomHandle().getRoomsMatching(blueprint.roomId()).isEmpty()) {
             msg("Room detected: " + blueprint.roomId());
-            phase = Phase.SPAWN_VILLAGER;
+            phase = Phase.RUN_SETUP_HOOK;
             return;
         }
         if (tickTimeout("Room detection timed out for " + blueprint.roomId())) {
             return;
         }
         waitTicks++;
+    }
+
+    private void runSetupHook() {
+        TestBlueprint.PostPlacementSetup hook = blueprint.setupHook();
+        if (hook == null) {
+            phase = Phase.SPAWN_VILLAGER;
+            return;
+        }
+        msg("Running post-placement setup hook...");
+        if (!hook.run(level, flagPos, tfbe, output)) {
+            error("Post-placement setup hook failed");
+            phase = Phase.DONE;
+            return;
+        }
+        phase = Phase.SPAWN_VILLAGER;
     }
 
     private void spawnVillager() {
@@ -333,6 +402,7 @@ public class TestExecutor {
     }
 
     private void assignJob() {
+        assignmentTownies = new HashSet<>(tfbe.getVillagerHandle().getVillagerJobs().keySet());
         for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
             tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);
             tfbe.getVillagerHandle().unlockJob(VillagerUUID.get(vuid), jobId);
@@ -366,8 +436,15 @@ public class TestExecutor {
         MCTownState state = tfbe.captureCurrentState();
         if (state != null) {
             beforeCounts = TestResultChecker.snapshotItemCounts(state);
-            msg("State captured, starting warp of " + effectiveWarpAmount() + " ticks...");
-            phase = Phase.RUN_WARP;
+            beforeContainerContents = TestResultChecker.snapshotContainerContents(state);
+            beforeKnowledgeCount = computeKnowledgeCount();
+            if (blueprint.useNaturalWarp()) {
+                msg("State captured, simulating " + effectiveWarpAmount() + " ticks of player absence...");
+                phase = Phase.NATURAL_WARP_FREEZE;
+            } else {
+                msg("State captured, starting warp of " + effectiveWarpAmount() + " ticks...");
+                phase = Phase.RUN_WARP;
+            }
             return;
         }
         if (waitTicks >= 50) {
@@ -391,6 +468,30 @@ public class TestExecutor {
         phase = Phase.SETTLE_AFTER_WARP;
         waitTicks = 0;
         maxWaitTicks = 40;
+    }
+
+    private void naturalWarpFreeze() {
+        setStartTimeIfNeeded();
+        tfbe.freezeWarpReferenceTick();
+        long currentTime = level.getDayTime();
+        long targetTime = currentTime + effectiveWarpAmount();
+        level.setDayTime(targetTime);
+        msg("Froze warp reference at tick " + currentTime + ", advanced world to " + targetTime);
+        msg("Next flag tick will detect " + effectiveWarpAmount() + " tick gap and trigger natural warp...");
+        phase = Phase.NATURAL_WARP_WAIT;
+        waitTicks = 0;
+        maxWaitTicks = 40;
+    }
+
+    private void naturalWarpWait() {
+        if (tickTimeout(null)) {
+            msg("Natural warp complete. Letting world settle...");
+            phase = Phase.SETTLE_AFTER_WARP;
+            waitTicks = 0;
+            maxWaitTicks = 40;
+            return;
+        }
+        waitTicks++;
     }
 
     private void logWarpContents(MCTownState state) {
@@ -429,7 +530,14 @@ public class TestExecutor {
         Map<String, Integer> afterCounts = TestResultChecker.snapshotItemCounts(afterState);
         TestResultChecker.Result result = TestResultChecker.check(beforeCounts, afterCounts, blueprint.expectation());
         warpDeltas = result.deltas();
-        warpPassed = result.passed();
+        boolean containerPassed = checkContainerContentsIfNeeded(
+                beforeContainerContents, afterState, blueprint.expectation());
+        // A warp-only scenario has no realtime check phase — the custom assertion and the
+        // villager-held gate must still run here or they are vacuous. Mixed realtime+warp
+        // scenarios run them in both — assertions must be read-only/idempotent.
+        boolean customPassed = checkCustomAssertionIfNeeded();
+        boolean heldPassed = checkVillagerHeldIfNeeded(afterState);
+        warpPassed = result.passed() && checkKnowledgeGrowthIfNeeded() && containerPassed && customPassed && heldPassed;
         broadcastResult("WARP", result);
         if (warpOnly) {
             phase = Phase.DONE;
@@ -439,11 +547,20 @@ public class TestExecutor {
     }
 
     private void broadcastResult(String phaseLabel, TestResultChecker.Result result) {
-        String tag = result.passed() ? "[PASS]" : "[FAIL]";
-        msg(tag + " " + phaseLabel + ": " + result.summary());
+        msg(AutotestLogFormatter.format(
+                AutotestLogFormatter.TRACK_JOBS,
+                testName(),
+                result.passed(),
+                phaseLabel,
+                result.summary()
+        ));
         for (String detail : result.details()) {
             msg("  " + detail);
         }
+    }
+
+    private String testName() {
+        return jobId.rootId() + ":" + jobId.jobId();
     }
 
     private void killForInspect() {
@@ -543,7 +660,25 @@ public class TestExecutor {
             return;
         }
         beforeRealtimeCounts = TestResultChecker.snapshotItemCounts(state);
+        beforeRealtimeContainerContents = TestResultChecker.snapshotContainerContents(state);
+        if (!runPostSpawnActionIfNeeded()) {
+            phase = Phase.DONE;
+            return;
+        }
         phase = Phase.START_MONITOR;
+    }
+
+    private boolean runPostSpawnActionIfNeeded() {
+        TestBlueprint.PostSpawnAction action = blueprint.postSpawnAction();
+        if (action == null) {
+            return true;
+        }
+        msg("Running post-spawn ritual trigger...");
+        if (!action.run(level, flagPos, tfbe, output)) {
+            error("Post-spawn ritual trigger failed");
+            return false;
+        }
+        return true;
     }
 
     private void checkRealtimeResults() {
@@ -573,8 +708,46 @@ public class TestExecutor {
 
         boolean fullnessPassed = checkFullnessIfNeeded();
         boolean heldPassed = checkVillagerHeldIfNeeded(afterState);
-        realtimePassed = itemsPassed && fullnessPassed && heldPassed;
+        TestExpectation containerExpectation = blueprint.realtimeExpectation() != null
+                ? blueprint.realtimeExpectation()
+                : blueprint.expectation();
+        boolean containerPassed = checkContainerContentsIfNeeded(
+                beforeRealtimeContainerContents, afterState, containerExpectation);
+        boolean customPassed = checkCustomAssertionIfNeeded();
+        realtimePassed = itemsPassed && fullnessPassed && heldPassed && containerPassed && customPassed;
         phase = Phase.DONE;
+    }
+
+    private boolean checkCustomAssertionIfNeeded() {
+        TestBlueprint.CustomAssertion assertion = blueprint.customAssertion();
+        if (assertion == null) {
+            return true;
+        }
+        boolean ok = assertion.check(level, flagPos, tfbe, output);
+        msg("CUSTOM assertion: " + (ok ? "PASS" : "FAIL"));
+        return ok;
+    }
+
+    private boolean checkContainerContentsIfNeeded(
+            Map<BlockPos, Map<String, Integer>> before,
+            MCTownState afterState,
+            TestExpectation expectation
+    ) {
+        if (expectation == null || expectation.containerContents().isEmpty()) {
+            return true;
+        }
+        // Blueprints express chest positions as flag-relative offsets; the snapshots are keyed by
+        // absolute world positions, so resolve the offsets against this scenario's flag origin.
+        TestExpectation resolved = expectation.withContainerContents(
+                expectation.containerContents().stream()
+                        .map(c -> new TestExpectation.ExpectedContainerContent(
+                                flagPos.offset(c.chest()), c.item(), c.minDelta(), c.maxDelta()))
+                        .toList()
+        );
+        Map<BlockPos, Map<String, Integer>> after = TestResultChecker.snapshotContainerContents(afterState);
+        TestResultChecker.Result result = TestResultChecker.checkContainerContents(before, after, resolved);
+        broadcastResult("CONTAINER", result);
+        return result.passed();
     }
 
     private boolean checkVillagerHeldIfNeeded(MCTownState afterState) {
@@ -594,7 +767,12 @@ public class TestExecutor {
             return true;
         }
         boolean allPassed = true;
+        Set<VillagerUUID> targets = scenarioTownieTargets(
+                tfbe.getVillagerHandle().getVillagerJobs().keySet(), assignmentTownies);
         for (Map.Entry<VillagerUUID, JobID> entry : tfbe.getVillagerHandle().getVillagerJobs().entrySet()) {
+            if (!targets.contains(entry.getKey())) {
+                continue;
+            }
             VillagerUUID vuid = entry.getKey();
             UUID uuid = VillagerUUID.get(vuid);
             VillagerStatsData stats = tfbe.getVillagerHandle().getStats(uuid);
@@ -605,6 +783,30 @@ public class TestExecutor {
                     passed ? "PASS" : "FAIL", fullness * 100, minFullness * 100));
         }
         return allPassed;
+    }
+
+    private int computeKnowledgeCount() {
+        if (tfbe == null) {
+            return 0;
+        }
+        KnowledgeHolder<?, MCHeldItem, ?> handle = tfbe.getKnowledgeHandle();
+        if (handle == null) {
+            return 0;
+        }
+        return handle.getAllKnownGatherResults().size();
+    }
+
+    private boolean checkKnowledgeGrowthIfNeeded() {
+        if (blueprint.minKnowledgeGrowth() == null) {
+            return true;
+        }
+        int after = computeKnowledgeCount();
+        int grown = after - beforeKnowledgeCount;
+        boolean ok = grown == blueprint.minKnowledgeGrowth();
+        msg(String.format(
+                "KNOWLEDGE [%s] grown=%d min=%d",
+                ok ? "PASS" : "FAIL", grown, blueprint.minKnowledgeGrowth()));
+        return ok;
     }
 
     private Map<String, Integer> scaleDeltas(Map<String, Integer> raw) {
