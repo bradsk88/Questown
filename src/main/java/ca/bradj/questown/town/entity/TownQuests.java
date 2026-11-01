@@ -1248,7 +1248,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         excluded.addAll(builtTopNeedProducers(questBatches.getAll()));
         TopNeedChoice choice = chooseTopNeed(
                 needs,
-                key -> ServerJobsRegistry.staticProducerRootsForItem(level, Ingredients.fromString(key)),
+                key -> ServerJobsRegistry.rootsThatCanMake(level, Ingredients.fromString(key)),
                 excluded
         );
         if (choice.need() == null) {

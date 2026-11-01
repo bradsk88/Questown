@@ -1299,3 +1299,13 @@ takes a `level` key after `tripLength`: among valid jobs with the same trip leng
 jobs are 0), the one with the highest `ServerJobsRegistry.getAvailableAtLevel` wins, and the
 remaining ties keep the rotation. A longer trip still beats a higher level. `JobCyclerTest`
 (`amongInTownJobs_theHighestLevelWins_everyTime`, `aLongerTrip_beatsAHigherLevel`).
+
+## The work-day window lives in Signals
+
+`ServerJobsRegistry.canFit` looks up the job's duration and asks `Signals.fitsInWorkday(start,
+duration)`: work fits when it ends in the same morning or noon. The window is pure, so
+`DayWindowTest` tests `fitsInWorkday` itself instead of a restated copy, and the disabled
+`ServerJobsRegistryCanFitTest` placeholder is gone. The declared-producer lookup is
+`rootsThatCanMake` (was `staticProducerRootsForItem`/`staticProducerRootsFor`); its two
+tag-membership cases were disabled (tag contents need a loaded data pack) and are removed.
+

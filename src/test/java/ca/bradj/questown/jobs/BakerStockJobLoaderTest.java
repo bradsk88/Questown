@@ -101,9 +101,9 @@ class BakerStockJobLoaderTest {
                 new ServerJobsRegistry.ProducerDeclaration(id, work.initialRequest.apply(null))
         ));
 
-        Assertions.assertEquals(Set.of(), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.COAL)));
-        Assertions.assertEquals(Set.of(), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.WHEAT)));
-        Assertions.assertEquals(Set.of("baker"), ServerJobsRegistry.staticProducerRootsFor(declared, Ingredient.of(Items.BREAD)));
+        Assertions.assertEquals(Set.of(), ServerJobsRegistry.rootsThatCanMake(declared, Ingredient.of(Items.COAL)));
+        Assertions.assertEquals(Set.of(), ServerJobsRegistry.rootsThatCanMake(declared, Ingredient.of(Items.WHEAT)));
+        Assertions.assertEquals(Set.of("baker"), ServerJobsRegistry.rootsThatCanMake(declared, Ingredient.of(Items.BREAD)));
     }
 
     private static JsonElement readJson(String resourcePath) {

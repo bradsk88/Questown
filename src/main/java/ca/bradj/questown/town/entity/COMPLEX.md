@@ -423,7 +423,7 @@ flowchart TD
   root itself (its capacity already exists) and any root some townie already
   has unlocked (an unlocked producer means the stuck state has a different
   cause and the quest would not help). Producer candidates come from the job
-  definitions' declared products (`ServerJobsRegistry.staticProducerRootsForItem`
+  definitions' declared products (`ServerJobsRegistry.rootsThatCanMake`
   — `initial_request` matching), not the discovery-gated registry results: an
   unlock quest exists to ask for a producer the town does not yet hold, so the
   producer knowledge must be omniscient (gannet decision 3); the discovery gate
@@ -449,8 +449,8 @@ already-unlocked producers, are **skipped, not dead-ends** (run-14's
 die-on-#1 `oak_wood` cell: zero candidates silenced a lower need that had
 one). A need whose producer's unlock is already in flight ends the phase
 (`SKIPPED`) — the walk does not reach past it to post for a lower-ranked
-need. The producer core itself (`staticProducerRootsFor`) is unit green in
-`StaticProducerRootsTest`; its `Works`-registry glue half is
+need. The producer core itself (`rootsThatCanMake(declared, wanted)`) is unit green in
+`RootsThatCanMakeTest`; its `Works`-registry glue half is
 registry-bound (compile + the held run settle it).
 
 **`initial_request` is the declared product, so helper jobs must not name their

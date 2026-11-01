@@ -127,10 +127,6 @@ public class ServerJobsRegistry {
         return townie.getTown() != null && townie.getTown().getPossibleWork().hasDoneAllRequests(townie.getUUID());
     }
 
-    /**
-     * The needs row's items for a specific townie: the job's wants while it works, otherwise the
-     * item it is blocked on (a seeking-work townie used to show a Job Board here regardless).
-     */
     public static ImmutableList<Ingredient> getNeededItems(VisitorMobEntity townie) {
         ImmutableList<Ingredient> wants = getWantedResourcesProvider(townie.getJobId())
                 .apply(Jobs.getHeldItems(townie.getInventory()));
@@ -175,9 +171,6 @@ public class ServerJobsRegistry {
     ) {
         Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(job)).findFirst();
         if (sj.isPresent()) {
-            // A special job answers for itself. Seeking work has no Work (null): falling through
-            // to getWorkSupplier logged "No work found" and answered with some other job of the
-            // same root (2026-10-17 playtest: hunter:seeking_work).
             return sj.get().reference().apply(job);
         }
         Supplier<Work> workSupplier = getWorkSupplier(job);
@@ -206,14 +199,6 @@ public class ServerJobsRegistry {
         return jobsThatProduce(data, wantedResult, true);
     }
 
-    /**
-     * Jobs whose results include the item, as far as the town knows: a loot job's results are
-     * the town's known loot for its table ({@code allKnownGatherItemsFn}), so a gatherer counts
-     * for wheat seeds only once the town has found seeds that way. Unlike
-     * {@link #getAllJobsThatProduce}, a job's declared {@code initial_request} alone does not
-     * count. For the player-facing "There are N known jobs which produce this item" (dev,
-     * 2026-10-19 playtest: count only jobs where the item is in the town's knowledge store).
-     */
     public static ImmutableMap<JobID, ResourceLocation> getJobsKnownToProduce(
             WorksBehaviour.TownData data,
             Ingredient wantedResult
@@ -268,22 +253,12 @@ public class ServerJobsRegistry {
         return false;
     }
 
-    /** One job's declared product: {@code initial_request} as the job data names it; {@code null} = names none. */
+    /** A job and the item it makes, or {@code null} if it makes none. */
     public record ProducerDeclaration(JobID job, @Nullable Ingredient product) {
     }
 
-    /**
-     * The static producer capability for a missing item: which roots' job definitions
-     * <em>declare</em> it as their product ({@code initial_request}) — independent of
-     * what the town has discovered. Quest generation must be able to ask for a producer
-     * the town does not yet hold (that is the unlock quest's whole purpose; gannet
-     * handoff, decision 3), so the discovery gate ({@code allKnownGatherItemsFn} via
-     * the results function) stays on the job engine's execution path only.
-     * <p>
-     * Scope is the declared product — the {@code biome_loot} result tables would extend
-     * this (parked follow-up).
-     */
-    public static Set<String> staticProducerRootsForItem(
+    /** The job roots that can make the item, whether or not the town has discovered how yet. */
+    public static Set<String> rootsThatCanMake(
             @Nullable ServerLevel sl,
             Ingredient wanted
     ) {
@@ -299,16 +274,10 @@ public class ServerJobsRegistry {
                 QT.JOB_LOGGER.error("Failed to resolve the declared product of {}", entry.getKey(), re);
             }
         }
-        return staticProducerRootsFor(declared, wanted);
+        return rootsThatCanMake(declared, wanted);
     }
 
-    /**
-     * Pure core of {@link #staticProducerRootsForItem}: the declared products are handed
-     * in, which keeps this unit-testable although building them from the live {@code Works}
-     * registry is Forge-registry-bound (compile + held-run covers that half; the
-     * {@code Work.isUnlockedInitially} precedent).
-     */
-    public static Set<String> staticProducerRootsFor(
+    public static Set<String> rootsThatCanMake(
             Iterable<ProducerDeclaration> declaredProducts,
             Ingredient wanted
     ) {
@@ -740,13 +709,7 @@ public class ServerJobsRegistry {
         );
     }
 
-    /**
-     * Whether the job's own block occupies {@code pos} — the warp-lane seam for assigning a job
-     * a real work block. Uses the job block identity check (block id + properties), not the
-     * full slot-gated predicate (which is how the baker's {@code baker/extract} would have
-     * stayed unassigned on an empty oven, dropping its slot-rule takes at a virtual position
-     * for the whole warp). Content-agnostic by design: the warp is what fills the slots.
-     */
+    /** Whether the job's work block is at {@code pos}, whatever the block currently holds. */
     public static boolean jobBlockAt(JobID jobID, WorkLocation.BlockInfo blockInfo, BlockPos pos) {
         Supplier<Work> w = Works.get(jobID);
         if (w == null) {
@@ -1018,14 +981,7 @@ public class ServerJobsRegistry {
             Signals.DayTime currentTick
     ) {
         Work w = getWorkSupplier(p).get();
-        long jobDuration = w.jobFunc.apply(villagerID).getTotalDuration();
-        long finalTick = currentTick.dayTime() + jobDuration;
-        Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
-        Signals currentSegment = Signals.fromDayTime(currentTick);
-        if (nextSegment.compareTo(currentSegment) < 0) {
-            return false;
-        }
-        return ImmutableList.of(Signals.MORNING, Signals.NOON).contains(nextSegment);
+        return Signals.fitsInWorkday(currentTick, w.jobFunc.apply(villagerID).getTotalDuration());
     }
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {

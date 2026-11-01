@@ -18,6 +18,15 @@ public enum Signals {
         }
     }
 
+    /** Whether work of this length, started now, ends in the same morning or noon. */
+    public static boolean fitsInWorkday(DayTime start, long duration) {
+        Signals end = fromDayTime(new DayTime(start.dayTime() + duration));
+        if (end.compareTo(fromDayTime(start)) < 0) {
+            return false;
+        }
+        return end == MORNING || end == NOON;
+    }
+
     public static Signals fromDayTime(DayTime gameTime) {
         long dayTime = gameTime.dayTime % FULL_DAY_TICKS;
         if (dayTime < 6000) {
