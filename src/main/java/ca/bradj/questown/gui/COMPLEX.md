@@ -501,7 +501,7 @@ WAITING_FOR_TIMED_STATE as working, so `keepsOwnLines` keeps the trip's lines. `
 The flag's villagers-tab card had no card-body click handler - only the 32x32 status icon
 sent `OpenJobMessage` (present since the 1.19.2 golden; the "click a card to open that
 villager" ask predates it). `mouseClicked` now falls through, after the status-icon check,
-to a whole-card hit-test (same pattern as `QuestsScreen.openLessonForClickedCard` on the
+to a whole-card hit-test (same pattern as `QuestsScreen.openTabForClickedCard` on the
 quest tab - user's reference) that sends `OpenVillagerMenuMessage(STATS, showInventoryTab=false)`
 for that townie: the opened menu hides its inventory tab and lands on the stats pane
 (management view, not the inventory; user ruling, `villager-card-opens-management-only-screen`).
@@ -525,9 +525,9 @@ The status icon keeps its `OpenJobMessage` (smaller box wins the overlap).
 
 ## Day-1 playtest: quest deep-links, localized job names, arrival copy
 
-- **Welcome-mat quest → crafting tab.** `QuestsScreen.openLessonForClickedCard`
+- **Welcome-mat quest → crafting tab.** `QuestsScreen.openTabForClickedCard`
   branches on `SpecialQuests.TOWN_GATE.equals(quest.getWantedId())` and fires
-  `Tabs.openTab("tooltips.crafting")` before falling back to the book lesson.
+  `Tabs.openTab("tooltips.crafting")`.
   `Tabs.openTab(titleKey)` looks the tab up by its tooltip key and runs its
   `onClick` (the same `OpenFlagMenuMessage` a tab click sends); returns false
   when the tab is absent (e.g. the villager-scoped menu) so the book fallback
@@ -620,7 +620,7 @@ empty multi-status overview.
   report 2026-10-14): line 1 = `menu.quests.roomblock.welcome_mat` / `menu.
   quests.roomblock.empty_room`, line 2 = grey `menu.quests.roomblock.
   click_crafting` via `Compat.translatableStyled`. Both cards deep-link to the
-  crafting tab on click (`openLessonForClickedCard`), which is what the grey
+  crafting tab on click (`openTabForClickedCard`), which is what the grey
   line promises - the empty-room card needs the Town Wand, which is crafted
   there. Remaining room blocks fall through the ROOM switch:
   `JOB_BOARD` or `RoomBlock.isBlockRoom(id)` → `menu.quests.roomblock.town` with
@@ -631,7 +631,7 @@ empty multi-status overview.
   "Job board quest's tooltip should use the same format as the welcome mat's
   (click to see crafting)." `JOB_BOARD` moved INTO the fixed two-line branch above
   (key `menu.quests.roomblock.job_board` + grey click-crafting line) and into the
-  crafting deep-link in `openLessonForClickedCard`; the now-dead server-side flavor
+  crafting deep-link in `openTabForClickedCard`; the now-dead server-side flavor
   text in `addBasicsBatch` was retired so the lang key is the single source of
   copy. The `roomblock.town` fallback now serves only the remaining block rooms.
 - **Job-board quest card shows the board, not a sign.** `UIQuest.fromLevel` overrides
@@ -925,9 +925,9 @@ completion and vanish unseen. Now:
 Four chat requests, one theme: a card or tab should take the player to where its
 ask is answered.
 
-- **JOB_CHANGE card → villagers tab.** `QuestsScreen.openLessonForClickedCard`
-  opens `tooltips.villagers` via `Tabs.openTab` (falls back to the BOP lesson when
-  the tab is absent — the flag menu hides it before the first villager). The tooltip
+- **JOB_CHANGE card → villagers tab.** `QuestsScreen.openTabForClickedCard`
+  opens `tooltips.villagers` via `Tabs.openTab` (a no-op when the tab is absent — the flag
+  menu hides it before the first villager). The tooltip
   (`jobChangeTooltip`, static; `renderCardTooltip` takes `villagersTabShown` from
   `Tabs.hasTab`) is the card's flavor/job line plus a grey
   `menu.quests.job_change.click_villagers` hint only while the tab exists.
@@ -1171,7 +1171,7 @@ appears whenever any quest is completed, as a button just below the panel
 (`footerButtonY`, 2 px gap). All-done keeps its centred placement.
 
 Card indices point into `cardsData()`, not `quests`: `renderCardContent` and
-`openLessonForClickedCard` look up `cardsData().get(card.index())`. Verified live:
+`openTabForClickedCard` look up `cardsData().get(card.index())`. Verified live:
 "Page 1 / 1" with the two open quests, the link below the panel, gui-lint OK on
 QuestsScreen (606x647); clicking it shows "Page 1 / 48". Applies to the per-villager
 quests screen too (same class).

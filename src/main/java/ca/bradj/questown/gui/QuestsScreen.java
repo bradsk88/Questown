@@ -1,8 +1,6 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.network.FlagCraftRecipes;
-import ca.bradj.questown.Questown;
-import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.core.Coordinate;
@@ -12,7 +10,6 @@ import ca.bradj.questown.gui.PagedCardScreen.CardCoordinates;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.Journal;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -397,7 +394,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     /**
      * The card's own copy (flavor text, else the job line) plus a grey click hint while the
      * villagers tab exists - a click opens it (2026-10-17 playtest feature request). Before
-     * the first villager the tab is hidden, the click opens the BOP lesson, and no hint shows.
+     * the first villager the tab is hidden, and no hint shows.
      */
     private static List<Component> jobChangeTooltip(UIQuest recipe, boolean villagersTabShown) {
         List<Component> base = recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()
@@ -569,7 +566,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 return true;
             }
         }
-        if (openLessonForClickedCard(x, y)) {
+        if (openTabForClickedCard(x, y)) {
             return true;
         }
         int bgX = (this.width - backgroundWidth) / 2;
@@ -662,8 +659,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return false;
     }
 
-    private static final ResourceLocation BOOK_ID = new ResourceLocation(Questown.MODID, "intro");
-
     /** Quest cards answered at the flag's crafting tab: a click opens it, and the tooltip says so. */
     static boolean opensCrafting(ResourceLocation wantedId) {
         return SpecialQuests.TOWN_GATE.equals(wantedId)
@@ -672,7 +667,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 || FlagCraftRecipes.MINESHAFT_QUEST.equals(wantedId);
     }
 
-    private boolean openLessonForClickedCard(double mouseX, double mouseY) {
+    private boolean openTabForClickedCard(double mouseX, double mouseY) {
         for (Card<UIQuest> card : cards()) {
             CardCoordinates c = card.coords();
             if (mouseX < c.leftX() || mouseX > c.rightX() || mouseY < c.topY() || mouseY > c.bottomY()) {
@@ -682,11 +677,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             if (quest == null) {
                 continue;
             }
-            // Day-1 playtest: the welcome-mat quest is answered at the flag's crafting tab,
-            // not in the book - deep-link there. Hardcoded for now (the player's ask):
-            // "Clicking on the welcome mat quest should take me to the flag's crafting tab."
-            // The empty-room card deep-links there too: its grey line says "Click to open
-            // crafting" because the Town Wand - the one thing it needs - is crafted there.
+            // The welcome-mat, empty-room, job-board and mineshaft quests are answered at the
+            // flag's crafting tab, so their cards deep-link there.
             if (opensCrafting(quest.getWantedId())
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;
@@ -695,34 +687,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                     && this.tabs instanceof Tabs tabs && tabs.openTab(VILLAGERS_TAB)) {
                 return true;
             }
-            ResourceLocation entry = lessonEntryForQuestType(quest.getType());
-            if (entry == null) {
-                continue;
-            }
-            // A wrong/unknown entry id used to NPE inside the journal call, crashing
-            // the client. The journal facade never throws, but keep the guard in case
-            // a future target restores strict entry lookup.
-            try {
-                Journal.openBookEntry(null, BOOK_ID, entry, 0);
-            } catch (RuntimeException e) {
-                QT.GUI_LOGGER.warn("Could not open book entry {} (quest type {})", entry, quest.getType(), e);
-                return false;
-            }
-            return true;
         }
         return false;
-    }
-
-    // Entry ids are the file path under en_us/, and every entry file lives in entries/.
-    private static @Nullable ResourceLocation lessonEntryForQuestType(Quest.QuestType type) {
-        return switch (type) {
-            case JOB_CHANGE -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
-            case JOB_UNLOCK, SKILL_UNLOCK, VILLAGER_LEVEL -> new ResourceLocation(Questown.MODID, "entries/lesson_bop");
-            case ROOM -> new ResourceLocation(Questown.MODID, "entries/lesson_room_recipes");
-            case ITEM, LOOT -> new ResourceLocation(Questown.MODID, "entries/lesson_needs");
-            case CONCURRENT_JOBS -> new ResourceLocation(Questown.MODID, "entries/014-supply-chains");
-            default -> null;
-        };
     }
 
     public List<Rect2i> getExtraAreas() {

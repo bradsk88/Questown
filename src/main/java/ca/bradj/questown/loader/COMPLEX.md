@@ -167,9 +167,10 @@ runtime verification — a held 1.20.6 hold-run autotest — not more ports):
   `ServerAboutToStartEvent` under `net.neoforged.neoforge.*`. (The one remaining `net.minecraftforge.`
   string in the tree is a dead commented-out sample in `_vanilla/entities/FishingHook.java` — comment only.)
 - **journal (Patchouli) drop** — **DONE.** `ServerJobsRegistry` + `PagedCardScreen` neutralized
-  (TriPredicate via the neutral `loader.TriPredicate`); the journal-open action is a neutral `mc.Journal`
-  facade (`QuestsScreen` → `Journal.openBookEntry(...)`) with the NeoForge impl in `loader.neo.NeoJournal`
-  (journal dropped per user — see `.scratch/bring-back-journal`).
+  (TriPredicate via the neutral `loader.TriPredicate`). The journal itself is gone (dev, 2026-10-31):
+  no `mc.Journal` facade, no `AdvancementEvents` entry map, no `patchouli_books` data; quest cards
+  only deep-link to flag tabs. The book content is in git history (`c83eb20`); see
+  `.scratch/bring-back-journal`.
 - **loot API** — **DONE.** `Loots` + `ResourceJobLoader` on the vanilla 1.20.6 loot API
   (`LootTable`/`LootParams`/`LootContextParamSets` in `net.minecraft.world.level.storage.loot.*`);
   `LootDataManager` is gone in 1.20.6.

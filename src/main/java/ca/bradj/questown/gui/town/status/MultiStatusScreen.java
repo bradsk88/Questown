@@ -342,7 +342,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         };
 
         // Full-card click opens that villager's UI in management-only mode (same whole-card
-        // hit-test the quest tab uses in openLessonForClickedCard; user reference, 2026-10-14
+        // hit-test the quest tab uses in openTabForClickedCard; user reference, 2026-10-14
         // playtest): the menu hides the inventory tab and lands on the stats pane, not the
         // inventory pane.
         for (Card<UUID> v : cards()) {
