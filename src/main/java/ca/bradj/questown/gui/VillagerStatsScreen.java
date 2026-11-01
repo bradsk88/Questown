@@ -1,31 +1,35 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.common.util.ImmutableRect2i;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMenu> {
+public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu> {
     public static final int HALF_WIDTH = 82;
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final ResourceLocation icons = Questown.ResourceLocation("textures/gui/bars.png");
     private final JEI.NineNine background;
     private final VillagerTabs tabs;
     private ImmutableRect2i expBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i hngBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i moodBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i dmgBar = new ImmutableRect2i(0, 0, 0, 0);
+    // The effects line's box and names while it is cut short, so a hover can list them all.
+    private ImmutableRect2i effectsLine = new ImmutableRect2i(0, 0, 0, 0);
+    private List<String> truncatedEffects = List.of();
 
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
@@ -59,17 +63,8 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
-    }
-
-    @Override
-    protected void renderTooltip(
-            PoseStack stack,
+    private void renderCustomTooltip(
+            RenderContext rc,
             int mouseX,
             int mouseY
     ) {
@@ -80,125 +75,164 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
                 bgY,
                 mouseX,
                 mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
 
+        if (!truncatedEffects.isEmpty() && JEI.isCoordInBox(mouseX, mouseY, effectsLine)) {
+            this.showTooltip(truncatedEffects.stream().map(n -> Compat.visualOrder(Compat.literal(n))).toList());
+            return;
+        }
+
         if (JEI.isCoordInBox(mouseX, mouseY, expBar)) {
-            super.renderTooltip(
-                    stack, Compat.translatable(
+            this.showTooltip(
+                    Compat.translatable(
                             "menu.common.stat_tooltip",
                             Compat.translatable("menu.villager_stats.experience"),
                             menu.getExperienceValue(),
                             menu.getExperienceTarget()
-                    ), mouseX, mouseY
+                    )
             );
             return;
         }
 
         if (JEI.isCoordInBox(mouseX, mouseY, hngBar)) {
-            super.renderTooltip(
-                    stack, Compat.translatable(
+            this.showTooltip(
+                    Compat.translatable(
                             "menu.common.stat_tooltip",
                             Compat.translatable("menu.villager_stats.hunger"),
                             menu.getFullnessPercent(),
                             100
-                    ), mouseX, mouseY
+                    )
             );
             return;
         }
 
         if (JEI.isCoordInBox(mouseX, mouseY, moodBar)) {
-            super.renderTooltip(
-                    stack, Compat.translatable(
+            this.showTooltip(
+                    Compat.translatable(
                             "menu.common.stat_tooltip",
                             Compat.translatable("menu.villager_stats.mood"),
                             menu.getMoodPercent() * 100,
                             100
-                    ), mouseX, mouseY
+                    )
             );
             return;
         }
         if (JEI.isCoordInBox(mouseX, mouseY, dmgBar)) {
-            super.renderTooltip(
-                    stack, Compat.translatable(
+            this.showTooltip(
+                    Compat.translatable(
                             "menu.common.stat_tooltip",
                             Compat.translatable("menu.villager_stats.damage"),
                             menu.getDamageLevel() * 100,
                             100
-                    ), mouseX, mouseY
+                    )
             );
             return;
         }
-
-        super.renderTooltip(stack, mouseX, mouseY);
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
+    protected void renderScreenContent(
+            RenderContext rc,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-
         int position = 0;
-        this.expBar = renderExperience(poseStack, position);
+        this.expBar = renderExperience(rc, position);
         position++;
-//        renderMood(poseStack, position);
+        renderMoodEffects(rc, position);
         position++;
         if (Config.HUNGER_ENABLED.get()) {
-            this.hngBar = renderHunger(poseStack, position);
+            this.hngBar = renderHunger(rc, position);
             position++;
         }
-//        renderDamage(poseStack, position);
-        renderTooltip(poseStack, mouseX, mouseY);
+//        renderDamage(rc, position);
+        renderCustomTooltip(rc, mouseX, mouseY);
     }
 
     private ImmutableRect2i renderExperience(
-            PoseStack stack,
+            RenderContext rc,
             int position
     ) {
         Component title = Compat.translatable("menu.villager_stats.experience");
-        return renderBar(
-                stack,
+        ImmutableRect2i bar = renderBar(
+                rc,
                 position,
                 title,
                 (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
         );
+        // "Lvl N" right-aligned on the title line.
+        Component level = Compat.translatable("menu.villager_stats.level", menu.getLevel());
+        int bgX = (this.width - backgroundWidth) / 2;
+        int titleY = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
+        rc.darkText(level, bgX + backgroundWidth - 8 - this.font.width(level), titleY);
+        return bar;
+    }
+
+    /**
+     * What is weighing on the villager, in words ("Didn't sleep"): the mood effects the townie
+     * carries. The stats page showed no sign of a sleepless or raw-food day.
+     * Nothing is drawn when no effect is active.
+     */
+    private void renderMoodEffects(
+            RenderContext rc,
+            int position
+    ) {
+        truncatedEffects = List.of();
+        if (menu.getMoodEffects().isEmpty()) {
+            return;
+        }
+        int bgX = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
+        // One line in the stats row (rows are 25 px apart); a long list ends in "..." and shows
+        // whole on hover.
+        List<String> names = new ArrayList<>();
+        for (String effect : menu.getMoodEffects()) {
+            String path = effect.substring(effect.indexOf(':') + 1);
+            names.add(Compat.translatableWithFallback(
+                    "menu.villager_stats.effect." + path, ca.bradj.questown.jobs.JobNames.variant(path)
+            ).getString());
+        }
+        String line = Compat.translatable("menu.villager_stats.mood_effects", String.join(", ", names)).getString();
+        String shown = Compat.fitToWidth(this.font, line, backgroundWidth - 16);
+        rc.darkText(Compat.literal(shown), bgX + 8, y);
+        effectsLine = new ImmutableRect2i(bgX + 8, y, this.font.width(shown), this.font.lineHeight);
+        if (!shown.equals(line)) {
+            truncatedEffects = List.copyOf(names);
+        }
     }
 
     private void renderMood(
-            PoseStack stack,
+            RenderContext rc,
             int position
     ) {
         Component title = Compat.translatable("menu.villager_stats.mood");
-        renderBar(stack, position, title, menu.getMoodPercent());
+        renderBar(rc, position, title, menu.getMoodPercent());
     }
 
     private ImmutableRect2i renderHunger(
-            PoseStack stack,
+            RenderContext rc,
             int position
     ) {
         int fullnessPercent = menu.getFullnessPercent();
         Component title = Compat.translatable("menu.villager_stats.hunger");
-        return renderBar(stack, position, title, fullnessPercent);
+        return renderBar(rc, position, title, fullnessPercent);
     }
 
     private ImmutableRect2i renderDamage(
-            PoseStack stack,
+            RenderContext rc,
             int position
     ) {
         int damageLevel = menu.getDamageLevel();
         Component title = Compat.translatable("menu.villager_stats.damage");
-        return renderBar(stack, position, title, damageLevel);
+        return renderBar(rc, position, title, damageLevel);
     }
 
     private ImmutableRect2i renderBar(
-            PoseStack stack,
+            RenderContext rc,
             int index,
             Component title,
             int fullnessPercent
@@ -206,34 +240,37 @@ public class VillagerStatsScreen extends AbstractContainerScreen<VillagerStatsMe
         int bgX = (this.width - backgroundWidth) / 2;
         int bxY = (this.height - backgroundHeight) / 2;
         bxY = bxY + (25 * index);
-        font.draw(stack, title, bgX + 8, bxY + 16, 0x00000000);
-        RenderSystem.setShaderTexture(0, new ResourceLocation("textures/gui/icons.png"));
+        rc.darkText(title, bgX + 8, bxY + 16);
         int x = 8 + bgX;
         int y = 28 + bxY;
         int height = 5;
         int barLeftX = x - 1;
-        blit(stack, barLeftX, y, 0, 0, 64, HALF_WIDTH, height, 256, 256);
-        blit(stack, x + 78, y, 0, 100, 64, HALF_WIDTH, height, 256, 256);
+        // bars.png (256x256): left half-bands at u0..94, right half-bands at u100..181
+        // (rebaked with the dark right cap the golden had). Band rows: track v64..68,
+        // fill v69..73 (v74 down is the purple bands). Each 82px half fills 0..50% /
+        // 50..100%, like the golden's two-half layout. Util.blit is the verified
+        // 1:1 pixel blit over the 256 sheet.
+        Util.blit(rc.gui(), icons, barLeftX, y, 1, 64, HALF_WIDTH, height);
+        Util.blit(rc.gui(), icons, x + 78, y, 100, 64, HALF_WIDTH, height);
         float fP = fullnessPercent / 100f;
-        int greenY = 69;
         int leftWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, fP))));
         int rightWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, (fP) - 0.5))));
-        blit(stack, barLeftX, y, 0, 0, greenY, leftWidth, height, 256, 256);
-        blit(stack, x + 78, y, 0, 100, greenY, rightWidth, height, 256, 256);
+        Util.blit(rc.gui(), icons, barLeftX, y, 1, 69, leftWidth, height);
+        Util.blit(rc.gui(), icons, x + 78, y, 100, 69, rightWidth, height);
         return new ImmutableRect2i(barLeftX, y, HALF_WIDTH * 2, height);
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, x, y, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), x, y);
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, x, y);
     }
 
     @Override

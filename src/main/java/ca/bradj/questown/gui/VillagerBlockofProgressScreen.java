@@ -4,11 +4,9 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,7 +14,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
-public class VillagerBlockofProgressScreen extends AbstractContainerScreen<VillagerBlockofProgressMenu> {
+public class VillagerBlockofProgressScreen extends CompatContainerScreen<VillagerBlockofProgressMenu> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private final VillagerTabs tabs;
@@ -53,64 +51,47 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
     }
 
     @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
-    }
-
-    @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         bgY += 16;
-        RenderUtil.renderItemScaled(itemRenderer, 4, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
-        renderText(poseStack, bgX, bgY);
+        RenderUtil.renderItemScaled(Compat.itemRenderer(), 1.6f, ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), bgX + 16, bgY + 2);
+        renderText(ctx, bgX, bgY);
     }
 
     private void renderText(
-            PoseStack poseStack,
+            RenderContext ctx,
             int bgX,
             int bgY
     ) {
+        String villagerLabel = menu.villagerDisplayName.isEmpty()
+                ? UtilClean.truncateMiddle(menu.villagerUUID)
+                : menu.villagerDisplayName;
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
         int iconWidth = 32;
-        bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
-                Compat.translatable("menu.block_of_progress.v_has_earned", UtilClean.truncateMiddle(menu.villagerUUID))
+        bgY += ctx.darkTextWrap(
+                topLeft.withY(bgY).shifted(iconWidth, 0), tWidth - iconWidth,
+                Compat.translatable("menu.block_of_progress.v_has_earned", villagerLabel)
         );
         bgY += 8;
-        bgY += Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
+        bgY += ctx.darkTextWrap(
+                topLeft.withY(bgY), tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
         bgY += 8;
-        Compat.drawDarkTextWrap(
-                font, poseStack, topLeft.withY(bgY), tWidth,
-                Compat.translatable("menu.block_of_progress.will_deposit", UtilClean.truncateMiddle(menu.villagerUUID))
+        ctx.darkTextWrap(
+                topLeft.withY(bgY), tWidth,
+                Compat.translatable("menu.block_of_progress.will_deposit", villagerLabel)
         );
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, bgX, bgY);
     }
 
     @Override

@@ -2,23 +2,25 @@ package ca.bradj.questown.gui.town.status;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.network.NetworkCompat;
 import ca.bradj.questown.gui.StatusPacket;
+import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record MultiStatusScreenSyncMessage(
         MultiStatusScreen.SyncedData data
@@ -29,37 +31,41 @@ public record MultiStatusScreenSyncMessage(
             FriendlyByteBuf buffer
     ) {
         buffer.writeMap(
-                msg.data.villagerStatuses(), FriendlyByteBuf::writeUUID, StatusPacket::toNetwork
+                msg.data.villagerStatuses(), (b, k) -> b.writeUUID(k), StatusPacket::toNetwork
         );
         buffer.writeMap(
-                msg.data.items(), FriendlyByteBuf::writeUUID, (b, v) ->
+                msg.data.items(), (b, k) -> b.writeUUID(k), (b, v) ->
                         b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(Compat.getItemId(item)))
         );
         buffer.writeBoolean(msg.data.villagerArrivingInMorning());
+        buffer.writeCollection(msg.data.pendingJobChange(), (b, u) -> b.writeUUID(u));
+        buffer.writeMap(msg.data.switchAfterTrip(), (b, k) -> b.writeUUID(k), NetworkCompat::toNetwork);
     }
 
     public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
         HashMap<UUID, StatusPacket> data = buffer.readMap(
                 HashMap::new,
-                FriendlyByteBuf::readUUID,
+                b -> b.readUUID(),
                 StatusPacket::fromNetwork
         );
         HashMap<UUID, ImmutableList<Item>> data2 = buffer.readMap(
                 HashMap::new,
-                FriendlyByteBuf::readUUID,
+                b -> b.readUUID(),
                 MultiStatusScreenSyncMessage::readItemsFromBuffer
         );
         boolean arrivingInMorning = buffer.readBoolean();
+        Set<UUID> pending = buffer.readCollection(HashSet::new, b -> b.readUUID());
+        HashMap<UUID, JobID> afterTrip = buffer.readMap(HashMap::new, b -> b.readUUID(), NetworkCompat::fromNetworkJobID);
         return new MultiStatusScreenSyncMessage(new MultiStatusScreen.SyncedData(
-                data, data2, arrivingInMorning
+                data, data2, arrivingInMorning, pending, afterTrip
         ));
     }
 
-    private static @NotNull ImmutableList<Item> readItemsFromBuffer(FriendlyByteBuf b) {
+    private static @NotNull ImmutableList<Item> readItemsFromBuffer(net.minecraft.network.FriendlyByteBuf b) {
         List<Item> dat = b.readList(bb -> {
             ResourceLocation resourceLocation = b.readResourceLocation();
             try {
-                return ForgeRegistries.ITEMS.getValue(resourceLocation);
+                return Loader.itemFromId(resourceLocation);
             } catch (Exception e) {
                 QT.GUI_LOGGER.error("Failed to get item {}", resourceLocation, e);
             }
@@ -69,17 +75,15 @@ public record MultiStatusScreenSyncMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                Dist.CLIENT,
-                () -> () -> MultiStatusScreen.syncedData = new MultiStatusScreen.SyncedData(
-                        ImmutableMap.copyOf(data.villagerStatuses()),
-                        UtilClean.deepCopy(data.items()),
-                        data.villagerArrivingInMorning()
-                )
-        )).exceptionally(MultiStatusScreenSyncMessage::logError);
-        ctx.get().setPacketHandled(true);
+        ctx.enqueueWork(() -> Loader.runClient(() -> MultiStatusScreen.syncedData = new MultiStatusScreen.SyncedData(
+                ImmutableMap.copyOf(data.villagerStatuses()),
+                UtilClean.deepCopy(data.items()),
+                data.villagerArrivingInMorning(),
+                ImmutableSet.copyOf(data.pendingJobChange()),
+                ImmutableMap.copyOf(data.switchAfterTrip())
+        ))).exceptionally(MultiStatusScreenSyncMessage::logError);
 
     }
 

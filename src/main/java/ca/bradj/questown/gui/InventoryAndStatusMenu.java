@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.init.MenuTypesInit;
+import org.jetbrains.annotations.Nullable;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
@@ -17,7 +18,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
@@ -35,7 +35,10 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     final JobID jobId;
 
     private final Stack<Runnable> closers = new Stack<>();
+    private @Nullable VisitorMobEntity townie;
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -55,7 +58,9 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             UUID villagerUUID,
             JobID jobId,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         this.jobId = jobId;
@@ -63,6 +68,8 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         layoutSlots(gathererInv);
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -81,17 +88,19 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             return;
         }
         ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
-        @NotNull ImmutableList<Component> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
+        @NotNull ImmutableList<Component> text = townie == null
+                ? ServerJobsRegistry.getStatusText(jobId, newStatus)
+                : ServerJobsRegistry.getStatusText(jobId, newStatus, townie);
         if (newStatus instanceof ProductionStatus ps) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusArtMessage(jobId, ps, tex)
             );
             if (text.isEmpty()) {
                 return;
             }
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusTextMessage(ps, new StatusPacket(jobId, text, tex))
             );
         }
@@ -109,7 +118,18 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override
@@ -121,6 +141,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             VisitorMobEntity e,
             ServerPlayer sender
     ) {
+        this.townie = e;
         IStatus<?> status = e.getStatusForServer();
         addStatusListener(e, status);
         addWantedIngredientsListener(e, sender);
@@ -146,18 +167,16 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             ServerPlayer sender
     ) {
         JobWantedIngredientsMessage msg = buildMessage(e);
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
-        Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.CHANNEL.send(tgt, msg);
+        Consumer<ImmutableList<Ingredient>> listener = ingr -> QuestownNetwork.sendToPlayer(sender, msg);
 
         e.addWantedIngredientsListener(listener);
         this.closers.add(() -> e.removeWantedIngredientsListener(listener));
-        QuestownNetwork.CHANNEL.send(tgt, buildMessage(e));
+        QuestownNetwork.sendToPlayer(sender, buildMessage(e));
     }
 
     private static @NotNull JobWantedIngredientsMessage buildMessage(
             VisitorMobEntity e
     ) {
-        Function<List<MCHeldItem>, ImmutableList<Ingredient>> wantFn = ServerJobsRegistry.getWantedResourcesProvider(e.getJobId());
-        return new JobWantedIngredientsMessage(wantFn.apply(Jobs.getHeldItems(e.getInventory())));
+        return new JobWantedIngredientsMessage(ServerJobsRegistry.getNeededItems(e));
     }
 }

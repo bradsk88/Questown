@@ -6,7 +6,6 @@ import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -14,7 +13,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.Optional;
 
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
@@ -56,15 +54,17 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
     }
 
     @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
+    protected void renderScreenExtras(
+            RenderContext ctx,
+            int mouseX,
+            int mouseY,
+            float partialTicks
     ) {
+        renderTooltips(ctx, mouseX, mouseY);
     }
 
     private void renderTooltips(
-            PoseStack stack,
+            RenderContext ctx,
             int mouseX,
             int mouseY
     ) {
@@ -75,7 +75,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
                 bgY,
                 mouseX,
                 mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
@@ -84,72 +84,55 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
             int x = card.coords().leftX();
             int y = card.coords().topY();
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, CARD_WIDTH, cardHeight)) {
-                String key1 = "questown.menu.needs_in_period_1";
-                String key2 = "questown.menu.needs_in_period_2";
                 Ingredient ingr = Ingredients.fromString(card.data().ingredientKey());
                 Component itemName = Ingredients.getName(ingr);
                 int timesNeeded = card.data().timesNeeded();
-                List<Component> es = ImmutableList.of(
-                        Compat.translatable(key1, itemName, timesNeeded),
-                        Compat.translatable(key2, ItemEconomicsData.PERIOD_DAYS)
-                );
-                super.renderTooltip(stack, es, Optional.empty(), mouseX, mouseY);
+                renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, List.of(
+                        ItemEconomicsData.neededTooltip(itemName, timesNeeded)
+                ));
             }
         }
-
-        super.renderTooltip(stack, mouseX, mouseY);
-    }
-
-    @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-        renderTooltips(poseStack, mouseX, mouseY);
     }
 
     @Override
     protected List<Component> renderCardContent(
-            PoseStack poseStack,
+            RenderContext ctx,
             Card<ItemEconomicsData> card,
             int mouseX,
             int mouseY
     ) {
-        renderDataAndIcons(poseStack, card.coords(), card.data());
+        renderDataAndIcons(ctx, card.coords(), card.data());
         return null;
     }
 
     private void renderDataAndIcons(
-            PoseStack poseStack,
+            RenderContext ctx,
             CardCoordinates coords,
             ItemEconomicsData data
     ) {
         int iconX = coords.leftX() + MED_PADDING;
         int iconY = coords.topY() + MED_PADDING;
         Ingredient item = Ingredients.fromString(data.ingredientKey());
-        ingredientRenderer.render(itemRenderer, item, iconX, iconY);
+        ingredientRenderer.render(ctx, item, iconX, iconY);
         int textX = iconX + ingredientRenderer.getSize() + SMALL_PADDING + SMALL_PADDING;
         int textY = coords.topYPadded();
-        Compat.drawDarkText(font, poseStack, Ingredients.getName(item), textX, textY);
+        ctx.darkText(Ingredients.getName(item), textX, textY);
         String count = Integer.toString(data.timesNeeded());
         int countX = coords.rightXPadded() - font.width(count);
-        Compat.drawDarkText(font, poseStack, Compat.literal(count), countX, textY);
+        ctx.darkText(Compat.literal(count), countX, textY);
     }
 
-    protected void renderBg(
-            PoseStack stack,
+    @Override
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
-        super.renderBg(stack, partialTicks, mouseX, mouseY);
+        super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight()) / 2;
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        this.tabs.draw(ctx, bgX, bgY);
     }
 
     @Override
@@ -183,7 +166,7 @@ public class VillagerEconomicsScreen extends AbstractPagedCardScreen<VillagerEco
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;
                 AddWorkFromUIMessage msg = new AddWorkFromUIMessage(ing, menu.getFlagPos(), inquired);
-                QuestownNetwork.CHANNEL.sendToServer(msg);
+                QuestownNetwork.sendToServer(msg);
                 return true;
             }
         }

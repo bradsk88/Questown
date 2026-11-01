@@ -1,23 +1,23 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.JEI;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 
-public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeConfirmMenu> {
+public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfirmMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -26,7 +26,6 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
     private final JEI.NineNine background;
     private final IDrawableStatic slot;
     private int textX;
-    private FormattedText texts;
     private int gathererSlotY;
     private Button unlockButton;
 
@@ -55,24 +54,24 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
         int buttonWidth = (backgroundWidth / 2) - 8;
-        this.unlockButton = this.addRenderableWidget(new Button(
-                maybeX, maybeY, buttonWidth, 20, Compat.translatable("menu.common.unlock"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new JobRootChangeMessage(
-                    menu.flagPos,
-                    menu.villagerUUID,
-                    Minecraft.getInstance().player.isCreative()
-            ));
-            Minecraft.getInstance().setScreen(null);
-        }
+        this.unlockButton = this.addRenderableWidget(Compat.button(
+                Compat.translatable("menu.common.unlock"),
+                (p_96776_) -> {
+                    QuestownNetwork.sendToServer(new JobRootChangeMessage(
+                            menu.flagPos,
+                            menu.villagerUUID,
+                            Minecraft.getInstance().player.isCreative(),
+                            menu.usesFlagBop()
+                    ));
+                    Minecraft.getInstance().setScreen(null);
+                },
+                maybeX, maybeY, buttonWidth, 20
         ));
         if (menu.alreadyPending.get() == 0) {
-            this.addRenderableWidget(new Button(
-                    maybeX + buttonWidth,
-                    maybeY,
-                    buttonWidth,
-                    20,
+            this.addRenderableWidget(Compat.button(
                     Compat.translatable("menu.common.cancel"),
-                    (p_96776_) -> Minecraft.getInstance().setScreen(null)
+                    (p_96776_) -> Minecraft.getInstance().setScreen(null),
+                    maybeX + buttonWidth, maybeY, buttonWidth, 20
             ));
         } else {
             unlockButton.visible = false;
@@ -82,49 +81,38 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
     }
 
     @Override
-    public void render(
-            PoseStack stack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
         if (menu.alreadyPending.get() == 1) {
-            renderStatusText(stack, bgX, bgY + menu.gathererInventoryYOffset + 24);
+            renderStatusText(ctx, bgX, bgY + menu.gathererInventoryYOffset + 24);
             return;
         }
 
         if (unlockButton != null) {
-            unlockButton.active = menu.tx.hasBlockOfProgress();
+            unlockButton.active = menu.hasBlockOfProgress();
         }
-        renderChangeText(stack, jobIconX, bgY + menu.gathererInventoryYOffset);
-        this.renderTooltip(stack, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderTooltip(
-            PoseStack stack,
-            int mouseX,
-            int mouseY
-    ) {
-        super.renderTooltip(stack, mouseX, mouseY);
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        tabs.renderTooltip(
-                x,
-                y,
-                mouseX,
-                mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
-        );
+        if (menu.usesFlagBop()) {
+            // The flag's Block of Progress in the empty slot, as an item (the dev's "the slot should
+            // change to an item renderer"); Unlock spends it from the flag.
+            Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
+            ItemStack bop = ca.bradj.questown.mc.Compat.copyWithCount(ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(), Math.min(menu.flagBopCount(), 64));
+            ctx.renderItemAndDecorations(bop, bgX + bopSlot.x, bgY + bopSlot.y);
+        }
+        renderChangeText(ctx, jobIconX, bgY + menu.gathererInventoryYOffset);
+        this.tabs.renderTooltip(bgX, bgY, mouseX, mouseY, key -> this.showTooltip(Compat.translatable(key)));
+        if (menu.usesFlagBop()) {
+            Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
+            if (UtilClean.isCoordInBox(mouseX, mouseY, bgX + bopSlot.x, bgY + bopSlot.y, 16, 16)) {
+                // Say that this Block of Progress is the flag's.
+                this.showTooltip(Compat.translatable("gui.flag_bop.tooltip", menu.flagBopCount()));
+            }
+        }
     }
 
     private void renderChangeText(
-            PoseStack stack,
+            RenderContext ctx,
             int x,
             int y1
     ) {
@@ -132,49 +120,55 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
 
 
-        String key = "menu.unlock_root.insert_bop";
-        if (menu.isBlessed()) {
-            key = "menu.unlock_root.insert_bop_blessed";
+        // An open onboarding job-change quest decides the root whatever the BOP, so say which
+        // job instead of "a random profession".
+        JobChangeText text = JobChangeText.of(
+                menu.hasBlockOfProgress(),
+                Minecraft.getInstance().player != null && Minecraft.getInstance().player.isCreative(),
+                menu.getPromisedRoot()
+        );
+        Component when = Compat.translatable(text.whenKey());
+        Object[] args;
+        if (text.root().isPresent()) {
+            args = new Object[]{Compat.translatable("jobs." + text.root().get()), when};
+        } else {
+            args = new Object[]{when};
         }
-        List<FormattedCharSequence> parts = font.split(Compat.translatable(key), textWidth);
+        List<FormattedCharSequence> parts = ctx.split(Compat.translatable(text.key(), args), textWidth);
         for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
+            ctx.darkText(part, x, bgY);
             bgY += 8;
         }
     }
 
     private void renderStatusText(
-            PoseStack stack,
+            RenderContext ctx,
             int x,
             int y1
     ) {
         int bgY = y1;
         int textWidth = backgroundWidth;
-        List<FormattedCharSequence> parts = font.split(
+        List<FormattedCharSequence> parts = ctx.split(
                 Compat.translatable("menu.unlock_root.already_pending"),
                 textWidth
         );
         for (FormattedCharSequence part : parts) {
-            drawCenteredString(stack, font, part, x + (textWidth/2), bgY, -1);
+            // Dark body text like the rest of this screen.
+            ctx.centeredDark(part, x + (textWidth / 2), bgY);
             bgY += 8;
         }
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        renderInventory(stack);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, bgX, bgY);
+        renderInventory(ctx);
     }
 
-    private void renderInventory(PoseStack stack) {
+    private void renderInventory(RenderContext ctx) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord;
@@ -188,7 +182,7 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.gathererSlotY = Math.min(yCoord, gathererSlotY);
-            this.slot.draw(stack, xCoord, yCoord);
+            ctx.drawJei(this.slot, xCoord, yCoord);
         }
     }
 
@@ -204,13 +198,5 @@ public class JobChangeConfirmScreen extends AbstractContainerScreen<JobChangeCon
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, p_97750_);
-    }
-
-    @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
     }
 }

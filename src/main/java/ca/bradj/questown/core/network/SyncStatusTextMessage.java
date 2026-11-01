@@ -3,10 +3,9 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.gui.StatusPacket;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncStatusTextMessage(
         ProductionStatus status,
@@ -28,7 +27,7 @@ public record SyncStatusTextMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

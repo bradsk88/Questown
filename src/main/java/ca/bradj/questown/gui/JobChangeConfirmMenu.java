@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
@@ -20,6 +21,8 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
     private static final int boxHeight = 18;
     final JobID jobId;
     final DataSlot alreadyPending;
+    private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     final BopTransactionSyncer tx = new BopTransactionSyncer(this::getSlot);
 
@@ -32,6 +35,15 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return menus.changeMenu;
     }
 
+    private final String promisedRoot;
+
+    /** The flag's Blocks of Progress when the panel was opened from the flag. */
+    public record FlagBop(int count) {
+        public static final FlagBop NONE = new FlagBop(0);
+    }
+
+    private final FlagBop flagBop;
+
     public <S extends IStatus<S>> JobChangeConfirmMenu(
             int windowId,
             Container gathererInv,
@@ -39,11 +51,19 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             UUID villagerUUID,
             JobID jobId,
             BlockPos flagPos,
-            boolean alreadyPending
+            boolean alreadyPending,
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            String promisedRoot,
+            FlagBop flagBop
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
+        this.promisedRoot = promisedRoot;
+        this.flagBop = flagBop;
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
+        this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
         layoutSlots(gathererInv);
         this.addDataSlot(this.alreadyPending = DataSlot.standalone());
         this.alreadyPending.set(alreadyPending ? 1 : 0);
@@ -62,7 +82,18 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override
@@ -71,7 +102,21 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return false;
     }
 
-    public boolean isBlessed() {
-        return tx.hasBlockOfProgress() && tx.isBlessed();
+    /** The root a spend is promised to give (an open onboarding job-change quest), or empty. */
+    public Optional<String> getPromisedRoot() {
+        return promisedRoot.isEmpty() ? Optional.empty() : Optional.of(promisedRoot);
+    }
+
+    /** The panel spends the flag's Block of Progress: nothing in the slot, and the flag has one. */
+    public boolean usesFlagBop() {
+        return !tx.hasBlockOfProgress() && flagBop.count() > 0;
+    }
+
+    public boolean hasBlockOfProgress() {
+        return tx.hasBlockOfProgress() || usesFlagBop();
+    }
+
+    public int flagBopCount() {
+        return flagBop.count();
     }
 }

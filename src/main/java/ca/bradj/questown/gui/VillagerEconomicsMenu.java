@@ -3,8 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.MenuTypesInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.jobs.IStatus;
-import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,16 +10,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
+import java.util.UUID;
 
 public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
-    private static final Collection<String> ENABLED_TABS = ImmutableList.of(
-            OpenVillagerMenuMessage.INVENTORY,
-            OpenVillagerMenuMessage.STATS,
-            OpenVillagerMenuMessage.QUESTS,
-            OpenVillagerMenuMessage.SKILLS,
-            OpenVillagerMenuMessage.BOP
-    );
+    // Every tab except ECONOMICS itself (the pane that is open). The old hand-rolled
+    // list omitted CHANGE_ROOT, so with the economics pane open the "switch job" tab's
+    // open-fn was null and it rendered as selected alongside the economics tab.
+    private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.ECONOMICS);
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
+    private final boolean showInventoryTab;
 
     public static VillagerEconomicsMenu ForClientSide(
             int windowId,
@@ -35,24 +33,23 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
 
     public <S extends IStatus<S>> VillagerEconomicsMenu(
             int windowId,
-            VisitorMobEntity entity,
+            UUID villager,
             BlockPos flagPos,
             VillagerEconomicsData initialData,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
-        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
+        this.showInventoryTab = showInventoryTab;
     }
 
-    public static VillagerEconomicsData read(FriendlyByteBuf buf) {
-        return new VillagerEconomicsData(ImmutableList.of());
-    }
-
-    public static void write(
-            VillagerEconomicsData data,
-            FriendlyByteBuf buf
-    ) {
-    }
+    // NOTE: economics data is NOT part of the villager-menu wire — it flows
+    // via the separate `EconomicsUpdate` message sent before openScreen.
+    // There is deliberately no read/write codec here, and there must not be
+    // one added: `VillagerMenusPayload` is the single wire source of truth.
 
     @Override
     public ItemStack quickMoveStack(
@@ -74,7 +71,18 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

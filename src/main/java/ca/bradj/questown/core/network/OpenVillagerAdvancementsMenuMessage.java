@@ -3,13 +3,12 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class OpenVillagerAdvancementsMenuMessage {
     private final BlockPos flagPos;
@@ -18,6 +17,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
     private final Collection<JobID> unlockableJobs;
     private final JobID currentJob;
     private final boolean showBlockOfProgressTab;
+    private final boolean showInventoryTab;
 
     public OpenVillagerAdvancementsMenuMessage(
             BlockPos flagPos,
@@ -25,7 +25,8 @@ public final class OpenVillagerAdvancementsMenuMessage {
             Collection<JobID> unlockedJobs,
             Collection<JobID> unlockableJobs,
             JobID currentJob,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showInventoryTab
     ) {
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
@@ -33,6 +34,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         this.unlockableJobs = unlockableJobs;
         this.currentJob = currentJob;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showInventoryTab = showInventoryTab;
     }
 
     public static void encode(
@@ -47,6 +49,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
         buffer.writeCollection(msg.unlockableJobs, NetworkCompat::toNetwork);
         NetworkCompat.toNetwork(buffer, msg.currentJob());
         buffer.writeBoolean(msg.showBlockOfProgressTab);
+        buffer.writeBoolean(msg.showInventoryTab);
     }
 
     public static OpenVillagerAdvancementsMenuMessage decode(FriendlyByteBuf buffer) {
@@ -56,12 +59,13 @@ public final class OpenVillagerAdvancementsMenuMessage {
                 buffer.readList(NetworkCompat::fromNetworkJobID),
                 buffer.readList(NetworkCompat::fromNetworkJobID),
                 NetworkCompat.fromNetworkJobID(buffer),
+                buffer.readBoolean(),
                 buffer.readBoolean()
         );
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(
                 ctx,
@@ -71,7 +75,8 @@ public final class OpenVillagerAdvancementsMenuMessage {
                         unlockedJobs,
                         unlockableJobs,
                         currentJob,
-                        showBlockOfProgressTab
+                        showBlockOfProgressTab,
+                        showInventoryTab
                 )
         );
     }
@@ -86,6 +91,10 @@ public final class OpenVillagerAdvancementsMenuMessage {
 
     public JobID currentJob() {
         return currentJob;
+    }
+
+    public boolean showInventoryTab() {
+        return showInventoryTab;
     }
 
     @Override

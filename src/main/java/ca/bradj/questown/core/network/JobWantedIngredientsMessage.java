@@ -5,14 +5,12 @@ import ca.bradj.questown.gui.ClientJobWantedResources;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 public record JobWantedIngredientsMessage(
         ImmutableList<Ingredient> ingredients
@@ -24,7 +22,7 @@ public record JobWantedIngredientsMessage(
     ) {
         buffer.writeInt(msg.ingredients.size());
         msg.ingredients.forEach(i -> {
-            JsonElement json = i.toJson();
+            com.google.gson.JsonElement json = ca.bradj.questown.mc.Compat.ingredientToJson(i);
             String s = json.toString();
             buffer.writeUtf(s);
         });
@@ -36,25 +34,19 @@ public record JobWantedIngredientsMessage(
         for (int i = 0; i < num; i++) {
             JsonParser p = new JsonParser();
             JsonElement j = p.parse(buffer.readUtf());
-            b.add(Ingredient.fromJson(j));
+            b.add(ca.bradj.questown.mc.Compat.ingredientFromJson(j));
         }
         return new JobWantedIngredientsMessage(b.build());
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         final AtomicBoolean success = new AtomicBoolean(false);
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> () -> {
-                        ClientJobWantedResources.wantedIngredients = ingredients;
-                        success.set(true);
-                    }
-            );
-        }).exceptionally(JobWantedIngredientsMessage::logError);
-        ctx.get().setPacketHandled(true);
+        ctx.enqueueWork(() -> Loader.runClient(() -> {
+            ClientJobWantedResources.wantedIngredients = ingredients;
+            success.set(true);
+        })).exceptionally(JobWantedIngredientsMessage::logError);
 
     }
 
