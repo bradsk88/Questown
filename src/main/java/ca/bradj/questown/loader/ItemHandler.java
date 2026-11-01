@@ -1,13 +1,6 @@
 package ca.bradj.questown.loader;
 
-/**
- * A neutral, loader-agnostic view of a mutable item handler (Forge {@code IItemHandler}).
- * Main-code logic manipulates inventory slots through this interface; the active loader
- * provides a concrete implementation that wraps the loader's own handler and delegates.
- *
- * <p>Method set mirrors the loader {@code IItemHandler}+{@code IItemHandlerModifiable} so the
- * neo impl is a 1:1 delegation.
- */
+/** A loader-neutral mutable item handler (the loader's {@code IItemHandler} and {@code IItemHandlerModifiable}). */
 public interface ItemHandler {
     int getSlots();
 

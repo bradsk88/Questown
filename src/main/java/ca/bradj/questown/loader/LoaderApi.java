@@ -16,10 +16,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
- * The concrete loader seam. {@link Loader} forwards every call to the installed api; a NeoForge build
- * installs {@code NeoLoader}, a legacy Forge build its own. Main code never sees this type directly — it
- * calls {@code Loader} — but the interface is defined in main (neutral) so the api's method signatures are
- * all vanilla/neutral types. The implementations live in a per-loader source set and may import loader types.
+ * What a mod loader provides, implemented once per loader ({@code loader.forge}, {@code loader.neo})
+ * and installed behind {@link Loader}. Its signatures use only vanilla and neutral types.
  */
 public interface LoaderApi {
 
@@ -42,21 +40,11 @@ public interface LoaderApi {
     /** Neutral menu registration: the loader wraps the mod-owned factory with its own container type. */
     <T extends net.minecraft.world.inventory.AbstractContainerMenu>
     Holder<net.minecraft.world.inventory.MenuType<T>> registerMenu(String name, MenuFactory<T> factory);
+
     /**
-     * Neutral menu-screen registration (client only). NeoForge fires its
-     * {@code RegisterMenuScreensEvent} at client init — before any mod-bus setup event — so the
-     * loader captures these at construction time and replays them when the event arrives.
-     */
-    /**
-     * The neutral shape of a menu screen factory (a vanilla {@code MenuScreens.ScreenConstructor}
-     * minus its load-bearing bound): javac refuses to infer a lambda's descriptor against the
-     * vanilla interface's {@code U extends Screen & MenuAccess<T>} when T arrives via a wildcard
-     * target, so main code hands the loader a plain factory and the loader adapts it.
-     */
-    /**
-     * Neutral menu-screen factory: the return type is {@code Object} so this common interface
-     * carries no client class reference; the client island (NeoLoaderClient) knows the result
-     * is a vanilla screen and adapts it.
+     * A menu-screen factory. It returns {@code Object} so this interface names no client class, and
+     * it is not a vanilla {@code ScreenConstructor} because javac cannot infer that interface's
+     * {@code Screen & MenuAccess<T>} bound for a wildcard menu type.
      */
     @FunctionalInterface
     interface ScreenFactory<T extends net.minecraft.world.inventory.AbstractContainerMenu> {
@@ -66,6 +54,7 @@ public interface LoaderApi {
                 net.minecraft.network.chat.Component title);
     }
 
+    /** Client only: the loader captures these and replays them when its screen-registration event fires. */
     <T extends net.minecraft.world.inventory.AbstractContainerMenu>
     void registerScreen(
             net.minecraft.world.inventory.MenuType<T> menuType,

@@ -42,17 +42,12 @@ accessTransformers {
 
 runs {
     configureEach {
-        // Server keeps run/; the client gets run-client/ so the two JVMs never share
-        // the same log4j appender files (that contention wedged a client join).
+        // Server keeps run/, the client run-client/: two JVMs sharing log4j files wedge the join.
         workingDirectory (it.name == 'client' ? project.file('run-client') : project.file('run'))
         modSource project.sourceSets.main
-            // Force Netty onto the pure-Java NIO transport. The epoll native transport
-            // silently stalls in this sandbox: server accepts connections but its event
-            // loop never delivers reads (idle in epollWait), so handshakes die with the
-            // client stuck on the "Connecting" screen.
+            // Netty's epoll transport can stall the handshake; use the pure-Java one.
             jvmArgument '-Dio.netty.transport.noNative=true'
-            // JDK 21 modules: netty (used by NeoForge networking) reflectively touches
-            // jdk.internal.misc.Unsafe. --add-opens keeps the client booting on JDK 21.
+            // Netty (NeoForge networking) reflects into jdk.internal.misc on JDK 21.
             jvmArgument '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
             jvmArgument '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
             systemProperty 'neoForge.logging.markers', 'REGISTRIES'
@@ -78,24 +73,21 @@ runs {
         }
 
         server {
-            // Keep the Swing server GUI out of the dev box: it steals focus and
-            // screen space, and headless screenshots (grim) can't see past it.
+            // No Swing server GUI: it steals focus.
             argument '--nogui'
             systemProperty 'neoForge.logging.console.level', 'info'
 
             jvmArgument '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
             jvmArgument '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
             jvmArgument '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
-            // Forward the category/scenario filters to the forked server JVM so the
-            // runbook's documented -D invocations reach AutoTestRunner.parseCategory.
+            // Forward the category/scenario filters to the forked server JVM
+            // (AutoTestRunner.parseCategory).
             if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
                 jvmArgument '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
             }
             if (System.getProperty('questown.autotest.only') != null) {
                 jvmArgument '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
             }
-            // The tick-rate override AutoTestRunner advertises in its "tick rate set" line; without
-            // this forward it silently stayed at the default (2026-10-19).
             if (System.getProperty('questown.autotest.shard') != null) {
                 jvmArgument '-Dquestown.autotest.shard=' + System.getProperty('questown.autotest.shard')
             }
@@ -142,10 +134,6 @@ dependencies {
     implementation 'mezz.jei:jei-1.20.6-neoforge:18.0.0.66'
 
     implementation 'ca.bradj:roomrecipes:1.20.6-neoforge'
-    // NOTE: Patchouli (journal) is intentionally NOT on the NeoForge 1.20.6 classpath —
-    // it has no Forge build past 1.20.1. The journal GUI is dropped for this release and
-    // scheduled to return as a neutral-screen rework. See
-    // .scratch/bring-back-journal/bring-back-journal.md (status: needs-triage).
 }
 
 test {
@@ -238,32 +226,23 @@ task publishModrinth(dependsOn: 'reobfJar') {
     }
 }
 
-// Autotest suites start from a clean world: residue from prior suite runs
-// accumulates in run/world and makes results run-count dependent
-// (.scratch/autotest-suite/organizer-fetch-warp-fails-only-in-full-suite.md).
-// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so
-// console commands can be driven headlessly.
-// NOTE (2026-10-03): the `server` block below forwards only a whitelist of -D
-// system properties to the forked server JVM. A scenario knob not on that
-// whitelist (e.g. questown.village.selfsuff.days/.coal before their entries
-// were added) is silently ignored - it parses null in the server and falls
-// back to its default. Verify what landed from the run log, not the command line.
-// Gated ONLY on -Dquestown.tp.fifo (independent of autotest, so plain dev
-// servers get a console too).
+// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so console commands can
+// be driven headlessly. Gated ONLY on -Dquestown.tp.fifo (plain dev servers get a console too).
+// The `server` run forwards only a whitelist of -D properties to the forked JVM; a knob missing
+// from it is silently ignored.
 if (System.getProperty('questown.tp.fifo') != null) {
     tasks.matching { it.name == 'runServer' }.configureEach {
         standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
     }
 } else if (System.getProperty('questown.autotest', 'false') == 'true') {
-    // Autotest (usually held) without the console: every FIFO feed is silently
-    // dropped and e.g. a fed `/tick rate 200` never applies. Observed once: a
-    // run segment at the 20 t/s default until the rate line appeared, with no
-    // other symptom (the pace-guard does not catch it — see sweep pace-guard notes).
+    // An autotest without the console silently drops every FIFO feed (e.g. `/tick rate 200`).
     logger.warn("[questown] autotest run WITHOUT -Dquestown.tp.fifo: the " +
             "run/server-cmd.fifo console is disabled (see build.gradle). Command " +
             "feeds (tick rate, TP, ...) will be SILENTLY DROPPED. Add -Dquestown.tp.fifo=true to enable.")
 }
 
+// Autotest suites start from a clean world: residue from prior runs makes results run-count
+// dependent.
 if (System.getProperty('questown.autotest', 'false') == 'true') {
     tasks.matching { it.name == 'runServer' }.configureEach {
         doFirst {
@@ -276,17 +255,17 @@ if (System.getProperty('questown.autotest', 'false') == 'true') {
     }
 }
 
-// importCheck: deterministic, surgical unused-import gate. Delegates to the
-// import-clean tool (JavaParser AST): it removes only imports whose name appears
-// nowhere as a real identifier in the parsed tree and never reformats the body,
-// so it can never drop a used import. Wired into `check` so `./gradlew build`/
-// `check` surfaces it, and runnable standalone as `./gradlew importCheck`.
-// Fix a failure with:  /home/retro/.local/bin/import-clean apply src/main/java src/test/java
+// importCheck: the unused-import gate (import-clean, JavaParser AST). Skipped where the tool
+// is not installed.
 task importCheck {
     group = 'verification'
     description = 'Fail if any Java source has unused imports. Fix: import-clean apply src/main/java src/test/java'
     doLast {
         def cleaner = '/home/retro/.local/bin/import-clean'
+        if (!new File(cleaner).canExecute()) {
+            logger.warn("importCheck: ${cleaner} not found; skipping the unused-import check")
+            return
+        }
         def proc = new ProcessBuilder(cleaner, 'check', 'src/main/java', 'src/test/java')
                 .redirectErrorStream(true).start()
         def output = proc.inputStream.text

@@ -8,13 +8,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Neutral message channel (Forge {@code SimpleChannel} / NeoForge payload-handler equivalent).
- * Main code registers a message type with its wire encoder/decoder over the vanilla
- * {@link FriendlyByteBuf} plus a handler, then sends via
- * {@link #sendToPlayer}/{@link #sendToAll}/{@link #sendToServer}. The active loader adapts this to
- * its own stack (NeoForge's Payload API: one envelope payload, a StreamCodec over the registered
- * encoder/decoders, and one IPayloadHandler per direction), so the Questown message classes (which
- * are already vanilla-buffer POJOs) stay neutral.
+ * Loader-neutral message channel. Main code registers each message with its encoder/decoder over
+ * {@link FriendlyByteBuf} and a handler, then sends via
+ * {@link #sendToPlayer}/{@link #sendToAll}/{@link #sendToServer}; the active loader adapts it to
+ * its own networking.
  *
  * <p>A {@link #message(Class, Direction)} registration is finalised by {@code handler(...)}; the
  * encoder and decoder must both be present (the message's {@code encode}/{@code decode} statics).
@@ -28,7 +25,7 @@ public interface Channel {
     /** Server to one player. */
     <T> void sendToPlayer(Player p, T msg);
 
-    /** Server to every player in the level's dimension (the former {@code PacketDistributor.ALL}). */
+    /** Server to every player in the level's dimension. */
     <T> void sendToAll(Level level, T msg);
 
     /** Client to the server it is connected to. */

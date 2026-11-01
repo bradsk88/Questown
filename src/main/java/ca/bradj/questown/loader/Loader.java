@@ -18,14 +18,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * The single loader seam for the whole mod. Main code (including {@code Compat}) calls these static,
- * neutral methods and never names a loader type. All loader-specific machinery is delegated to a
- * {@link LoaderApi} installed once at mod start (for NeoForge: {@code loader.neo.NeoLoader}).
- *
- * <p>Strangler: the mod's code only talks to this neutral surface, so the loader underneath it
- * (NeoForge 1.20.6 primary, a legacy Forge 1.19.2 api) can be swapped behind it. Every method here uses
- * vanilla ({@code net.minecraft}) or {@code ca.bradj.questown.loader} types, so main code carries zero
- * loader imports.
+ * The mod loader (Forge or NeoForge; see the package docs), as static loader-neutral methods. The
+ * rest of the mod, {@code Compat} included, calls these and never names a loader type; each call is
+ * delegated to the {@link LoaderApi} the active loader installs once at mod start.
  *
  * <p>Contexts without a mod (unit tests) supply their {@link LoaderApi} on the classpath instead:
  * the first unresolved call picks up the implementation named by
