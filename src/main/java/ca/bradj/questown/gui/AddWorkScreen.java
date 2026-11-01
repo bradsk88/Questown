@@ -1,15 +1,13 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
+import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -18,15 +16,18 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
+public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -34,16 +35,18 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
-    private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
-    private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
-    private static final int CARD_HEIGHT = 42;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    // The requests are drawn as an icon grid, so pages hold grid slots, not cards.
+    private static final int GRID_COLUMNS = 8;
+    private static final int GRID_ROWS = 7;
+    private static final int SLOTS_PER_PAGE = GRID_COLUMNS * GRID_ROWS;
 
     private final List<Ingredient> work;
+    private final List<Ingredient> categories;
+    private final List<RequestSlot> requestSlots;
     private final JEI.NineNine background;
     private final JEI.NineNine cardBackground;
     private final GuiIconButtonSmall nextPage;
@@ -60,7 +63,12 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.work = ImmutableList.copyOf(container.getAddableWork());
+        this.categories = container.getCategories();
+        this.work = ImmutableList.<Ingredient>builder()
+                .addAll(this.categories)
+                .addAll(container.getAddableWork())
+                .build();
+        this.requestSlots = flattenRequests();
         this.background = JEI.getRecipeGuiBackground();
         this.cardBackground = JEI.getRecipeBackground();
 
@@ -102,93 +110,95 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(ctx, x);
 
         y = pageStringY + PAGE_PADDING;
-
-        int startIndex = currentPage * MAX_CARDS_PER_PAGE;
-        int endIndex = Math.min(startIndex + MAX_CARDS_PER_PAGE, work.size());
 
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        ImmutableList<Slot> slotz = renderRequestItemIcons(poseStack, work, x, y, mouseX, mouseY);
+        List<RequestSlot> page = Pages.slice(requestSlots, currentPage, SLOTS_PER_PAGE);
+        ImmutableList<Slot> slotz = renderRequestItemIcons(ctx, page, x, y, mouseX, mouseY);
         b.addAll(slotz);
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        ctx.text(Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR, false);
         slots.clear();
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
+    private final Map<Slot, Ingredient> slotRequests = new IdentityHashMap<>();
 
-    private ImmutableList<Slot> renderRequestItemIcons(
-            PoseStack poseStack,
-            Iterable<Ingredient> possibleRequests,
-            int x,
-            int y,
-            int mouseX,
-            int mouseY
-    ) {
-        Container dummyInv = new SimpleContainer(1028);
-        ImmutableList.Builder<Slot> b = ImmutableList.builder();
+    private boolean isCategory(Ingredient ing) {
+        return categories.contains(ing);
+    }
 
-        int slotIndex = 0;
-        int slotX = 0;
-        for (Ingredient ing : possibleRequests) {
-            if (slotX >= 8) {
-                y = y + 16;
-                slotX = 0;
-            }
-            int iconX = x + 8 + slotX * 18;
+    /**
+     * One grid slot per request: a category is a single slot that requests the whole tag; a
+     * multi-item ingredient gets its own slot followed by one per member.
+     */
+    private record RequestSlot(Ingredient request, ItemStack[] shown, @Nullable Component categoryName) {
+    }
 
+    private List<RequestSlot> flattenRequests() {
+        ImmutableList.Builder<RequestSlot> b = ImmutableList.builder();
+        for (Ingredient ing : work) {
             ItemStack[] allPossible = ing.getItems();
-            if (allPossible.length > 0) {
-                int curSeconds = (int) (System.currentTimeMillis() / 1000);
-                ItemStack itemStack = allPossible[curSeconds % allPossible.length];
-                renderRequest(poseStack, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
-                slotIndex++;
-                slotX++;
+            if (allPossible.length == 0) {
+                continue;
             }
-            if (allPossible.length == 1) {
+            // A category (a tag: "Food") is one slot that requests the whole category; its members
+            // are not listed after it (most of a tag is not something the town can make - the
+            // producible ones already have their own slots).
+            boolean category = isCategory(ing);
+            b.add(new RequestSlot(ing, allPossible, category ? Ingredients.getName(ing) : null));
+            if (category || allPossible.length == 1) {
                 continue;
             }
             for (ItemStack specificItem : allPossible) {
-                if (slotX >= 8) {
-                    y = y + 16;
-                    slotX = 0;
-                }
-                iconX = x + 8 + slotX * 18;
-                renderRequest(poseStack, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
-                slotIndex++;
-                slotX++;
+                b.add(new RequestSlot(Ingredient.of(specificItem), new ItemStack[]{specificItem}, null));
             }
         }
         return b.build();
     }
 
+    private ImmutableList<Slot> renderRequestItemIcons(
+            RenderContext ctx,
+            List<RequestSlot> page,
+            int x,
+            int y,
+            int mouseX,
+            int mouseY
+    ) {
+        Container dummyInv = new SimpleContainer(SLOTS_PER_PAGE);
+        ImmutableList.Builder<Slot> b = ImmutableList.builder();
+        slotRequests.clear();
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        for (int i = 0; i < page.size(); i++) {
+            RequestSlot r = page.get(i);
+            int iconX = x + 8 + (i % GRID_COLUMNS) * 18;
+            int iconY = y + (i / GRID_COLUMNS) * 16;
+            ItemStack itemStack = r.shown()[curSeconds % r.shown().length];
+            renderRequest(ctx, iconY, mouseX, mouseY, itemStack, iconX, dummyInv, i, b,
+                    r.request(), r.categoryName());
+        }
+        return b.build();
+    }
+
     private void renderRequest(
-            PoseStack poseStack,
+            RenderContext ctx,
             int y,
             int mouseX,
             int mouseY,
@@ -196,79 +206,68 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
             int iconX,
             Container dummyInv,
             int slotIndex,
-            ImmutableList.Builder<Slot> b
+            ImmutableList.Builder<Slot> b,
+            Ingredient request,
+            @Nullable Component categoryName
     ) {
-        this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        // No tint on category slots: they come first, so a tint would read as a darker first row. The
+        // cycling icon and the category tooltip mark them.
+        ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-            fill(
-                    poseStack,
+            ctx.fill(
                     iconX,
                     y + 1,
                     iconX + 16,
                     y + 17,
                     0x80FFFFFF
             ); // transparent white square behind hovered item slot
-            renderTooltip(
-                    poseStack,
-                    itemStack.getItem().getName(itemStack),
-                    mouseX,
-                    mouseY
-            ); // render hovered item's name as a tooltip
+            if (categoryName != null) {
+                this.showTooltip(List.of(
+                        Compat.visualOrder(categoryName),
+                        Compat.visualOrder(Compat.translatableStyled(
+                                "job_board.add_work.category_hint",
+                                net.minecraft.network.chat.Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY)
+                        ))
+                ));
+            } else {
+                this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
+            }
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);
         b.add(element);
+        slotRequests.put(element, request);
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            RenderContext ctx,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        ctx.fill(
                 x + borderPadding + buttonWidth,
                 nextPage.y,
                 x + backgroundWidth - borderPadding - buttonWidth,
                 nextPage.y + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(requestSlots.size(), SLOTS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
-    protected void renderBg(
-            PoseStack poseStack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(requestSlots.size(), SLOTS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }
@@ -304,7 +303,6 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     }
 
 
-    @Override
     public boolean mouseScrolled(
             double scrollX,
             double scrollY,
@@ -321,7 +319,7 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override
@@ -332,7 +330,9 @@ public class AddWorkScreen extends AbstractContainerScreen<AddWorkContainer> {
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                Ingredient item = Ingredient.of(s.getItem());
+                // The request the slot stands for: a category slot requests the category, not the
+                // member it happens to be showing.
+                Ingredient item = slotRequests.getOrDefault(s, Ingredient.of(s.getItem()));
                 if (!menu.canRequest(item)) {
                     QT.logBug("AddWorkScreen: ingredient slot not acceptable: {}", s.getItem());
                     return false;

@@ -4,12 +4,10 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,7 +22,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStockRequestContainer> {
+public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockRequestContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -32,7 +30,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -101,20 +99,12 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(ctx, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -125,24 +115,24 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
         y = y + PAGE_PADDING;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
-        ImmutableList<Slot> slotz = renderRequestItemIcons(poseStack, work, x, y, mouseX, mouseY);
+        ImmutableList<Slot> slotz = renderRequestItemIcons(ctx, work, x, y, mouseX, mouseY);
         b.addAll(slotz);
 
         int idX = x + PAGE_PADDING;
         int idY = y - 10;
-        this.font.draw(poseStack, Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR);
+        ctx.text(Compat.translatable("job_board.add_work.title"), idX, idY, TEXT_COLOR, false);
         slots.clear();
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderRequestItemIcons(
-            PoseStack poseStack,
+            RenderContext ctx,
             Iterable<Ingredient> possibleRequests,
             int x,
             int y,
@@ -165,7 +155,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
             if (allPossible.length > 0) {
                 int curSeconds = (int) (System.currentTimeMillis() / 1000);
                 ItemStack itemStack = allPossible[curSeconds % allPossible.length];
-                renderRequest(poseStack, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
+                renderRequest(ctx, y, mouseX, mouseY, itemStack, iconX, dummyInv, slotIndex, b);
                 slotIndex++;
                 slotX++;
             }
@@ -178,7 +168,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
                     slotX = 0;
                 }
                 iconX = x + 8 + slotX * 18;
-                renderRequest(poseStack, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
+                renderRequest(ctx, y, mouseX, mouseY, specificItem, iconX, dummyInv, slotIndex, b);
                 slotIndex++;
                 slotX++;
             }
@@ -187,7 +177,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     }
 
     private void renderRequest(
-            PoseStack poseStack,
+            RenderContext ctx,
             int y,
             int mouseX,
             int mouseY,
@@ -197,22 +187,16 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
             int slotIndex,
             ImmutableList.Builder<Slot> b
     ) {
-        this.itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
+        ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-            fill(
-                    poseStack,
+            ctx.fill(
                     iconX,
                     y + 1,
                     iconX + 16,
                     y + 17,
                     0x80FFFFFF
             ); // transparent white square behind hovered item slot
-            renderTooltip(
-                    poseStack,
-                    itemStack.getItem().getName(itemStack),
-                    mouseX,
-                    mouseY
-            ); // render hovered item's name as a tooltip
+            this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);
@@ -220,54 +204,34 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            RenderContext ctx,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        ctx.fill(
                 x + borderPadding + buttonWidth,
                 nextPage.y,
                 x + backgroundWidth - borderPadding - buttonWidth,
                 nextPage.y + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
-    protected void renderBg(
-            PoseStack poseStack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }
@@ -303,7 +267,6 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
     }
 
 
-    @Override
     public boolean mouseScrolled(
             double scrollX,
             double scrollY,
@@ -320,7 +283,7 @@ public class CreateStockRequestScreen extends AbstractContainerScreen<CreateStoc
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override

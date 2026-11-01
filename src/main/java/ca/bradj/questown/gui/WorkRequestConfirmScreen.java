@@ -9,9 +9,6 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -25,7 +22,7 @@ import java.util.Map;
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.CONFIRMED;
 import static ca.bradj.questown.core.network.AddWorkFromUIMessage.Action.REJECTED;
 
-public class WorkRequestConfirmScreen extends Screen {
+public class WorkRequestConfirmScreen extends CompatScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
@@ -54,7 +51,7 @@ public class WorkRequestConfirmScreen extends Screen {
             Map<JobID, ResourceLocation> iconsForJobsWhichProduceResult,
             BlockPos flagPos
     ) {
-        super(Compat.translatable("menu.work_add_confirm.title", Compat.translatable(Ingredients.toString(requested))));
+        super(Compat.translatable("menu.work_add_confirm.title", Ingredients.getName(requested)));
 
         this.background = JEI.getRecipeGuiBackground();
         this.itemRequested = requested;
@@ -63,7 +60,7 @@ public class WorkRequestConfirmScreen extends Screen {
         this.backToRequestedJobs = () -> this.send(flagPos, REJECTED);
         this.openJobsInfoScreen = () -> {
             OpenItemJobsMessage msg = new OpenItemJobsMessage(flagPos, this.itemRequested);
-            QuestownNetwork.CHANNEL.sendToServer(msg);
+            QuestownNetwork.sendToServer(msg);
         };
     }
 
@@ -72,7 +69,7 @@ public class WorkRequestConfirmScreen extends Screen {
             AddWorkFromUIMessage.Action action
     ) {
         AddWorkFromUIMessage m = new AddWorkFromUIMessage(itemRequested, p, action);
-        QuestownNetwork.CHANNEL.sendToServer(m);
+        QuestownNetwork.sendToServer(m);
     }
 
     @Override
@@ -87,34 +84,22 @@ public class WorkRequestConfirmScreen extends Screen {
         this.moreInfoButtonY = jobIconsY + 24;
         int buttonHeight = (2 * font.lineHeight) + 2;
         int buttonWidth = backgroundWidth - (2 * PAGE_PADDING);
-        this.addRenderableWidget(new Button(
-                pageLeftX + PAGE_PADDING,
-                moreInfoButtonY,
-                buttonWidth,
-                buttonHeight,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.common.learn_more"),
-                (p_96776_) -> this.openJobsInfoScreen.run()
-        ));
+                (p_96776_) -> this.openJobsInfoScreen.run(),
+                pageLeftX + PAGE_PADDING, moreInfoButtonY, buttonWidth, buttonHeight));
 
         // Bottom buttons are relative to bottom of page
         this.confirmTextY = pageTopY + backgroundHeight - (2 * PAGE_PADDING) - buttonHeight - tallLine;
         this.confirmButtonY = confirmTextY + tallLine;
-        this.addRenderableWidget(new Button(
-                pageLeftX + PAGE_PADDING,
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.common.yes"),
-                (p_96776_) -> this.requestWork.run()
-        ));
-        this.addRenderableWidget(new Button(
-                (int) (pageLeftX + PAGE_PADDING + (buttonWidth / 2f)),
-                confirmButtonY,
-                (int) (buttonWidth / 2f),
-                buttonHeight,
+                (p_96776_) -> this.requestWork.run(),
+                pageLeftX + PAGE_PADDING, confirmButtonY, (int) (buttonWidth / 2f), buttonHeight));
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.common.no"),
-                (p_96776_) -> this.backToRequestedJobs.run()
-        ));
+                (p_96776_) -> this.backToRequestedJobs.run(),
+                (int) (pageLeftX + PAGE_PADDING + (buttonWidth / 2f)), confirmButtonY, (int) (buttonWidth / 2f), buttonHeight));
     }
 
     @Override
@@ -130,26 +115,28 @@ public class WorkRequestConfirmScreen extends Screen {
     }
 
     @Override
-    public void render(
-            PoseStack stack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.fillGradient(stack, 0, 0, this.width, this.height, -1072689136, -804253680);
-        this.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
+    protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        ctx.fillGradient(0, 0, this.width, this.height, -1072689136, -804253680);
+    }
+
+    @Override
+    protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2;
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+    }
+
+    @Override
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = pageLeftX;
         x = x + PAGE_PADDING;
 
         int xRef = x;
 
-        Compat.drawDarkText(this.font, stack, title, x, pageTopY);
-        Ingredients.render(itemRenderer, itemRequested, x, mainItemIconY);
+        ctx.darkText(title, x, pageTopY);
+        Ingredients.render(ctx, itemRequested, x, mainItemIconY);
         x += 24;
-        Compat.drawDarkText(
-                this.font,
-                stack,
+        ctx.darkText(
                 Compat.translatable(
                         "menu.work_add_confirm.there_are_n_known_jobs",
                         iconsForJobsWhichProduceResult.size()
@@ -158,39 +145,37 @@ public class WorkRequestConfirmScreen extends Screen {
                 mainItemTextY
         );
         Component translatable = Compat.translatable("menu.work_add_confirm.which_produce_this_item");
-        Compat.drawDarkText(this.font, stack, translatable, x, mainItemTextY2);
-        renderJobIcons(stack, mouseX, mouseY, xRef, jobIconsY);
+        ctx.darkText(translatable, x, mainItemTextY2);
+        renderJobIcons(ctx, mouseX, mouseY, xRef, jobIconsY);
         Component confTxt = Compat.translatable("menu.work_add_confirm.confirm_text");
-        Compat.drawDarkText(this.font, stack, confTxt, xRef, confirmTextY);
+        ctx.darkText(confTxt, xRef, confirmTextY);
     }
 
     private void renderJobIcons(
-            PoseStack stack,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             int xRef,
             int y
     ) {
-        RenderUtil.stripOfRequestableItems(
+        // The strip returns the hovered job's name; without showing it the icons (often a
+        // job's tool, e.g. three boots) never said which jobs they are.
+        List<Component> hovered = RenderUtil.stripOfRequestableItems(
                 (ingr, coord) -> {
                     Ingredient ing = Ingredients.fromRL(ingr.getValue());
-                    Ingredients.render(itemRenderer, ing, coord.x(), coord.y());
+                    Ingredients.render(ctx, ing, coord.x(), coord.y());
                 },
                 (ingr) -> Jobs.getComponentsForTooltip(ingr.getKey()),
-                (text, coord) -> Compat.drawDarkText(font, stack, text, coord.x(), coord.y()),
-                (topLeft, botRight) -> RenderUtil.highlight(stack, topLeft, botRight),
+                (text, coord) -> ctx.darkText(text, coord.x(), coord.y()),
+                (topLeft, botRight) -> RenderUtil.highlight(ctx.gui(), topLeft, botRight),
                 iconsForJobsWhichProduceResult,
                 new Coordinate(xRef, y),
                 new Coordinate(xRef + backgroundWidth - (PAGE_PADDING * 2), y),
                 new Coordinate(mouseX, mouseY)
         );
-    }
-
-    @Override
-    public void renderBackground(PoseStack poseStack) {
-        int x = (this.width - backgroundWidth) / 2;
-        int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
+        if (hovered != null) {
+            showTooltip(hovered.stream().map(Compat::componentText).toList());
+        }
     }
 
     @Override

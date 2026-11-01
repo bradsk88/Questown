@@ -4,30 +4,41 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
-import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 public class Ingredients {
+    private static com.google.gson.JsonElement toJson(Ingredient item) {
+        // 1.20.6's CODEC_NONEMPTY rejects an empty ingredient ("Item array cannot be
+        // empty"); 1.19.2's built-in Ingredient.toJson() produced {"items":[]}. Return
+        // that empty-items shape so isTag/getName/toString fall through the way the
+        // golden does (isTag -> false) instead of throwing and taking the whole
+        // skills-pane card render down (putRequestedItemFirst -> isTag).
+        if (item.isEmpty()) {
+            com.google.gson.JsonObject empty = new com.google.gson.JsonObject();
+            empty.add("items", new com.google.gson.JsonArray());
+            return empty;
+        }
+        return ca.bradj.questown.mc.Compat.ingredientToJson(item);
+    }
+
     public static Component getName(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return Compat.translatable("#" + tag);
+            return Compat.translatableWithFallback("#" + tag, tagFallbackName(tag));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return i.getName(i.getDefaultInstance());
             }
@@ -35,15 +46,35 @@ public class Ingredients {
         return Compat.translatable("this");
     }
 
+    /**
+     * A tag's name when the lang file has none: its path, words capitalized
+     * ("minecraft:saplings" -> "Saplings"), never the raw id.
+     */
+    static String tagFallbackName(String tag) {
+        String path = tag.substring(tag.indexOf(':') + 1);
+        path = path.substring(path.lastIndexOf('/') + 1);
+        StringBuilder b = new StringBuilder();
+        for (String word : path.split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!b.isEmpty()) {
+                b.append(' ');
+            }
+            b.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return b.toString();
+    }
+
     public static WorkRequest asWorkRequest(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tag)));
+            return WorkRequest.of(Compat.itemTag(new ResourceLocation(tag)));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return WorkRequest.of(i);
             }
@@ -53,16 +84,13 @@ public class Ingredients {
 
     public static Ingredient fromString(String block) {
         if (block.startsWith("#")) {
-            return Ingredient.of(TagKey.create(
-                    Registry.ITEM_REGISTRY,
-                    new ResourceLocation(block.replace("#", ""))
-            ));
+            return Ingredient.of(Compat.itemTag(new ResourceLocation(block.replace("#", ""))));
         }
-        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+        return Ingredient.of(Loader.itemFromId(new ResourceLocation(block)));
     }
 
     public static String toString(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
             String tKey = "#" + tag;
@@ -76,7 +104,7 @@ public class Ingredients {
     }
 
     public static @Nullable String getTag(Ingredient ing) {
-        JsonElement j = ing.toJson();
+        JsonElement j = toJson(ing);
         return getTag(j);
     }
 
@@ -90,20 +118,31 @@ public class Ingredients {
         return j.getAsJsonObject().get("tag").getAsString();
     }
 
+    /**
+     * A rotating representative item for an ingredient (one per second, as the "needs" row cycles),
+     * or null when none matches. Used both by {@link #render} and the townie need bubble.
+     */
+    public static @Nullable ItemStack representativeItemStack(Ingredient ing) {
+        ItemStack[] matchingStacks = ing.getItems();
+        if (matchingStacks.length == 0) {
+            return null;
+        }
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        return matchingStacks[curSeconds % matchingStacks.length];
+    }
+
     public static @Nullable ItemStack render(
-            ItemRenderer itemRenderer,
+            RenderContext ctx,
             Ingredient ing,
             int iconX,
             int y
     ) {
-        int curSeconds = (int) (System.currentTimeMillis() / 1000);
-        ItemStack[] matchingStacks = ing.getItems();
-        if (matchingStacks.length > 0) {
-            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-            itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-            return itemStack;
+        ItemStack itemStack = representativeItemStack(ing);
+        if (itemStack == null) {
+            return null;
         }
-        return null;
+        Compat.renderItemAndDecorations(ctx.gui(), itemStack, iconX, y + 1);
+        return itemStack;
     }
 
     // This one is better than Minecraft's, because it preserves the tag ID
@@ -121,8 +160,22 @@ public class Ingredients {
     }
 
     public static Ingredient fromRL(ResourceLocation value) {
-        @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
+        @Nullable Item l = Loader.itemFromId(value);
         return Ingredient.of(l);
+    }
+
+    /**
+     * Resolve a ResourceLocation to an ingredient, item-first: a registered item id yields
+     * the item ingredient; anything else (a tag id, or an unknown id) yields a tag
+     * ingredient. A tag ingredient for an unregistered tag simply matches nothing, so a
+     * missing id fails safe instead of throwing.
+     */
+    public static Ingredient asIngredient(ResourceLocation value) {
+        Item asItem = Loader.itemFromId(value);
+        if (asItem != null) {
+            return Ingredient.of(asItem);
+        }
+        return Ingredient.of(Compat.itemTag(value));
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {

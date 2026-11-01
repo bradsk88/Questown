@@ -4,22 +4,16 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.Ingredients;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
-/**
- */
 public final class AddWorkFromUIMessage {
     private final Ingredient requested;
     private final BlockPos flagPos;
@@ -69,40 +63,33 @@ public final class AddWorkFromUIMessage {
 
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
-            // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
-            // Do stuff
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             BlockEntity flag = sender.getLevel().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Work will not be added.", flagPos);
                 return;
             }
             switch (action) {
-                case INQUIRED -> {
-                    WorksBehaviour.TownData td = tfbe.getTownData();
-                    Ingredient result = (Ingredient) requested;
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(() -> sender),
-                            new WorkRequestConfirmMessage(
-                                    (Ingredient) requested(),
-                                    ServerJobsRegistry.getAllJobsThatProduce(td, result),
-                                    tfbe.getTownFlagBasePos()
-                            )
-                    );
-                }
+                case INQUIRED -> QuestownNetwork.sendToPlayer(
+                        sender,
+                        new WorkRequestConfirmMessage(
+                                requested,
+                                tfbe.getKnownProducersOf(requested),
+                                tfbe.getTownFlagBasePos()
+                        )
+                );
                 case CONFIRMED -> {
                     VisitorTrigger.Triggers adv = VisitorTrigger.Triggers.FirstJobRequest;
-                    AdvancementsInit.VISITOR_TRIGGER.trigger(ctx.get().getSender(), adv);
-                    tfbe.getWorkHandle().requestWork(Ingredients.asWorkRequest(requested));
+                    AdvancementsInit.VISITOR_TRIGGER.trigger((net.minecraft.server.level.ServerPlayer) ctx.sender(), adv);
+                    tfbe.requestWorkFromPlayer(Ingredients.asWorkRequest(requested));
                     tfbe.openJobsMenu(sender, false);
                 }
                 case REJECTED -> tfbe.openJobsMenu(sender, true);
             }
         });
-        ctx.get().setPacketHandled(true);
 
     }
 

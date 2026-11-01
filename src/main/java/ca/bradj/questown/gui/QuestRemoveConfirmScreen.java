@@ -5,21 +5,15 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.town.quests.Quest;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.PlayerHeadItem;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
@@ -30,7 +24,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemoveQuestsContainer> {
+public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQuestsContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final int borderPadding = 6;
@@ -38,7 +32,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
@@ -81,9 +75,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             if (v.villagerUUID() == null) {
                 return null;
             }
-            ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-            head.getOrCreateTag().putString(PlayerHeadItem.TAG_SKULL_OWNER, v.villagerUUID());
-            return head;
+            return Compat.resolvablePlayerHead(java.util.UUID.fromString(v.villagerUUID()));
         }).toList();
 
     }
@@ -108,19 +100,17 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         int cardsHeight = MAX_CARDS_PER_PAGE * (CARD_HEIGHT + CARD_PADDING);
         int maybeY = pageStringY + this.previousPage.getHeight() + PAGE_PADDING + cardsHeight + (2 * this.font.lineHeight) + borderPadding;
         this.addRenderableWidget(
-                new Button(
-                        x + borderPadding, maybeY,
-                        48, buttonHeight,
+                Compat.button(
                         Compat.translatable("menu.back"),
-                        (p_96776_) -> menu.sendOpenQuestsMenuRequest()
+                        (p_96776_) -> menu.sendOpenQuestsMenuRequest(),
+                        x + borderPadding, maybeY, 48, buttonHeight
                 )
         );
         this.addRenderableWidget(
-                new Button(
-                        maybeX, maybeY,
-                        48, buttonHeight,
+                Compat.button(
                         Compat.translatable("menu.decline"),
-                        (p_96776_) -> menu.sendConfirmRemoveRequest()
+                        (p_96776_) -> menu.sendConfirmRemoveRequest(),
+                        maybeX, maybeY, 48, buttonHeight
                 )
         );
     }
@@ -139,20 +129,12 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(ctx, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -162,12 +144,12 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
-        this.font.draw(
-                poseStack,
+        ctx.text(
                 Compat.translatable("menu.quests.confirm_remove_top", quests.size()),
                 x,
                 y,
-                TEXT_COLOR
+                TEXT_COLOR,
+        false
         );
 
         y = y + this.font.lineHeight + CARD_PADDING;
@@ -189,26 +171,31 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             }
 
             if (Quest.QuestStatus.COMPLETED.equals(recipe.status)) {
-                RenderSystem.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
+                Compat.setShaderColor(0.8f, 1.0f, 0.8f, 1.0f);
                 recipeName = Compat.translatable("quests.completed_suffix", recipeName);
             }
             if (recipe.isBroken) {
-                RenderSystem.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
+                Compat.setShaderColor(0.85f, 0.75f, 1.0f, 1.0f);
             }
-            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            ctx.drawNineNine(this.cardBackground, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+            Compat.resetShaderColor();
 
             int iconY = cardY + CARD_HEIGHT - 24;
-            ImmutableList<Slot> slotz = renderRecipeCardIcons(poseStack, recipe, x, iconY, mouseX, mouseY);
+            ImmutableList<Slot> slotz = renderRecipeCardIcons(ctx, recipe, x, iconY, mouseX, mouseY);
             b.addAll(slotz);
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            this.font.draw(poseStack, recipeName.getString(), idX, idY, TEXT_COLOR);
+            ctx.text(recipeName.getString(), idX, idY, TEXT_COLOR, false);
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            Component tooltip = Compat.translatable("quests.job_owner", vID);
+            // "Villager N" when the menu sync carries display names, otherwise the
+            // historical truncated UUID.
+            Component tooltip = Compat.translatable(
+                    "quests.job_owner",
+                    AbstractQuestsContainer.villagerLabelFor(menu.villagerDisplayNames(), vID)
+            );
 
             if (vID.isEmpty()) {
                 continue;
@@ -227,9 +214,9 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             if (showHead) {
                 int headX = x + CARD_WIDTH - 19 - 19;
                 int headY = idY - 6;
-                this.itemRenderer.renderAndDecorateItem(heads.get(i), headX, headY);
+                ctx.renderItemAndDecorations(heads.get(i), headX, headY);
                 if (mouseX >= headX && mouseY >= headY && mouseX < headX + 16 && mouseY < headY + 17) {
-                    highlightAndTooltip(poseStack, headX, headY, tooltip, mouseX, mouseY);
+                    highlightAndTooltip(ctx, headX, headY, tooltip, mouseX, mouseY);
                 }
             }
         }
@@ -237,17 +224,17 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         slots.addAll(b.build());
 
         int botY = y + (endIndex - startIndex) * (CARD_HEIGHT + CARD_PADDING) + 2;
-        this.font.draw(poseStack, Compat.translatable("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR);
+        ctx.text(Compat.translatable("menu.quests.confirm_remove_bottom"), x, botY, TEXT_COLOR, false);
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
 
     private final List<Slot> slots = new ArrayList<>();
 
     private ImmutableList<Slot> renderRecipeCardIcons(
-            PoseStack poseStack,
+            RenderContext ctx,
             UIQuest recipe,
             int x,
             int y,
@@ -256,8 +243,12 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     ) {
         Inventory dummyInv = new Inventory(null);
         Collection<Ingredient> ingredients = recipe.getIngredients();
-        ingredients = RoomRecipes.filterSpecialBlocks
-                                         (ingredients);
+        ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            // Job-change quests ALWAYS require the Block of Progress, so the card's item row is left
+            // empty instead of repeating it; kept in step with QuestsScreen.renderRecipeCardIcons.
+            ingredients = ImmutableList.of();
+        }
         int j = 0;
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
@@ -265,10 +256,11 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
         for (Ingredient ing : ingredients) {
             int iconX = x + 8 + j * 18;
 
-            ItemStack itemStack = Ingredients.render(itemRenderer, ing, iconX, y + 1);
+            ItemStack itemStack = Ingredients.representativeItemStack(ing);
             if (itemStack != null) {
+                ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
                 if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
-                    highlightAndTooltip(poseStack, iconX, y, itemStack.getItem().getName(itemStack), mouseX, mouseY);
+                    highlightAndTooltip(ctx, iconX, y, itemStack.getItem().getName(itemStack), mouseX, mouseY);
                 }
                 Slot element = new Slot(dummyInv, j, iconX, y + 1);
                 element.set(itemStack);
@@ -280,7 +272,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     }
 
     private void highlightAndTooltip(
-            PoseStack poseStack,
+            RenderContext ctx,
             int iconX,
             int y,
             Component itemStack,
@@ -288,60 +280,45 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
             int mouseY
     ) {
         // transparent white square behind hovered item slot
-        fill(poseStack, iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF);
+        ctx.fill(iconX, y + 1, iconX + 16, y + 17, 0x80FFFFFF);
         // render hovered item's name as a tooltip
-        renderTooltip(poseStack, itemStack, mouseX, mouseY);
+        this.showTooltip(itemStack);
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            RenderContext ctx,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        ctx.fill(
                 x + borderPadding + buttonWidth,
                 nextPage.y,
                 x + backgroundWidth - borderPadding - buttonWidth,
                 nextPage.y + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(quests.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
-    protected void renderBg(
-            PoseStack poseStack,
+    protected void renderBgContent(
+            RenderContext ctx,
             float partialTicks,
             int mouseX,
             int mouseY
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) quests.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(quests.size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }
@@ -377,7 +354,6 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
     }
 
 
-    @Override
     public boolean mouseScrolled(
             double scrollX,
             double scrollY,
@@ -394,7 +370,7 @@ public class QuestRemoveConfirmScreen extends AbstractContainerScreen<TownRemove
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override
