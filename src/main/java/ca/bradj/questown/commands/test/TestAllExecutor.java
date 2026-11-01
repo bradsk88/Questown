@@ -2,7 +2,7 @@ package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.AnyTestEntry;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry.TestEntry;
-import ca.bradj.questown.commands.test.TestBlueprintRegistry.WorldgenCheck;
+import ca.bradj.questown.commands.test.TestBlueprintRegistry.LevelCheck;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
@@ -29,7 +29,7 @@ public class TestAllExecutor {
             BlockPos origin,
             int warpAmount
     ) {
-        this(level, output, origin, warpAmount, null);
+        this(level, output, origin, warpAmount, (String) null);
     }
 
     public TestAllExecutor(
@@ -39,13 +39,21 @@ public class TestAllExecutor {
             int warpAmount,
             @Nullable String category
     ) {
+        this(level, output, origin, warpAmount, TestBlueprintRegistry.resolveJobs(category));
+    }
+
+    public TestAllExecutor(
+            ServerLevel level,
+            TestOutput output,
+            BlockPos origin,
+            int warpAmount,
+            List<AnyTestEntry> jobs
+    ) {
         this.level = level;
         this.output = output;
         this.origin = origin;
         this.warpAmount = warpAmount;
-        this.jobs = category != null
-                ? TestBlueprintRegistry.getTestsByCategory(category)
-                : TestBlueprintRegistry.getTestableJobs();
+        this.jobs = jobs;
     }
 
     public boolean tick() {
@@ -53,7 +61,11 @@ public class TestAllExecutor {
             if (!currentExecutor.tick()) {
                 return false;
             }
-            recordResult(jobs.get(currentIndex).name(), currentExecutor.getWarpPassed());
+            recordResult(
+                    jobs.get(currentIndex).name(),
+                    currentExecutor.getWarpPassed(),
+                    currentExecutor.isExpectedFailure()
+            );
             currentExecutor = null;
             currentIndex++;
         }
@@ -62,7 +74,7 @@ public class TestAllExecutor {
             AnyTestEntry entry = jobs.get(currentIndex);
             msg("=== Test " + (currentIndex + 1) + "/" + jobs.size() + ": " + entry.name() + " ===");
 
-            if (entry instanceof WorldgenCheck wc) {
+            if (entry instanceof LevelCheck wc) {
                 recordResult(entry.name(), wc.check().apply(level));
                 currentIndex++;
                 continue;
@@ -81,11 +93,19 @@ public class TestAllExecutor {
     }
 
     private void recordResult(String name, boolean passed) {
+        recordResult(name, passed, false);
+    }
+
+    private void recordResult(String name, boolean passed, boolean expectedFailure) {
+        String line = AutotestLogFormatter.formatScenario(
+                AutotestLogFormatter.TRACK_JOBS,
+                name,
+                passed,
+                expectedFailure
+        );
+        results.add(line);
         if (passed) {
-            results.add("[PASS] " + name);
             this.passed++;
-        } else {
-            results.add("[FAIL] " + name + ": Some expectations failed");
         }
     }
 
@@ -95,7 +115,8 @@ public class TestAllExecutor {
             msg(result);
         }
         msg("========================================");
-        msg("Passed: " + passed + "/" + jobs.size() + " (" + (passed * 100 / jobs.size()) + "%)");
+        int percentage = jobs.isEmpty() ? 0 : (passed * 100 / jobs.size());
+        msg("Passed: " + passed + "/" + jobs.size() + " (" + percentage + "%)");
         msg("========================================");
     }
 
