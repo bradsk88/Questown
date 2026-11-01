@@ -1,0 +1,42 @@
+package ca.bradj.questown.loader.forge;
+
+import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.SyncWorkForCommandsMessage;
+import ca.bradj.questown.jobs.*;
+import ca.bradj.questown.town.TownVillagerUIs;
+import ca.bradj.questown.town.quests.paths.QuestPaths;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerAboutToStartEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+;
+
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(modid = Questown.MODID, bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
+public class JobFileEvents {
+
+    @SubscribeEvent
+    public static void reloadListeners(ServerAboutToStartEvent event) {
+        ResourceJobLoader.LISTENER.loadFromFiles(event.getServer().getResourceManager());
+        ImmutableMap<JobID, Work> jobs = ResourceJobLoader.LISTENER.getJobs();
+        Works.staticInitialize(jobs);
+        ServerJobsRegistry.staticInitialize(jobs);
+        QuestPaths.LISTENER.loadFromFiles(event.getServer().getResourceManager());
+    }
+
+    @SubscribeEvent
+    public static void playerJoined(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer sp)) {
+            return;
+        }
+        ImmutableList<JobID> ids = ImmutableList.copyOf(Works.ids());
+        SyncWorkForCommandsMessage ms = new SyncWorkForCommandsMessage(ids);
+        QuestownNetwork.sendToPlayer(sp, ms);
+        TownVillagerUIs.syncWorkToClient(sp);
+    }
+
+}

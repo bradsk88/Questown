@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -10,10 +11,12 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,6 +28,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.tags.BlockTags;
@@ -36,14 +40,12 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import ca.bradj.questown.jobs.special.DisplayFit;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -127,11 +129,14 @@ public class ResourceJobLoader {
 
         private ImmutableMap<JobID, Work> makeCookJobs(JsonObject obj) {
             ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+            // Per-item starter selection: only the listed expanded jobs join the root's initial
+            // unlock set (a blanket `unlocked_with_root_job` here would grant every food recipe).
+            ImmutableSet<String> starterRecipes = starterRecipes(obj);
             Ingredient ing = Ingredient.of(TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW);
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
                 // FIXME: Make "initial request" a function that provides recipe manager as input
-                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), item.getItem()));
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), sl, item.getItem()));
                 WorkSpecialRules special = loadRulesV2(obj);
                 if (!obj.get("block").isJsonObject()) {
                     throw new IllegalArgumentException("block must be an object");
@@ -155,6 +160,7 @@ public class ResourceJobLoader {
                             replaceWhen(ws.toolsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
                     );
                     JobID od = new JobID("cook", Compat.getItemId(item.getItem()).getPath());
+                    boolean starter = starterRecipes.contains(od.jobId());
                     Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
                     Work cookWork = WorksBehaviour.productionWork(
                             iconItem.getDefaultInstance(),
@@ -166,10 +172,18 @@ public class ResourceJobLoader {
                             wwi,
                             special,
                             loadSoundV1(obj)
-                    ).withPriority(requiredInt(obj, "priority"));
+                    ).withPriority(requiredInt(obj, "priority"))
+                     // Every expanded recipe shares the template's status art (e.g. the furnace
+                     // front while working). Before withSlotPrecondition: withOverrides does not
+                     // copy the precondition.
+                     .withOverrides(overridesFromJsonV2(obj));
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
+                    cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
+                    cookWork = cookWork.withUnlockedWithRootJob(
+                            unlockedWithRootJob(obj) || starter
+                    );
                     b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -218,7 +232,7 @@ public class ResourceJobLoader {
                     if (crafted.isEmpty()) {
                         String fb = optional(resultObj, "fallback", JsonElement::getAsString);
                         if (fb != null) {
-                            Item fbItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fb));
+                            Item fbItem = Loader.itemFromId(new ResourceLocation(fb));
                             if (fbItem != null) {
                                 return Ingredient.of(fbItem);
                             }
@@ -235,7 +249,7 @@ public class ResourceJobLoader {
                 );
 
                 String armorItemId = "minecraft:" + prefix + "_" + templatePiece;
-                Item iconItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation(armorItemId));
+                Item iconItem = Loader.itemFromId(new ResourceLocation(armorItemId));
                 if (iconItem == null) {
                     iconItem = materialItem;
                 }
@@ -254,7 +268,8 @@ public class ResourceJobLoader {
                         wwi,
                         loadRulesV1(obj),
                         loadSoundV1(obj)
-                ).withPriority(requiredInt(obj, "priority"));
+                ).withPriority(requiredInt(obj, "priority")).withExperience(experience(obj))
+                 .withAvailableAtLevel(ArmorTierLevels.forPrefix(prefix));
                 b.put(expandedId, armorerWork);
             }
             return b.build();
@@ -306,10 +321,10 @@ public class ResourceJobLoader {
 
         private Item cooked(
                 RecipeManager rm,
+                ServerLevel level,
                 Item iconItem
         ) {
-            List<SmeltingRecipe> all = rm.getAllRecipesFor(RecipeType.SMELTING);
-            return all.stream()
+            return RecipeRef.recipesOf(rm, RecipeType.SMELTING).stream()
                       .filter(v -> isSingleItemRecipeMatch(iconItem, v))
                       .findFirst().orElseThrow().getResultItem().getItem();
         }
@@ -330,7 +345,7 @@ public class ResourceJobLoader {
         }
 
         private Work workFromJsonV1(JsonObject object) {
-            Item iconItem = ForgeRegistries.ITEMS.getValue(required(object, "icon"));
+            Item iconItem = Loader.itemFromId(required(object, "icon"));
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + object.get("icon").getAsString());
             }
@@ -341,7 +356,7 @@ public class ResourceJobLoader {
             );
             Function<ServerLevel, Ingredient> initReq = sl -> null;
             if (initialRequest != null) {
-                @Nullable Item r = ForgeRegistries.ITEMS.getValue(initialRequest);
+                @Nullable Item r = Loader.itemFromId(initialRequest);
                 if (r == null) {
                     throw new IllegalArgumentException("Initial request item does not exist: " + object.get("icon")
                                                                                                        .getAsString());
@@ -370,15 +385,40 @@ public class ResourceJobLoader {
             ).withPriority(requiredInt(object, "priority"));
             @Nullable Overrides overrides = overridesFromJsonV2(object);
             if (overrides != null) {
-                return wb.withOverrides(overrides);
+                wb = wb.withOverrides(overrides);
             }
-            return wb;
+            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
+                   .withExperience(experience(object)).withPrefersRequestedLoot(prefersRequestedLoot(object))
+                   .withLootTableDefault(lootTableDefault(object));
+            return wb.withProficiencyId(proficiencyId(object));
         }
 
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
             ImmutableMap<IStatus<?>, ResourceLocation> textureOverrides = textureOverridesV2(object);
             ImmutableMap<IStatus<?>, Pair<String, String>> statusTextOverrides = statusTextOverridesV2(object);
-            return new Overrides(textureOverrides, statusTextOverrides);
+            return new Overrides(textureOverrides, statusTextOverrides, workingTextureV2(object));
+        }
+
+        /** {@code {"type": "working", "new_texture": ...}}: one image for every work state and extraction. */
+        private static @Nullable ResourceLocation workingTextureV2(JsonObject object) {
+            if (!object.has("status_texture_overrides")) {
+                return null;
+            }
+            for (JsonElement row : object.getAsJsonArray("status_texture_overrides")) {
+                JsonObject rowObj = row.getAsJsonObject();
+                if ("working".equals(rowObj.get("type").getAsString())) {
+                    return textureLocation(rowObj.get("new_texture").getAsString());
+                }
+            }
+            return null;
+        }
+
+        private static ResourceLocation textureLocation(String newTexture) {
+            @NotNull String[] parts = newTexture.split(":");
+            if (parts.length == 2) {
+                return new ResourceLocation(parts[0], parts[1]);
+            }
+            return Questown.ResourceLocation(newTexture);
         }
 
         private ImmutableMap<IStatus<?>, ResourceLocation> textureOverridesV2(JsonObject object) {
@@ -391,16 +431,11 @@ public class ResourceJobLoader {
                     switch (type) {
                         case "core_state": {
                             ProductionStatus productionStatus = getCore(rowObj);
-                            String newTexture = rowObj.get("new_texture").getAsString();
-                            @NotNull String[] newTextureParts = newTexture.split(":");
-                            if (newTextureParts.length == 2) {
-                                ResourceLocation rl = new ResourceLocation(newTextureParts[0], newTextureParts[1]);
-                                textureOverrides.put(productionStatus, rl);
-                            } else {
-                                textureOverrides.put(productionStatus, Questown.ResourceLocation(newTexture));
-                            }
+                            textureOverrides.put(productionStatus, textureLocation(rowObj.get("new_texture").getAsString()));
                             break;
                         }
+                        case "working":
+                            break; // workingTextureV2
                         default:
                             throw new IllegalArgumentException("Unexpected texture override type " + type);
                     }
@@ -433,7 +468,7 @@ public class ResourceJobLoader {
         }
 
         private Work workFromJsonV2(JsonObject obj) {
-            Item iconItem = ForgeRegistries.ITEMS.getValue(required(obj, "icon"));
+            Item iconItem = Loader.itemFromId(required(obj, "icon"));
             if (iconItem == null) {
                 throw new IllegalArgumentException("Icon image does not exist: " + obj.get("icon").getAsString());
             }
@@ -449,14 +484,18 @@ public class ResourceJobLoader {
 
             try {
                 JsonObject block = obj.getAsJsonObject("block");
-                Predicate<JobBlockTestContext> isJobBlock = ResourceJobLoader.isJobBlockV2(
-                        block,
-                        special
-                );
+                boolean display = block.has("display");
+                Predicate<JobBlockTestContext> isJobBlock = display
+                        ? isDisplayJobBlock(block)
+                        : ResourceJobLoader.isJobBlockV2(block, special);
                 int cooldownTicks = requiredInt(obj, "cooldown_ticks");
                 WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
                 JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
-                BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = shouldInitWS(block, special);
+                // A display stands in air, so no block state answers "does a job care"; the work
+                // status store seeds displays itself (TownWorkStatusStore).
+                BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = display
+                        ? (i, p) -> false
+                        : shouldInitWS(block, special);
                 Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
                 Work work = WorksBehaviour.productionWork(
                         iconItem.getDefaultInstance(),
@@ -468,11 +507,17 @@ public class ResourceJobLoader {
                         wwi,
                         special,
                         loadSoundV1(obj)
-                ).withPriority(requiredInt(obj, "priority"));
+                ).withPriority(requiredInt(obj, "priority"))
+                 // status_texture_overrides were only ever applied by the V1 loader. Before
+                 // withSlotPrecondition: withOverrides does not copy the precondition.
+                 .withOverrides(overridesFromJsonV2(obj));
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
-                return work;
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
+                           .withExperience(experience(obj)).withPrefersRequestedLoot(prefersRequestedLoot(obj))
+                           .withLootTableDefault(lootTableDefault(obj));
+                return work.withProficiencyId(proficiencyId(obj));
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }
@@ -533,25 +578,6 @@ public class ResourceJobLoader {
             return new SoundInfo(rl, chance, duration);
         }
 
-        private WorkWorldInteractions smeltingResultWorkInt(
-                int cooldownTicks,
-                Item rawItem
-        ) {
-            ResultGenerator<MCHeldItem> g = new ResultGenerator<>() {
-                @Override
-                public Iterable<MCHeldItem> generate(ServerLevel level, Collection<MCHeldItem> heldItems) {
-                    Item cookedItem = cooked(level.getRecipeManager(), rawItem);
-                    return ImmutableList.of(MCHeldItem.fromMCItemStack(cookedItem.getDefaultInstance()));
-                }
-
-                @Override
-                public boolean isResultAlwaysEmpty() {
-                    return false;
-                }
-            };
-            return new WorkWorldInteractions(cooldownTicks, g);
-        }
-
         private WorkWorldInteractions worldWorkInt(
                 JsonObject object,
                 int cooldownTicks
@@ -566,7 +592,7 @@ public class ResourceJobLoader {
                 case "biome_loot" -> biomeLootResult(rizz);
                 case "loot" -> lootResult(rizz);
                 case "crafting_table" -> craftingTableResult(rizz);
-                case "uses_special_rules", "via_other_job" -> ResultGenerator.alwaysEmpty();
+                case "uses_special_rules", "via_other_job" -> ResultGenerator.forSpecialType(type);
                 default -> throw new IllegalArgumentException("Unexpected result type: " + type);
             };
             return new WorkWorldInteractions(cooldownTicks, g);
@@ -647,7 +673,7 @@ public class ResourceJobLoader {
             JsonObject object,
             JsonObject rizz
     ) {
-        Item resultItem = ForgeRegistries.ITEMS.getValue(required(rizz, "item"));
+        Item resultItem = Loader.itemFromId(required(rizz, "item"));
         return new ResultGenerator<>() {
             @Override
             public Iterable<MCHeldItem> generate(
@@ -716,8 +742,7 @@ public class ResourceJobLoader {
                     ServerLevel level,
                     Collection<MCHeldItem> heldItems
             ) {
-                LootTables tables = level.getServer().getLootTables();
-                LootTable loot = tables.get(ResourceLocation.tryParse(table));
+                LootTable loot = Compat.lootTable(level, ResourceLocation.tryParse(table));
                 return Loots.loadFromTables(level, loot, 1, maxResults).stream().map(MCHeldItem::fromTown).toList();
             }
 
@@ -750,7 +775,7 @@ public class ResourceJobLoader {
                 Item itemForGrid = resolveGridItem(fillItem, heldItems);
                 ItemStack itemstack = assembleCraftingResult(l, ingredientChar, itemForGrid);
                 if (itemstack.isEmpty() && fallback != null) {
-                    itemstack = ForgeRegistries.ITEMS.getValue(new ResourceLocation(fallback)).getDefaultInstance();
+                    itemstack = Loader.itemFromId(new ResourceLocation(fallback)).getDefaultInstance();
                 }
                 itemstack.setCount(1);
                 return ImmutableList.copyOf(Collections.nCopies(qty, MCHeldItem.fromMCItemStack(itemstack)));
@@ -807,12 +832,9 @@ public class ResourceJobLoader {
             }
         }
 
-        Optional<CraftingRecipe> match = level.getServer().getRecipeManager()
-                                              .getRecipeFor(RecipeType.CRAFTING, cc, level);
-        if (match.isPresent()) {
-            return match.get().assemble(cc);
-        }
-        return ItemStack.EMPTY;
+        return RecipeRef.assembleMatching(
+                level.getServer().getRecipeManager(), RecipeType.CRAFTING, cc, level
+        );
     }
 
     private static WorkStates workStates(
@@ -855,7 +877,7 @@ public class ResourceJobLoader {
                 int work1 = v.get("work").getAsInt();
                 work.put(i, () -> work1);
                 maxState = Math.max(maxState, i + 1);
-                valid = valid || i != 0; // ONLY work is not sufficient for state 0
+                valid = true;
             }
             if (v.has("time")) {
                 int time1 = v.get("time").getAsInt();
@@ -864,11 +886,10 @@ public class ResourceJobLoader {
                 valid = true;
             }
             if (!valid) {
-                String fmt = "Job %s is missing ingredients, tools, work, or time for state at index %d: %s";
-                if (i == 0) {
-                    fmt = "Job %s is missing ingredients, tools, or time for state at index %d: %s";
-                }
-                throw new IllegalJobDefinition(String.format(fmt, id.toNiceString(), i, v));
+                throw new IllegalJobDefinition(String.format(
+                        "Job %s is missing ingredients, tools, work, or time for state at index %d: %s",
+                        id.toNiceString(), i, v
+                ));
             }
         }
         return new WorkStates(
@@ -913,6 +934,48 @@ public class ResourceJobLoader {
             }
             BlockState state = i.state(p);
             return baseTest.test(state);
+        };
+    }
+
+    /**
+     * {@code "block": {"display": "armor_stand" | "item_frame", "accepts": "<item or #tag>"}}: the
+     * work spot is a display standing there.
+     * Carrying an accepted item, only a display it fits counts, so boots never go to a stand whose
+     * only gap is the head. Empty-handed, a display fits if a stored accepted item fits it, or, when
+     * the caller passes no town items (the job's own checks), if it has any empty slot: whether the
+     * town has the item is the scorer's tool check. No "already used" shortcut: that would send a
+     * villager holding boots to any stand.
+     */
+    private static Predicate<JobBlockTestContext> isDisplayJobBlock(JsonObject block) {
+        boolean armorStand = "armor_stand".equals(required(block, "display", JsonElement::getAsString));
+        Ingredient accepts = getIngredient(required(block, "accepts", JsonElement::getAsString));
+        return ctx -> {
+            // A display stands in air; skip the entity lookup everywhere else.
+            if (ctx.world() == null || !ctx.blockInfo().state(ctx.blockPos()).isAir()) {
+                return false;
+            }
+            List<ItemStack> slots = ctx.world().getDisplaySlots(ctx.blockPos());
+            if (slots.isEmpty() || DisplayFit.isArmorStand(slots) != armorStand) {
+                return false;
+            }
+            List<ItemStack> heldAccepted = new ArrayList<>();
+            ctx.heldItems().get().forEach(h -> {
+                ItemStack s = h.get().toMCItemStack();
+                if (accepts.test(s)) {
+                    heldAccepted.add(s);
+                }
+            });
+            if (!heldAccepted.isEmpty()) {
+                return DisplayFit.anyFits(slots, heldAccepted);
+            }
+            List<ItemStack> stored = ctx.townUniqueItems().get().stream()
+                                        .map(net.minecraft.world.item.Item::getDefaultInstance)
+                                        .filter(accepts)
+                                        .toList();
+            if (!stored.isEmpty()) {
+                return DisplayFit.anyFits(slots, stored);
+            }
+            return slots.stream().anyMatch(ItemStack::isEmpty);
         };
     }
 
@@ -967,16 +1030,19 @@ public class ResourceJobLoader {
     ) {
         // Gather all global and per-status rules
         ImmutableList<String> allRules = ImmutableList.<String>builder().addAll(special.specialGlobalRules()).build();
-        // Query all registered JobPhaseModifier appliers
-        boolean passed = false;
+        // Query all registered JobPhaseModifier appliers, evaluating each exactly once (short-circuited
+        // on a failing rule, same as before), delegating the pass/fail decision to the Forge-free
+        // UtilClean.specialRulesAllPass so it is unit-testable.
+        java.util.List<Boolean> ruleResults = new java.util.ArrayList<>();
         for (JobPhaseModifier rule : ca.bradj.questown.integration.SpecialRulesRegistry.getRuleAppliers(allRules)) {
-            if (rule.postJobBlockCheckPassed(ctx)) {
-                passed = true;
-                continue;
+            boolean passed = rule.postJobBlockCheckPassed(ctx);
+            ruleResults.add(passed);
+            if (!passed) {
+                break;
             }
-            return false;
         }
-        return passed;
+        boolean result = UtilClean.specialRulesAllPass(ruleResults);
+        return result;
     }
 
     private static Optional<BlockStateComparator> getStateComparator(JsonObject block) {
@@ -1040,7 +1106,7 @@ public class ResourceJobLoader {
     private static @NotNull Predicate<BlockState> getBlockCheck(String block) {
         if (block.startsWith("#")) {
             TagKey<Block> tag = BlockTags.create(new ResourceLocation(block.replace("#", "")));
-            return bs -> ForgeRegistries.BLOCKS.tags().getTag(tag).contains(bs.getBlock());
+            return bs -> bs.is(tag);
         }
         return (BlockState bs) -> {
             ResourceLocation resourceLocation = new ResourceLocation(block);
@@ -1064,6 +1130,78 @@ public class ResourceJobLoader {
             String k
     ) {
         return required(object, k, JsonElement::getAsInt);
+    }
+
+    private static @Nullable String proficiencyId(JsonObject object) {
+        return optional(object, "proficiency_id", JsonElement::getAsString);
+    }
+
+    /**
+     * The `unlocked_with_root_job` flag: a job in a non-starter position that still belongs in its
+     * root's initial unlock set at staff (e.g. `cook/fuel` next to the `cook/extract` root).
+     * Absent = false.
+     */
+    private static boolean unlockedWithRootJob(JsonObject object) {
+        Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
+        return Boolean.TRUE.equals(flag);
+    }
+
+    /** The optional `experience` value: XP per completion, replacing the formula. */
+    private static @Nullable Integer experience(JsonObject object) {
+        return optional(object, "experience", JsonElement::getAsInt);
+    }
+
+    /** The `biome_loot` result's `default` table path; null for any other result type. */
+    private static @Nullable String lootTableDefault(JsonObject object) {
+        JsonElement result = object.get("result");
+        if (result == null || !result.isJsonObject()) {
+            return null;
+        }
+        JsonObject r = result.getAsJsonObject();
+        if (!r.has("type") || !"biome_loot".equals(r.get("type").getAsString())) {
+            return null;
+        }
+        return optional(r, "default", JsonElement::getAsString);
+    }
+
+    /** The `biome_loot` result's `prefer_requested` flag (full-day leaver trips); absent = false. */
+    private static boolean prefersRequestedLoot(JsonObject object) {
+        JsonElement result = object.get("result");
+        if (result == null || !result.isJsonObject()) {
+            return false;
+        }
+        Boolean prefer = optional(result.getAsJsonObject(), "prefer_requested", JsonElement::getAsBoolean);
+        return prefer != null && prefer;
+    }
+
+    /**
+     * The `available_at_level` value: the townie level at which the job becomes available for
+     * skill-tab unlocking. Absent = {@link Work#DEFAULT_AVAILABLE_AT_LEVEL}.
+     */
+    private static int availableAtLevel(JsonObject object) {
+        Integer level = optional(object, "available_at_level", JsonElement::getAsInt);
+        return level != null ? level : Work.DEFAULT_AVAILABLE_AT_LEVEL;
+    }
+
+    /**
+     * The `starter_recipes` list (expanded-template jobs only): the item paths
+     * whose expanded jobs join their root's initial unlock set at staff, on top
+     * of the blanket `unlocked_with_root_job` flag. E.g. the cook
+     * simple-furnace template lists `mutton`, so every freshly staffed cook
+     * (spawn or job-change) can actually cook the first hunter's guaranteed
+     * simple-furnace food while the remaining recipes stay progression-gated.
+     * Absent/empty = no starter.
+     */
+    private static ImmutableSet<String> starterRecipes(JsonObject object) {
+        JsonElement el = object.get("starter_recipes");
+        if (el == null || !el.isJsonArray()) {
+            return ImmutableSet.of();
+        }
+        ImmutableSet.Builder<String> b = ImmutableSet.builder();
+        for (JsonElement v : el.getAsJsonArray()) {
+            b.add(v.getAsString());
+        }
+        return b.build();
     }
 
     private static <X> X required(
