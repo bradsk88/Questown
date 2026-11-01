@@ -5,10 +5,10 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
-import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
+import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
@@ -20,31 +20,41 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.List;
 
 public class ExplorerWork {
-    public static final JobID ID = new JobID("gatherer", "explore");
+    // The explorer is its OWN root ("explorer"), not a "gatherer" sub-job, so a villager
+    // assigned to it doesn't randomly cycle into the plain gather sub-jobs during warp —
+    // only "explore" is in its cycling pool, so it deterministically produces the map +
+    // scouts loot every trip. It still has a gatherer parent (see asWork) so it is unlocked
+    // through progression, the same way armorer/* is reached from crafter/*.
+    public static final JobID ID = new JobID("explorer", "explore");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
     public static final int BLOCK_STATE_NEED_PAPER = 1;
-    public static final int BLOCK_STATE_NEED_ROAM = 2;
-    public static final int BLOCK_STATE_DONE = 3;
+    public static final int BLOCK_STATE_USE_PAPER = 2;
+    public static final int BLOCK_STATE_NEED_ROAM = 3;
+    public static final int BLOCK_STATE_DONE = 4;
 
     public static final int MAX_STATE = BLOCK_STATE_DONE;
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD),
-            BLOCK_STATE_NEED_PAPER, Ingredient.of(Items.PAPER)
+            // Paper is held as a TOOL at NEED_PAPER then CONSUMED as an ingredient here. This is
+            // the cook's "tool→ingredient" idiom (cf. cook/simple_furnace_food holding then
+            // consuming beef): a mid-cycle ingredient can't be acquired during warp, but a held
+            // one is consumed fine — so grab it cheaply as a tool first, spend it from held here.
+            BLOCK_STATE_USE_PAPER, Ingredient.of(Items.PAPER)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 1,
-            BLOCK_STATE_NEED_PAPER, 1
+            BLOCK_STATE_USE_PAPER, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            // No tools required
+            // Held (grabbed once, carried, rendered in hand) so it survives warp supply
+            // collection; spent the very next state as an ingredient (USE_PAPER).
+            BLOCK_STATE_NEED_PAPER, Ingredient.of(Items.PAPER)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             // No work required
@@ -55,7 +65,9 @@ public class ExplorerWork {
             ProductionStatus.fromJobBlockStatus(BLOCK_STATE_NEED_ROAM),
             ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
             ProductionStatus.FACTORY.waitingForTimedState(),
-            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD)
+            ImmutableList.of(SpecialRules.REMOVE_FROM_WORLD),
+            ProductionStatus.EXTRACTING_PRODUCT,
+            ImmutableList.of(SpecialRules.SCOUT_LOOT)
     );
 
 
@@ -89,27 +101,8 @@ public class ExplorerWork {
         ImmutableList.Builder<MCHeldItem> list = ImmutableList.builder();
         list.add(MCHeldItem.fromTown(map));
 
-        List<GathererTools.LootTableParameters> all = NewLeaverWork.getAllParameters();
-        if (all.isEmpty()) {
-            all = ImmutableList.of(new GathererTools.LootTableParameters(
-                    GathererTools.NO_TOOL_TABLE_PREFIX,
-                    GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT
-            ));
-        }
-
-        GathererTools.LootTableParameters lootParams = all.get(level.getRandom().nextInt(all.size()));
-        @NotNull List<MCHeldItem> knowledge = Loots.getFromLootTables(
-                level, 1, 1,
-                lootParams,
-                biome
-        );
-
-        QT.JOB_LOGGER.debug(
-                "Presenting knowledge of item to explorer: {} [prefix: {}, biome: {}]",
-                knowledge.get(0), lootParams.prefix(), biome
-        );
-        list.add(KnowledgeMetaItem.wrap(knowledge.get(0), lootParams.prefix(), biome));
-
+        // The map is the only product. Learning a loot drop for this biome happens at
+        // extraction via SpecialRules.SCOUT_LOOT, which reads this map's biome.
         ImmutableList<MCHeldItem> realList = list.build();
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", realList);
         return realList;
