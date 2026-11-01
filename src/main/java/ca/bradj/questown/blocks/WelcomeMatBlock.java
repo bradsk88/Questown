@@ -1,9 +1,14 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -15,12 +20,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -31,16 +33,18 @@ import java.util.List;
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
 public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
+    public static final MapCodec<WelcomeMatBlock> CODEC = MapCodec.unit(WelcomeMatBlock::new);
+
     public static final String ITEM_ID = "welcome_mat_block";
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 1.0D, 16.0D);
 
     public WelcomeMatBlock(
     ) {
         super(
-                BlockBehaviour.Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.COLOR_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noCollission(),
+                        .noCollission().impl(),
                 Entity::new,
                 Entity::tick
         );
@@ -81,8 +85,10 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Welcome mat is not associated to an existing flag");
-            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
-            return Blocks.AIR.defaultBlockState();
+            TownFlagBlock.tellPlacerNotLinked(ctx, "message.welcome_mat.not_linked");
+            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
+            // a copy duplicated it whenever the player kept the stack.
+            return null;
         }
 
         parent.registerWelcomeMat(matPos);
@@ -117,6 +123,24 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
     public static class Entity extends BlockEntity implements TownFlagSubEntity {
 
         private final List<Runnable> tickListeners = new ArrayList<>();
+
+        // c3 ("hard to use wrong"): a welcome mat must belong to a live flag (registered
+        // in that flag's POIs). Enforced post-load so the place->register ordering is fine
+        // (placeWelcomeMat registers synchronously before the first tick), and so a freshly
+        // reloaded world's flag POIs have settled before we judge ownership. Reported once.
+        private int c3Ticks = 0;
+        private boolean c3Reported = false;
+        private static final int C3_GRACE_TICKS = 120; // 6s
+
+        /** true when some live flag has registered this mat position in its POIs. */
+        private static boolean ownedByFlag(BlockPos pos) {
+            for (TownFlagBlockEntity f : TownFlags.all()) {
+                if (f.getWelcomeMats().contains(pos)) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public Entity(
                 BlockPos p_155229_,
@@ -153,6 +177,22 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
                 BlockState blockState,
                 Entity entity
         ) {
+            if (level instanceof ServerLevel sl) {
+                if (entity.c3Ticks < C3_GRACE_TICKS) {
+                    entity.c3Ticks++;
+                } else if (!entity.c3Reported) {
+                    entity.c3Reported = true;
+                    if (ownedByFlag(pos)) {
+                        QT.BLOCK_LOGGER.info("[c3] welcome mat @{} is registered to a flag - OK", pos);
+                    } else {
+                        QT.BLOCK_LOGGER.warn("[c3] welcome mat @{} has NO owning flag (use-wrong placement) - reverting to air", pos);
+                        sl.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+                        TownFlagSubBlocks.dropDrops(sl, pos,
+                                ImmutableList.of(Items.OAK_PRESSURE_PLATE.getDefaultInstance()));
+                        return;
+                    }
+                }
+            }
             entity.tickListeners.forEach(Runnable::run);
         }
     }

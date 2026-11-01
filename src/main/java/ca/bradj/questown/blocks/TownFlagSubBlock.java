@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -17,7 +18,7 @@ public abstract class TownFlagSubBlock<I extends BlockEntity & TownFlagSubEntity
     private final BlockEntityTicker<? super I> ticker;
 
     protected TownFlagSubBlock(
-            Properties p_49224_,
+            BlockBehaviour.Properties p_49224_,
             BiFunction<BlockPos, BlockState, I> entityFactory,
             BlockEntityTicker<? super I> ticker
     ) {

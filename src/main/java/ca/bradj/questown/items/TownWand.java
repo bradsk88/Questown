@@ -20,12 +20,17 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import ca.bradj.questown.logic.CampfireRange;
+import ca.bradj.questown.logic.TownCycle;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -65,8 +70,9 @@ public class TownWand extends Item {
     ) {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(level, itemInHand);
 
-        if (level.getBlockState(clickedPos).is(Blocks.CAMPFIRE)) {
-            CampfireSleepHandler.beginCampfireSleep(player.get(), level, clickedPos, parent);
+        BlockState clickedState = level.getBlockState(clickedPos);
+        if (clickedState.is(Blocks.CAMPFIRE)) {
+            handleCampfireClick(player, level, clickedPos, clickedState, parent);
             return;
         }
 
@@ -77,6 +83,48 @@ public class TownWand extends Item {
         }
         BlockPos bp = parent.getTownFlagBasePos();
         Util.onScreenText(player, "message.wand.clicked_away", bp.getX(), bp.getY(), bp.getZ());
+    }
+
+    /**
+     * Wand-on-campfire has two branches sharing one flag-radius gate:
+     * <ul>
+     *   <li>unlit + registered → light it (no sleep).</li>
+     *   <li>lit + registered   → fall through to the sleep path.</li>
+     * </ul>
+     * Outside a town's registered campfire the wand is inert on campfires: both paths gate up front
+     * and share the same rejection.
+     */
+    private void handleCampfireClick(
+            Supplier<ServerPlayer> player,
+            ServerLevel level,
+            BlockPos clickedPos,
+            BlockState clickedState,
+            TownFlagBlockEntity parent
+    ) {
+        // Registered = the clicked campfire is within the flag's campfire-search
+        // radius. We don't require it to be the SAME one findCampfire happens to
+        // return first (worlds generated across multiple structure revisions can
+        // legitimately have more than one campfire near a flag).
+        BlockPos flagPos = parent.getBlockPos();
+        int radius = ca.bradj.questown.mc.Compat.configGet(
+                ca.bradj.questown.core.Config.CAMPFIRE_SEARCH_RADIUS
+        ).get();
+        boolean registered = CampfireRange.contains(flagPos, clickedPos, radius);
+        if (!registered) {
+            Util.onScreenText(player, "message.wand.campfire.not_registered");
+            return;
+        }
+        boolean lit = clickedState.hasProperty(CampfireBlock.LIT) && clickedState.getValue(CampfireBlock.LIT);
+        if (!lit) {
+            level.setBlockAndUpdate(clickedPos, clickedState.setValue(CampfireBlock.LIT, true));
+            level.playSound(
+                    null, clickedPos,
+                    SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS,
+                    1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F
+            );
+            return;
+        }
+        CampfireSleepHandler.beginCampfireSleep(player.get(), level, clickedPos, parent);
     }
 
     @Override
@@ -110,13 +158,13 @@ public class TownWand extends Item {
     @Override
     public void appendHoverText(
             ItemStack item,
-            @Nullable Level level,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level ctx,
             List<Component> p_41423_,
             TooltipFlag p_41424_
     ) {
-        super.appendHoverText(item, level, p_41423_, p_41424_);
+        super.appendHoverText(item, ctx, p_41423_, p_41424_);
         BlockPos parent = TownFlagBlock.GetParentPosFromNBT(item);
-        Style color = Style.EMPTY.withColor(TextColor.parseColor("GRAY"));
+        Style color = Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY);
 
         if (parent == null) {
             String key = "tooltips.items.wand.inactive";

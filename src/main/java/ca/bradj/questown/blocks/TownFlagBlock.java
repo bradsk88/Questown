@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -10,8 +11,14 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
+import ca.bradj.questown.core.network.OpenDormantFlagMessage;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.gui.FlagTabs;
+import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
@@ -40,16 +47,13 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -61,23 +65,37 @@ import java.util.function.Supplier;
 
 public class TownFlagBlock extends BaseEntityBlock {
 
+    public static final com.mojang.serialization.MapCodec<TownFlagBlock> CODEC =
+            com.mojang.serialization.MapCodec.unit(TownFlagBlock::new);
+
     public static final String ITEM_ID = "flag_base";
-    public static final Item.Properties ITEM_PROPS = new Item.Properties().
-            tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
+    public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
+    // A relocation deed is waiting above this flag. A blockstate (not BE) property so it auto-syncs to
+    // the client, which the flag has no ticker to hydrate BE data on. The "" model variant ignores it.
+    public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
+    // The flag's deposited BOPs have reached the cap. Rendered as a red BOP above the flag and surfaced
+    // as a warning in the BOP menu, so a full flag (which silently loses further BOPs) is visible.
+    // A blockstate (not BE) property so it auto-syncs to the client, like DEED_AVAILABLE.
+    public static final Property<Boolean> BOP_FULL = BooleanProperty.create("bop_full");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {
         super(
-                BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
+                Compat.P.of().mapColor(MapC.COLOR_GRAY)
                                          .strength(10.0F, 1200.0F)
-                                         .noOcclusion()
+                                         .noOcclusion().impl()
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(INACTIVE, false));
+        this.registerDefaultState(this.stateDefinition.any()
+                                                       .setValue(INACTIVE, false)
+                                                       .setValue(PHASE, FlagPhase.ACTIVE)
+                                                       .setValue(DEED_AVAILABLE, false)
+                                                       .setValue(BOP_FULL, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(INACTIVE);
+        p_51385_.add(INACTIVE, PHASE, DEED_AVAILABLE, BOP_FULL);
     }
 
     public static String itemId(WallType wallType) {
@@ -99,203 +117,74 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
-        if (itemInHand.getTag() == null) {
+        net.minecraft.nbt.CompoundTag data = Compat.itemDataTag(itemInHand);
+        if (data.isEmpty()) {
             QT.ITEM_LOGGER.error("Missing NBT tag on {}", itemInHand);
             return null;
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!itemInHand.getTag().contains(xTag)) {
-            QT.ITEM_LOGGER.error("Missing X tag from {}", itemInHand.getTag());
+        if (!data.contains(xTag)) {
+            QT.ITEM_LOGGER.error("Missing X tag from {}", data);
             return null;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!itemInHand.getTag().contains(yTag)) {
-            QT.ITEM_LOGGER.error("Missing Y tag from {}", itemInHand.getTag());
+        if (!data.contains(yTag)) {
+            QT.ITEM_LOGGER.error("Missing Y tag from {}", data);
             return null;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!itemInHand.getTag().contains(zTag)) {
-            QT.ITEM_LOGGER.error("Missing Z tag from {}", itemInHand.getTag());
+        if (!data.contains(zTag)) {
+            QT.ITEM_LOGGER.error("Missing Z tag from {}", data);
             return null;
         }
-        x = itemInHand.getOrCreateTag().getInt(xTag);
-        y = itemInHand.getOrCreateTag().getInt(yTag);
-        z = itemInHand.getOrCreateTag().getInt(zTag);
+        x = data.getInt(xTag);
+        y = data.getInt(yTag);
+        z = data.getInt(zTag);
 
 
         BlockPos bp = new BlockPos(x, y, z);
         return bp;
     }
 
+    private static net.minecraft.nbt.CompoundTag customData(ItemStack stack) {
+        return Compat.itemDataTag(stack);
+    }
+
     public static void CopyParentFromNBT(
             ItemStack input,
             ItemStack output
     ) {
-        if (input.getTag() == null) {
-            QT.ITEM_LOGGER.error("No parent stored on item: {}", input.getTag());
+        net.minecraft.nbt.CompoundTag in = customData(input);
+        if (in.isEmpty()) {
+            QT.ITEM_LOGGER.error("No parent stored on item: {}", in);
             return;
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!input.getTag().contains(xTag)) {
-            QT.ITEM_LOGGER.error("No parent X coord stored on item: {}", input.getTag());
+        if (!in.contains(xTag)) {
+            QT.ITEM_LOGGER.error("No parent X coord stored on item: {}", in);
             return;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!input.getTag().contains(yTag)) {
-            QT.ITEM_LOGGER.error("No parent Y coord stored on item: {}", input.getTag());
+        if (!in.contains(yTag)) {
+            QT.ITEM_LOGGER.error("No parent Y coord stored on item: {}", in);
             return;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!input.getTag().contains(zTag)) {
-            QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", input.getTag());
+        if (!in.contains(zTag)) {
+            QT.ITEM_LOGGER.error("No parent Z coord stored on item: {}", in);
             return;
         }
-        output.getOrCreateTag().putInt(xTag, input.getTag().getInt(xTag));
-        output.getOrCreateTag().putInt(yTag, input.getTag().getInt(yTag));
-        output.getOrCreateTag().putInt(zTag, input.getTag().getInt(zTag));
+        CompoundTag inTag = in;
+        Compat.updateItemDataTag(output, out -> {
+            out.putInt(xTag, inTag.getInt(xTag));
+            out.putInt(yTag, inTag.getInt(yTag));
+            out.putInt(zTag, inTag.getInt(zTag));
+        });
     }
 
     @Nullable
-    private static InteractionResult convertItemInHand(
-            ServerLevel level,
-            ServerPlayer player,
-            InteractionHand hand,
-            TownFlagBlockEntity entity
-    ) {
-        ItemStack itemInHand = player.getItemInHand(hand);
-
-        if (Ingredient.of(ItemTags.LOGS).test(itemInHand) && !entity.isFlagpoleBuilt()) {
-            if (hasActiveExoticWoodQuest(entity, itemInHand)) {
-                itemInHand.shrink(1);
-                BlockPos above = entity.getBlockPos().above();
-                level.setBlock(above, Blocks.OAK_FENCE.defaultBlockState(), 3);
-                level.setBlock(above.above(), Blocks.OAK_FENCE.defaultBlockState(), 3);
-                entity.setFlagpoleBuilt(true);
-                entity.setChanged();
-                return InteractionResult.CONSUME;
-            }
-        }
-
-        if (itemInHand.getItem().equals(Items.DIRT)) {
-            if (entity.giveBonusFood(player)) {
-                return InteractionResult.CONSUME;
-            }
-            return null; // already claimed — fall through to open the flag UI
-        }
-
-        if (itemInHand.getItem().equals(Items.DIAMOND)) {
-            for (VillagerUUID uuid : entity.getQuestHandle().getVillagersWithQuests()) {
-                entity.addImmediateReward(
-                        new AddRandomUpgradeQuest(entity, uuid)
-                );
-                return InteractionResult.sidedSuccess(false);
-            }
-        }
-
-        if (itemInHand.getItem().equals(Items.GOLD_BLOCK)) {
-            UUID randomVillager = entity.getRandomVillager();
-            entity.addImmediateReward(
-                    new AddBatchOfQuestsForVisitorReward(entity, randomVillager)
-            );
-            return InteractionResult.sidedSuccess(false);
-        }
-
-        if (itemInHand.getItem().equals(Items.POTATO)) {
-            entity.getVillagerHandle().recallVillagers();
-            return InteractionResult.sidedSuccess(false);
-        }
-
-        // TODO: Consider making a new recipe type so any item can be cnverted to
-        //  any other item and with the parent NBT stored on the new item.
-        ItemStack converted = null;
-
-        for (Supplier<RoomBlock> blockSupplier : BlockAsRoomEntity.ALL) {
-            if (itemInHand.getItem().equals(blockSupplier.get().asItem())) {
-                converted = itemInHand.copy();
-            }
-        }
-
-        if (itemInHand.getItem().equals(Items.STICK)) {
-            converted = ItemsInit.TOWN_WAND.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(ItemsInit.TOWN_WAND.get())) {
-            converted = Items.STICK.getDefaultInstance();
-        }
-        if (ImmutableList.of(
-                ItemsInit.WELCOME_MAT_BLOCK.get(),
-                ItemsInit.STOCK_REQUEST_CLIPBOARD.get()
-        ).contains(itemInHand.getItem())) {
-            converted = itemInHand;
-        }
-        if (Ingredient.of(ItemTags.SIGNS).test(itemInHand)) {
-            converted = ItemsInit.JOB_BOARD_BLOCK.get().getDefaultInstance();
-        }
-        if (Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES).test(itemInHand)) {
-            converted = ItemsInit.WELCOME_MAT_BLOCK.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(ItemsInit.TOWN_DOOR.get())) {
-            converted = ItemsInit.TOWN_DOOR.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(Items.COBBLESTONE)) {
-            converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(ItemsInit.FALSE_DOOR.get())) {
-            converted = ItemsInit.FALSE_WALL_BLOCK.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(ItemsInit.FALSE_WALL_BLOCK.get())) {
-            converted = ItemsInit.FALSE_DOOR.get().getDefaultInstance();
-        }
-        if (Ingredient.of(Tags.Items.FENCE_GATES).test(itemInHand)) {
-            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
-        }
-        if (itemInHand.getItem().equals(ItemsInit.TOWN_FENCE_GATE.get())) {
-            converted = ItemsInit.TOWN_FENCE_GATE.get().getDefaultInstance();
-        }
-
-        if (itemInHand.getItem().equals(Items.GLASS_PANE)) {
-            converted = ItemsInit.PLATE_BLOCK.get().getDefaultInstance();
-        }
-
-        if (Ingredient.of(ItemTags.BEDS).test(itemInHand.getItem().getDefaultInstance())) {
-            converted = ItemsInit.HOSPITAL_BED.get().getDefaultInstance();
-        }
-
-        if (ItemsInit.HOSPITAL_BED.get().equals(itemInHand.getItem())) {
-            converted = GetFlagInputFromItemNBT(itemInHand);
-        }
-
-        if (converted != null) {
-            StoreFlagInputOnOutputNBT(itemInHand, converted);
-            player.setItemInHand(hand, converted);
-            QT.FLAG_LOGGER.debug(
-                    "{} created at {}",
-                    ForgeRegistries.ITEMS.getKey(converted.getItem()),
-                    entity.getTownFlagBasePos()
-            );
-            ItemStack toDrop = null;
-            if (itemInHand.getCount() > 1) {
-                toDrop = itemInHand.copy();
-                toDrop.shrink(1);
-            }
-            if (toDrop != null) {
-                BlockPos flagPos = player.blockPosition();
-                level.addFreshEntity(new ItemEntity(level, flagPos.getX(), flagPos.getY(), flagPos.getZ(), toDrop));
-            }
-            StoreParentOnNBT(converted, entity.getTownFlagBasePos());
-            QT.FLAG_LOGGER.debug(
-                    "{} has been paired with {} at {}",
-                    ForgeRegistries.ITEMS.getKey(converted.getItem()), entity.getUUID(), entity.getTownFlagBasePos()
-            );
-            if (converted.getItem().equals(ItemsInit.TOWN_WAND.get())) {
-                AdvancementsInit.ROOM_TRIGGER.trigger((ServerPlayer) player, RoomTrigger.Triggers.WandGet);
-            }
-            return InteractionResult.sidedSuccess(false);
-        }
-        return null;
-    }
-
     private static boolean shouldPreSelectBopTab(TownFlagBlockEntity entity, ServerPlayer player) {
         if (entity.getBlocksOfProgress() <= 0) {
             return false;
@@ -309,30 +198,25 @@ public class TownFlagBlock extends BaseEntityBlock {
         return !player.getAdvancements().getOrStartProgress(adv).isDone();
     }
 
-    private static boolean hasActiveExoticWoodQuest(TownFlagBlockEntity entity, ItemStack itemInHand) {
-        ResourceLocation heldItemId = Compat.getItemId(itemInHand.getItem());
-        for (Quest<ResourceLocation, ?> q : entity.getAllQuests()) {
-            if (q.getType() != Quest.QuestType.ITEM) {
-                continue;
-            }
-            if (q.isComplete()) {
-                continue;
-            }
-            if (q.getFlavorText() == null || !q.getFlavorText().contains("flagpole")) {
-                continue;
-            }
-            if (heldItemId.equals(q.getWantedId())) {
-                return true;
-            }
+
+    /**
+     * A flag-linked block placed from an item with no (or a dead) flag link drops back as an item.
+     * Tell the placer why instead of failing silently.
+     */
+    public static void tellPlacerNotLinked(
+            net.minecraft.world.item.context.BlockPlaceContext ctx,
+            String msgKey
+    ) {
+        if (ctx.getPlayer() instanceof ServerPlayer sp) {
+            ca.bradj.questown.mc.Util.onScreenText(() -> sp, msgKey);
         }
-        return false;
     }
 
     public static void StoreParentOnNBT(
             ItemStack itemInHand,
             BlockPos p
     ) {
-        getParentData(p).forEach((key, value) -> itemInHand.getOrCreateTag().putInt(key, value));
+        getParentData(p).forEach((key, value) -> Compat.updateItemDataTag(itemInHand, tag -> tag.putInt(key, value)));
     }
 
     public static ImmutableMap<String, Integer> getParentData(
@@ -345,23 +229,18 @@ public class TownFlagBlock extends BaseEntityBlock {
         );
     }
 
-    public static void StoreFlagInputOnOutputNBT(
-            ItemStack input,
-            ItemStack output
-    ) {
-        String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        output.getOrCreateTag().put(key, input.serializeNBT());
-    }
 
     public static @Nullable ItemStack GetFlagInputFromItemNBT(
+            net.minecraft.core.RegistryAccess ctx,
             ItemStack item
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        CompoundTag serialized = item.getOrCreateTag().getCompound(key);
+        CompoundTag serialized = Compat.itemDataTag(item).getCompound(key);
         if (serialized.isEmpty()) {
             return null;
         }
-        return ItemStack.of(serialized);
+        ItemStack parsed = ItemStack.of(serialized);
+        return parsed.isEmpty() ? null : parsed;
     }
 
     @Override
@@ -389,6 +268,20 @@ public class TownFlagBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    @Override
+    public float getDestroyProgress(
+            BlockState state,
+            Player player,
+            BlockGetter level,
+            BlockPos pos
+    ) {
+        // The town flag is unbreakable in survival: it owns the town's authoritative data and
+        // there is no loot/drop path, so mining it would destroy the town irrecoverably. The
+        // only sanctioned removal is the shutdown ritual (relocation deed) or the creative-only
+        // `qt flag destroy` dev command.
+        return 0.0F;
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(
@@ -411,47 +304,133 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(
-            BlockState p_60503_,
+    public void setPlacedBy(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            net.minecraft.world.entity.LivingEntity placer,
+            ItemStack stack
+    ) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        // A player-placed flag grants the placer a flag-centered filled map, so a lost player can
+        // find the flag. Only a player placement grants: the console `/flag` command and
+        // relocation go through setBlock* without a placer.
+        if (!(level instanceof ServerLevel) || !(placer instanceof ServerPlayer player)) {
+            return;
+        }
+        if (level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+            flag.grantStarterMap(player);
+        }
+    }
+
+    public InteractionResult useWithoutItem(
+            BlockState blockState,
+            Level level,
+            BlockPos pos,
+            Player player,
+            BlockHitResult hitResult
+    ) {
+        InteractionHand hand = player.getOffhandItem().isEmpty() ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        return useFlag(level, pos, player, hand);
+    }
+
+    public ca.bradj.questown.mc.ItemInteractionResult useItemOn(
+            ItemStack stack,
+            BlockState blockState,
             Level level,
             BlockPos pos,
             Player player,
             InteractionHand hand,
-            BlockHitResult p_60508_
+            BlockHitResult hitResult
+    ) {
+        // A Block of Progress used on the flag goes back into it.
+        if (stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+            if (level instanceof ServerLevel && player instanceof ServerPlayer sp
+                    && level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+                flag.returnBopFromPlayer(sp, stack);
+            }
+            return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(level.isClientSide());
+        }
+        InteractionResult r = useFlag(level, pos, player, hand);
+        if (r == InteractionResult.PASS) {
+            return ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(true);
+    }
+
+    private InteractionResult useFlag(
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(true);
         }
 
-        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(pos, TilesInit.TOWN_FLAG.get());
-        if (oEntity.isEmpty()) {
+        if (!(level.getBlockEntity(pos) instanceof TownFlagBlockEntity entity)) {
             return InteractionResult.sidedSuccess(true);
         }
-        TownFlagBlockEntity entity = oEntity.get();
 
-        InteractionResult sidedSuccess = convertItemInHand(sl, (ServerPlayer) player, hand, entity);
-        if (sidedSuccess != null) {
-            return sidedSuccess;
+        BlockState flagState = level.getBlockState(pos);
+        FlagPhase phase = flagState.hasProperty(PHASE) ? flagState.getValue(PHASE) : FlagPhase.ACTIVE;
+        switch (FlagClickAction.of(entity.isDeedAvailable(), phase)) {
+            case COLLECT_DEED -> {
+                entity.collectDeed((ServerPlayer) player);
+                return InteractionResult.sidedSuccess(false);
+            }
+            case DORMANT_CHOICES -> {
+                QuestownNetwork.sendToPlayer((ServerPlayer) player, new OpenDormantFlagMessage(pos));
+                return InteractionResult.sidedSuccess(false);
+            }
+            case FLAG_MENU -> {
+            }
         }
 
-        if (oEntity.get().isInitialized()) {
-            if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
-                entity.menus.showUI(
-                        (ServerPlayer) player,
-                        OpenFlagMenuMessage.BOP,
-                        entity.getInfo(),
-                        entity.getBlocksOfProgress()
-                );
-            } else {
-                oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
-            }
+        if (entity.isInitialized()) {
+            FlagTabsEmbedding.FlagInfo info = entity.getInfo();
+            String tab = FlagTabs.initialFlagTab(
+                    entity.isBopFull(),
+                    info.villagersTabAttention(),
+                    info.bopTabAttention() && shouldPreSelectBopTab(entity, (ServerPlayer) player),
+                    info.questsTabAttention(),
+                    info.showEconTab() && info.bonusFoodAvailable()
+            );
+            entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
+            // The chicken's "Look at the flag" beat is the right-click, whichever tab opens:
+            // before the first arrival the villagers tab is hidden and the flag opens on another
+            // one.
+            ChickenArcUiObservations.markFlagUiOpened(level, pos);
         } else {
-            if (!oEntity.get().isInitializing()) {
-                oEntity.get().initializeFreshFlag(true);
+            if (!entity.isInitializing()) {
+                entity.initializeFreshFlag(true);
             }
             player.displayClientMessage(Compat.translatable("messages.town_flag.loading"), false);
         }
         return InteractionResult.sidedSuccess(false);
     }
 
+    // Forge 1.19.2 has one use(...): try useItemOn (the held stack), then useWithoutItem
+    // (main hand only), the order 1.20.5+ calls them in.
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        ca.bradj.questown.mc.ItemInteractionResult qtItem = useItemOn(qtPlayer.getItemInHand(qtHand), qtState, qtLevel, qtPos, qtPlayer, qtHand, qtHit);
+        if (qtItem.consumesAction()) {
+            return qtItem.result();
+        }
+        if (qtItem != ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
+    }
 }

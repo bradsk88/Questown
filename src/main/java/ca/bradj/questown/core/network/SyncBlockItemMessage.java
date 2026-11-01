@@ -4,11 +4,10 @@ import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncBlockItemMessage(
         BlockPos pos,
@@ -20,7 +19,7 @@ public record SyncBlockItemMessage(
         buffer.writeInt(msg.pos.getX());
         buffer.writeInt(msg.pos.getY());
         buffer.writeInt(msg.pos.getZ());
-        buffer.writeItem(msg.item());
+        ca.bradj.questown.mc.Compat.writeItem(buffer, msg.item());
         buffer.writeInt(msg.index());
     }
 
@@ -28,7 +27,7 @@ public record SyncBlockItemMessage(
         int blockX = buffer.readInt();
         int blockY = buffer.readInt();
         int blockZ = buffer.readInt();
-        ItemStack item = buffer.readItem();
+        ItemStack item = ca.bradj.questown.mc.Compat.readItem(buffer);
         int index = buffer.readInt();
         return new SyncBlockItemMessage(new BlockPos(blockX, blockY, blockZ), item, index);
     }
@@ -36,14 +35,13 @@ public record SyncBlockItemMessage(
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             if (Minecraft.getInstance().level.getBlockEntity(pos()) instanceof ItemAccepting be) {
                 be.setItem(index, MCTownItem.fromMCItemStack(item));
             }
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -19,19 +20,20 @@ import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.CompatBlockColor;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class FoodDisplayBlock extends HorizontalDirectionalBlock implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<FoodDisplayBlock> CODEC = MapCodec.unit(FoodDisplayBlock::new);
+
     public static final String ITEM_ID = "food_display";
 
     public FoodDisplayBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOD, MaterialColor.WOOD)
+                Compat.blockProps(CompatBlockColor.WOOD)
                         .strength(2.0F, 3.0F)
                         .sound(SoundType.WOOD)
                         .noOcclusion()
@@ -92,13 +94,11 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos pos,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
 
@@ -106,11 +106,7 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
             return InteractionResult.PASS;
         }
 
-        if (!InteractionHand.MAIN_HAND.equals(p_60507_)) {
-            return InteractionResult.PASS;
-        }
-
-        ItemStack item = p_60506_.getItemInHand(p_60507_);
+        ItemStack item = p_60506_.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
 
         BlockEntity blockentity = sl.getBlockEntity(pos);
         if (!(blockentity instanceof FoodDisplayEntity fde)) {
@@ -146,5 +142,22 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
     @Override
     public RenderShape getRenderShape(BlockState blockState) {
         return RenderShape.MODEL;
+    }
+
+    // Forge 1.19.2 has one use(...): try useItemOn (the held stack), then useWithoutItem
+    // (main hand only), the order 1.20.5+ calls them in.
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

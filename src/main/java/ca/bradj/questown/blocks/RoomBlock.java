@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
@@ -14,14 +15,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> implements EntityBlock, Roomable {
-    public RoomBlock(Properties p_49795_) {
+    public RoomBlock(BlockBehaviour.Properties p_49795_) {
 
         super(
                 p_49795_,
@@ -39,7 +40,7 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
             String namespaced = parts[1];
             String[] ps = namespaced.split("\\.");
             if (ps.length > 0) {
-                Item value = ForgeRegistries.ITEMS.getValue(Questown.ResourceLocation(ps[1]));
+                Item value = Loader.itemFromId(Questown.ResourceLocation(ps[1]));
                 if (value == null) {
                     return null;
                 }
@@ -70,6 +71,16 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
 //            return SpecialQuests.TOWN_GATE;
 //        }
         return Questown.ResourceLocation("block_room/" + rb.getDescriptionId());
+    }
+
+    /**
+     * The item dropped when the flag orphans this block. The block's own
+     * item, carrying the flag's NBT via {@code dropWhenOrphaned}
+     * (TownFlagBlock.StoreParentOnNBT) so a re-placement re-attaches to the
+     * same flag.
+     */
+    public Item getOrphanDropItem() {
+        return asItem();
     }
 
     public static boolean isBlockRoom(ResourceLocation rb) {

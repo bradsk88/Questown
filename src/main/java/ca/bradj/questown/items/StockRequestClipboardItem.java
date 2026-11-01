@@ -23,7 +23,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 public class StockRequestClipboardItem extends Item {
@@ -43,13 +42,13 @@ public class StockRequestClipboardItem extends Item {
         TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sp.getLevel(), itemInHand);
         if (parent == null) {
             OnScreenTextMessage msg = new OnScreenTextMessage("message.flag_item.no_flag");
-            QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sp), msg);
+            QuestownNetwork.sendToPlayer(sp, msg);
             return InteractionResultHolder.fail(itemInHand);
         }
 
         WorksBehaviour.TownData td = parent.getTownData();
         BlockPos flagPos = parent.getTownFlagBasePos();
-        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override

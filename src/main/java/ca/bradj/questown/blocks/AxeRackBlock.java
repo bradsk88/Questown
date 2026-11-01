@@ -9,6 +9,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.Containers;
 import ca.bradj.questown.jobs.declarative.MCExtra;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -25,22 +26,23 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.CompatBlockColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class AxeRackBlock extends Block implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<AxeRackBlock> CODEC = MapCodec.unit(AxeRackBlock::new);
+
     public static final String ITEM_ID = "axe_rack_block";
 
     public static final int MAX = 1;
 
     public AxeRackBlock(
     ) {
-        super(Properties.of(Material.WOOD, MaterialColor.WOOD).strength(1.0F, 10.0F).noOcclusion());
+        super(Compat.blockProps(CompatBlockColor.WOOD).strength(1.0F, 10.0F).noOcclusion());
         this.registerDefaultState(this.stateDefinition.any());
     }
 
@@ -117,16 +119,14 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
         rack.addItem(item);
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand hand,
             BlockHitResult p_60508_
     ) {
-        if (hand != InteractionHand.MAIN_HAND) {
+        if (false) {
             return InteractionResult.CONSUME;
         }
         if (!(level instanceof ServerLevel sl)) {
@@ -138,7 +138,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
             return InteractionResult.CONSUME;
         }
 
-        ItemStack itemInHand = p_60506_.getItemInHand(hand);
+        ItemStack itemInHand = p_60506_.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (itemInHand.isEmpty()) {
             return take(rack, p_60506_);
         }
@@ -149,8 +149,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
         ItemStack copy = itemInHand.copy();
         int index = Containers.addIfPossible(itemInHand, rack);
         if (index >= 0) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.ALL.noArg(),
+            QuestownNetwork.sendToAll(level,
                     new SyncBlockItemMessage(p_60505_, copy, index)
             );
         }
@@ -171,8 +170,7 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
             p_60506_.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
             entity.removeItem(i);
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.ALL.noArg(),
+            QuestownNetwork.sendToAll(entity.getLevel(),
                     new SyncBlockItemMessage(entity.getBlockPos(), ItemStack.EMPTY, i)
             );
         }
@@ -190,5 +188,22 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
     @Override
     public RenderShape getRenderShape(BlockState p_60550_) {
         return RenderShape.MODEL;
+    }
+
+    // Forge 1.19.2 has one use(...): try useItemOn (the held stack), then useWithoutItem
+    // (main hand only), the order 1.20.5+ calls them in.
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }
