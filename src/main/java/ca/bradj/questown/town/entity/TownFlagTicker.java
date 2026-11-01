@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
@@ -19,7 +20,9 @@ import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.mojang.math.Vector3f;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -32,6 +35,9 @@ import java.util.Objects;
 import java.util.function.Function;
 
 public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickData, VisitorMobEntity> {
+
+    // Board requests pause once storage holds enough (BoardRequests); a container scan every 5 s.
+    private static final long STOCK_CHECK_INTERVAL = 100;
 
     @Override
     protected void triggerUnmetNeedsAdvancement(TickData tickData) {
@@ -71,11 +77,16 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     }
 
     @Override
+    protected void tickEvening(TickData tickData) {
+        tickData.entity().showCampReadyToastIfDue();
+    }
+
+    @Override
     protected void tickPOIs(TickData tickData) {
         TownFlagBlockEntity e = tickData.entity();
         ServerLevel sl = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
-        e.pois.tick(sl, blockEntityPos, (int) e.villagerHandle.stream().count());
+        e.pois.tick(sl, blockEntityPos, e.quests.isCampfireQuestOpen());
     }
 
     @Override
@@ -91,6 +102,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMetaAndFarms();
         e.jobHandle.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get());
         e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get()));
+        MiningSounds.tick(sl, e.jobHandles.values());
     }
 
     @Override
@@ -127,7 +139,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
 
     @Override
     protected void tickWorkHandle(TickData tickData) {
-        tickData.entity().workHandle.tick(tickData.level());
+        TownFlagBlockEntity e = tickData.entity();
+        e.workHandle.tick(tickData.level());
+        if (tickData.level().getGameTime() % STOCK_CHECK_INTERVAL == 0) {
+            e.refreshStockedRequests(TownContainers.getAllStacks(e, tickData.level()));
+        }
     }
 
     @Override
@@ -193,6 +209,15 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             TickData tickData,
             boolean playersNearbyOnPrevTick
     ) {
+        // Test-only keep-awake: during a held autotest run
+        // (-Dquestown.autotest.hold=true) the flag never sleeps, so its POI scan
+        // runs from server start - before a player joins - letting the seeded
+        // lit campfire be detected and the campfire quest self-complete. Real
+        // game behavior is untouched: the branch is gated on the test property.
+        if ("true".equals(System.getProperty("questown.autotest.hold"))) {
+            return false;
+        }
+
         ServerLevel level = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
         Player nearestPlayer = level.getNearestPlayer(
@@ -203,7 +228,9 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
                 null
         );
         if (nearestPlayer == null) {
-            logStop(blockEntityPos, "No players are found on server");
+            if (playersNearbyOnPrevTick) {
+                logStop(blockEntityPos, "No players are found on server");
+            }
             return true;
         }
 
@@ -229,29 +256,6 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
                 reason,
                 Config.TOWN_TICK_RADIUS.get()
         );
-    }
-
-    @Override
-    protected void addQuests(
-            TickData tickData,
-            VisitorMobEntity v
-    ) {
-        QT.FLAG_LOGGER.debug("No quests found. Adding a batch for {}", v.getVUID());
-        TownFlagBlockEntity e = tickData.entity();
-        e.questsHandle.addBatchOfQuestsForVisitor(v.getVUID());
-        e.setChanged();
-    }
-
-    @Override
-    protected ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TickData e) {
-        return e.entity().getAllQuestsWithRewards().stream()
-                .map(v -> new Pair<>((Completable) v.getKey(), (Reward) v.getValue()))
-                .collect(ImmutableList.toImmutableList());
-    }
-
-    @Override
-    protected ImmutableList<Reward> getMorningRewards(TickData e) {
-        return e.entity.morningRewards.children.stream().map(v -> (Reward) v).collect(ImmutableList.toImmutableList());
     }
 
     @Override
@@ -285,12 +289,61 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+        FlagPhase phase = phaseOf(state);
+        if (phase != FlagPhase.ACTIVE) {
+            // A parked town still owns its boards and mats (its physical blocks stay). Without
+            // this heartbeat the orphan watchdog removed them 20 ticks into the ritual.
+            notifySubBlocksOfTick(new TickData(sl, blockEntityPos, state, e));
+        }
+        if (phase == FlagPhase.SHUTTING_DOWN) {
+            if (!e.shutdownController.isRunning()) {
+                // Loaded mid-ritual after a restart: the progress is in memory only. Load the town
+                // first, then resume the recall from the townies still standing.
+                if (runAnyInitializers(new TickData(sl, blockEntityPos, state, e))) {
+                    return;
+                }
+                e.shutdownController.begin(sl, blockEntityPos, state, e);
+            }
+            e.shutdownController.tick(sl, blockEntityPos, state, e);
+            spawnShutdownParticles(sl, blockEntityPos);
+            return;
+        }
+        if (phase == FlagPhase.DORMANT) {
+            // A dormant flag loaded after a restart still deserializes its town (the deed re-issue,
+            // wake-in-place and relocation read it); it just doesn't run the town. Returning before
+            // the initializers left it "needs a moment to start up" forever.
+            runAnyInitializers(new TickData(sl, blockEntityPos, state, e));
+            return;
+        }
+        e.messages.flushBroadcasts();
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }
 
+    private static FlagPhase phaseOf(BlockState state) {
+        if (!state.hasProperty(TownFlagBlock.PHASE)) {
+            return FlagPhase.ACTIVE;
+        }
+        return state.getValue(TownFlagBlock.PHASE);
+    }
+
+    private void spawnShutdownParticles(ServerLevel sl, BlockPos pos) {
+        if (sl.getGameTime() % 5 != 0) {
+            return;
+        }
+        double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        double y = pos.getY() + 1.4;
+        double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
+    }
+
+    // The flag sparkles cyan while it holds Blocks of Progress, so the player can tell at a
+    // glance that there is one to collect (a full flag additionally renders a red BOP cube).
+    private static final DustParticleOptions CYAN_SPARKLE =
+            new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);
+
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {
-        if (e.bopCount <= 0) {
+        if (e.getBopCount() <= 0) {
             return;
         }
         if (sl.getGameTime() % 20 != 0) {
@@ -299,7 +352,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
         double y = pos.getY() + 1.2;
         double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
-        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, 0, 0.1, 0, 0.01);
+        sl.sendParticles(CYAN_SPARKLE, x, y, z, 1, 0, 0.1, 0, 0.01);
     }
 
     public record TickData(ServerLevel level, BlockPos blockEntityPos, BlockState state, TownFlagBlockEntity entity) {

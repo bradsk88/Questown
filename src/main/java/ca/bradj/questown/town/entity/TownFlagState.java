@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.commands.DebugLogArgument;
@@ -11,9 +13,10 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee;
 import ca.bradj.questown.jobs.declarative.WarpTickHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
@@ -39,8 +42,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -87,6 +90,8 @@ public class TownFlagState {
     private final Stack<Function<TownFlagBlockEntity, MCTownState>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
+
+    private long ticksSinceContainerScan = 0;
     private final ArrayList<Integer> times = new ArrayList<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
@@ -100,12 +105,7 @@ public class TownFlagState {
                 if (!((VisitorMobEntity) entity).isInitialized()) {
                     return null;
                 }
-                Vec3 pos = entity.position();
-                ImmutableSnapshot<MCHeldItem, ?> snapshot = ((VisitorMobEntity) entity).getJobJournalSnapshot();
-                TownState.VillagerData<MCHeldItem> data = new TownState.VillagerData<MCHeldItem>(
-                        pos.x, pos.y, pos.z, snapshot, entity.getUUID()
-                );
-                vB.add(data);
+                vB.add(captureVillager(parent, (VisitorMobEntity) entity));
             }
         }
 
@@ -120,6 +120,18 @@ public class TownFlagState {
                 ImmutableList.of(), // TODO: Should we pass in current knowledge?
                 UtilClean.mapKeys(parent.villagerHandle.blockOfProgressMap(), VillagerUUID::get),
                 dayTime
+        );
+    }
+
+    static TownState.VillagerData<MCHeldItem> captureVillager(
+            TownFlagBlockEntity town,
+            VisitorMobEntity entity
+    ) {
+        Vec3 pos = entity.position();
+        ImmutableSnapshot<MCHeldItem, ?> snapshot = entity.getJobJournalSnapshot();
+        return new TownState.VillagerData<>(
+                pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
+                town.getVillagerHandle().getProficiencies(entity.getUUID())
         );
     }
 
@@ -166,22 +178,27 @@ public class TownFlagState {
             return storedState;
         }
 
-        ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
-
-        ticksPassed = Signals.calculateProductiveTicks(dayTime, ticksPassed);
-        if (ticksPassed <= 0) {
-            QT.FLAG_LOGGER.info("Time warp contained no productive ticks (all nighttime)");
-            return storedState;
+        // Two timelines: villager labour runs on the productive budget (stops at
+        // night); passive world processes (crop/furnace/tree warp rules) run on the wall-clock budget.
+        long wallClockTicks = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
+        long productiveTicks = Signals.calculateProductiveTicks(dayTime, wallClockTicks);
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(dayTime, wallClockTicks);
+        if (productiveTicks <= 0) {
+            QT.FLAG_LOGGER.info(
+                    "Time warp window is all night ({} wall-clock ticks): running passive effects only",
+                    wallClockTicks
+            );
         }
 
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
-        // Collect real room block positions for warp rules
+        // Collect real room block positions for warp rules (walls too: JobBlockScan)
         ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
         for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
             room.getSpaces().stream()
-                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS).stream())
                     .forEach(v -> {
                         BlockPos pos = Positions.ToBlock(v, room.yCoord);
                         roomPosBuilder.add(pos);
@@ -195,22 +212,29 @@ public class TownFlagState {
         ImmutableSet<String> rules = collectGlobalRulesForAllVillagerRoots(storedState);
 
         WarpWorldAccess warpWorld = new WarpWorldAccess(sl, roomPositions);
+        warpWorld.seedFarmSaplings(collectFarmPositions(e));
 
         MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
-                (town, tick, delta) -> WarpTickHook.run(
-                        rules,
-                        warpWorld,
-                        town, tick, delta,
-                        () -> roomPositions
-                );
+                (town, tick, delta) -> {
+                    // Plantings during the upcoming villager steps record this tick as their plantTick.
+                    warpWorld.setCurrentWarpTick(tick);
+                    return WarpTickHook.run(
+                            rules,
+                            warpWorld,
+                            town, tick, delta,
+                            () -> roomPositions
+                    );
+                };
 
         // Delegate to MCAdvanceTime (the testable implementation)
         MCAdvanceTime advancer =
                 new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
         MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
                 storedState,
-                ticksPassed,
+                productiveTicks,
+                wallClockTicks,
                 dayTime,
+                timeline::wallClockOffsetAt,
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
                 null, // cookResolver - not yet implemented
@@ -226,6 +250,20 @@ public class TownFlagState {
         }
 
         return result.state();
+    }
+
+    private static ImmutableList<BlockPos> collectFarmPositions(TownFlagBlockEntity e) {
+        ImmutableList.Builder<BlockPos> farmPosBuilder = ImmutableList.builder();
+        for (MCRoom room : e.roomsHandle.getFarms()) {
+            room.getSpaces().stream()
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .forEach(v -> {
+                        BlockPos pos = Positions.ToBlock(v, room.yCoord);
+                        farmPosBuilder.add(pos);
+                        farmPosBuilder.add(pos.above());
+                    });
+        }
+        return farmPosBuilder.build();
     }
 
     private static ImmutableSet<String> collectGlobalRulesForAllVillagerRoots(
@@ -252,7 +290,6 @@ public class TownFlagState {
      */
     private static Work createWork(TownFlagBlockEntity e, ServerLevel sl) {
         return new Work() {
-            private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
 
             @Override
             public void recomputeNow() {
@@ -265,13 +302,13 @@ public class TownFlagState {
                     Signals.DayTime dayTime,
                     long ticksElapsed
             ) {
-                ImmutableList<WorkRequest> requestedResults = e.getWorkHandle().getRequestedResults();
+                BoardRequests requestedResults = e.getWorkHandle().getBoardRequests();
                 WorksBehaviour.TownData td = e.getTownData();
 
                 Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(null, p, dayTime);
                 Predicate<JobID> canAlwaysStart = p -> ServerJobsRegistry.canAlwaysStart(null, p);
 
-                List<JobID> possibleWork = e.getPossibleWork().getFor(currentJob);
+                List<JobID> possibleWork = e.getPossibleWork().getForWarp(currentJob);
 
                 // First try to choose from preselected jobs that match a request
                 JobID work = TownVillagerData.chooseFromList(
@@ -284,24 +321,12 @@ public class TownFlagState {
                 if (work != null) {
                     return work;
                 }
-
-                JobID fallback = fallbackSelector.tryFallback(
-                        (int) ticksElapsed, currentJob, canFit, canAlwaysStart, requestedResults, td,
-                        e.getPossibleWork().getFor(currentJob),
-                        jobs -> Compat.shuffle(jobs.iterator(), sl)
-                );
-                if (fallback != null) {
-                    return fallback;
-                }
-                if (fallbackSelector.isBuffering()) {
-                    return currentJob;
-                }
                 return null;
             }
 
             @Override
             public List<JobID> getPreselectedJobs(JobID currentJob) {
-                return e.getPossibleWork().getFor(currentJob);
+                return e.getPossibleWork().getForWarp(currentJob);
             }
 
             @Override
@@ -337,6 +362,22 @@ public class TownFlagState {
         };
     }
 
+    /**
+     * Grants the XP the warp recorded (per townie, {@code MCTownState.recordExperience}) once, after
+     * the townies are back, then consumes it. One {@code addExperience} call per townie, so a warp
+     * levels a townie at most once: {@code addExperience} keeps only the remainder past one level,
+     * and adds nothing while the townie holds an unspent Block of Progress.
+     */
+    private static void grantWarpExperience(TownFlagBlockEntity e, MCTownState state) {
+        Map<UUID, Integer> earned = state.recordedExperience();
+        if (earned.isEmpty()) {
+            return;
+        }
+        earned.forEach((uuid, xp) -> e.getVillagerHandle().addExperience(uuid, xp));
+        QT.FLAG_LOGGER.info("[warp] experience granted: {}", earned);
+        state.clearRecordedExperience();
+    }
+
     static void recoverMobs(
             TownFlagBlockEntity e,
             ServerLevel sl
@@ -364,6 +405,11 @@ public class TownFlagState {
                 );
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
+                // Restore persisted proficiencies over any seed the register() call may have applied
+                // (loaded/relocated townies keep theirs).
+                if (!v.getProficiencies().isEmpty()) {
+                    e.getVillagerHandle().setProficiencies(v.uuid, v.getProficiencies());
+                }
             }
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
         }
@@ -389,8 +435,18 @@ public class TownFlagState {
         }
 
         long start = System.currentTimeMillis();
-        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
+        if (!flagTag.contains(NBT_TIME_WARP_REFERENCE_TICK)) {
+            // First tick of a freshly placed flag: seed the reference tick. Treating the whole
+            // world age as a "genuine absence" would fire a catch-up warp against the expected
+            // missing town state and log a false "NBT had no town state" bug.
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            this.initialized = true;
+            this.lastTickWallMs = System.currentTimeMillis();
+            profileTick(start);
+            return false;
+        }
+        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long timeSinceWake = Math.max(
                 0,
                 gt - lastTick
@@ -398,13 +454,37 @@ public class TownFlagState {
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
+        long nowMs = System.currentTimeMillis();
+        // The flag ticks every game tick while a player is in radius, so a
+        // game-time jump detected on a tick that follows the previous one by
+        // moments of wall time means the town was awake: the jump is a sleep
+        // or a /time set, not a player absence, and must not produce.
+        boolean townAwake = lastTickWallMs != 0 && (nowMs - lastTickWallMs) < 5000;
+        this.lastTickWallMs = nowMs;
+
         if (waking) {
-            warp(e, flagTag, level, timeSinceWake);
+            if (townAwake) {
+                flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            } else {
+                // Genuine absence (the flag was not ticking): catch up, but
+                // only for the daytime portion - villagers sleep at night.
+                long warpTicks = daytimeTicks(lastTick, gt);
+                if (warpTicks > 10) {
+                    warp(e, flagTag, level, warpTicks, timeSinceWake);
+                } else {
+                    flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+                }
+                runMissedMorning(e, lastTick, gt, level.getGameTime());
+            }
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
 
-        // TODO[Performance]: Run less often?
+        if (!isDueForContainerScan()) {
+            profileTick(start);
+            return false;
+        }
+
         Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllContainersMatching(
                 e,
                 item -> true
@@ -416,11 +496,58 @@ public class TownFlagState {
         return changes;
     }
 
+    /**
+     * The town-wide container scan walks every recipe-matched room's contained blocks (twice: once
+     * for chests, once for block entities) and hashes each container's contents, at a cost that
+     * grows with the room count, so it runs every {@code ContainerScanInterval} ticks rather than
+     * every tick. Skipping a scan only delays change <em>detection</em>:
+     * {@link #checkForContainerChanges} diffs against {@code listenedBlocks}, so a change made during
+     * a skipped tick is caught by the next scan.
+     */
+    /**
+     * The morning pass (pending BOP job changes, morning rewards, arrivals) only runs from the
+     * ticker's MORNING detection, which a non-ticking flag never sees. After the catch-up warp
+     * (so it acts on the recovered villagers), run the one morning the absence skipped.
+     */
+    private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now, long gameTime) {
+        if (!ca.bradj.questown.town.MissedMorning.missedDuringAbsence(lastTick, now)) {
+            return;
+        }
+        QT.FLAG_LOGGER.info("Running the morning the town slept through while no player was near (from {} to {})", lastTick, now);
+        e.morningTick(gameTime);
+    }
+
+    private boolean isDueForContainerScan() {
+        ticksSinceContainerScan++;
+        if (ticksSinceContainerScan < Config.CONTAINER_SCAN_INTERVAL.get()) {
+            return false;
+        }
+        ticksSinceContainerScan = 0;
+        return true;
+    }
+
     MCTownState warp(
             TownFlagBlockEntity e,
             CompoundTag flagTag,
             ServerLevel level,
             long timeSinceWake
+    ) {
+        return warp(e, flagTag, level, timeSinceWake, timeSinceWake);
+    }
+
+    /**
+     * @param warpTicks the ticks of work to simulate (the natural-warp path
+     *                  passes only the daytime portion of the elapsed
+     *                  interval; the explicit dev warp passes the full amount)
+     * @param elapsedTicks the real elapsed ticks, used for the "while you
+     *                     were away" summary's day count
+     */
+    MCTownState warp(
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level,
+            long warpTicks,
+            long elapsedTicks
     ) {
         long levelDayTime = level.getDayTime();
 
@@ -429,15 +556,34 @@ public class TownFlagState {
 
         MCTownState newState = null;
         try {
-            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
+                // Warp-path LOOT parity: apply the non-empty extractions the warper
+                // recorded on the snapshot (same outcome as
+                // RealtimeWorldInteraction.onLootExtracted), then consume them so
+                // they are applied exactly once and never stored.
+                // Flip the hunter loot-guarantee once-bit if a raw-food extraction
+                // just closed the raw-food LOOT.
+                // Capture the pre-settle state, then check if the settle closed it.
+                boolean rawLootActiveBefore = FirstHunterLootGuarantee.rawFoodLootQuestActive(e)
+                        && !e.isFirstHunterLootGuaranteeFired();
+                boolean anyRawFoodExtract = newState.recordedLootExtractions().stream()
+                        .anyMatch(FirstHunterLootGuarantee::matchesFirstHunterItem);
+                for (MCHeldItem extracted : newState.recordedLootExtractions()) {
+                    e.getQuestHandle().processLootQuests(extracted.get());
+                }
+                if (rawLootActiveBefore && anyRawFoodExtract) {
+                    FirstHunterLootGuarantee.flipOnceBit(e);
+                }
+                newState.clearRecordedLootExtractions();
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                grantWarpExperience(parent, newState);
                 TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
 
-                sendWarpSummary(e, level, timeSinceWake, beforeItems);
+                sendWarpSummary(e, level, elapsedTicks, beforeItems);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -532,7 +678,7 @@ public class TownFlagState {
         }
 
         long daysAway = timeSinceWake / 24000;
-        String dayStr = daysAway == 1 ? "1 day" : daysAway + " days";
+        String dayStr = ca.bradj.questown.town.AwayDuration.describe(timeSinceWake);
 
         StringBuilder items = new StringBuilder();
         int count = 0;
@@ -562,6 +708,28 @@ public class TownFlagState {
             );
         }
     }
+
+    /** Ticks in {@code [from, to)} whose time-of-day falls in the working
+     * day {@code [0, 12000)}. Night ticks are excluded because villagers
+     * sleep then; a warp may only produce for daylight ticks. */
+    static long daytimeTicks(long from, long to) {
+        if (to <= from) {
+            return 0;
+        }
+        long total = 0;
+        long startDay = Math.floorDiv(from, 24000L);
+        long endDay = Math.floorDiv(to - 1, 24000L);
+        for (long d = startDay; d <= endDay; d++) {
+            long segStart = Math.max(from, d * 24000L);
+            long segEnd = Math.min(to, d * 24000L + 12000L);
+            if (segEnd > segStart) {
+                total += segEnd - segStart;
+            }
+        }
+        return total;
+    }
+
+    private long lastTickWallMs;
 
     private void profileTick(long startTime) {
         if (Config.TICK_SAMPLING_RATE.get() > 0) {
@@ -596,11 +764,11 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
                 continue;
             }
-            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.itemHandler());
-            if (!cap.isPresent()) {
+            Optional<ItemHandler> opt = Loader.handlerOf(entity);
+            if (opt.isEmpty()) {
                 continue;
             }
-            int newValue = determineValue(cap.resolve().get());
+            int newValue = determineValue(opt.get());
             if (listenedBlocks.containsKey(bp)) {
                 Integer oldValue = listenedBlocks.get(bp);
                 if (!oldValue.equals(newValue)) {
@@ -617,7 +785,7 @@ public class TownFlagState {
         return containersChanged;
     }
 
-    private static int determineValue(IItemHandler cap) {
+    private static int determineValue(ItemHandler cap) {
         ArrayList<String> itemNames = new ArrayList<>(cap.getSlots());
         for (int i = 0; i < cap.getSlots(); i++) {
             itemNames.add(cap.getStackInSlot(i).toString());

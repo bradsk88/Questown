@@ -9,10 +9,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class TownFlagBOPItemHandler implements IItemHandler {
+import java.util.function.Consumer;
+
+public class TownFlagBOPItemHandler implements ItemHandler {
+
+    /** The flag holds at most this many Blocks of Progress; a full flag silently drops further ones. */
+    public static final int CAP = 64;
 
     private final TownFlagBlockEntity town;
 
@@ -24,14 +29,19 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             TownFlagBlockEntity flag,
             ServerPlayer recipient
     ) {
-        flag.bopCount--;
+        // FIFO: the player collects the oldest deposit first (see bopStacks on the entity).
+        if (flag.bopStacks.isEmpty()) {
+            return;
+        }
+        ItemStack v = flag.bopStacks.remove(0);
+        flag.markBopWithdrawn();
         flag.setChanged();
-        ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
+        flag.syncBopFull();
         BlockPos bp = flag.getTownFlagBasePos();
         flag.messages.broadcastMessage(
                 "messages.player.took_bop",
                 recipient.getName(),
-                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
+                Compat.getItemName(v),
                 Util.getTinyString(bp)
         );
         if (recipient.getInventory().add(v)) {
@@ -47,15 +57,15 @@ public class TownFlagBOPItemHandler implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return 64;
+        return CAP;
     }
 
     @Override
     public @NotNull ItemStack getStackInSlot(int i) {
-        if (i >= town.bopCount) {
+        if (i >= town.getBopCount()) {
             return ItemStack.EMPTY;
         }
-        return new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+        return town.bopStacks.get(i);
     }
 
     @Override
@@ -64,16 +74,45 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             @NotNull ItemStack itemStack,
             boolean simulate
     ) {
+        if (itemStack.isEmpty()) {
+            // A consumed/empty stack is not a deposit. 1.20.6 copy() of an empty stack hands
+            // back the global ItemStack.EMPTY singleton, and setCount() on it does not reset
+            // the item reference, so storing it would poison the shared EMPTY and make the
+            // BE save throw "Cannot encode empty ItemStack" (1.19.2 never hit this; its
+            // save() tolerated empties).
+            return itemStack;
+        }
         if (!isItemValid(i, itemStack)) {
             return itemStack;
         }
-        itemStack.shrink(1);
-        if (!simulate) {
-            town.bopCount++;
-            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
+        return depositOne(itemStack, simulate, stored -> {
+            town.bopStacks.add(stored);
+            town.syncBopFull();
+            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
+            // Two lines in one message: the lang
+            // value carries the line break, since two broadcasts are paced 100 ticks apart.
             town.messages.broadcastMessage("messages.bop.earned");
+        });
+    }
+
+    /**
+     * Takes one item off {@code from} and hands {@code store} a 1-count snapshot of it (earned-by
+     * NBT included). Returns what is left of {@code from}.
+     */
+    static ItemStack depositOne(
+            ItemStack from,
+            boolean simulate,
+            Consumer<ItemStack> store
+    ) {
+        // Snapshot BEFORE shrinking: a villager carries one BOP, so shrink(1) empties the stack and
+        // copy() would hand back ItemStack.EMPTY.
+        ItemStack stored = ca.bradj.questown.mc.Compat.copyWithCount(from, 1);
+        if (simulate) {
+            return ca.bradj.questown.mc.Compat.copyWithCount(from, from.getCount() - 1);
         }
-        return itemStack;
+        from.shrink(1);
+        store.accept(stored);
+        return from;
     }
 
     @Override
@@ -99,9 +138,18 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         if (i >= getSlots()) {
             return false;
         }
-        if (i < town.bopCount) {
+        if (i < town.getBopCount()) {
             return false;
         }
         return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+    @Override
+    public void setStackInSlot(int slot, @NotNull ItemStack stack) {
+        throw new UnsupportedOperationException("BOP handler is deposit-only; setStackInSlot is not supported.");
+    }
+
+    @Override
+    public void setChanged() {
+        // No-op: the flag owns the bopStacks list and marks itself changed on deposit/eject.
     }
 }
