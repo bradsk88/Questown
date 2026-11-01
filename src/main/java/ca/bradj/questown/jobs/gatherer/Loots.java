@@ -8,8 +8,13 @@ import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.GathererMap;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -17,10 +22,14 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static ca.bradj.questown.jobs.gatherer.GathererTools.NO_TOOL_LOOT_TABLE_DEFAULT;
 
@@ -131,5 +140,81 @@ public class Loots {
                 .limit(max)
                 .map(MCTownItem::fromMCItemStack)
                 .toList();
+    }
+
+    // The player-facing previews below read the job loot tables' JSON, cached until the server's
+    // resource manager changes (a datapack reload replaces it).
+    private static ResourceManager previewedManager;
+    private static final Map<GathererTools.LootTablePrefix, ImmutableSet<String>> PREVIEWS = new HashMap<>();
+    private static final Map<String, ImmutableList<String>> MOST_LIKELY = new HashMap<>();
+
+    /**
+     * Every item the job loot tables under {@code data/questown/loot_tables/<prefix>/**} can drop.
+     * Player-facing producer lists use it so a loot job counts as producing an item only when its
+     * own tables can drop it; the extraction gate does not.
+     */
+    public static synchronized ImmutableSet<String> previewForPrefix(
+            ResourceManager manager,
+            GathererTools.LootTablePrefix prefix
+    ) {
+        resetPreviewsIfReloaded(manager);
+        return PREVIEWS.computeIfAbsent(prefix, p -> readDrops(manager, p));
+    }
+
+    /**
+     * The item ids of one questown loot table ({@code data/questown/loot_tables/<table>.json}), most
+     * likely first ({@link LootTableLikelihood}); empty when the table cannot be read.
+     */
+    public static synchronized ImmutableList<String> getMostLikelyItems(
+            ResourceManager manager,
+            String table
+    ) {
+        resetPreviewsIfReloaded(manager);
+        return MOST_LIKELY.computeIfAbsent(table, t -> readMostLikely(manager, t));
+    }
+
+    private static void resetPreviewsIfReloaded(ResourceManager manager) {
+        if (manager != previewedManager) {
+            PREVIEWS.clear();
+            MOST_LIKELY.clear();
+            previewedManager = manager;
+        }
+    }
+
+    private static ImmutableSet<String> readDrops(
+            ResourceManager manager,
+            GathererTools.LootTablePrefix prefix
+    ) {
+        Map<ResourceLocation, Resource> found = manager.listResources(
+                "loot_tables/" + prefix.value(),
+                rl -> Questown.MODID.equals(rl.getNamespace()) && rl.getPath().endsWith(".json")
+        );
+        List<JsonElement> tables = new ArrayList<>();
+        for (Map.Entry<ResourceLocation, Resource> e : found.entrySet()) {
+            try (Reader r = e.getValue().openAsReader()) {
+                tables.add(JsonParser.parseReader(r));
+            } catch (Exception ex) {
+                QT.JOB_LOGGER.error("Could not read loot table {} for its drops", e.getKey(), ex);
+            }
+        }
+        return LootTableDrops.itemIds(tables);
+    }
+
+    private static ImmutableList<String> readMostLikely(
+            ResourceManager manager,
+            String table
+    ) {
+        ResourceLocation id = new ResourceLocation(Questown.MODID, "loot_tables/" + table + ".json");
+        Optional<Resource> res = manager.getResource(id);
+        if (res.isEmpty()) {
+            QT.JOB_LOGGER.error("No loot table {} to rank its drops", id);
+            return ImmutableList.of();
+        }
+        try (Reader r = res.get().openAsReader()) {
+            return LootTableLikelihood.itemIdsByLikelihood(JsonParser.parseReader(r));
+        } catch (Exception ex) {
+            QT.JOB_LOGGER.error("Could not read loot table {} to rank its drops", id, ex);
+            return ImmutableList.of();
+        }
     }
 }

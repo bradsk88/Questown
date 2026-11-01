@@ -49,6 +49,6 @@ attempt always brings back an item".
 A loot table's item ids, most likely first, from the table JSON alone: per pool, rolls (a number, or
 a `{min, max}` mean) times weight / total weight (weight defaults to 1; empty and tag entries take a
 share and are not listed), summed over pools; ties keep table order. Used by the skill card's
-"Produces:" (`town/COMPLEX.md` "Skill card products"); `LootTableDropsIndex.mostLikely` reads and
+"Produces:" (`town/COMPLEX.md` "Skill card products"); `Loots.getMostLikelyItems` reads and
 caches it per table path, cleared with the drops cache on a resource reload. Pinned by
 `LootTableLikelihoodTest` (incl. the real hunter default table: leather, mutton, porkchop).

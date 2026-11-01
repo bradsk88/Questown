@@ -44,7 +44,7 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.LootTableDropsIndex;
+import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
@@ -1513,7 +1513,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return new WorksBehaviour.TownData(
                 level,
                 prefix -> {
-                    ImmutableSet<String> drops = LootTableDropsIndex.forPrefix(level.getServer().getResourceManager(), prefix);
+                    ImmutableSet<String> drops = Loots.previewForPrefix(level.getServer().getResourceManager(), prefix);
                     return knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix).stream()
                             .filter(item -> drops.contains(Compat.getItemId(item.get()).toString()))
                             .collect(ImmutableSet.toImmutableSet());

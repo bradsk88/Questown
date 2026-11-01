@@ -2,7 +2,7 @@ package ca.bradj.questown.town;
 
 import net.minecraft.server.packs.resources.ResourceManager;
 import ca.bradj.questown.loader.Loader;
-import ca.bradj.questown.mc.LootTableDropsIndex;
+import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
@@ -199,7 +199,7 @@ public class TownVillagerUIs {
         }
         ResourceManager rm = unsafe.getServerLevel().getServer().getResourceManager();
         ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
-        for (String id : LootTableDropsIndex.mostLikely(rm, table)) {
+        for (String id : Loots.getMostLikelyItems(rm, table)) {
             net.minecraft.world.item.Item item = Loader.itemFromId(new ResourceLocation(id));
             if (item != null) {
                 b.add(item.getDefaultInstance());

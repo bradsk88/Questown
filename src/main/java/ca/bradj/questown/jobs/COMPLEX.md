@@ -1005,7 +1005,7 @@ villager on 2026-10-20 (a fresh hunter never brought meat back), so the dev rule
 count only.
 
 - `TownFlagBlockEntity.getTownDataForDisplay` filters the engine's set to the items the job's own
-  tables can drop: `mc/LootTableDropsIndex.forPrefix` (per-prefix cache over
+  tables can drop: `jobs/gatherer/Loots.previewForPrefix` (per-prefix cache over
   `data/questown/loot_tables/<prefix>/**`, rebuilt when the server's resource manager changes)
   over the pure `jobs/gatherer/LootTableDrops.itemIds` (every `minecraft:item` entry, nested pools
   and alternatives included; `minecraft:tag` entries are not expanded).
