@@ -8,11 +8,17 @@ https://modrinth.com/mod/questown/
 ### Automated Testing
 Run all 12 job tests on a headless server:
 ```
-JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.18+8 ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.warp=24000
+JAVA_HOME=/home/retro/.gradle/jdks/jdk-17.0.20+8 ./gradlew runServer -Dquestown.autotest=true -Dquestown.autotest.warp=24000
 ```
-- Requires JDK 17 (Gradle auto-provisions it at the path above on first build).
+- Requires JDK 17 (Gradle auto-provisions it under `~/.gradle/jdks/` on first build — if the
+  pinned path is gone, substitute any JDK 17 that exists on your machine).
 - Exit code 0 = all pass, 1 = failures.
 - Results in `run/logs/latest.log` — grep for `[autotest]`.
+
+### Dev environment
+- **"Unsupported class file major version 65"**: Gradle 7.2 cannot run on Java 21.
+  `gradle.properties` pins `org.gradle.java.home` to a JDK 17; point it at one on your machine.
+- RoomRecipes comes from Modrinth's maven (`maven.modrinth:roomrecipes`).
 
 ### Release Preparation
 Before a new version can be considered beta-ready, you must test

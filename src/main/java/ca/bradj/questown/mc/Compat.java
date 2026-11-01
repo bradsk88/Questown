@@ -1,57 +1,50 @@
 package ca.bradj.questown.mc;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.init.CommandsInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.rooms.TownPosition;
+import ca.bradj.questown.world.QTToolAction;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.block.model.ItemTransforms;
+import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkHooks;
-import net.minecraftforge.network.simple.SimpleChannel;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import net.minecraftforge.common.ToolAction;
+import net.minecraftforge.common.ToolActions;
 
 /**
  * Compat executes the "strangler" pattern. Putting all code that changes
@@ -60,19 +53,6 @@ import java.util.function.Supplier;
  */
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
-
-    private static class ForgeRefs {
-        static final IForgeRegistry<EntityType<?>> ENTITY_TYPES = ForgeRegistries.ENTITY_TYPES;
-        static final @NotNull Capability<IItemHandler> ITEM_HANDLER = ForgeCapabilities.ITEM_HANDLER;
-    }
-
-    public static IForgeRegistry<EntityType<?>> entityTypes() {
-        return ForgeRefs.ENTITY_TYPES;
-    }
-
-    public static @NotNull Capability<IItemHandler> itemHandler() {
-        return ForgeRefs.ITEM_HANDLER;
-    }
 
     public static void playNeutralSound(
             ServerLevel serverLevel,
@@ -89,6 +69,14 @@ public class Compat {
                 volume,
                 pitchUpOrDown
         );
+    }
+
+    /**
+     * Vanilla's cave ambience: a random one of its variants each play. A {@code Holder} on 1.20+,
+     * a plain {@code SoundEvent} on 1.19.2.
+     */
+    public static SoundEvent caveAmbience() {
+        return net.minecraft.sounds.SoundEvents.AMBIENT_CAVE;
     }
 
     public static void playSound(
@@ -109,7 +97,7 @@ public class Compat {
         );
     }
 
-    public static Component translatable(String key) {
+    public static MutableComponent translatable(String key) {
         return Component.translatable(key);
     }
 
@@ -118,6 +106,25 @@ public class Compat {
             Object... args
     ) {
         return Component.translatable(key, args);
+    }
+
+    /**
+     * A translatable that renders {@code fallback} (a format pattern taking the same
+     * {@code args}) when {@code key} is missing from the client's lang file, instead of the
+     * raw key. Use for status tooltips, where any unauthored category × status pair would
+     * otherwise surface as the raw i18n key to the player.
+     */
+    public static MutableComponent translatableWithFallback(
+            String key,
+            String fallback,
+            Object... args
+    ) {
+        // 1.19.2 has no translatable-with-fallback. A missing key's TranslatableContents formats
+        // the key string itself, so the fallback pattern as the key renders the fallback.
+        if (net.minecraft.locale.Language.getInstance().has(key)) {
+            return Component.translatable(key, args);
+        }
+        return Component.translatable(fallback, args);
     }
 
     public static Component translatableStyled(
@@ -170,43 +177,91 @@ public class Compat {
         // Render layer is set via model JSON files
     }
 
-    public static <MSG> SimpleChannel.MessageBuilder<MSG> withConsumer(
-            SimpleChannel.MessageBuilder<MSG> decoder,
-            BiConsumer<MSG, Supplier<NetworkEvent.Context>> consumer
-    ) {
-        return decoder.consumerNetworkThread(consumer);
-    }
-
     public static CompoundTag getBlockStoredTagData(TownFlagBlockEntity e) {
         return e.getPersistentData();
+    }
+
+    public static void writeIngredient(net.minecraft.network.FriendlyByteBuf buf, net.minecraft.world.item.crafting.Ingredient i) {
+        i.toNetwork(buf);
+    }
+
+    public static net.minecraft.world.item.crafting.Ingredient readIngredient(net.minecraft.network.FriendlyByteBuf buf) {
+        return net.minecraft.world.item.crafting.Ingredient.fromNetwork(buf);
+    }
+
+    /** An item stack on the wire (empty allowed). 1.19.2: the buffer's own item read/write. */
+    public static void writeItem(FriendlyByteBuf buf, ItemStack stack) {
+        buf.writeItem(stack);
+    }
+
+    public static ItemStack readItem(FriendlyByteBuf buf) {
+        return buf.readItem();
+    }
+
+    /** A copy with the given count (1.20's {@code ItemStack#copyWithCount}). */
+    public static ItemStack copyWithCount(ItemStack stack, int count) {
+        ItemStack out = stack.copy();
+        out.setCount(count);
+        return out;
+    }
+
+    /** Whether the state is solid (1.20's {@code BlockState#isSolid}; 1.19.2 asks the material). */
+    public static boolean isSolid(net.minecraft.world.level.block.state.BlockState state) {
+        return state.getMaterial().isSolid();
+    }
+
+    /** Whether the state can be replaced by a placement (1.20's no-arg {@code canBeReplaced}). */
+    public static boolean canBeReplaced(net.minecraft.world.level.block.state.BlockState state) {
+        return state.getMaterial().isReplaceable();
+    }
+
+    /** An ingredient as JSON (1.19.2: its own toJson; 1.20.6: the non-empty codec). */
+    public static com.google.gson.JsonElement ingredientToJson(net.minecraft.world.item.crafting.Ingredient i) {
+        return i.toJson();
+    }
+
+    public static net.minecraft.world.item.crafting.Ingredient ingredientFromJson(com.google.gson.JsonElement json) {
+        return net.minecraft.world.item.crafting.Ingredient.fromJson(json);
+    }
+
+    /** An item stack as NBT (1.20.5 needs the level's registries; 1.19.2 doesn't). */
+    public static CompoundTag saveItem(net.minecraft.world.level.Level level, ItemStack stack) {
+        return stack.save(new CompoundTag());
+    }
+
+    public static ItemStack loadItem(net.minecraft.world.level.Level level, CompoundTag tag) {
+        return ItemStack.of(tag);
+    }
+
+    /** Same item, any count or data (1.20's {@code ItemStack.isSameItem}). */
+    public static boolean isSameItem(ItemStack a, ItemStack b) {
+        return a.getItem() == b.getItem();
+    }
+
+    /**
+     * The vanilla character skins a townie may wear: 1.19.2 ships only Steve and Alex, under
+     * {@code textures/entity/} (1.20.5 added seven more under {@code player/slim/}).
+     */
+    public static java.util.List<ResourceLocation> vanillaCharacterSkins() {
+        return ImmutableList.of(
+                new ResourceLocation("textures/entity/alex.png"),
+                new ResourceLocation("textures/entity/steve.png")
+        );
     }
 
     public static void openScreen(
             ServerPlayer sender,
             MenuProvider menuProvider,
-            Consumer<FriendlyByteBuf> writer
-    ) {
-        NetworkHooks.openScreen(sender, menuProvider, writer);
+            Consumer<FriendlyByteBuf> writer) {
+        net.minecraftforge.network.NetworkHooks.openScreen(sender, menuProvider, writer == null ? buf -> {} : writer);
     }
 
-    public static DeferredRegister<MenuType<?>> CreateMenuRegister(String modid) {
-        return DeferredRegister.create(ForgeRegistries.MENU_TYPES, modid);
+    public static void enqueueOrLog(Runnable staticInitialize) {
+        ca.bradj.questown.loader.Loader.enqueueWork(staticInitialize);
     }
 
-    public static void enqueueOrLog(
-            FMLCommonSetupEvent event,
-            Runnable staticInitialize
-    ) {
-        event.enqueueWork(staticInitialize).exceptionally(
-                ex -> {
-                    QT.INIT_LOGGER.error("Enqueued work failed", ex);
-                    return null;
-                }
-        );
-    }
-
-    public static <X> Supplier<X> configGet(ForgeConfigSpec.ConfigValue<X> cfg) {
-        return cfg::get;
+    public static <X> Supplier<X> configGet(ca.bradj.questown.loader.ConfigValue<X> cfg) {
+        return cfg;
     }
 
     public static TownPosition townPos(
@@ -217,14 +272,14 @@ public class Compat {
     }
 
     public static boolean insertInNextOpenSlot(
-            IItemHandler iItemHandler,
+            ca.bradj.questown.loader.ItemHandler iItemHandler,
             ItemStack inserted,
             int targetSize
     ) {
-        if (inserted.getOrCreateTag().isEmpty()) {
+        if (!inserted.hasTag()) {
             for (int i = 0; i < iItemHandler.getSlots(); i++) {
                 ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
-                if (stackInSlot.getOrCreateTag().isEmpty() && stackInSlot.sameItem(inserted)) {
+                if (!stackInSlot.hasTag() && stackInSlot.getItem() == inserted.getItem()) {
                     if (stackInSlot.getCount() < targetSize) {
                         iItemHandler.insertItem(i, inserted, false);
                         return true;
@@ -242,50 +297,98 @@ public class Compat {
         return false;
     }
 
+    /** A component as one tooltip line (for multi-line {@code showTooltip}). */
+    public static FormattedCharSequence visualOrder(Component c) {
+        return c.getVisualOrderText();
+    }
+
+    /** {@code text} cut to fit {@code width} pixels, ending in "…" when it was cut. */
+    public static String fitToWidth(
+            Font font,
+            String text,
+            int width
+    ) {
+        if (font.width(text) <= width) {
+            return text;
+        }
+        String ellipsis = "…";
+        return font.plainSubstrByWidth(text, Math.max(0, width - font.width(ellipsis))) + ellipsis;
+    }
+
     public static void drawDarkText(
             Font font,
-            PoseStack stack,
+            PoseStack gui,
             Component translatable,
             int x,
             int y
     ) {
-        font.draw(stack, translatable, x, y, 0x00000000);
+        font.draw(gui, translatable, x, y, 0xFF404040);
     }
 
     public static void drawDarkText(
             Font font,
-            PoseStack stack,
+            PoseStack gui,
             FormattedCharSequence translatable,
             int x,
             int y
     ) {
-        font.draw(stack, translatable, x, y, 0x00000000);
+        font.draw(gui, translatable, x, y, 0xFF404040);
     }
 
-    public static void drawLightText(
+    public static void drawDarkText(
             Font font,
-            PoseStack stack,
+            PoseStack gui,
             String translatable,
             int x,
             int y
     ) {
-        font.drawShadow(stack, translatable, x, y, 0xFFFFFFFF);
+        font.draw(gui, translatable, x, y, 0xFF404040);
+    }
+    public static void drawLightText(
+            Font font,
+            PoseStack gui,
+            String translatable,
+            int x,
+            int y
+    ) {
+        font.drawShadow(gui, translatable, x, y, 0xFFFFFFFF);
     }
 
     public static Component getItemName(ResourceLocation wantedId) {
-        return getItemName(ForgeRegistries.ITEMS.getValue(wantedId));
+        net.minecraft.world.item.Item it = ca.bradj.questown.loader.Loader.itemFromId(wantedId);
+        return it == null ? net.minecraft.network.chat.Component.empty() : getItemName(it);
     }
 
     public static Component getItemName(Item item) {
         return item.getName(item.getDefaultInstance());
     }
 
+    /**
+     * The display-name component of a specific stack (honours any custom name in
+     * its NBT). Use this when an item must be passed as a {@code Component}
+     * argument to a {@code Component.translatable} / {@link #translatable} call
+     * - a raw {@link ItemStack} is rejected by 1.20.6's
+     * {@code TranslatableContents} (Component/Number/Boolean/String only) and
+     * throws {@code IllegalArgumentException}.
+     */
+    public static Component getItemName(ItemStack stack) {
+        return stack.getDisplayName();
+    }
+
+    /**
+     * The plain name of a stack, as an item tooltip shows it. {@link #getItemName(ItemStack)} is
+     * the chat form, wrapped in square brackets.
+     */
+    public static Component getHoverName(ItemStack stack) {
+        return stack.getHoverName();
+    }
+
     public static ResourceLocation getItemId(Item item) {
-        return ForgeRegistries.ITEMS.getKey(item);
+        return ca.bradj.questown.loader.Loader.itemIdOf(item);
     }
 
     public static ResourceLocation getItemId(Block block) {
-        return ForgeRegistries.BLOCKS.getKey(block);
+        return ca.bradj.questown.loader.Loader.blockIdOf(block);
     }
 
     public static boolean getRandomBool(@Nullable ServerLevel serverLevel) {
@@ -306,24 +409,62 @@ public class Compat {
         sender.sendSystemMessage(message);
     }
 
-    public static void initCommands(IEventBus bus) {
-        CommandsInit.register(bus);
-    }
-
     /**
      * @return The number of vertical pixels used up when drawing the text
      */
     public static int drawDarkTextWrap(
             Font font,
-            PoseStack poseStack,
+            PoseStack gui,
             Coordinate topLeft,
             int textWidth,
             Component translatable
     ) {
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFF404040, false);
+    }
+
+    public static int drawRedTextWrap(
+            Font font,
+            PoseStack gui,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable
+    ) {
+        return drawTextWrap(font, gui, topLeft, textWidth, translatable, 0xFFFF0000, true);
+    }
+
+    /**
+     * Draw wrapped {@code translatable} in {@code color} and record the extent when the gui-lint
+     * {@link ca.bradj.questown.gui.GuiLayoutCapture} is active. Dark and red text both delegate
+     * here so the linter captures either.
+     *
+     * @return The number of vertical pixels used up when drawing the text
+     */
+    public static int drawTextWrap(
+            Font font,
+            PoseStack gui,
+            Coordinate topLeft,
+            int textWidth,
+            Component translatable,
+            int color,
+            boolean dropShadow
+    ) {
+        boolean capture = ca.bradj.questown.gui.GuiLayoutCapture.isActive();
         int out = 0;
+        int maxLineWidth = 0;
         for (FormattedCharSequence line : font.split(translatable, textWidth)) {
-            drawDarkText(font, poseStack, line, topLeft.x(), topLeft.y() + out);
+            if (dropShadow) {
+                font.drawShadow(gui, line, topLeft.x(), topLeft.y() + out, color);
+            } else {
+                font.draw(gui, line, topLeft.x(), topLeft.y() + out, color);
+            }
+            if (capture) {
+                maxLineWidth = Math.max(maxLineWidth, font.width(line));
+            }
             out += (int) (font.lineHeight * 1.5);
+        }
+        if (capture) {
+            ca.bradj.questown.gui.GuiLayoutCapture.recordText(
+                    topLeft.x(), topLeft.y(), maxLineWidth, out, translatable.getString());
         }
         return out;
     }
@@ -350,11 +491,306 @@ public class Compat {
         return RANDOM.nextFloat() * (v1 - v) + v;
     }
 
+    public static ItemRenderer itemRenderer() {
+        return Minecraft.getInstance().getItemRenderer();
+    }
+
+    /** An item tag (a <code>#tag</code> id) by namespace-qualified location. */
+    public static TagKey<Item> itemTag(ResourceLocation tag) {
+        return TagKey.create(Registry.ITEM_REGISTRY, tag);
+    }
+
+    /** Per-item NBT mutation (1.19.2: item NBT; 1.20.4+: the custom-data component). */
+    public static void updateItemDataTag(
+            net.minecraft.world.item.ItemStack stack,
+            java.util.function.Consumer<net.minecraft.nbt.CompoundTag> mutate
+    ) {
+        mutate.accept(stack.getOrCreateTag());
+    }
+
+    public static void renderItemAndDecorations(
+            PoseStack gui,
+            ItemStack stack,
+            int x,
+            int y
+    ) {
+        ItemRenderer renderer = itemRenderer();
+        renderer.renderAndDecorateItem(stack, x, y);
+        renderer.renderGuiItemDecorations(Minecraft.getInstance().font, stack, x, y);
+    }
+
+    /** Static-render an item in the GUI display context. */
+    public static void renderItemStaticGui(
+            ItemRenderer renderer,
+            ItemStack stack,
+            int lightLevel,
+            com.mojang.blaze3d.vertex.PoseStack poseStack,
+            net.minecraft.client.renderer.MultiBufferSource buffer,
+            net.minecraft.world.level.Level level,
+            int shade
+    ) {
+        renderer.renderStatic(stack, ItemTransforms.TransformType.GUI, lightLevel,
+                net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
+                poseStack, buffer, shade);
+    }
+
     public static List<FormattedCharSequence> splitText(
             Font font,
             Component text,
             int width
     ) {
         return font.split(text, width);
+    }
+
+
+    public static net.minecraft.client.gui.components.Button button(
+            Component text,
+            net.minecraft.client.gui.components.Button.OnPress onPress,
+            int x,
+            int y,
+            int width,
+            int height
+    ) {
+        return new net.minecraft.client.gui.components.Button(x, y, width, height, text, onPress);
+    }
+
+
+    public static FormattedCharSequence componentText(Component component) {
+        return component.getVisualOrderText();
+    }
+
+
+    public static void setShaderColor(float r, float g, float b, float a) {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(r, g, b, a);
+    }
+
+    public static void resetShaderColor() {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    /** Block properties carrying the block's map colour (and, on 1.19.2, its material). */
+    public static BlockBehaviour.Properties blockProps(CompatBlockColor color) {
+        return BlockBehaviour.Properties.of(color.material(), color.mapColor());
+    }
+
+    /** The item's arbitrary NBT (1.19.2: its tag; 1.20.4+: the custom-data component). */
+    public static CompoundTag itemDataTag(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        return tag == null ? new CompoundTag() : tag.copy();
+    }
+
+    /** The inverse of {@link #itemDataTag(ItemStack)}. */
+    public static void setItemDataTag(ItemStack stack, CompoundTag t) {
+        stack.setTag(t);
+    }
+
+
+    private static ToolAction forgeToolAction(QTToolAction toolAction) {
+        return switch (toolAction) {
+            case HOE_TILL -> ToolActions.HOE_TILL;
+            case AXE_STRIP -> ToolActions.AXE_STRIP;
+            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
+            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
+        };
+    }
+
+    /**
+     * The tool-modified state a block takes under a neutral {@code QTToolAction}, or {@code null}
+     * when it is not tool-transformable.
+     */
+    public static net.minecraft.world.level.block.state.BlockState toolModifiedState(
+            net.minecraft.world.level.block.state.BlockState state,
+            net.minecraft.world.item.context.UseOnContext context,
+            QTToolAction toolAction
+    ) {
+        return state.getToolModifiedState(context, forgeToolAction(toolAction), false);
+    }
+
+    /** The item registered under {@code id}. */
+    public static Item itemFromId(net.minecraft.resources.ResourceLocation id) {
+        return Registry.ITEM.get(id);
+    }
+
+    /** Every registered item. */
+    public static java.util.stream.Stream<Item> itemRegistryStream() {
+        return Registry.ITEM.stream();
+    }
+
+    /** The SCHEDULE registry key, for the HolderRegistry the visitor schedule registers onto. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.world.entity.schedule.Schedule>> scheduleRegistry() {
+        return Registry.SCHEDULE_REGISTRY;
+    }
+
+    /** The BLOCK_ENTITY_TYPE registry key, for the block-entity-type HolderRegistries. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.world.level.block.entity.BlockEntityType<?>>> blockEntityTypeRegistry() {
+        return Registry.BLOCK_ENTITY_TYPE_REGISTRY;
+    }
+
+    /** The COMMAND_ARGUMENT_TYPE registry key, for the command-argument HolderRegistry. */
+    public static net.minecraft.resources.ResourceKey<net.minecraft.core.Registry<net.minecraft.commands.synchronization.ArgumentTypeInfo<?, ?>>> commandArgumentTypeRegistry() {
+        return Registry.COMMAND_ARGUMENT_TYPE_REGISTRY;
+    }
+
+    /** A block tag key. */
+    public static TagKey<Block> blockTag(net.minecraft.resources.ResourceLocation id) {
+        return TagKey.create(Registry.BLOCK_REGISTRY, id);
+    }
+
+    /**
+     * The loot table with the given id.
+     */
+    public static net.minecraft.world.level.storage.loot.LootTable lootTable(
+            ServerLevel level,
+            ResourceLocation id
+    ) {
+        return level.getServer().getLootTables().get(id);
+    }
+
+    /** Whether a loot table with the given id exists on the server (loot-table registry keys). */
+    public static boolean hasLootTable(
+            ServerLevel level,
+            ResourceLocation id
+    ) {
+        return level.getServer().getLootTables().getIds().contains(id);
+    }
+
+    /**
+     * A fluent block-properties chain in the vanilla shape, with the map colour given as a
+     * {@link MapC}.
+     */
+    public static final class P {
+
+        // 1.19.2 builds Properties from a Material up front, so the chain is recorded and
+        // replayed in impl() on top of the material the map colour carries.
+        private net.minecraft.world.level.material.Material material = net.minecraft.world.level.material.Material.STONE;
+        private @Nullable net.minecraft.world.level.material.MaterialColor color;
+        private @Nullable java.util.function.Function<net.minecraft.world.level.block.state.BlockState, net.minecraft.world.level.material.MaterialColor> colorFn;
+        private final List<Consumer<BlockBehaviour.Properties>> ops = new ArrayList<>();
+
+        private P() {
+        }
+
+        public static P of() {
+            return new P();
+        }
+
+        /** The block's static map colour. */
+        public P mapColor(MapC c) {
+            this.material = c.material();
+            this.color = c.vanilla();
+            return this;
+        }
+
+        /** A per-state map colour. */
+        public P mapColor(
+                java.util.function.Function<
+                    net.minecraft.world.level.block.state.BlockState,
+                    net.minecraft.world.level.material.MaterialColor
+                > f
+        ) {
+            this.colorFn = f;
+            return this;
+        }
+
+        public P strength(float destroyTime, float explosionResistance) {
+            ops.add(p -> p.strength(destroyTime, explosionResistance));
+            return this;
+        }
+
+        public P strength(float destroyTime) {
+            ops.add(p -> p.strength(destroyTime));
+            return this;
+        }
+
+        public P noOcclusion() {
+            ops.add(BlockBehaviour.Properties::noOcclusion);
+            return this;
+        }
+
+        public P noCollission() {
+            ops.add(BlockBehaviour.Properties::noCollission);
+            return this;
+        }
+
+        public P sound(net.minecraft.world.level.block.SoundType s) {
+            ops.add(p -> p.sound(s));
+            return this;
+        }
+
+        public P lightLevel(
+                java.util.function.ToIntFunction<net.minecraft.world.level.block.state.BlockState> f
+        ) {
+            ops.add(p -> p.lightLevel(f));
+            return this;
+        }
+
+        public BlockBehaviour.Properties impl() {
+            BlockBehaviour.Properties props;
+            if (colorFn != null) {
+                props = BlockBehaviour.Properties.of(material, colorFn);
+            } else if (color != null) {
+                props = BlockBehaviour.Properties.of(material, color);
+            } else {
+                props = BlockBehaviour.Properties.of(material);
+            }
+            ops.forEach(op -> op.accept(props));
+            return props;
+        }
+    }
+
+    /**
+     * A player head whose face resolves to the given UUID (empty texture, the profile's UUID,
+     * no authlib properties).
+     */
+    public static ItemStack resolvablePlayerHead(java.util.UUID uuid) {
+        ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
+        CompoundTag owner = net.minecraft.nbt.NbtUtils.writeGameProfile(
+                new CompoundTag(), new com.mojang.authlib.GameProfile(uuid, null));
+        head.getOrCreateTag().put("SkullOwner", owner);
+        return head;
+    }
+
+    /**
+     * The 1.20.3+ tick-rate lever - what {@code /tick rate <tps>} does on a live
+     * server. The autotest runner applies this on boot so tick-budgeted
+     * scenarios (the scenario clock is ticks, never wall clock) deliver in a
+     * fraction of the wall time; 1.19.2 has a fixed 20 t/s with no lever.
+     */
+    public static void setServerTickRate(MinecraftServer server, float tps) {
+        if (tps != 20.0f) {
+            ca.bradj.questown.QT.LOGGER.warn(
+                    "Tick rate adjustment is not available before Minecraft 1.20.6: asked for {} t/s, running at 20 t/s", tps);
+        }
+    }
+
+    /**
+     * The 1.20.5+ {@code spawnChunkRadius} gamerule (spawn chunks always loaded otherwise; the
+     * autotest origin sits in them). village/day1 sets it to 0 so the flag's chunk can unload.
+     */
+    public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
+        // No spawnChunkRadius gamerule before 1.20.5: spawn chunks stay loaded.
+        ca.bradj.questown.QT.LOGGER.warn(
+                "The spawn chunk radius can't be changed before Minecraft 1.20.5 (asked for {}); spawn chunks stay loaded", radius);
+    }
+
+    /**
+     * The room recipe registered under {@code id}, or null.
+     */
+    public static @Nullable ca.bradj.roomrecipes.recipes.RoomRecipe findRoomRecipe(ServerLevel level, ResourceLocation id) {
+        return level.getRecipeManager().getAllRecipesFor(ca.bradj.roomrecipes.recipes.RecipesInit.ROOM).stream()
+                .filter(r -> r.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Whether the player has completed the advancement; an unknown id reads as not completed.
+     */
+    public static boolean hasCompletedAdvancement(ServerPlayer player, ResourceLocation advancementId) {
+        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advancementId);
+        if (adv == null) {
+            return false;
+        }
+        return player.getAdvancements().getOrStartProgress(adv).isDone();
     }
 }

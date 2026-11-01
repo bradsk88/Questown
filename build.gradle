@@ -32,12 +32,12 @@ repositories {
         name = "Progwml6 maven"
         url = "https://dvs1.progwml6.com/files/maven/"
     }
-    maven {
-        // location of a maven mirror for JEI files, as a fallback
-        name = "ModMaven"
-        url = "https://modmaven.dev"
-    }
     maven { url 'https://maven.blamejared.com' }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
 }
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
@@ -62,12 +62,30 @@ minecraft {
     // These can be tweaked, removed, or duplicated as needed.
     runs {
         client {
-            workingDirectory project.file('run')
+            // Client owns run-client/ (server keeps run/; shared log4j files
+            // wedge the client join otherwise).
+            workingDirectory project.file('run-client')
+
+            // Netty (Forge networking) reflects into jdk.internal.misc on JDK 17+.
+            jvmArg '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
+            jvmArg '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
+            // Netty's epoll transport can stall the handshake; use the pure-Java one.
+            jvmArg '-Dio.netty.transport.noNative=true'
 
             property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            // Port-test hook (QtDiagClient); inert without the [qtdiag] command file.
+            property 'questown.diag', 'true'
+            // Dev-only: -Pautojoin makes the client skip the title screen and
+            // connect straight to a local (hold-mode autotest) server.
+            if (project.hasProperty('autojoin')) {
+                def port = System.getProperty('questown.diag.port',
+                        project.findProperty('autoport') ?: '25565')
+                args '--server', 'localhost', '--port', port
+            }
 
             mods {
                 questown {
@@ -79,6 +97,12 @@ minecraft {
         server {
             workingDirectory project.file('run')
 
+            // Netty's epoll transport can stall the handshake; use the pure-Java one.
+            jvmArg '-Dio.netty.transport.noNative=true'
+
+            // No Swing server GUI: it steals focus.
+            args '--nogui'
+
             // Recommended logging data for a userdev environment
             // The markers can be changed as needed.
             // "SCAN": For mods scan.
@@ -89,12 +113,41 @@ minecraft {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
 
             jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
             jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+            jvmArg '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
+            // Forward the category/scenario filters to the forked server JVM
+            // (AutoTestRunner.parseCategory).
+            if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
+                jvmArg '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
+            }
+            if (System.getProperty('questown.autotest.only') != null) {
+                jvmArg '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
+            }
+            if (System.getProperty('questown.autotest.shard') != null) {
+                jvmArg '-Dquestown.autotest.shard=' + System.getProperty('questown.autotest.shard')
+            }
+            // Accepted for parity with the 1.20.6 branch; 1.19.2 has no tick-rate lever, so the
+            // server logs that it stays at 20 t/s (Compat.setServerTickRate).
+            if (System.getProperty('questown.autotest.tickrate') != null) {
+                jvmArg '-Dquestown.autotest.tickrate=' + System.getProperty('questown.autotest.tickrate')
+            }
+            if (System.getProperty('questown.village.agentDrive') != null) {
+                jvmArg '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
+            }
+            ['days', 'coal', 'mat_coal', 'skipnight'].each { knob ->
+                def v = System.getProperty('questown.village.selfsuff.' + knob)
+                if (v != null) {
+                    jvmArg '-Dquestown.village.selfsuff.' + knob + '=' + v
+                }
+            }
+            if (System.getProperty('questown.log4j.config') != null) {
+                jvmArg '-Dlog4j2.configurationFile=' + System.getProperty('questown.log4j.config')
+            }
 
             mods {
                 questown {
@@ -116,7 +169,7 @@ minecraft {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
             args '--mod', 'questown', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
@@ -142,10 +195,7 @@ dependencies {
 
     implementation fg.deobf("mezz.jei:jei-1.19.2-forge:11.5.0.297")
 
-    implementation 'ca.bradj:RoomRecipes:1.19.2-0.0.7-alpha.1'
-
-    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77:api")
-    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.19.2-77")
+    implementation fg.deobf("maven.modrinth:roomrecipes:1.19.2-1.0.0-beta.2")
 }
 
 test {
@@ -237,3 +287,50 @@ task publishModrinth(dependsOn: 'reobfJar') {
         }
     }
 }
+
+// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so
+// console commands can be driven headlessly. Gated ONLY on -Dquestown.tp.fifo
+// (independent of autotest, so plain dev servers get a console too).
+if (System.getProperty('questown.tp.fifo') != null) {
+    tasks.matching { it.name == 'runServer' }.configureEach {
+        standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
+    }
+}
+
+// Autotest suites start from a clean world: residue from prior runs makes results run-count
+// dependent.
+if (System.getProperty('questown.autotest', 'false') == 'true') {
+    tasks.matching { it.name == 'runServer' }.configureEach {
+        doFirst {
+            def world = project.file('run/world')
+            if (world.exists()) {
+                println '[autotest] wiping run/world for a clean suite run'
+                world.deleteDir()
+            }
+        }
+    }
+}
+
+// importCheck: the unused-import gate (import-clean, JavaParser AST). Skipped where the tool
+// is not installed.
+task importCheck {
+    group = 'verification'
+    description = 'Fail if any Java source has unused imports.'
+    doLast {
+        def cleaner = '/home/retro/.local/bin/import-clean'
+        if (!new File(cleaner).canExecute()) {
+            logger.warn("importCheck: ${cleaner} not found; skipping the unused-import check")
+            return
+        }
+        def proc = new ProcessBuilder(cleaner, 'check', 'src/main/java', 'src/test/java')
+                .redirectErrorStream(true).start()
+        def output = proc.inputStream.text
+        proc.waitFor()
+        if (proc.exitValue() != 0) {
+            logger.lifecycle(output)
+            throw new GradleException("importCheck: unused imports found. Fix: ${cleaner} apply src/main/java src/test/java")
+        }
+    }
+}
+check.dependsOn importCheck
+
