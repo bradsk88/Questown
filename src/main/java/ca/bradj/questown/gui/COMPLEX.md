@@ -989,7 +989,7 @@ The flag's villagers tab appears with the first arrival (`TownFlagBlockEntity.ge
 - **Initial focus** is the pure `FlagTabs.initialFlagTab(bopFull, villagersDot, bopTabUnseen,
   questsDot, economicsDot)`, called by `TownFlagBlock.use`: a full flag opens BOP (its warning);
   otherwise the red-dotted tab wins in the user's order Villagers > BOP > Quests > Economics
-  (round 6 revision), else the multi-status overview. Economics' dot is
+  (round 6 revision), else the villagers tab. Economics' dot is
   `showEconTab && bonusFoodAvailable`. "Unseen" is
   `FlagInfo.bopTabAttention()` AND no `first_bop_view` advancement
   (`TownFlagBlock.shouldPreSelectBopTab`). Before this, incomplete quests outranked the unseen
@@ -1706,8 +1706,8 @@ count: `StatusPacket.workProgress` (0..1, -1 none; new network float) comes from
 (`WorkProgress.fraction(left, max(declared, left))`). A leaver's trip bar wins when both apply
 (`renderLeaverReturnBar` returns whether it drew). Work moves without a status change, so the
 server-side `MultiStatusMenu` re-sends the statuses every 20 ticks while open
-(`broadcastChanges` -> `FlagMenus.resendStatuses`), wired in both open paths (`TownFlagMenus`
-and `TownVillagerUIs.showMultiStatusUI`). `StatusSmoother`'s equality ignores the new field, so
+(`broadcastChanges` -> `FlagMenus.resendStatuses`), wired in its one open path (the
+`TownFlagMenus` VILLAGERS tab). `StatusSmoother`'s equality ignores the new field, so
 it keeps the newest progress. `WorkProgressTest`. Not seen in game (my test town only had a
 hunter).
 
@@ -1723,3 +1723,14 @@ The villager-advancements trio called `ctx.gui().blit(...)` / `enableScissor` di
 `RenderContext.gui()` is the `PoseStack` (there is no `GuiGraphics`), so those calls go through
 `RenderContext.blit` (256-sheet and sized forms), `enableScissor` and `disableScissor` on both
 branches.
+
+## Flag click: one open path for the villagers overview
+
+A flag right-click always goes through `TownFlagMenus.showUI` with the tab from
+`FlagTabs.initialFlagTab`, which returns `OpenFlagMenuMessage.VILLAGERS` when no tab has a red
+dot (it used to return null, which `TownFlagBlock` sent down a second path,
+`TownVillagerUIs.showMultiStatusUI`). That second path built the same `MultiStatusMenu` with
+thinner quest data, and its client message `OpenMultiVillagerMenuMessage` had no sender; both
+are gone. The second path held the `FirstOpenFlagMenu` advancement back until the town had a
+villager, so the VILLAGERS branch of `TownFlagMenus` now checks `entities` before triggering it.
+`BopTabAttentionTest.nothingToSee_villagersOverview`.

@@ -46,7 +46,7 @@ public class QtDevClickCommand {
         // @formatter:off
         var qtdev = Commands.literal("_qtdev");
         // openvillager: open a villager's tabbed menu for the nearest player —
-        // the flag right-click path (showMultiStatusUI / showUI) without input.
+        // the flag right-click path (showUI) without input.
         var openvillager = Commands.literal("openvillager")
                 .then(Commands.argument("type", StringArgumentType.word())
                     .suggests((ctx, b) -> SharedSuggestionProvider.suggest(

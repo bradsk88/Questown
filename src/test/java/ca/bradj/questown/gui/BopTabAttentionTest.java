@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -90,7 +89,7 @@ class BopTabAttentionTest {
     }
 
     @Test
-    void nothingToSee_overview() {
-        assertNull(FlagTabs.initialFlagTab(false, false, false, false, false));
+    void nothingToSee_villagersOverview() {
+        assertEquals(OpenFlagMenuMessage.VILLAGERS, FlagTabs.initialFlagTab(false, false, false, false, false));
     }
 }

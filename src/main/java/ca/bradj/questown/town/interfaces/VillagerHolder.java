@@ -195,8 +195,6 @@ public interface VillagerHolder {
 
     void clearPoseRequests(UUID uuid);
 
-    void showMultiStatusUI(ServerPlayer sender);
-
     void showItemJobsUI(
             ServerPlayer sender,
             Ingredient itemToShowJobsFor

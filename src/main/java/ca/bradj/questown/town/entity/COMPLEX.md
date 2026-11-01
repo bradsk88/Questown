@@ -1882,7 +1882,7 @@ would default to the villagers tab unless there's something worthy of attention 
 player hasn't seen". `SeenQuests` holds the `batch UUID | wanted id` keys
 (`TownQuests.incompleteQuestKeys`) of the open quests at the last quests-tab open
 (`TownFlagMenus` -> `markQuestsSeen`), persisted as `questown_quests_seen`. A new quest re-dots
-the tab. With the dot gone, `FlagTabs.initialFlagTab` falls through to null, and the flag opens
+the tab. With the dot gone, `FlagTabs.initialFlagTab` falls through to `VILLAGERS`, and the flag opens
 the villagers overview. The flag's in-world "!" bubble still reads any incomplete quest
 (`TownFlagBlockEntity.hasIncompleteQuests`). Seen: after one quests-tab visit the book tab lost
 its dot and the next right-click opened the villagers tab. `SeenQuestsTest` (3).

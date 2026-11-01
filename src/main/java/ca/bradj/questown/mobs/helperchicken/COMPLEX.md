@@ -104,7 +104,7 @@ flowchart TD
   hand-placed; the room lesson is still carried by the door beats that follow.
 - The flag-UI beat (`WAITING_FOR_FLAG_UI`, right after the mat) advances on a right-click of
   the flag, whichever tab opens (`TownFlagBlock.useFlag` -> `ChickenArcUiObservations.markFlagUiOpened`).
-  The mark used to sit only in `TownVillagerUIs.showMultiStatusUI` (the villagers overview), from
+  The mark used to sit only in the villagers-overview open path (since folded into `TownFlagMenus`), from
   when the flag opened there (a9121849). The same day 530c8923 hid the villagers tab until the first
   arrival, and 437a770f (10-17) opens the red-dot tab, so before the first villager the flag opens
   on quests and the beat waited through the first night (2026-10-30 agent playtest). The

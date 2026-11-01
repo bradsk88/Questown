@@ -16,7 +16,7 @@ Built for the 1.19.2 → 1.20.6 migration; version-generic beyond that.
   **No `tp` across distance** — see "player death" below.
 - **Zero-click menu open**: the console command `_qtdev openvillager <type>`
   opens the per-villager tabbed menu (`showUI` for every type, including
-  inventory - the flag-level `showMultiStatusUI` menu has no villager UUID
+  inventory - the flag-level villagers overview has no villager UUID
   and the hook cannot tab it) for the connected player.
 - **Same fixture age**: the fixture state is time-dependent - townies
   work, jobs complete, quests and job unlocks progress while the world is

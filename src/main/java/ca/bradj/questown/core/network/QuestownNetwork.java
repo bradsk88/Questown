@@ -46,7 +46,6 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_CLIENT, JobWantedIngredientsMessage.class, JobWantedIngredientsMessage::encode, JobWantedIngredientsMessage::decode, JobWantedIngredientsMessage::handle);
         register(Channel.Direction.TO_CLIENT, MultiStatusScreenSyncMessage.class, MultiStatusScreenSyncMessage::encode, MultiStatusScreenSyncMessage::decode, MultiStatusScreenSyncMessage::handle);
         register(Channel.Direction.TO_CLIENT, OnScreenTextMessage.class, OnScreenTextMessage::encode, OnScreenTextMessage::decode, OnScreenTextMessage::handle);
-        register(Channel.Direction.TO_CLIENT, OpenMultiVillagerMenuMessage.class, OpenMultiVillagerMenuMessage::encode, OpenMultiVillagerMenuMessage::decode, OpenMultiVillagerMenuMessage::handle);
         register(Channel.Direction.TO_CLIENT, OpenRelocationConfirmMessage.class, OpenRelocationConfirmMessage::encode, OpenRelocationConfirmMessage::decode, OpenRelocationConfirmMessage::handle);
         register(Channel.Direction.TO_CLIENT, OpenVillagerAdvancementsMenuMessage.class, OpenVillagerAdvancementsMenuMessage::encode, OpenVillagerAdvancementsMenuMessage::decode, OpenVillagerAdvancementsMenuMessage::handle);
         register(Channel.Direction.TO_CLIENT, ShowItemJobsMessage.class, ShowItemJobsMessage::encode, ShowItemJobsMessage::decode, ShowItemJobsMessage::handle);

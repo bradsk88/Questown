@@ -397,13 +397,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             }
         }
 
-        // No item-on-flag conversions (removed 2026-10-19, dev): everything that matters is
-        // crafted from the flag's crafting tab (FlagCraftMessage).
         if (entity.isInitialized()) {
-            // A full flag opens the BOP menu unconditionally (not gated on first_bop_view), so the
-            // warning shows even once the player has seen the tab. Otherwise an unseen BOP tab
-            // outranks the quests tab (day-1 playtest: opening on the multi-status overview shows
-            // nothing selected, so open the tab with "stuff to see").
             FlagTabsEmbedding.FlagInfo info = entity.getInfo();
             String tab = FlagTabs.initialFlagTab(
                     entity.isBopFull(),
@@ -412,11 +406,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     info.questsTabAttention(),
                     info.showEconTab() && info.bonusFoodAvailable()
             );
-            if (tab == null) {
-                entity.getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
-            } else {
-                entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
-            }
+            entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
             // The chicken's "Look at the flag" beat is the right-click, whichever tab opens:
             // before the first arrival the villagers tab is hidden and the flag opens on another
             // one (2026-10-30: the beat waited all night).

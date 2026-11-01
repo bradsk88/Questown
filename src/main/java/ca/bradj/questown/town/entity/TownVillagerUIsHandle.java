@@ -73,17 +73,6 @@ public class TownVillagerUIsHandle {
                 .collect(ImmutableSet.toImmutableSet());
     }
 
-    public void showMultiStatusUI(ServerPlayer player, Collection<VisitorMobEntity> entities) {
-        TownVillagerUIs.showMultiStatusUI(
-                player,
-                town.getUnsafe().getInfo(),
-                entities,
-                () -> town.getUnsafe().getAllQuestsWithRewards(),
-                town.getUnsafe().depositedBopRootJobs(),
-                () -> town.getUnsafe().hasVillagerArrivingInMorning()
-        );
-    }
-
     public void showItemJobsUI(
             ServerPlayer sender,
             Ingredient itemToShowJobsFor,

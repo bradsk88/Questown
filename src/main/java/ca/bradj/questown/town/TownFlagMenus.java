@@ -95,7 +95,13 @@ public class TownFlagMenus {
                 OpenFlagMenuMessage.VILLAGERS,
                 () -> openMenu(
                         sender, (windowId, inv, p) -> new MultiStatusMenu(
-                                windowId, realFlagInfo, () -> triggerAdvancement(flagPos, sender.serverLevel()),
+                                windowId, realFlagInfo, () -> {
+                                    // The flag opens on this overview before anyone has arrived; the
+                                    // first-flag-menu advancement waits for a villager.
+                                    if (!entities.isEmpty()) {
+                                        triggerAdvancement(flagPos, sender.serverLevel());
+                                    }
+                                },
                                 () -> FlagMenus.resendStatuses(sender, entities, () -> flagEntity.hasVillagerArrivingInMorning())
                         ), uiQuests, realFlagInfo, entities, flagEntity.depositedBopRootJobs(),
                         () -> flagEntity.hasVillagerArrivingInMorning(), summary

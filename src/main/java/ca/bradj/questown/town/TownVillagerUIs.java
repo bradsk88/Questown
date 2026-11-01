@@ -8,8 +8,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.VillagerUUID;
-import ca.bradj.questown.core.advancements.RoomTrigger;
-import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.core.network.*;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -19,12 +17,9 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
-import ca.bradj.questown.town.quests.MCReward;
-import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -50,83 +45,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class TownVillagerUIs {
-
-    public static void showMultiStatusUI(
-            ServerPlayer player,
-            FlagTabsEmbedding.FlagInfo townFlagBasePos,
-            Collection<? extends LivingEntity> entities,
-            Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            com.google.common.collect.ImmutableList<String> bopRootJobs,
-            Supplier<Boolean> morningSpawnPending
-    ) {
-        List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
-
-        Compat.openScreen(
-                player, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return Compat.literal("");
-                    }
-
-                    @Override
-                    public @NotNull AbstractContainerMenu createMenu(
-                            int windowId,
-                            @NotNull Inventory inv,
-                            @NotNull Player p
-                    ) {
-                        MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
-                                windowId,
-                                townFlagBasePos,
-                                this::triggerAdvancement,
-                                () -> FlagMenus.resendStatuses(player, es, morningSpawnPending)
-                        );
-                        return multiStatusMenu;
-                    }
-
-                    private void triggerAdvancement() {
-                        if (entities.isEmpty()) {
-                            return;
-                        }
-                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                                player.serverLevel(),
-                                RoomTrigger.Triggers.FirstOpenFlagMenu,
-                                townFlagBasePos.flagPos()
-                        );
-                    }
-                }, data -> {
-                    List<UIQuest> quests = UIQuest.fromLevel(
-                            player.serverLevel(),
-                            questsSrc.get()
-                    );
-                    QuestScreenSummary summary = new QuestScreenSummary(
-                            QuestCompletion.allComplete(quests.stream().map(q -> q.status).toList()),
-                            hasPendingMorningReward(player, townFlagBasePos)
-                    );
-                    Map<UUID, String> displayNames = Map.of();
-                    if (player.level().getBlockEntity(townFlagBasePos.flagPos())
-                            instanceof TownFlagBlockEntity flag) {
-                        displayNames = flag.getVillagerHandle().displayNamesForAll();
-                    }
-                    FlagMenus.writeAndLink(
-                            data, quests, townFlagBasePos, player, es, bopRootJobs, morningSpawnPending,
-                            summary, displayNames
-                    );
-                }
-        );
-        ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markFlagUiOpened(
-                player.level(), townFlagBasePos.flagPos()
-        );
-    }
-
-    private static boolean hasPendingMorningReward(
-            ServerPlayer player,
-            FlagTabsEmbedding.FlagInfo townFlagBasePos
-    ) {
-        if (!(player.level().getBlockEntity(townFlagBasePos.flagPos()) instanceof TownFlagBlockEntity flag)) {
-            return false;
-        }
-        return flag.hasPendingMorningReward();
-    }
 
     public static void showItemJobsUI(
             ServerPlayer sender,
