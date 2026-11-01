@@ -76,8 +76,10 @@ public class QuestBatches<
             BiPredicate<KEY, ITEM> questMatchesStack,
             Tracker<ITEM_KEY, ITEM, QUEST> tracker
     ) {
+        // Open ITEM quests only, and only an ITEM quest is completed: a finished ITEM quest for X
+        // plus X in stock must not close a LOOT ("make X") card wanting X.
         List<QUEST> stacksToFind = getAll().stream()
-                                           .filter(v -> v.getType() == Quest.QuestType.ITEM)
+                                           .filter(v -> v.getType() == Quest.QuestType.ITEM && !v.isComplete())
                                            .collect(Collectors.toCollection(ArrayList::new));
         if (stacksToFind.isEmpty()) {
             return;
@@ -86,7 +88,6 @@ public class QuestBatches<
         Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
         for (ITEM stack : allStacks) {
             Optional<QUEST> quest = stacksToFind.stream()
-                                                // TODO: Also handle tags
                                                 .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
                                                 .findFirst();
             if (quest.isEmpty()) {
@@ -94,7 +95,7 @@ public class QuestBatches<
             }
             int result = tracker.addCount(itemCounts, stack);
             if (result >= quest.get().getCountNeeded()) {
-                markRecipeAsComplete(null, quest.get().getWantedId());
+                markItemQuestAsComplete(quest.get().getWantedId());
                 stacksToFind.remove(quest.get());
                 if (stacksToFind.isEmpty()) {
                     return;
@@ -175,21 +176,33 @@ public class QuestBatches<
         bs.forEach(v -> {
             final VillagerUUID owner = coerceUUID(villagers, v.getUUID());
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
-            ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 switch (q.getType()) {
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                    case LOOT -> e.addLootQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
-                    case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
+                    case JOB_UNLOCK -> e.addJobUnlockQuest(q.getWantedId());
+                    case CONCURRENT_JOBS -> e.addConcurrentJobsQuest(owner, q.getConcurrentJobIds());
+                    case FIRST_WORK_REQUEST -> e.addFirstWorkRequestQuest(owner);
+                    case SKILL_UNLOCK -> e.addSkillUnlockQuest(owner, q.getWantedId());
+                    case VILLAGER_LEVEL -> e.addVillagerLevelQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
+                }
+                if (q.getType() != Quest.QuestType.UNKNOWN) {
+                    // The typed rebuild drops what the save carried beyond type/id/count: the
+                    // onboarding marker, flavor text, LOOT progress.
+                    e.newestQuest().carrySavedStateFrom(q);
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
-                    e.markRecipeAsComplete(q.completedOn, q.getWantedId());
+                    // Replay, not completion: the persisted quest was already rewarded on disk
+                    // (its reward is restored applied), so re-claiming through
+                    // markRecipeAsComplete would trip the once-guard on every load
+                    // (see QuestBatch.markRecipeAsCompleteForReplay).
+                    e.markRecipeAsCompleteForReplay(q.completedOn, q.getWantedId());
                     completedQuests.remove(iq);
                 }
-                eqb.add(q);
             });
             bld.add(e);
         });
@@ -250,23 +263,27 @@ public class QuestBatches<
         return ImmutableList.copyOf(this.batches.stream().flatMap(QuestBatch::stream).toList());
     }
 
+    private void markItemQuestAsComplete(KEY itemId) {
+        for (BATCH b : batches) {
+            if (b.markRecipeAsComplete(null, itemId, q -> q.getType() == Quest.QuestType.ITEM)) {
+                return;
+            }
+        }
+    }
+
     public void markRecipeAsComplete(
             @Nullable ROOM room,
             KEY recipeId
     ) {
-        for (BATCH b : batches) {
-            if (room != null && b.getAll().stream()
-                 .filter(Quest::isComplete)
-                 .filter(v -> recipeId.equals(v.getWantedId()))
-                 .anyMatch(v -> room.equals(v.completedOn))
-            ) {
-                QT.QUESTS_LOGGER.debug(
-                        "Quest was already marked complete: {} for door {}",
-                        recipeId,
-                        room.doorPos
-                );
-                return;
-            }
+        // Room objects keep their identity across rescans, so a re-issued quest for the same recipe
+        // (visitor-batch re-issue after the batch completion reward) must not be bounced by the
+        // original completion on this room. Skip only when nothing open remains for this recipe;
+        // when an open quest exists, complete it.
+        boolean openForRecipe = batches.stream()
+                .anyMatch(b -> b.getAll().stream()
+                        .anyMatch(v -> !v.isComplete() && recipeId.equals(v.getWantedId())));
+        if (!openForRecipe) {
+            return;
         }
         for (BATCH b : batches) {
             if (b.markRecipeAsComplete(room, recipeId)) {

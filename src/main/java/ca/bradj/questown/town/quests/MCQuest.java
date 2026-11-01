@@ -2,7 +2,10 @@ package ca.bradj.questown.town.quests;
 
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -12,6 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -19,6 +23,32 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static final Serializer SERIALIZER = new Serializer();
 
     @Nullable String concurrentJobIdsEncoded;
+
+    /**
+     * LOOT-quest accumulation: how many of the wanted item the town has extracted while this quest
+     * was open. The quest completes at {@link #getCountNeeded()} (a count-1 quest on the first
+     * extraction). Persisted with the quest so the progress survives world saves; older saves
+     * default to 0.
+     */
+    private int lootExtracted;
+
+    /** Add to the extraction total; @return the running total. */
+    public int addExtracted(int n) {
+        lootExtracted += n;
+        return lootExtracted;
+    }
+
+    public int getExtracted() {
+        return lootExtracted;
+    }
+
+    @Override
+    protected void carrySavedStateFrom(Quest<?, ?> saved) {
+        super.carrySavedStateFrom(saved);
+        if (saved instanceof MCQuest mcq) {
+            this.lootExtracted = mcq.lootExtracted;
+        }
+    }
 
     MCQuest() {
         super();
@@ -70,6 +100,18 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
+    // A LOOT quest is satisfied when a townie extracts (produces) matching loot from their
+    // job, not by a chest deposit. The wanted id is an item or a tag; see
+    // ca.bradj.questown.gui.Ingredients#asIngredient for the resolution.
+    public static MCQuest loot(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation itemId,
+            int count
+    ) {
+        return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.LOOT, count);
+    }
+
     public static MCQuest jobChange(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
@@ -84,7 +126,150 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable VillagerUUID ownerId,
             ResourceLocation jobId
     ) {
-        return new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        MCQuest q = new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        // Player-facing guidance shown in the quest UI, in the same style as the
+        // crafter-arc job quests. Without it the quest read as only a job id.
+        q.setFlavorText("A villager wants to work as a " + JobID.fromRL(jobId).toNiceString()
+                + ". Spend a Block of Progress on the change job tab to request a job change - "
+                + "it takes effect overnight.");
+        return q;
+    }
+
+    /**
+     * The day-2 onboarding quest: post the town's first work request on the job board. Completes from
+     * the flag's work-handle listener on any posted request while active.
+     */
+    public static MCQuest firstWorkRequest(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId
+    ) {
+        MCQuest q = new MCQuest(
+                batchUUID, ownerId, SpecialQuests.FIRST_WORK_REQUEST, null,
+                QuestType.FIRST_WORK_REQUEST, 1
+        );
+        q.setFlavorText("Open the job board and post your first work request - the town needs to know what to make.");
+        return q;
+    }
+
+    /**
+     * Unlock any skill on a job root's skill tree (the cook batch asks for the cook's). The wanted id
+     * is {@code questown:skill_unlock/<root>}, not a job RL: batch completion matches by wanted id
+     * alone, so sharing the cook JOB_CHANGE quest's id would let either quest complete the other.
+     * Completes from {@code TownQuests.markSkillUnlocked} when the player spends a Block of Progress
+     * on a node with the same root.
+     */
+    public static MCQuest skillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            String treeRoot
+    ) {
+        MCQuest q = new MCQuest(batchUUID, ownerId, Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + treeRoot),
+                null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Once your " + treeRoot + " levels up, open its skills tab and spend a "
+                + "Block of Progress on any skill. New skills let a villager make more things.");
+        return q;
+    }
+
+    /**
+     * A SKILL_UNLOCK quest that names one skill: only unlocking {@code skill} completes it (curated
+     * paths). Wanted id {@code questown:skill_unlock/<root>/<job>}.
+     */
+    public static MCQuest namedSkillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            JobID skill
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + skill.rootId() + "/" + skill.jobId());
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Once your " + skill.rootId() + " can learn it, open its skills tab and spend a "
+                + "Block of Progress on " + Jobs.getVariantNameComponent(skill).getString() + ".");
+        return q;
+    }
+
+    private static final String SKILL_UNLOCK_PREFIX = "skill_unlock/";
+
+    /**
+     * Any villager working {@code root} reaches {@code level} ({@link VillagerLevelQuests}). A
+     * curated path posts it ahead of a batch whose skills need that level.
+     */
+    public static MCQuest villagerLevel(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            String root,
+            int level
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(VillagerLevelQuests.path(root, level));
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.VILLAGER_LEVEL, 1);
+        q.setFlavorText("Villagers level up by working. Post requests on the job board for your " + root
+                + " to make, and new skills open up once one of them reaches level " + level + ".");
+        return q;
+    }
+
+    /**
+     * The job root a SKILL_UNLOCK quest's wanted id names. Falls back to a job RL
+     * ({@code cook_qt_extract}), the id the first build used.
+     */
+    public static String skillTreeRoot(ResourceLocation wantedId) {
+        String path = wantedId.getPath();
+        if (path.startsWith(SKILL_UNLOCK_PREFIX)) {
+            String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+            int slash = tree.indexOf('/');
+            return slash < 0 ? tree : tree.substring(0, slash);
+        }
+        return JobID.fromRL(wantedId).rootId();
+    }
+
+    /** The one skill a named SKILL_UNLOCK quest wants; empty for an any-skill-on-the-tree quest. */
+    public static Optional<JobID> namedSkill(ResourceLocation wantedId) {
+        String path = wantedId.getPath();
+        if (!path.startsWith(SKILL_UNLOCK_PREFIX)) {
+            return Optional.empty();
+        }
+        String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+        int slash = tree.indexOf('/');
+        if (slash < 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new JobID(tree.substring(0, slash), tree.substring(slash + 1)));
+    }
+
+    public static MCQuest jobUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation rootJobId
+    ) {
+        // Flavor text is set by the creator (TownQuests): it names the missing item and
+        // the stuck townie, which this type-specific factory does not know.
+        return new MCQuest(batchUUID, ownerId, rootJobId, null, QuestType.JOB_UNLOCK, 1);
+    }
+
+    /**
+     * Encode the stuck root this JOB_UNLOCK quest was posted for, in fromRecipeID
+     * (persisted via NBT {@code from_recipe_id}, otherwise unused for this type), so
+     * the one-per-stuck-root dedupe survives a flag reload.
+     */
+    public void setUnlockStuckRoot(String stuckRoot) {
+        this.fromRecipeID = JobID.toRL(new JobID(stuckRoot, stuckRoot));
+    }
+
+    /** The stuck root this JOB_UNLOCK quest was posted for, or empty for town-wide ones. */
+    public Optional<String> unlockStuckRoot() {
+        return this.fromRecipeID()
+                .map(JobID::fromRL)
+                .map(JobID::rootId);
+    }
+
+    /**
+     * Retarget an open JOB_UNLOCK quest to a different producer root, in place (same batch, owner and
+     * reward), when the stuck root's missing item flips to an item the new producer makes. Re-posting
+     * a fresh quest instead would fill the handle with phantoms.
+     */
+    public void retargetUnlock(ResourceLocation newRootJob, String newFlavorText) {
+        if (this.getType() != QuestType.JOB_UNLOCK) {
+            throw new IllegalStateException("retargetUnlock: not a JOB_UNLOCK quest: " + this.getType());
+        }
+        this.recipeId = newRootJob;
+        this.setFlavorText(newFlavorText);
     }
 
     public static MCQuest concurrentJobs(
@@ -127,6 +312,10 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
         q.setFlavorText(this.getFlavorText());
+        q.setOnboarding(this.isOnboarding());
+        q.setDiscardable(this.isDiscardable());
+        q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
@@ -143,6 +332,10 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
+        q.setOnboarding(this.isOnboarding());
+        q.setDiscardable(this.isDiscardable());
+        q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         return q;
     }
 
@@ -154,8 +347,13 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_FLAVOR_TEXT = "flavor_text";
+        private static final String NBT_ONBOARDING = "onboarding";
+        private static final String NBT_DISCARDABLE = "discardable";
+        private static final String NBT_TOP_NEED_PRODUCER = "top_need_producer";
+        private static final String NBT_PATH_BATCH = "path_batch";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
+        private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
         private static final String NBT_COMPLETED_ON_DOORPOS_Z = "doorpos_z";
@@ -188,8 +386,19 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (quest.getFlavorText() != null) {
                 ct.putString(NBT_FLAVOR_TEXT, quest.getFlavorText());
             }
+            if (quest.isOnboarding()) {
+                ct.putBoolean(NBT_ONBOARDING, true);
+            }
+            if (quest.isDiscardable()) {
+                ct.putBoolean(NBT_DISCARDABLE, true);
+            }
+            quest.topNeedProducer().ifPresent(p -> ct.putString(NBT_TOP_NEED_PRODUCER, p));
+            quest.pathBatch().ifPresent(p -> ct.putString(NBT_PATH_BATCH, p));
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
+            }
+            if (quest instanceof MCQuest mcq && mcq.lootExtracted > 0) {
+                ct.putInt(NBT_LOOT_EXTRACTED, mcq.lootExtracted);
             }
             return ct;
         }
@@ -242,8 +451,23 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             if (nbt.contains(NBT_FLAVOR_TEXT)) {
                 quest.setFlavorText(nbt.getString(NBT_FLAVOR_TEXT));
             }
+            if (nbt.getBoolean(NBT_ONBOARDING)) {
+                quest.setOnboarding(true);
+            }
+            if (nbt.getBoolean(NBT_DISCARDABLE)) {
+                quest.setDiscardable(true);
+            }
+            if (nbt.contains(NBT_TOP_NEED_PRODUCER)) {
+                quest.setTopNeedProducer(nbt.getString(NBT_TOP_NEED_PRODUCER));
+            }
+            if (nbt.contains(NBT_PATH_BATCH)) {
+                quest.setPathBatch(nbt.getString(NBT_PATH_BATCH));
+            }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);
+            }
+            if (nbt.contains(NBT_LOOT_EXTRACTED)) {
+                quest.lootExtracted = nbt.getInt(NBT_LOOT_EXTRACTED);
             }
             return quest;
         }

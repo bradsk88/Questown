@@ -48,11 +48,45 @@ class QuestsTest {
             }
 
             @Override
+            public TestQuest newJobUnlockQuest(Integer id) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
             public TestQuest newItemQuest(
                     @Nullable UUID ownerId,
                     Integer itemId,
                     int count
             ) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newLootQuest(
+                    @Nullable UUID ownerId,
+                    Integer itemId,
+                    int count
+            ) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newSkillUnlockQuest(@Nullable UUID ownerId, Integer treeRootId) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newVillagerLevelQuest(@Nullable UUID ownerId, Integer id) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
+            public TestQuest newConcurrentJobsQuest(@Nullable UUID ownerId, java.util.Collection<Integer> jobIds) {
                 throw new UnsupportedOperationException("Not implemented");
             }
 

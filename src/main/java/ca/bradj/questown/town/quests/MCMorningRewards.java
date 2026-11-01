@@ -39,6 +39,10 @@ public class MCMorningRewards extends MCRewardList {
         return currentChildren.stream().anyMatch(r -> r instanceof SpawnVisitorReward);
     }
 
+    public boolean hasPendingMorningReward() {
+        return MorningRewards.isAnyPending(currentChildren);
+    }
+
     public Collection<MCReward> popChildren() {
         ImmutableList<MCReward> mcRewards = ImmutableList.copyOf(this.currentChildren);
         currentChildren.clear();

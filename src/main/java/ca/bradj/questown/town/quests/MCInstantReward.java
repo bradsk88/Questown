@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;
@@ -38,8 +37,8 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
     ) {
         super(rType);
         this.town = town;
-        QT.QUESTS_LOGGER.warn(
-                "An \"instant\"-type reward is being loaded from disk. This is probably harmless, but is also unexpected.");
+        // No log here: a persisted instant reward (already applied on disk, e.g. a completed
+        // onboarding batch) is the normal state on every load of a post-onboarding world.
     }
 
     @Override
