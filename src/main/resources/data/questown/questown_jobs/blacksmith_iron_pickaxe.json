@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/iron_pickaxe",
+ "available_at_level": 8,
   "unlocks_title": "blacksmith",
   "priority": "3000",
   "parent": "crafter/iron_hoe",
@@ -28,8 +29,11 @@
   ],
   "cooldown_ticks": 25,
   "sound": {
-    "id": "minecraft:item.axe.scrape",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
-  }
+  },
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "questown:textures/blocks/blacksmiths_table_front.png"}
+  ]
 }

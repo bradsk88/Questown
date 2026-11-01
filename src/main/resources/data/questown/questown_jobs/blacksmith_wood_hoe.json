@@ -1,6 +1,7 @@
 {
   "version": 1,
   "id": "crafter/wooden_hoe",
+ "available_at_level": 3,
   "unlocks_title": "blacksmith",
   "priority": "2999",
   "parent": "crafter/stick",
@@ -28,8 +29,11 @@
   ],
   "cooldown_ticks": 25,
   "sound": {
-    "id": "minecraft:item.axe.scrape",
+    "id": "minecraft:block.anvil.use",
     "chance": "100",
     "duration": 5
-  }
+  },
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "questown:textures/blocks/blacksmiths_table_front.png"}
+  ]
 }
