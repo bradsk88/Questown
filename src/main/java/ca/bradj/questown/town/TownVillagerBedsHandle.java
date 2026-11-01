@@ -54,6 +54,8 @@ public class TownVillagerBedsHandle {
     public TownVillagerBedsHandle() {
     }
 
+    // Dev-only bed-visibility probe: which link of the bed pipeline is empty (no active-recipe
+    // matches at all / no bed blocks in the contained sets / no head blocks).
     private static Collection<BlockPos> getAllBedHeads(@NotNull TownInterface town) {
         RoomsHolder rooms = town.getRoomHandle();
         Collection<BlockPos> beds = rooms.findMatchedRecipeBlocks(

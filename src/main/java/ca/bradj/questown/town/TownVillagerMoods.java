@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.items.EffectMetaItem;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -20,12 +19,13 @@ public class TownVillagerMoods {
     static Map<ResourceLocation, Integer> buffs;
     private static boolean staticInitialized = false;
 
-    static void staticInitialize() {
+    public static void staticInitialize() {
         ImmutableMap.Builder<ResourceLocation, Integer> b = ImmutableMap.builder();
 
-        b.put(EffectMetaItem.MoodEffects.COMFORTABLE_EATING, 5);
-        b.put(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, -5);
-        b.put(EffectMetaItem.MoodEffects.ATE_RAW_FOOD, -10);
+        b.put(MoodEffects.COMFORTABLE_EATING, 5);
+        b.put(MoodEffects.UNCOMFORTABLE_EATING, -5);
+        b.put(MoodEffects.ATE_RAW_FOOD, -10);
+        b.put(MoodEffects.SLEEPLESS, -15);
 
         buffs = b.build();
         staticInitialized = true;
@@ -36,10 +36,24 @@ public class TownVillagerMoods {
 
     // Computed at runtime
     private final Map<UUID, Integer> mood = new HashMap<>();
-    private long moodTick = Config.MOOD_TICK_INTERVAL.get();
+    private long moodTick;
+
+    /** Production wiring: the assessment interval comes from the NeoForge config. */
+    public TownVillagerMoods() {
+        this.moodTick = Config.MOOD_TICK_INTERVAL.get();
+    }
+
+    /** Test seam: a fixed interval, no config read (the config-split pattern). */
+    TownVillagerMoods(long moodTickInterval) {
+        this.moodTick = moodTickInterval;
+    }
 
     public static int compute(Collection<Effect> effects) {
-        Integer neutral = Config.NEUTRAL_MOOD.get();
+        return compute(Config.NEUTRAL_MOOD.get(), effects);
+    }
+
+    /** Pure mood math: the neutral value is a parameter, so no config read — unit-testable. */
+    static int compute(int neutral, Collection<Effect> effects) {
         Integer computed = effects.stream()
                 .map(Effect::effect)
                 .map(buffs::get)
@@ -72,6 +86,12 @@ public class TownVillagerMoods {
 
     public float getMood(UUID uuid) {
         return mood.getOrDefault(uuid, Config.NEUTRAL_MOOD.get()) / 100f;
+    }
+
+    /** True when the given effect is currently active on the given townie. */
+    public boolean hasEffect(UUID uuid, ResourceLocation effect) {
+        return moodEffects.getOrDefault(uuid, ImmutableList.of())
+                .stream().anyMatch(e -> e.effect().equals(effect));
     }
 
     public void tryApplyEffect(ResourceLocation effect, Long expireOnTick, UUID uuid) {

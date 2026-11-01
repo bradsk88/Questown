@@ -2,7 +2,6 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.items.KnowledgeMetaItem;
 import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import com.google.common.collect.ImmutableSet;
@@ -27,13 +26,7 @@ public class TownKnowledgeStore extends KnowledgeStore<ResourceLocation, MCHeldI
     public TownKnowledgeStore() {
         super(
                 ImmutableSet.of(MCTownItem.fromMCItemStack(Items.WHEAT_SEEDS.getDefaultInstance())),
-                (i) -> {
-                    MCTownItem unwrapped = KnowledgeMetaItem.unwrap(i);
-                    if (unwrapped != null) {
-                        return unwrapped;
-                    }
-                    return i.get();
-                },
+                MCHeldItem::get,
                 (GathererTools.LootTablePrefix tool, ResourceLocation biome, MCTownItem i) -> {
                     if (biome == null) {
                         return MCHeldItem.fromTown(i);
