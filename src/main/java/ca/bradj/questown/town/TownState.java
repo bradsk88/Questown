@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.BlockPos;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -193,6 +194,73 @@ public abstract class TownState<
         );
     }
 
+    /**
+     * Moves a single matching item from a source container into the container located at
+     * {@code targetPos}, immutably (a new town state with the two replaced containers). The source
+     * is the first container OTHER than the target that holds a matching item, so the move is
+     * directed source&rarr;target rather than first-available. Returns {@code null} when there is no
+     * container at {@code targetPos}, that container is full, or no other container holds a match.
+     * <p>
+     * This is the warp-state equivalent of the realtime fetcher relocating a requested ingredient
+     * into the request's chest. The remove (1 unit) and add (1 unit) are balanced, so the town-wide
+     * total is conserved.
+     */
+    public @Nullable SELF withItemRelocatedTo(
+            Predicate<I> ingredientCheck,
+            BlockPos targetPos
+    ) {
+        int targetIdx = indexOfContainerAt(targetPos);
+        if (targetIdx < 0) {
+            return null;
+        }
+        if (containers.get(targetIdx).isFull()) {
+            return null;
+        }
+        int sourceIdx = -1;
+        for (int i = 0; i < containers.size(); i++) {
+            if (i == targetIdx) {
+                continue;
+            }
+            if (containers.get(i).hasItem(ingredientCheck::test)) {
+                sourceIdx = i;
+                break;
+            }
+        }
+        if (sourceIdx < 0) {
+            return null;
+        }
+        Map.Entry<ContainerTarget<C, I>, I> removed = containers.get(sourceIdx).withItemRemoved(ingredientCheck);
+        if (removed == null) {
+            return null;
+        }
+        ContainerTarget<C, I> newTarget = containers.get(targetIdx).withItemAdded(removed.getValue());
+        if (newTarget == null) {
+            return null;
+        }
+        ImmutableList.Builder<ContainerTarget<C, I>> b = ImmutableList.builder();
+        for (int i = 0; i < containers.size(); i++) {
+            if (i == sourceIdx) {
+                b.add(removed.getKey());
+            } else if (i == targetIdx) {
+                b.add(newTarget);
+            } else {
+                b.add(containers.get(i));
+            }
+        }
+        return newTownState(
+                villagers, b.build(), workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep
+        );
+    }
+
+    private int indexOfContainerAt(BlockPos pos) {
+        for (int i = 0; i < containers.size(); i++) {
+            if (containers.get(i).getBlockPos().equals(pos)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public Map.Entry<SELF, I> withContainerItemRemoved(Predicate<I> itemCheck) {
         ImmutableList.Builder<ContainerTarget<C, I>> b = ImmutableList.builder();
         I removed = null;
@@ -261,6 +329,9 @@ public abstract class TownState<
         public final double xPosition, yPosition, zPosition;
         public final ImmutableSnapshot<I, ?> journal;
         private final List<Effect> effects = new ArrayList<>();
+        // Per-(townie, proficiency-id) work-speed levels ∈ [0,1]. The warp-side carrier
+        // of proficiency (mirrors the live TownVillagerProficiencies holder).
+        private final ImmutableMap<String, Float> proficiencies;
 
         public VillagerData(
                 double xPosition,
@@ -269,11 +340,23 @@ public abstract class TownState<
                 ImmutableSnapshot<I, ?> journal,
                 UUID uuid
         ) {
+            this(xPosition, yPosition, zPosition, journal, uuid, ImmutableMap.of());
+        }
+
+        public VillagerData(
+                double xPosition,
+                double yPosition,
+                double zPosition,
+                ImmutableSnapshot<I, ?> journal,
+                UUID uuid,
+                ImmutableMap<String, Float> proficiencies
+        ) {
             this.xPosition = xPosition;
             this.yPosition = yPosition;
             this.zPosition = zPosition;
             this.journal = journal;
             this.uuid = uuid;
+            this.proficiencies = proficiencies;
         }
 
         @Override
@@ -284,7 +367,31 @@ public abstract class TownState<
                     ",\n\tyPosition=" + yPosition +
                     ",\n\tzPosition=" + zPosition +
                     ",\n\tjournal=" + journal +
+                    ",\n\tproficiencies=" + proficiencies +
                     "\n}";
+        }
+
+        public ImmutableMap<String, Float> getProficiencies() {
+            return proficiencies;
+        }
+
+        public float getProficiencyLevel(String proficiencyId) {
+            return proficiencies.getOrDefault(proficiencyId, 0f);
+        }
+
+        public VillagerData<I> withProficiencies(Map<String, Float> levels) {
+            return new VillagerData<>(
+                    xPosition, yPosition, zPosition, journal, uuid, ImmutableMap.copyOf(levels)
+            );
+        }
+
+        public VillagerData<I> withProficiencyLevel(
+                String proficiencyId,
+                float level
+        ) {
+            Map<String, Float> m = new HashMap<>(proficiencies);
+            m.put(proficiencyId, level);
+            return withProficiencies(m);
         }
 
         public int getCapacity() {
@@ -298,7 +405,7 @@ public abstract class TownState<
 
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
+                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid, proficiencies
             );
         }
 
@@ -310,14 +417,14 @@ public abstract class TownState<
             int idx = journal.items().indexOf(first.get());
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
+                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid, proficiencies
             );
         }
 
         public VillagerData<I> withItems(ImmutableList<I> items) {
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withItems(items), uuid
+                    (ImmutableSnapshot) journal.withItems(items), uuid, proficiencies
             );
         }
 

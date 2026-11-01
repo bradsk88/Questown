@@ -2,11 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.jobs.Signals;
-import ca.bradj.questown.town.quests.Completable;
-import ca.bradj.questown.town.quests.Reward;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +13,6 @@ import java.util.Stack;
 import java.util.function.Supplier;
 
 public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
-    private int ticksWithoutQuests;
     private boolean stopped;
     protected boolean everScanned = false;
     boolean debugMode;
@@ -28,12 +24,29 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     protected void tick(
             TICK_DATA data
     ) {
+        // Profiling wraps every exit path, not just the full-tick one. The heavy work below is
+        // throttled to every FlagTickInterval-th tick, but updateStoredData (and its town-wide
+        // container scan) runs on ALL of them — measuring only the full ticks would hide the
+        // per-tick cost entirely.
+        long start = System.nanoTime();
+        try {
+            tickInner(data);
+        } finally {
+            profileTick(start);
+        }
+    }
+
+    private void tickInner(
+            TICK_DATA data
+    ) {
         if (runAnyInitializers(data)) {
+            // A flag that is initializing (after a reload) is alive: its sub-blocks self-destruct
+            // when not ticked, so keep them fed while the initializers run.
+            notifySubBlocksOfTick(data);
             return;
         }
 
         Collection<VILLAGERS> villagers = getVillagers(data);
-        ensureCompletableQuestsExist(data, villagers);
 
         boolean alreadyStopped = stopped;
         stopped = allPlayersLeftArea(data, !alreadyStopped);
@@ -43,8 +56,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             }
             storeInactiveState(data);
         }
-
-        long start = System.currentTimeMillis();
 
         // Must tick sub-blocks even with debug mode enabled,
         // because non-ticked sub-blocks will self-destruct.
@@ -61,27 +72,32 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
 
         handleIfNewMorning(data, signals);
 
-        boolean stateChanged = updateStoredData(data);
+        boolean[] stateChanged = new boolean[1];
+        TickProfile.INSTANCE.phase("updateStoredData", () -> stateChanged[0] = updateStoredData(data));
 
-        if (stateChanged) {
-            handleNewStoredData(data);
+        if (stateChanged[0]) {
+            TickProfile.INSTANCE.phase("handleNewStoredData", () -> handleNewStoredData(data));
         }
 
-        tickWorkHandle(data);
-        tickQuests(data);
-        tickBiomesHandle(data);
-        tickHealingHandle(data);
-        tickPossibleWorkHandle(data);
-        tickRoomsHandle(data);
+        TickProfile.INSTANCE.phase("workHandle", () -> tickWorkHandle(data));
+        TickProfile.INSTANCE.phase("quests", () -> tickQuests(data));
+        TickProfile.INSTANCE.phase("biomes", () -> tickBiomesHandle(data));
+        TickProfile.INSTANCE.phase("healing", () -> tickHealingHandle(data));
+        TickProfile.INSTANCE.phase("possibleWork", () -> tickPossibleWorkHandle(data));
+        TickProfile.INSTANCE.phase("roomsHandle", () -> tickRoomsHandle(data));
 
         if (!isFlagTick(data)) {
             return;
         }
 
-        updateWorkStatuses(data);
+        TickProfile.INSTANCE.phase("updateWorkStatuses", () -> updateWorkStatuses(data));
 
-        tickASAPRewards(data);
-        tickPOIs(data);
+        TickProfile.INSTANCE.phase("asapRewards", () -> tickASAPRewards(data));
+        TickProfile.INSTANCE.phase("pois", () -> tickPOIs(data));
+
+        if (signals == Signals.NIGHT || signals == Signals.EVENING) {
+            tickEvening(data);
+        }
 
         if ((signals == Signals.NIGHT || signals == Signals.EVENING) && !villagers.isEmpty()) {
             triggerFirstNightAdvancement(data);
@@ -96,8 +112,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         }
 
         everScanned = true;
-
-        profileTick(start);
     }
 
     protected abstract void triggerUnmetNeedsAdvancement(TICK_DATA data);
@@ -112,6 +126,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     );
 
     protected abstract void triggerFirstNightAdvancement(TICK_DATA data);
+
+    protected abstract void tickEvening(TICK_DATA data);
 
     protected abstract void tickPOIs(TICK_DATA data);
 
@@ -144,8 +160,32 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         detectMorning(data, signals);
 
         if (!mornings.empty()) {
-            onMorning(data, mornings.pop());
+            runMorning(data, mornings.pop());
         }
+    }
+
+    /**
+     * Run the morning pass and mark this morning as consumed. The ticker's own detection
+     * (handleIfNewMorning) uses this; the campfire-sleep wake path (TownFlags.onSleepFinished) must
+     * use it too: calling the abstract onMorning directly leaves isMorning unset, so the ticker's
+     * detection would re-run the whole morning pass in the same window.
+     */
+    public void runMorning(
+            TICK_DATA data,
+            long newTime
+    ) {
+        isMorning = true;
+        onMorning(data, newTime);
+    }
+
+    /**
+     * The campfire-sleep wake's morning pass. It runs on {@link #getTick} (game time), the same
+     * clock as the ticker's own morning detection, never the wake event's new daytime: the morning
+     * pass stamps SLEEPLESS expiry and last-downtime ticks that are read against game time, and a
+     * sleep skip advances daytime but not game time. Pinned by {@code SleepMorningClockTest}.
+     */
+    public void runSleptMorning(TICK_DATA data) {
+        runMorning(data, getTick(data));
     }
 
     protected abstract void onMorning(
@@ -198,55 +238,12 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             boolean playersNearbyOnPrevTick
     );
 
-    private void ensureCompletableQuestsExist(
-            TICK_DATA data,
-            Collection<VILLAGERS> villagers
-    ) {
-        // We use a loop to ensure the more expensive "quests" check is only
-        // run if there is at least one villager in the town.
-        for (VILLAGERS villager : villagers) {
-            if (!isMissingCompletableQuests(data)) {
-                ticksWithoutQuests = 0;
-                break;
-            }
-            boolean allowingForBuffer = ticksWithoutQuests < 500;
-            if (allowingForBuffer) {
-                ticksWithoutQuests++;
-                break;
-            }
-            addQuests(data, villager);
-            ticksWithoutQuests = 0;
-            break; // We only want to add a quest batch for the first villager
-        }
-    }
-
     private void onMorningDetected(long newTime) {
         this.mornings.push(newTime);
         // IMPORTANT: DO NOTHING ELSE IN THIS FUNCTION
         // Adding logic here may cause the game to lock up.
         // Do morning logic via morningTick().
     }
-
-    protected abstract void addQuests(
-            TICK_DATA data,
-            VILLAGERS v
-    );
-
-    private boolean isMissingCompletableQuests(TICK_DATA e) {
-        Collection<Pair<Completable, Reward>> all = getAllQuestsWithRewards(e);
-        if (all.stream().anyMatch(v -> !v.a().isComplete())) {
-            return false;
-        }
-        Collection<Reward> rewards = getMorningRewards(e);
-        if (rewards.stream().anyMatch(Reward::addsQuestsWhenApplied)) {
-            return false;
-        }
-        return true;
-    }
-
-    protected abstract ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TICK_DATA e);
-
-    protected abstract ImmutableList<Reward> getMorningRewards(TICK_DATA e);
 
     protected abstract ImmutableList<VILLAGERS> getVillagers(TICK_DATA data);
 
@@ -261,13 +258,16 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     }
 
     private void profileTick(long start) {
+        long elapsedNanos = System.nanoTime() - start;
+
+        TickProfile.INSTANCE.record(elapsedNanos);
+
         if (Config.TICK_SAMPLING_RATE.get() > 0) {
-            long end = System.currentTimeMillis();
-            times.add((int) (end - start));
+            times.add((int) (elapsedNanos / 1000));
 
             if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
                 double tl = times.stream().mapToInt(Integer::intValue).average().orElse(0);
-                QT.PROFILE_LOGGER.debug("Average tick length: {}", tl);
+                QT.PROFILE_LOGGER.info("Average tick length: {}us", tl);
                 times.clear();
             }
         }
