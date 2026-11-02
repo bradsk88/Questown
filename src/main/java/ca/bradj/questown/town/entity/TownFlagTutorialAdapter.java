@@ -19,9 +19,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Map;
 

@@ -39,8 +39,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -252,7 +252,6 @@ public class TownFlagState {
      */
     private static Work createWork(TownFlagBlockEntity e, ServerLevel sl) {
         return new Work() {
-            private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
 
             @Override
             public void recomputeNow() {
@@ -283,18 +282,6 @@ public class TownFlagState {
                 );
                 if (work != null) {
                     return work;
-                }
-
-                JobID fallback = fallbackSelector.tryFallback(
-                        (int) ticksElapsed, currentJob, canFit, canAlwaysStart, requestedResults, td,
-                        e.getPossibleWork().getFor(currentJob),
-                        jobs -> Compat.shuffle(jobs.iterator(), sl)
-                );
-                if (fallback != null) {
-                    return fallback;
-                }
-                if (fallbackSelector.isBuffering()) {
-                    return currentJob;
                 }
                 return null;
             }
@@ -617,7 +604,7 @@ public class TownFlagState {
         return containersChanged;
     }
 
-    private static int determineValue(IItemHandler cap) {
+    private static int determineValue(ItemHandler cap) {
         ArrayList<String> itemNames = new ArrayList<>(cap.getSlots());
         for (int i = 0; i < cap.getSlots(); i++) {
             itemNames.add(cap.getStackInSlot(i).toString());

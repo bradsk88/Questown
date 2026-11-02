@@ -1,19 +1,15 @@
 package ca.bradj.questown.jobs;
 
-import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
-import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownVillagerHandle;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+/** Job setup that runs once, at common setup. */
 public final class Events {
+    private Events() {
+    }
 
-    @SubscribeEvent()
-    public static void register(FMLCommonSetupEvent event) {
-        Compat.enqueueOrLog(event, DeclarativeJobs::staticInitialize);
-        Compat.enqueueOrLog(event, TownVillagerHandle::staticInit);
+    public static void onCommonSetup() {
+        DeclarativeJobs.staticInitialize();
+        TownVillagerHandle.staticInit();
     }
 }

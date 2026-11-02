@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.rewards.RewardType;

@@ -164,7 +164,6 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.AdvancerSetup advancerSetup =
                 EquivalenceTestFramework.createAdvancerSetup(definition, world2);
-        advancerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
 
         EquivalenceTestFramework.runAdvancer(advancerSetup, 50);
         EquivalenceTestFramework.SimulationResult advancerResult =

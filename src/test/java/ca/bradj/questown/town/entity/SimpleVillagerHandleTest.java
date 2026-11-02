@@ -21,7 +21,6 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void tick(List<UUID> uuids) {
-
         }
 
         @Override
@@ -29,17 +28,14 @@ class SimpleVillagerHandleTest {
                 UUID vEntity,
                 BiConsumer<TownPosition, Long> listener
         ) {
-
         }
 
         @Override
         public void claimBed(UUID vEntity) {
-
         }
 
         @Override
         public void stopSleeping(UUID uuid) {
-
         }
 
         @Override
@@ -104,7 +100,6 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void invalidateCachedWorkPossibilities() {
-
         }
 
         @Override
@@ -117,7 +112,6 @@ class SimpleVillagerHandleTest {
                 UUID vEntity,
                 Runnable runnable
         ) {
-
         }
 
         @Override

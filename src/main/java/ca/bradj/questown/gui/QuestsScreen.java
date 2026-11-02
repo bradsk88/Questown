@@ -24,7 +24,6 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import vazkii.patchouli.api.PatchouliAPI;
 
 import java.util.*;
 

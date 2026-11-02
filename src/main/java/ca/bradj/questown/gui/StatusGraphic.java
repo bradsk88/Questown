@@ -8,7 +8,6 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 

@@ -1,4 +1,5 @@
 package ca.bradj.questown.jobs;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -14,6 +15,7 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -25,6 +27,7 @@ import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.tags.BlockTags;
@@ -41,9 +44,6 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.LootTables;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -131,7 +131,7 @@ public class ResourceJobLoader {
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
                 // FIXME: Make "initial request" a function that provides recipe manager as input
-                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), item.getItem()));
+                Function<ServerLevel, Ingredient> initReq = sl -> Ingredient.of(cooked(sl.getRecipeManager(), sl, item.getItem()));
                 WorkSpecialRules special = loadRulesV2(obj);
                 if (!obj.get("block").isJsonObject()) {
                     throw new IllegalArgumentException("block must be an object");

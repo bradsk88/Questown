@@ -21,7 +21,6 @@ import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -30,9 +29,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -143,10 +140,7 @@ public class RealtimeWorldInteraction extends
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toQTItemStack();
-            is.hurtAndBreak(
-                    1, mcExtra.entity(), (x) -> {
-                    }
-            );
+            is.hurtAndBreak(1, mcExtra.entity(), e -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
         }

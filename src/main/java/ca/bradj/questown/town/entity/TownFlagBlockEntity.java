@@ -167,6 +167,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
+
+
     private static Map<String, InitPair> initPairs;
 
     public static void staticInitialize() {

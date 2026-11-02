@@ -23,12 +23,12 @@ public record UIJob(
 ) {
     public static UIJob fromNetwork(FriendlyByteBuf buf) {
         JobID jobId = NetworkCompat.fromNetworkJobID(buf);
-        List<UUID> vs = buf.readList(FriendlyByteBuf::readUUID);
-        List<String> in = buf.readList(FriendlyByteBuf::readUtf);
-        List<String> tl = buf.readList(FriendlyByteBuf::readUtf);
+        List<UUID> vs = buf.readList(b -> b.readUUID());
+        List<String> in = buf.readList(b -> b.readUtf());
+        List<String> tl = buf.readList(b -> b.readUtf());
         ResourceLocation rrName = buf.readResourceLocation();
-        List<String> rr = buf.readList(FriendlyByteBuf::readUtf);
-        List<ItemStack> result = buf.readList(FriendlyByteBuf::readItem);
+        List<String> rr = buf.readList(b -> b.readUtf());
+        List<ItemStack> result = buf.readList(b -> ca.bradj.questown.mc.Compat.readItem(b));
         return fromBufferData(jobId, in, tl, vs, rrName, rr, result);
     }
 
@@ -41,12 +41,12 @@ public record UIJob(
         List<String> toolIDs = uiJob.tools().stream().map(Ingredients::toString).toList();
         List<String> roomRecipe = uiJob.roomRecipe().stream().map(Ingredients::toString).toList();
 
-        buf.writeCollection(uiJob.villagersWhoCanDoJob(), FriendlyByteBuf::writeUUID);
-        buf.writeCollection(ingIDs, FriendlyByteBuf::writeUtf);
-        buf.writeCollection(toolIDs, FriendlyByteBuf::writeUtf);
+        buf.writeCollection(uiJob.villagersWhoCanDoJob(), (b, v) -> b.writeUUID(v));
+        buf.writeCollection(ingIDs, (b, v) -> b.writeUtf(v));
+        buf.writeCollection(toolIDs, (b, v) -> b.writeUtf(v));
         buf.writeUtf(uiJob.roomNameTranslationKey().toString());
-        buf.writeCollection(roomRecipe, FriendlyByteBuf::writeUtf);
-        buf.writeCollection(uiJob.result(), FriendlyByteBuf::writeItem);
+        buf.writeCollection(roomRecipe, (b, v) -> b.writeUtf(v));
+        buf.writeCollection(uiJob.result(), (b, v) -> ca.bradj.questown.mc.Compat.writeItem(b, v));
     }
 
     private static @NotNull UIJob fromBufferData(

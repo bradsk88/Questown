@@ -4,7 +4,6 @@ import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -33,7 +32,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -164,7 +162,7 @@ public class TimeWarpWorldInteraction extends
             if (!itemStack.isDamageableItem()) {
                 return tuwn;
             }
-            itemStack.hurt(1, mcTownState.level.getRandom(), null);
+            itemStack.setDamageValue(itemStack.getDamageValue() + 1);
             if (itemStack.getDamageValue() >= itemStack.getMaxDamage()) {
                 itemStack = ItemStack.EMPTY;
             }

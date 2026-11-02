@@ -1,6 +1,5 @@
 package ca.bradj.questown.town.rewards;
 
-import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
@@ -9,7 +8,6 @@ import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;

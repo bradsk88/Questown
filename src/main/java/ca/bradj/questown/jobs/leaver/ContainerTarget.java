@@ -65,7 +65,6 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
 
         @Override
         public void clearContent() {
-
         }
     };
 

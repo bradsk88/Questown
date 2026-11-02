@@ -315,10 +315,8 @@ class TutorialPhaseGateTest {
     void whenTwoJobChangesDoneButNotComplete_noAdvance() {
         TownQuests quests = questsAtPhase2_5();
 
-        JobID farmerJob = new JobID("farmer", "wheat");
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(farmerJob)
                 .build();
         quests.addTutorialBatches(view);
 

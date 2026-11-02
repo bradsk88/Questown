@@ -17,7 +17,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK_SOURCE> implements WorkStatusHandle<POS, ITEM> {
-
     @FunctionalInterface
     public interface DebugLogger {
         void log(String message, Object... params);

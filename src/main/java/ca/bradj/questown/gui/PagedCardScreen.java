@@ -2,24 +2,19 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
-import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import vazkii.patchouli.api.TriPredicate;
+import ca.bradj.questown.loader.TriPredicate;
 
 import java.util.Collection;
 import java.util.List;
@@ -39,7 +34,7 @@ public final class PagedCardScreen<D> {
 
     public interface CardRenderer<D> {
         List<Component> renderAndReturnTooltip(
-                PoseStack poseStack,
+                RenderContext ctx,
                 Card<D> card,
                 Coordinate mousePosition
         );
@@ -169,32 +164,30 @@ public final class PagedCardScreen<D> {
     }
 
     protected void renderBg(
-            PoseStack stack,
+            RenderContext ctx,
             float v,
             int i,
             int i1
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
         int bgY = (this.height.get() - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
     public @Nullable List<Component> afterRender(
-            PoseStack poseStack,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
             List<D> cardsData,
             boolean drawCardBg
     ) {
-        renderButtons(poseStack, font, mouseX, mouseY, partialTicks, cardsData);
-        return renderCards(poseStack, mouseX, mouseY, drawCardBg);
+        renderButtons(ctx, mouseX, mouseY, partialTicks, cardsData);
+        return renderCards(ctx, mouseX, mouseY, drawCardBg);
     }
 
     public void renderButtons(
-            PoseStack poseStack,
-            Font font,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks,
@@ -213,7 +206,7 @@ public final class PagedCardScreen<D> {
     }
 
     private @Nullable List<Component> renderCards(
-            PoseStack poseStack,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             boolean drawCardBg
