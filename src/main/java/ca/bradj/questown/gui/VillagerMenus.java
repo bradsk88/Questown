@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.VillagerStatsData;
 import net.minecraft.core.BlockPos;
@@ -16,17 +15,12 @@ import java.util.List;
 import java.util.UUID;
 
 public class VillagerMenus {
-    final VisitorMobEntity entity;
     InventoryAndStatusMenu invMenu;
     VillagerStatsMenu statsMenu;
     VillagerQuestsContainer questsMenu;
     VillagerEconomicsMenu econMenu;
     VillagerBlockofProgressMenu bopMenu;
     JobChangeConfirmMenu changeMenu;
-
-    public VillagerMenus(VisitorMobEntity e) {
-        this.entity = e;
-    }
 
     public static VillagerMenus fromNetwork(
             int windowId,

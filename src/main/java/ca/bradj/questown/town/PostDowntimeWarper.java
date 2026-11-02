@@ -9,7 +9,6 @@ import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;

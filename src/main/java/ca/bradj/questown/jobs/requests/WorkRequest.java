@@ -1,9 +1,9 @@
 package ca.bradj.questown.jobs.requests;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
-import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -11,7 +11,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.Objects;

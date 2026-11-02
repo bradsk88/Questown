@@ -2,11 +2,8 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Config;
-import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.jobs.Signals;
-import ca.bradj.questown.town.quests.Completable;
-import ca.bradj.questown.town.quests.Reward;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,7 +13,6 @@ import java.util.Stack;
 import java.util.function.Supplier;
 
 public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
-    private int ticksWithoutQuests;
     private boolean stopped;
     protected boolean everScanned = false;
     boolean debugMode;
@@ -197,28 +193,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             TICK_DATA data,
             boolean playersNearbyOnPrevTick
     );
-
-    private void ensureCompletableQuestsExist(
-            TICK_DATA data,
-            Collection<VILLAGERS> villagers
-    ) {
-        // We use a loop to ensure the more expensive "quests" check is only
-        // run if there is at least one villager in the town.
-        for (VILLAGERS villager : villagers) {
-            if (!isMissingCompletableQuests(data)) {
-                ticksWithoutQuests = 0;
-                break;
-            }
-            boolean allowingForBuffer = ticksWithoutQuests < 500;
-            if (allowingForBuffer) {
-                ticksWithoutQuests++;
-                break;
-            }
-            addQuests(data, villager);
-            ticksWithoutQuests = 0;
-            break; // We only want to add a quest batch for the first villager
-        }
-    }
 
     private void onMorningDetected(long newTime) {
         this.mornings.push(newTime);

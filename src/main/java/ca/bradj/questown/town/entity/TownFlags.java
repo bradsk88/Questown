@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class TownFlags {
 
     private static final Map<UUID, TownFlagBlockEntity> flags = new HashMap<>();

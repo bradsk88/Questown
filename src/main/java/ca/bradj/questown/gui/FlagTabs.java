@@ -3,6 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -59,7 +60,7 @@ public class FlagTabs extends Tabs implements SubUI {
             b.add(new Tab(
                     (rc, x, y) -> {
                         int txBefore = RenderSystem.getShaderTexture(0);
-                        Util.blitTab(rc.stack(), x, y, 0);
+                        Util.blitTab(rc.gui(), x, y, 0);
                         RenderSystem.setShaderTexture(0, txBefore);
                     },
                     setScreen(econScreenFn),

@@ -175,7 +175,6 @@ public class QuestBatches<
         bs.forEach(v -> {
             final VillagerUUID owner = coerceUUID(villagers, v.getUUID());
             BATCH e = this.emptyBatch(v.getBatchUUID(), owner, v.reward);
-            ImmutableList.Builder<QUEST> eqb = ImmutableList.builder();
             v.getAll().forEach(q -> {
                 switch (q.getType()) {
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());

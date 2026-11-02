@@ -1,13 +1,17 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.mc.Compat;
+
 import ca.bradj.questown.blocks.FalseDoorBlock;
 import ca.bradj.questown.blocks.FalseWallBlock;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.core.space.Position;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AbstractGlassBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.IronBarsBlock;
 import net.minecraft.world.level.block.StairBlock;
@@ -73,7 +77,8 @@ public class WallDetection {
             Level level,
             BlockState blockState
     ) {
-        if (blockState.getBlock() instanceof AbstractGlassBlock || blockState.getBlock() instanceof IronBarsBlock) {
+        if (blockState.is(C_GLASS_BLOCKS) || blockState.is(C_GLASS_PANES)
+                || blockState.getBlock() instanceof IronBarsBlock) {
             return true;
         }
         if (blockState.getBlock() instanceof StairBlock) {

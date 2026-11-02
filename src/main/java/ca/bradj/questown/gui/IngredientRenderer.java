@@ -1,6 +1,6 @@
 package ca.bradj.questown.gui;
 
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 

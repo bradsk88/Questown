@@ -189,11 +189,6 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public void showMultiStatusUI(ServerPlayer sender) {
-                villagerHandle.uis.showMultiStatusUI(sender, villagerHandle.delegate.entities());
-            }
-
-            @Override
             public void showItemJobsUI(
                     ServerPlayer sender,
                     Ingredient itemToShowJobsFor

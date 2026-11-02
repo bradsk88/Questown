@@ -3,9 +3,7 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
-import net.minecraft.client.gui.GuiComponent;
 
 import java.util.function.Consumer;
 

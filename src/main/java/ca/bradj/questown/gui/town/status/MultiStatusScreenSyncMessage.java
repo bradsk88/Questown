@@ -29,10 +29,10 @@ public record MultiStatusScreenSyncMessage(
             FriendlyByteBuf buffer
     ) {
         buffer.writeMap(
-                msg.data.villagerStatuses(), FriendlyByteBuf::writeUUID, StatusPacket::toNetwork
+                msg.data.villagerStatuses(), (b, k) -> b.writeUUID(k), StatusPacket::toNetwork
         );
         buffer.writeMap(
-                msg.data.items(), FriendlyByteBuf::writeUUID, (b, v) ->
+                msg.data.items(), (b, k) -> b.writeUUID(k), (b, v) ->
                         b.writeCollection(v, (bb, item) -> bb.writeResourceLocation(Compat.getItemId(item)))
         );
         buffer.writeBoolean(msg.data.villagerArrivingInMorning());
@@ -41,12 +41,12 @@ public record MultiStatusScreenSyncMessage(
     public static MultiStatusScreenSyncMessage decode(FriendlyByteBuf buffer) {
         HashMap<UUID, StatusPacket> data = buffer.readMap(
                 HashMap::new,
-                FriendlyByteBuf::readUUID,
+                b -> b.readUUID(),
                 StatusPacket::fromNetwork
         );
         HashMap<UUID, ImmutableList<Item>> data2 = buffer.readMap(
                 HashMap::new,
-                FriendlyByteBuf::readUUID,
+                b -> b.readUUID(),
                 MultiStatusScreenSyncMessage::readItemsFromBuffer
         );
         boolean arrivingInMorning = buffer.readBoolean();
@@ -59,7 +59,7 @@ public record MultiStatusScreenSyncMessage(
         List<Item> dat = b.readList(bb -> {
             ResourceLocation resourceLocation = b.readResourceLocation();
             try {
-                return ForgeRegistries.ITEMS.getValue(resourceLocation);
+                return Loader.itemFromId(resourceLocation);
             } catch (Exception e) {
                 QT.GUI_LOGGER.error("Failed to get item {}", resourceLocation, e);
             }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.VillagerUUID;
@@ -23,8 +24,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.IForgeRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -135,7 +134,6 @@ public class UIQuest implements Comparable<UIQuest> {
             Quest<ResourceLocation, MCRoom> v,
             ImmutableMap<ResourceLocation, RoomRecipe> rMap
     ) {
-        IForgeRegistry<Item> reg = ForgeRegistries.ITEMS;
         return switch (v.getType()) {
             case ROOM -> getRoomIngredients(v, rMap);
             case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));

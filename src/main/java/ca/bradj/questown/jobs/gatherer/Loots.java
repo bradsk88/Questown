@@ -69,16 +69,15 @@ public class Loots {
     ) {
         String id = String.format("%s/%s/%s", lt.prefix().value(), biome.getNamespace(), biome.getPath());
         ResourceLocation rl = new ResourceLocation(Questown.MODID, id);
-        LootTables tables = level.getServer().getLootTables();
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, lt.fallback().path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             QT.JOB_LOGGER.warn("No loot table found for {}. Using fallback {}", id, lt.fallback());
             rl = new ResourceLocation(Questown.MODID, NO_TOOL_LOOT_TABLE_DEFAULT.path());
         }
-        if (!tables.getIds().contains(rl)) {
+        if (!Compat.hasLootTable(level, rl)) {
             throw new IllegalStateException(
                     String.format(
                             "No loot table found for %s or fallback %s",
@@ -86,7 +85,7 @@ public class Loots {
                     )
             );
         }
-        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
+        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, rl);
     }
 
     @NotNull
@@ -95,17 +94,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome, ResourceLocation rl
     ) {
-        LootTables tables = level.getServer().getLootTables();
-        return getFromKnownTable(level, minAmount, maxAmount, lt, biome, tables, rl);
-    }
-
-    @NotNull
-    private static List<MCHeldItem> getFromKnownTable(
-            ServerLevel level, int minAmount, int maxAmount,
-            GathererTools.LootTableParameters lt,
-            ResourceLocation biome, LootTables tables, ResourceLocation rl
-    ) {
-        LootTable lootTable = tables.get(rl);
+        LootTable lootTable = Compat.lootTable(level, rl);
         List<MCTownItem> loot = Loots.loadFromTables(level, lootTable, minAmount, maxAmount);
         return loot.stream().map(v -> MCHeldItem.fromLootTable(v, lt.prefix(), biome)).toList();
     }

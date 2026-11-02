@@ -2,11 +2,9 @@ package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.jobs.JobID;
-import ca.bradj.questown.town.quests.MCQuestBatches;
 import ca.bradj.questown.town.quests.MCReward;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 

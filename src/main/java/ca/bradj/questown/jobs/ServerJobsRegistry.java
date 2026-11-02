@@ -598,14 +598,7 @@ public class ServerJobsRegistry {
             Signals.DayTime currentTick
     ) {
         Work w = getWorkSupplier(p).get();
-        long jobDuration = w.jobFunc.apply(villagerID).getTotalDuration();
-        long finalTick = currentTick.dayTime() + jobDuration;
-        Signals nextSegment = Signals.fromDayTime(new Signals.DayTime(finalTick));
-        Signals currentSegment = Signals.fromDayTime(currentTick);
-        if (nextSegment.compareTo(currentSegment) < 0) {
-            return false;
-        }
-        return ImmutableList.of(Signals.MORNING, Signals.NOON).contains(nextSegment);
+        return Signals.fitsInWorkday(currentTick, w.jobFunc.apply(villagerID).getTotalDuration());
     }
 
     public static void staticInitialize(ImmutableMap<JobID, Work> js) {

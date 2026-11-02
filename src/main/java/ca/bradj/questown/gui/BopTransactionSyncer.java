@@ -1,6 +1,5 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.blocks.BlockOfProgress;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.Slot;
