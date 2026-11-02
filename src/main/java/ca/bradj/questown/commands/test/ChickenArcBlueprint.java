@@ -6,38 +6,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Declarative shape of one chicken-arc scenario for the headless
- * {@code ChickenArcTestExecutor}.
+ * One helper-chicken autotest scenario: the arena setup, the scripted player actions, and what
+ * must be true at the end.
  *
- * <p>Carries the arena setup knobs (rotation, flag-placement mode, arena size),
- * an ordered list of scripted player actions, the expectation bundle, and
- * post-action settle / warp controls. No job-specific fields — the existing
- * {@code TestBlueprint} handles jobs; this record is deliberately parallel
- * rather than an overload so the two tracks keep distinct contracts.
- *
- * @param name                  stable scenario name used in the log prefix
- * @param category              always {@code "chicken"}; mirrors
- *                              {@code TestBlueprintRegistry.getTestsByCategory} filter shape
- * @param startRotation         rotation written to {@code chicken-structure-rotation}
- *                              (happy path) or the rotation whose anchor the forfeit
- *                              scenario builds toward (detector path)
- * @param placeFlagViaCommand   when {@code true}, the executor skips its default
- *                              {@code PLACE_FLAG} phase and relies on a scripted
- *                              {@code RunCommand("/qt flag place_above ...")} action
- * @param forceRotationDetected when {@code true}, the executor writes
- *                              {@code chicken-rotation-detected=true} + rotation bits
- *                              on the flag BE before the spawn controller ticks; when
- *                              {@code false}, the real
- *                              {@code HelperChickenRotationDetector.tick()} runs to
- *                              completion
- * @param scriptedActions       ordered player actions; dispatched one at a time with
- *                              each action's {@code postActionWaitTicks} between
- * @param expectation           assertion bundle consumed by the checker
- * @param postActionSettleTicks final settle after the last scripted action, before
- *                              {@code WARP} runs
- * @param warpAmount            ticks to fast-forward via {@code flag.warpTime}; 0 skips
- * @param halfWidthOverride     optional per-scenario arena half-width override; when
- *                              null, the executor defaults to 10
+ * @param placeFlagViaCommand   the scenario places the flag with a scripted command
+ * @param forceRotationDetected skip the real rotation detection and write the rotation directly
+ * @param warpAmount            ticks to warp at the end; 0 for none
+ * @param halfWidthOverride     arena half-width; null for the default of 10
  */
 public record ChickenArcBlueprint(
         String name,

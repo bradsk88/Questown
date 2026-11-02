@@ -10,17 +10,7 @@ import net.minecraft.core.BlockPos;
 
 import java.util.List;
 
-/**
- * The "some of your town is too far away to come with you" confirmation shown when a relocation deed
- * is placed far from part of the town (ADR-0009, #199 Phase 4). Three choices, mirroring the
- * server-side {@link ca.bradj.questown.town.entity.TownRelocation.FarFixturePolicy}:
- * <ul>
- *   <li><b>Bring it anyway</b> — carry every fixture ({@code BRING_ALL}).</li>
- *   <li><b>Leave it behind</b> — drop the out-of-range fixtures ({@code LEAVE_BEHIND}).</li>
- *   <li><b>Cancel</b> — abort; the deed is never consumed (no packet, just close).</li>
- * </ul>
- * Bring/leave send a {@link RelocationChoiceMessage} that finishes the placement on the server.
- */
+/** Confirms placing a relocation deed when some of the town would be left too far away: bring it anyway, leave it behind, or cancel. */
 public class RelocationConfirmScreen extends CompatScreen {
 
     private static final int backgroundWidth = 176;

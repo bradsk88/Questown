@@ -66,7 +66,6 @@ public final class TestLoader implements LoaderApi {
 
     @Override
     public void registerConfig(Loader.ConfigType type, ConfigSpec spec, String filename) {
-        // Tests read defaults directly; nothing to save.
     }
 
     // ---- Registries -------------------------------------------------------

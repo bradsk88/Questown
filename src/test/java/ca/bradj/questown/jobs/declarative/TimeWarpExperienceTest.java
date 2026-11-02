@@ -22,15 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Warp paid no XP (dev, 2026-10-24: fix it): realtime grants XP from a completion listener on the
- * townie's own job, and the warp's world interactions are fresh objects with no listener. A warp
- * completion now records the cycle's XP on the warp state ({@code onJobCompleted}), the record
- * survives the state copies, and the settle point consumes it once ({@code TownFlagState.warp}).
- * The call site (one line in {@code AbstractWorldInteraction.tryExtractProduct}, beside the
- * completion listeners) and the settle are checked in a warp autotest's log
- * ({@code [warp] experience granted}).
- */
+/** A warp records each completed cycle's XP on its state, keeps it through copies, and grants it once. */
 class TimeWarpExperienceTest {
 
     private static final UUID TOWNIE = UUID.randomUUID();

@@ -117,7 +117,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
     private final TripVisibility tripVisibility = new TripVisibility();
-    // Built in registerGoals: Mob's constructor calls it before this class's field initializers run.
+    // Built in registerGoals, which runs before field initializers.
     private @Nullable LingeringDoorGoal doorGoal;
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
@@ -137,19 +137,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
     );
-    /**
-     * The townie's current unmet need, as a {@link TownieNeed} name, or empty for "nothing wrong".
-     * Synched because the bubble that renders it is client-side; a String is used for the same
-     * reason the helper chicken's bubble fields are — it serializes with no custom serializer.
-     */
+    /** The villager's need as a {@link TownieNeed} name, or empty. Synced for the bubble. */
     private static final EntityDataAccessor<String> need = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
-    /**
-     * When {@link #need} is {@link TownieNeed#UNMET_ITEM}, the missing ingredient as its
-     * {@link ca.bradj.questown.gui.Ingredients#toString} form, so a client bubble can name and
-     * show it (the Inventory screen's "needs" row pattern). Empty for any other need.
-     */
+    /** For {@link TownieNeed#UNMET_ITEM}, the missing ingredient's string form; empty otherwise. */
     private static final EntityDataAccessor<String> unmetItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.STRING
     );
@@ -287,7 +279,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
-        // DEV-DIAG: LOOTTRACE grant-site trace, 2026-10-04 — pin the hunted-meat grant path; grep 'DEV-DIAG' to enumerate; keep/remove per handoff
         QT.VILLAGER_LOGGER.info("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
                 v == null ? "null" : v.get().toString(),
                 inventoryFullStrategy,
@@ -395,11 +386,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 id -> {
                     Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
                     int earned = ServerJobsRegistry.getExperienceEarned(job.getId(), job.getExperienceEarned());
-                    // Fires once per realtime job-completion (throttled by the world-interaction
-                    // interval, guarded by workLeft == 0, state reset after extraction) - not
-                    // per-tick. Shows whether the completion listener fires and the amount, to
-                    // split listener-not-firing vs getExperienceEarned==0 vs frozen-latch vs
-                    // starvation. See the no-experience problem (Option B).
                     QT.VILLAGER_LOGGER.info(
                             "[Experience] +{} from {} for {}",
                             earned, job.getId().toNiceString(), uuid
@@ -438,15 +424,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         builder.define(unmetItem, "");
     }
 
-    /**
-     * Records that this townie needs the player's help with something, so a bubble can say so.
-     * Silence means working (ADR-0011), so this is set only when the townie has actually given up.
-     */
-    /**
-     * NO_STORAGE consumer (2026-10-21 dev request): a townie stopped for lack of storage space
-     * bubbles at once. It takes precedence over UNMET_ITEM (full storage is what blocks it right
-     * now; TownPossibleWork does not overwrite it) and clears only its own need.
-     */
+    /** A villager stopped for lack of storage gets the bubble at once. It wins over a missing item, and clears only itself. */
     private void syncStorageNeed(IStatus<?> jobStatus) {
         boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
         if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM || getNeed() == TownieNeed.MISSING_ROOM)) {
@@ -456,11 +434,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         }
     }
 
-    /**
-     * An unmet-item or missing-room need set while the villager was seeking work is dropped the tick
-     * it starts working (at the job change and on every tick), not at the next recompute pass (dev ruling 2026-10-31: a cook working
-     * through beef shows no bubble). The pass re-applies it once the villager struggles again.
-     */
+    /** A missing-item or missing-room need clears the moment the villager starts working. */
     private void clearNeedWhileWorking(JobID jobId, IStatus<?> jobStatus) {
         TownieNeed n = getNeed();
         if (n != TownieNeed.UNMET_ITEM && n != TownieNeed.MISSING_ROOM) {
@@ -489,7 +463,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return TownieNeed.fromName(this.entityData.get(need));
     }
 
-    /** Server-only: the item the {@code UNMET_ITEM} need is about, cleared by {@link #setNeed}. */
+    /** Server only: the item behind the {@code UNMET_ITEM} need. */
     public void setUnmetItem(String itemKey) {
         if (level().isClientSide()) {
             return;
@@ -497,11 +471,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
     }
 
-    /**
-     * The item this townie is blocked on (its {@link TownieNeed#UNMET_ITEM} key), or null for any
-     * other need or when the key does not resolve. Read by the need bubble, the inventory needs
-     * row and the status tooltip.
-     */
+    /** The item this villager is blocked on, or null. */
     public @Nullable Ingredient getUnmetItemIngredient() {
         if (getNeed() != TownieNeed.UNMET_ITEM) {
             return null;
@@ -521,7 +491,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return this.entityData.get(unmetItem);
     }
 
-    /** The room a CANT_REACH need could not get into, or null (the target was not in a room). */
+    /** The room a can't-reach need couldn't get into, or null. */
     public @Nullable ResourceLocation getUnreachableRoom() {
         if (getNeed() != TownieNeed.CANT_REACH || getUnmetItem().isEmpty()) {
             return null;
@@ -529,7 +499,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return ResourceLocation.tryParse(getUnmetItem());
     }
 
-    /** The room a MISSING_ROOM need asks for, or null. */
     public @Nullable ResourceLocation getMissingRoom() {
         if (getNeed() != TownieNeed.MISSING_ROOM || getUnmetItem().isEmpty()) {
             return null;
@@ -537,9 +506,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return ResourceLocation.tryParse(getUnmetItem());
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
 
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
@@ -688,9 +654,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
         }
         if (vis != this.entityData.get(visible)) {
-            // Sparkles where the villager leaves town (or comes back), instead of silently popping
-            // out of the world (r17 #4, dev 2026-10-25: "some kind of poof or sparkle"). Not POOF:
-            // it "looks like a death animation" (r22, dev 2026-10-26).
+            // Sparkles where the villager leaves or comes back, rather than vanishing.
             Vec3 sparkle = TripVisibility.sparkleAt(vis, position(), j.getWorkSpotBlock());
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sparkle.x, sparkle.y + 0.8, sparkle.z, 12, 0.4, 0.6, 0.4, 0.0);
             QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({}), sparkles at {}", UtilClean.truncateMiddle(uuid),
@@ -870,13 +834,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
-    /**
-     * A chunk unload stops tracking the entity without calling {@link #remove} (only KILLED
-     * unregistered), so the town kept the unloaded copy and the reloaded entity registered a
-     * second time - counted twice (2026-10-17, village/day1 reload step). Unregister on unload
-     * (the loader's tracking-end hook, Forge and NeoForge alike); the entity re-registers when
-     * it loads.
-     */
+    /** Unregisters from the town on chunk unload; it registers again when it loads. */
     @Override
     public void onRemovedFromWorld() {
         super.onRemovedFromWorld();
@@ -1004,11 +962,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
-        // 1.20.5+: ItemStack.save throws on EMPTY (1.19.2 wrote a raw air tag).
-        // Keep the per-slot size by writing an empty compound for empty slots;
-        // the load side parses those back through MCHeldItem.fromMCItemStack (which
-        // maps an EMPTY stack to Air()). A saved AIR stack does NOT work either -
-        // new ItemStack(Items.AIR) is itself empty, so save() throws the same way.
+        // Empty slots are saved as an empty compound, keeping the slot count.
         Jobs.getItems(job.get())
             .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
                 : ca.bradj.questown.mc.Compat.saveItem(level(), v)));
@@ -1023,9 +977,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 .stream()
                 .map(v -> {
                     CompoundTag tag = (CompoundTag) v;
-                    // Empty compound = a saved empty slot (see addAdditionalSaveData).
-                    // Parsing it would make vanilla log "Tried to load invalid item"
-                    // for every expected-empty slot on every entity load.
+                    // An empty compound is an empty slot.
                     ItemStack stack = tag.isEmpty()
                             ? net.minecraft.world.item.ItemStack.EMPTY
                             : ca.bradj.questown.mc.Compat.loadItem(level(), tag);
@@ -1063,7 +1015,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return getEntityData().get(lastHeldItem);
     }
 
-    /** Hidden by its job (away on a trip); synced, so the client can read it. */
+    /** Hidden by its job, away on a trip. */
     public boolean isAwayOnTrip() {
         return !this.entityData.get(visible);
     }
@@ -1124,10 +1076,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return new VillagerPathNavigation(this, p_21480_);
     }
 
-    // No door malus override: vanilla's walk evaluator treats any NEGATIVE malus as
-    // impassable (WalkNodeEvaluator `>= 0.0F` gates), so the 2026-10-15 "door preference"
-    // discount (DOOR_OPEN 0.0 - 0.5) made OPEN doors unwalkable and sent villagers over
-    // walls and onto beds/chests (2026-10-17 playtest; see mobs/visitor/COMPLEX.md).
+    // No door malus: vanilla treats a negative malus as impassable.
 
     @Override
     protected void registerGoals() {
@@ -1247,8 +1196,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this.level().setBlock(bedPos, bs.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.FALSE), 3);
             facing = this.getDirection();
         } else if (bs.getBlock() instanceof BedBlock) {
-            // A vanilla bed skipped the stand-up entirely: the townie woke standing on the bed top
-            // and, in a room 2 blocks tall inside, wedged under the ceiling for good (r12 #6).
             this.level().setBlock(bedPos, bs.setValue(BedBlock.OCCUPIED, Boolean.FALSE), 3);
             facing = bs.getValue(BedBlock.FACING);
         } else {
@@ -1264,7 +1211,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private Vec3 doorwayOrAboveBed(BlockPos bedPos) {
-        // No free floor beside the bed: stand in the room's doorway (dev, 2026-10-23).
+        // No free floor beside the bed: stand in the room's doorway.
         if (town != null) {
             Optional<BlockPos> door = town.getRoomHandle().findDoorOfRoomContaining(bedPos);
             if (door.isPresent()) {
@@ -1454,7 +1401,6 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getStatus();
     }
 
-    /** The current step's work done, 0..1, or -1 for no work bar (see DeclarativeJob#getWorkProgress). */
     public float getWorkProgress() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
         if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
@@ -1463,11 +1409,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return -1;
     }
 
-    /**
-     * The job's current work-site progress (processing state, work/time left),
-     * for the inspect command's eyes-level readout. Null when the job is not a
-     * declarative job or has no current work spot.
-     */
+    /** The job's work-site progress, for the inspect command; null when there is none. */
     public @Nullable String getWorkProgressDebug() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
         if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
@@ -1476,11 +1418,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return null;
     }
 
-    /**
-     * The timed leaver trip this townie is currently on (absolute server
-     * return tick + total ticks), or null when the townie is not away on a
-     * timed trip. Delegates to the declarative job that owns the timer.
-     */
+    /** The trip this villager is on, or null. */
     public @Nullable LeaverReturn getLeaverReturn() {
         if (town == null) {
             return null;
@@ -1566,12 +1504,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return false;
         }
 
-        // The town's campfire is furniture: vanilla's CampfireBlock.entityInside burns any
-        // LivingEntity inside a lit campfire block to death in about a second (1 fire damage
-        // per tick, no armor, no burn time). Pathfinding already hard-blocks lit campfires for
-        // townies (VillagerPathNavigation), so this covers the routes it cannot: a campfire
-        // placed under a standing townie, or a stuck-unstick shove into the block. Fire from
-        // any other source (lava, real flames) still hurts.
+        // A lit campfire would burn a villager inside it; other fire still hurts.
         if ((p_21016_.is(DamageTypes.IN_FIRE) || p_21016_.is(DamageTypes.ON_FIRE)) && !level().isClientSide() && inOrOnLitCampfire()) {
             return false;
         }
@@ -1579,8 +1512,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return super.hurt(p_21016_, p_21017_);
     }
 
-    /** The feet block or the block below the feet is a lit campfire: the two ways a townie's
-     *  body can end up inside the campfire block's space. */
+    /** Whether the villager's feet are in or on a lit campfire. */
     private boolean inOrOnLitCampfire() {
         BlockPos feet = blockPosition();
         return CampfireBlock.isLitCampfire(level().getBlockState(feet))
@@ -1628,10 +1560,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getId();
     }
 
-    /**
-     * Whether the current job lets the hungry->dining short-circuit snap this townie straight
-     * to a dining work. Server-only (the current job is a client-throwing stub on the client).
-     */
+    /** Whether a hungry villager may switch straight to eating. Server only. */
     public boolean canInstantlySwitchToEating() {
         return job.get().canInstantlySwitchToEating();
     }
@@ -1644,7 +1573,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return town;
     }
 
-    /** Outside the town's footprint (see {@link StrandedRescue}); false while hidden on a trip. */
+    /** Outside the town; false while away on a trip. */
     public boolean isStrandedOutsideTown() {
         if (town == null || !entityData.get(visible)) {
             return false;
@@ -1652,11 +1581,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return StrandedRescue.isOutsideTown(blockPosition(), town.getTownAnchors());
     }
 
-    /**
-     * Poof a stranded villager back beside the town gate (r20: one fell off a cliff into water and
-     * could not get home). Visible on purpose, a puff and a sound at both ends, so the player reads
-     * it as a rescue rather than a glitch.
-     */
+    /** Sends a stranded villager back to the gate, with a puff and a sound. */
     public void rescueToGate(String why) {
         if (!(level() instanceof ServerLevel sl)) {
             return;
@@ -1671,11 +1596,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         QT.VILLAGER_LOGGER.info("[rescue] {} poofed from {} to the gate at {} ({})", uuid, from, to, why);
     }
 
-    /**
-     * What the navigator is working from right now, for `_qtdev nav`: the brain's walk target,
-     * the navigation path's end and whether it reaches, and the can't-reach timestamp. Reads the
-     * same objects the nav sink reads, at the moment of the call.
-     */
+    /** Dev-only: the villager's walk target, path end and can't-reach time, for {@code _qtdev nav}. */
     public String describeNav() {
         StringBuilder b = new StringBuilder();
         b.append("pos=").append(blockPosition()).append(" status=").append(getStatusForServer());

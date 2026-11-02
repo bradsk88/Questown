@@ -14,28 +14,14 @@ import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
-/**
- * In 1.19.2 the HUD (hearts, hunger, XP, hotbar, chat) was drawn after the current
- * screen, so Questown's menus showed it on top of the menu background. In 1.20.6
- * GameRenderer draws the HUD before the screen, so an opaque screen background hides
- * it. This handler restores the 1.19.2 layering for the screen families that match
- * the 1.19.2 golden captures by re-rendering the HUD after the screen.
- *
- * <p>The re-render draws the full {@link net.minecraft.client.gui.Gui} layer stack, which
- * in 1.20.6 includes the crosshair - and the crosshair would otherwise pop back on top of
- * the menu (the day-1 playtest's "crosshair renders above menus"). The {@link
- * #onRenderGuiLayerPre} hook drops just the crosshair layer during the re-render pass so
- * the HUD is restored but the crosshair stays suppressed.
- */
+/** Draws the HUD after Questown's menus, as 1.19.2 did, without the crosshair. */
 @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class QuestownHudEvents {
 
     private QuestownHudEvents() {
     }
 
-    // Set only while the post-screen HUD re-render is in flight (client render thread,
-    // single-threaded), so the layer hook can tell a re-render pass from the normal
-    // pre-screen HUD draw (where the crosshair should render as usual and get covered).
+    // True only during the post-screen HUD redraw.
     private static boolean reRenderingHud = false;
 
     @SubscribeEvent
@@ -55,9 +41,7 @@ public final class QuestownHudEvents {
         }
     }
 
-    // During the post-screen HUD re-render, skip the crosshair layer so it doesn't draw on
-    // top of the menu. In the normal pre-screen pass reRenderingHud is false, so the
-    // crosshair renders as vanilla would (and the opaque screen background covers it).
+    // No crosshair during the redraw.
     @SubscribeEvent
     public static void onRenderGuiLayerPre(RenderGuiLayerEvent.Pre event) {
         if (reRenderingHud && VanillaGuiLayers.CROSSHAIR.equals(event.getName())) {

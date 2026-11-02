@@ -6,12 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
-// Dev-only: the player-facing claim is the economics tab's food card
-// (TownFlagBlockEntity.claimBonusFood, ClaimFreeFoodMessage). This command is
-// the headless version for held runs: it deposits the same 20 carrots into a
-// registered container and flips the once-only bonus-food bit, so the
-// chicken-arc free-food beat can advance without a client. Enforces the same
-// "only once" rule as claimBonusFood.
+// Dev-only: claim the economics tab's free food without a client.
 public class FreeFoodCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(
@@ -36,8 +31,7 @@ public class FreeFoodCommand {
                 QT.FLAG_LOGGER.warn("[free_food] no registered container for flag {}", flag.getUUID());
                 return 1;
             }
-            // Only flip the once-only bit after the food is actually in a container,
-            // so a run with no registered chest does not advance the beat empty-handed.
+            // Only once the food is in a chest, so a town with no chest does not use up the claim.
             flag.markBonusFoodGiven();
             QT.FLAG_LOGGER.info("[free_food] deposited {} carrots into a registered container for flag {}",
                     deposited, flag.getUUID());

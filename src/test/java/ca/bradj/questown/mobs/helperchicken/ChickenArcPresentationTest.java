@@ -10,26 +10,9 @@ import org.junit.jupiter.api.Test;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * Logic + parity coverage for {@link ChickenArcPresentation}.
- *
- * <p><b>activePhase</b> is pure boolean logic and tested exhaustively.
- *
- * <p><b>present</b> rows for beats whose icons come from mod-registered
- * {@code ItemsInit}/{@code BlocksInit} {@code RegistryObject.get()} return
- * null outside the Forge mod-loading lifecycle, so unit tests cannot
- * fully exercise those rows. We cover the vanilla-icon beats here and
- * defer the mod-icon beats to in-game chicken-arc autotest scenarios.
- *
- * <p>The parity tests against {@link ChickenArcBubbles#forState},
- * {@link ChickenArcController#hintKey}, and
- * {@link ChickenArcController#plainTextKey} prove byte-for-byte
- * behavioural equivalence with the existing switches before the old APIs
- * are deleted in U5. They are removed in U5.
- */
+/** {@link ChickenArcPresentation}: every phase choice, and the rows for lessons with vanilla icons. */
 class ChickenArcPresentationTest {
 
-    /** Beats whose presentation rows reference only vanilla items. */
     private static final Set<ChickenBeatState> VANILLA_ONLY = EnumSet.of(
             ChickenBeatState.WAITING_FOR_WALL_BLOCK,
             ChickenBeatState.WAITING_FOR_DOOR,
@@ -46,10 +29,6 @@ class ChickenArcPresentationTest {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }
-
-    // -------------------------------------------------------------------------
-    // activePhase — pure boolean logic, exhaustively tested.
-    // -------------------------------------------------------------------------
 
     @Test
     void activePhase_useXonY_beats_pickFetchOrUseFromHasItem() {
@@ -91,9 +70,7 @@ class ChickenArcPresentationTest {
     @Test
     void activePhase_sunsetAndMap_twoPhases() {
         ChickenBeatState s = ChickenBeatState.SUNSET_AND_MAP;
-        // The chest is dropped on the earlier WAITING_FOR_CHEST beat, so this
-        // beat has no PREPARING phase: by day it waits for night, at night it
-        // goes to the campfire. chestSpawned no longer changes the phase.
+        // The sleep lesson waits for night, then goes to the campfire; the chest doesn't change it.
         Assertions.assertEquals(
                 BeatPhase.AWAITING_NIGHT,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false))
@@ -149,9 +126,7 @@ class ChickenArcPresentationTest {
 
     @Test
     void activePhase_roomBuild_isAlwaysDefault() {
-        // The room-build beat is chicken-driven, not player-driven: it never
-        // reads the player's held item, so it stays in the default phase
-        // regardless of what the player holds.
+        // The room-build lesson ignores what the player holds.
         Assertions.assertEquals(
                 BeatPhase.DEFAULT,
                 ChickenArcPresentation.activePhase(
@@ -167,22 +142,18 @@ class ChickenArcPresentationTest {
     @Test
     void activePhase_pressurePlate_threePhases() {
         ChickenBeatState s = ChickenBeatState.WAITING_FOR_PRESSURE_PLATE;
-        // No plate, no mat → go get a pressure plate.
         Assertions.assertEquals(
                 BeatPhase.NEED_TO_FETCH,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false))
         );
-        // Has a pressure plate → take it to the flag base to craft the mat.
         Assertions.assertEquals(
                 BeatPhase.READY_TO_USE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, true))
         );
-        // Has a welcome mat → place it at the gate.
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false, false))
         );
-        // Mat wins over plate (placement phase takes priority over craft phase).
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(true, false, false, true))
@@ -192,26 +163,19 @@ class ChickenArcPresentationTest {
     @Test
     void activePhase_worldlySeedsDelivery_threePhases() {
         ChickenBeatState s = ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY;
-        // No seeds, gatherer has not left → neutral gate hint (not the gate-wait).
         Assertions.assertEquals(
                 BeatPhase.AWAITING_GATHERER,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false, false))
         );
-        // No seeds, gatherer has left → gate-wait "waiting for the villager to return".
         Assertions.assertEquals(
                 BeatPhase.DEFAULT,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, false, true))
         );
-        // Worldly Seeds in a container → the chicken pecks that container.
         Assertions.assertEquals(
                 BeatPhase.READY_TO_PLACE,
                 ChickenArcPresentation.activePhase(s, new PhaseInputs(false, false, false, false, true, false))
         );
     }
-
-    // -------------------------------------------------------------------------
-    // present — terminal-state and through-walls invariants.
-    // -------------------------------------------------------------------------
 
     @Test
     void present_completeAndForfeit_hideBubbleAndSuppressKeys() {
@@ -242,12 +206,6 @@ class ChickenArcPresentationTest {
             }
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Structural invariant: placement-beat bubble does not change with hasItem
-    // (the bubble shows the target item regardless; only the hint adapts).
-    // Documented as intentional in /CONTEXT.md and ADR-0001.
-    // -------------------------------------------------------------------------
 
     @Test
     void placementBeats_bubbleIdenticalAcrossPhases() {
@@ -289,10 +247,7 @@ class ChickenArcPresentationTest {
 
     @Test
     void worldlySeedsDelivery_bubbleIsThroughWalls() {
-        // Preserved structural invariant from ChickenArcBubblesTest.
-        // present() will NPE on the WORLDLY_SEEDS RegistryObject in unit tests,
-        // so we assert at the activePhase level only — the through-walls flag
-        // is set by the row table for this beat and verified in-game.
+        // Checked at the phase level; present() needs the mod's items.
         Assertions.assertEquals(
                 BeatPhase.AWAITING_GATHERER,
                 ChickenArcPresentation.activePhase(

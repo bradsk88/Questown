@@ -279,7 +279,6 @@ class CoreProgressionTest {
                 questAlreadyExists
         );
 
-        // Neither meets any need - all are equally unneeded, so pick randomly
         Assertions.assertEquals("random from [farmer,miner]", result);
     }
 }

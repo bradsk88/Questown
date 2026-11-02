@@ -8,25 +8,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Verifies the {@link SpecialRules#CAN_INSTANTLY_SWITCH_TO_EATING} opt-in for the
- * hungry-to-dining short-circuit. Only {@link DowntimeWork} opts in; every other job
- * must not, so a hungry working townie is routed through the work board (which deposits
- * its carried work output) instead of snapping straight to dining.
- *
- * {@link Work#getSpecialGlobalRules()} is exactly the list a {@link DeclarativeJob}
- * surfaces via {@code getGlobalSpecialRules()}, which is what
- * {@code Job.canInstantlySwitchToEating()} checks, so asserting on the work's rules is
- * a faithful proxy for the job-level behavior.
- *
- * The negative case (a non-DowntimeWork job is false) is the trivial default: the rule
- * is only ever added to the list in {@code DowntimeWork}, so {@code contains} is false
- * for every other job. Building an arbitrary non-downtime work here (e.g. DinerWork)
- * is not possible in a plain unit test — it references Questown-registered items
- * (ItemsInit) that vanilla Bootstrap does not register — so the behavioral consequence
- * (a hungry non-downtime townie routes through the board, not straight to dining) is
- * covered by the held {@code village/self_sufficiency} run.
- */
+/** Only {@link DowntimeWork} lets a hungry villager switch straight to eating; other jobs go through the board, which stores their output first. */
 class DowntimeWorkEatingRuleTest {
 
     @BeforeAll

@@ -11,13 +11,7 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
-// Dev-only: place a job-board block for a town flag by block position, the way a
-// player's item-use would, but driven from the console (FIFO). The dev is an
-// observer, not the one holding the item, so the flag entity places and registers
-// the job-board block itself (TownFlagBlockEntity.placeJobBoard). No permission
-// gate, so it runs from the console. Registered exactly like FlagCraftCommand
-// (same qt parent, same BlockPos arg) so a held run can drive the job_board quest
-// without a player.
+// Dev-only: place a job board for a town flag.
 public class FlagPlaceBoardCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(

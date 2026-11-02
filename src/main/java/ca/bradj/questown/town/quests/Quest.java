@@ -27,20 +27,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     @Nullable
     private String flavorText;
 
-    // True for quests added by the onboarding flow (tutorial phases, the kickoff batch). Such
-    // quests complete on a room that is a superset of the wanted recipe ("any storeroom"),
-    // whereas random/procedural quests require an exact recipe match. See the storeroom quest
-    // completion notes in .scratch/storeroom-quest-completion.
+    // Onboarding quests complete on any room that contains the wanted recipe; others need an exact match.
     private boolean onboarding;
-    // Only procedurally generated batches may be discarded by the player (a "Remove request" x on
-    // the quest card); designed and tutorial batches may not (2026-10-21 agent playtest).
+    // Only procedural batches can be discarded.
     private boolean discardable;
-    // The producer root a top-need room quest was posted for ("build the miner's room" for a coal
-    // need), or null. Locks the top-need beat while open and retires that producer once built.
+    // The producer a top-need room quest was posted for, or null.
     @Nullable
     private String topNeedProducer;
-    // The curated-path batch this quest was posted for ("questown:outfitter/start", QuestPath.batchTag),
-    // or null. The record of which path batches a town has posted and completed.
+    // The curated-path batch this quest belongs to, or null.
     @Nullable
     private String pathBatch;
 
@@ -48,7 +42,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this(null, null, null, null, null, 1);
     }
 
-    /** The room this quest was completed on, or null while open (or for non-room quests). */
+    /** The room this quest completed on, or null. */
     public @Nullable ROOM completedOn() {
         return completedOn;
     }
@@ -146,11 +140,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         return type;
     }
 
-    /**
-     * Job ids for a CONCURRENT_JOBS quest; empty for every other type. The base returns
-     * nothing so generic rebuild paths can ask any quest without a cast; {@code MCQuest}
-     * overrides with the encoded job list.
-     */
+    /** A CONCURRENT_JOBS quest's job ids; empty for other types. */
     public Collection<KEY> getConcurrentJobIds() {
         return Collections.emptyList();
     }
@@ -200,10 +190,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.pathBatch = pathBatchTag;
     }
 
-    /**
-     * Copy the saved state the load replay's typed rebuild (QuestBatches.filterOutDuplicateCompletion)
-     * does not reconstruct: the onboarding marker (it gates arrivals) and the flavor text.
-     */
+    /** Copies what a rebuild on load doesn't: the onboarding flag and the flavor text. */
     protected void carrySavedStateFrom(Quest<?, ?> saved) {
         this.onboarding = saved.onboarding;
         this.discardable = saved.discardable;
@@ -268,23 +255,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
         QUEST newJobUnlockQuest(KEY id);
 
-        /**
-         * The day-2 "post your first work request" quest. Must not be built through
-         * {@link #newQuest}: that produces a ROOM-typed recipe quest, which displays the
-         * raw special-quest id and is invisible to the first-work completion check.
-         */
+        /** Day 2's first-work-request quest. Don't build it with {@link #newQuest}. */
         QUEST newFirstWorkRequestQuest(@Nullable UUID ownerId);
 
-        /**
-         * A CONCURRENT_JOBS quest holding the given job ids. Must not be built through
-         * {@link #newQuest}: the job list lives outside the wanted id and would be lost.
-         */
+        /** A CONCURRENT_JOBS quest. Don't build it with {@link #newQuest}: the job list would be lost. */
         QUEST newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<KEY> jobIds);
 
-        /** A SKILL_UNLOCK quest on the skill tree whose root node is {@code treeRootId}. */
         QUEST newSkillUnlockQuest(@Nullable UUID ownerId, KEY treeRootId);
 
-        /** A VILLAGER_LEVEL quest: a villager of a job root reaches a level, both encoded in {@code id}. */
         QUEST newVillagerLevelQuest(@Nullable UUID ownerId, KEY id);
 
         QUEST completed(

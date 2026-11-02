@@ -196,7 +196,7 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
                     y + 17,
                     0x80FFFFFF
             ); // transparent white square behind hovered item slot
-            this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
+            this.showTooltip(itemStack.getItem().getName(itemStack));
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);

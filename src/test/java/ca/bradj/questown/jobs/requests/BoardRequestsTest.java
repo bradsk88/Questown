@@ -12,10 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Agent playtest 2026-10-27 #2: standing board requests filled the chests until every villager
- * sat at "no storage". A request pauses once storage holds {@link BoardRequests#PAUSE_AT}.
- */
+/** A board request pauses once storage holds {@link BoardRequests#PAUSE_AT}. */
 class BoardRequestsTest {
 
     @BeforeAll
@@ -49,7 +46,7 @@ class BoardRequestsTest {
     void allPaused_boardIsNotEmptyButOffersNoWork() {
         WorkRequest stick = WorkRequest.of(Items.STICK);
         BoardRequests board = new BoardRequests(ImmutableList.of(stick), ImmutableSet.of(stick));
-        // Not empty: an empty board lets a villager pick any work, which is what fills the chests.
+        // Still not empty: an empty board lets villagers pick any work.
         Assertions.assertFalse(board.isEmpty());
         Assertions.assertEquals(ImmutableList.of(), board.toWork());
     }
@@ -63,7 +60,6 @@ class BoardRequestsTest {
         Assertions.assertEquals(ImmutableList.of(stick, boots), board.toWork());
     }
 
-    /** Dev 2026-10-28: a pause stops makers only; a display or fuel job still answers it. */
     @Test
     void toWorkFor_aJobThatMakesNothingStillSeesPausedRequests() {
         WorkRequest armor = WorkRequest.of(Items.LEATHER_BOOTS);

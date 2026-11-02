@@ -38,11 +38,7 @@ class RequestCategoriesTest {
                 RequestCategories.offered(List.of("planks"), (i, c) -> MEMBERSHIP.get(i).contains(c)));
     }
 
-    /**
-     * r16 #18 (dev 2026-10-24): a product that is a whole offered category (the cook's
-     * {@code #questown:villager_food}) is drawn by the category's own cycling tile, so it is not
-     * also a product tile.
-     */
+    /** A product that is a whole offered category isn't also its own tile. */
     @Test
     void anOfferedCategoryTagIsNotAlsoAProduct() {
         Map<String, ResourceLocation> tags = Map.of("#villager_food", FOOD);

@@ -43,40 +43,19 @@ public class Work {
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
     private @Nullable String proficiencyId;
-    /**
-     * True when the job's JSON opts it into its root's initial unlock set via
-     * `unlocked_with_root_job` — e.g. `cook/fuel`, so a freshly staffed cook
-     * unlocks a working set (extract + fuel) instead of a single root job that
-     * re-selects itself every cooldown. Recipes stay progression-gated;
-     * see `.scratch/cook-skill-unlock/cook-skill-unlock.md`.
-     */
+    /** True when the job joins its root's starting unlocks ({@code unlocked_with_root_job}). */
     private boolean unlockedWithRootJob;
 
-    /**
-     * The townie level at which this job becomes available for skill-tab
-     * unlocking (the JSON `available_at_level`, default {@link #DEFAULT_AVAILABLE_AT_LEVEL}).
-     * Townies start at level 1, so the default keeps every ordinary job available the moment
-     * the skills tab first appears (level 2); the material-tier crafter jobs declare higher
-     * values (wooden 7, stone 12, iron 17, golden 22, diamond 27) so a profession's tool
-     * progression follows the townie's level. The gate applies to jobs NOT yet unlocked only —
-     * tutorial-granted jobs are already in the unlocked set and are never retroactively
-     * hidden (2026-10-13 skills-tab ruling, skills-tab-hidden-until-level-2.md).
-     */
+    /** The villager level at which this job can be unlocked. Only affects jobs not unlocked yet. */
     private int availableAtLevel = DEFAULT_AVAILABLE_AT_LEVEL;
-    /** The JSON `experience`: XP per completion, replacing the formula. Null = the formula. */
+    /** XP per completion, or null for the formula. */
     private @Nullable Integer experience;
-    /**
-     * The `biome_loot` result's `prefer_requested` flag: a full-day leaver trip rolls a second time
-     * and keeps that roll's board-requested items ({@code RequestedLootPreference}).
-     */
+    /** {@code prefer_requested}: a full-day trip rolls twice and keeps requested items. */
     private boolean prefersRequestedLoot;
-    /**
-     * The `biome_loot` result's `default` loot table path ("jobs/hunter_sword/default"), or null for
-     * any other result: the skill details' "Produces:" lists its items, most likely first.
-     */
+    /** The trip's default loot table, or null; the skill details list its items. */
     private @Nullable String lootTableDefault;
 
-    /** The `available_at_level` default: the first level at which the skills tab appears. */
+    /** The first level at which the skills tab appears. */
     public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
 
     public Work(
@@ -120,11 +99,7 @@ public class Work {
         return specialGlobalRules;
     }
 
-    /**
-     * The job definition's proficiency-id (a free-form string; multiple jobs may
-     * share one). Null means proficiency does not apply to this job — a flat 1×
-     * work-speed multiplier and no leveling. See ADR-0010.
-     */
+    /** The job's proficiency id, or null when proficiency does not apply (no speed-up, no leveling). Jobs can share one. */
     public @Nullable String getProficiencyId() {
         return proficiencyId;
     }
@@ -133,14 +108,7 @@ public class Work {
         return unlockedWithRootJob;
     }
 
-    /**
-     * Pure "unlocked with the root job at staff" decision: a job joins its
-     * root's initial set when it is a progression root (no parent) or its JSON
-     * opted in via `unlocked_with_root_job`. Kept as a plain (parent, flag)
-     * static so it is unit-testable without a Forge registry — the
-     * `ResourceJobLoader` parse and the `getDefaultWork` consumers are the
-     * registry-bound half (compile + held-run coverage).
-     */
+    /** Whether a job joins its root's starting unlocks: it is a root (no parent), or it says so. */
     public static boolean isUnlockedInitially(
             @Nullable JobID parentID,
             boolean unlockedWithRootJob
@@ -148,11 +116,7 @@ public class Work {
         return parentID == null || unlockedWithRootJob;
     }
 
-    /**
-     * The same-root fallback's pick: the first candidate unlocked with the root (see
-     * {@link #isUnlockedInitially}), else the first candidate. Pure over accessors so it is
-     * unit-testable without the Forge registry.
-     */
+    /** The first candidate unlocked with the root, else the first candidate. */
     public static <T> Optional<T> preferInitiallyUnlocked(
             List<T> candidates,
             Function<T, @Nullable JobID> parentOf,
@@ -172,7 +136,6 @@ public class Work {
         return this;
     }
 
-    /** Chains the `unlocked_with_root_job` JSON flag parsed by {@code ResourceJobLoader}. */
     public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
         this.unlockedWithRootJob = unlockedWithRootJob;
         return this;
@@ -182,7 +145,6 @@ public class Work {
         return availableAtLevel;
     }
 
-    /** Chains the `available_at_level` JSON value parsed by {@code ResourceJobLoader}. */
     public Work withAvailableAtLevel(int availableAtLevel) {
         this.availableAtLevel = availableAtLevel;
         return this;
@@ -196,29 +158,22 @@ public class Work {
         return lootTableDefault;
     }
 
-    /** Chains the `biome_loot` result's `default` table parsed by {@code ResourceJobLoader}. */
     public Work withLootTableDefault(@Nullable String lootTableDefault) {
         this.lootTableDefault = lootTableDefault;
         return this;
     }
 
-    /** Chains the `biome_loot` result's `prefer_requested` flag parsed by {@code ResourceJobLoader}. */
     public Work withPrefersRequestedLoot(boolean prefersRequestedLoot) {
         this.prefersRequestedLoot = prefersRequestedLoot;
         return this;
     }
 
-    /** Chains the optional `experience` JSON value parsed by {@code ResourceJobLoader}. */
     public Work withExperience(@Nullable Integer experience) {
         this.experience = experience;
         return this;
     }
 
-    /**
-     * XP for one completion: the job's declared `experience`, else {@code formula}
-     * ({@code DeclarativeJob.getExperienceEarned}). The cook and baker jobs earned 1 from the
-     * formula (dev ruling 2026-10-24, {@code JobExperienceFieldTest}).
-     */
+    /** XP for one completion: the declared {@code experience}, else {@code formula}. */
     public int experienceEarned(int formula) {
         if (experience == null) {
             return formula;
@@ -348,17 +303,7 @@ public class Work {
         return warper.apply(input.withSlotPrecondition(slotPrecondition));
     }
 
-    /**
-     * Whether this job's own block occupies the given position — the warp-lane work-block
-     * assignment seam ({@code PostDowntimeWarper} assigns the job's real container block this
-     * way instead of falling back to a virtual position). Tests the block-identity check
-     * ({@code shouldInitializeWorkState}: block id + block-state properties), NOT the full
-     * {@code isJobBlock} predicate, which for slot-gated jobs also demands a particular slot
-     * content. The content check is wrong for assignment: it tests the world AS IT IS, while
-     * the warp is still to produce it — a {@code baker/extract} that requires bread to already
-     * sit in slot 2 could never be assigned on an oven the warp has not baked yet, so its
-     * takes would drop at a virtual position and the warp's output would never be extracted.
-     */
+    /** Whether this job's block is at {@code pos}, by block and properties only, whatever the block currently holds. */
     public boolean isJobBlockAt(WorkLocation.BlockInfo blockInfo, BlockPos pos) {
         return shouldInitializeWorkState.test(blockInfo, pos);
     }

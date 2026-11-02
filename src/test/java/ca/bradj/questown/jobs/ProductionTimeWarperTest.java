@@ -168,9 +168,7 @@ class ProductionTimeWarperTest {
 
     @Test
     void simulateDropLoot_shouldLeaveUndepositedItemsInInventory_IfTownCanOnlyTakeSome() {
-        // Leftovers: when the town can only accept some of the held items, the
-        // undeposited ones stay in the inventory (in the slots of the dropped
-        // items), and the town receives only what it took.
+        // When the town takes only some items, the rest stay with the villager.
         ArrayList<TestItem> townItems = new ArrayList<>();
 
         ProductionTimeWarper.Result<TestItem> res = ProductionTimeWarper.<TestItem, TestItem>
@@ -179,12 +177,12 @@ class ProductionTimeWarperTest {
                                 ProductionStatus.DROPPING_LOOT,
                                 ImmutableList.of(
                                         new TestItem("bread"),
-                                        new TestItem("stick") // 2-slot inventory
+                                        new TestItem("stick")
                                 )
                         ),
                         heldItems -> {
-                            townItems.addAll(heldItems.subList(0, 1)); // town takes the first item
-                            return heldItems.subList(1, heldItems.size()); // the rest come back
+                            townItems.addAll(heldItems.subList(0, 1));
+                            return heldItems.subList(1, heldItems.size());
                         },
                         () -> new TestItem("")
                 );
@@ -233,7 +231,6 @@ class ProductionTimeWarperTest {
     }
     @Test
     void dropIntoContainers_ShouldLeaveABlockOfProgressWithTheVillager() {
-        // Dev 2026-10-30: "BOPs should ALWAYS be deposited on the flag."
         ImmutableList<TestItem> items = ImmutableList.of(
                 new TestItem("block_of_progress"),
                 new TestItem("gold")

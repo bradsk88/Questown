@@ -6,11 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-/**
- * r16 #14 (dev ruling 2026-10-24): a random Block of Progress job change prefers roots no townie
- * holds yet. r16's two rolls gave a baker and a second hunter while the town's top need had no
- * producer at all.
- */
 class RootRollTest {
 
     private static final JobID HUNTER = new JobID("hunter", "sword");

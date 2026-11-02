@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Dev 2026-10-28: a display job puts each piece of armor in its own slot on a stand. */
 class DisplayFitTest {
 
     @BeforeAll

@@ -13,19 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Pins the data wiring of the job-board ROOM quest (wanted id {@code questown:job_board}).
- *
- * <p>Completion depends on a specific chain: the quest's wanted id equals the room recipe
- * {@code questown:job_board} (data/questown/recipes/job_board.json), whose single ingredient
- * is the item tag {@code questown:job_board_inputs}, which contains the board block item.
- * Both sides of that chain feed the recipe-cost tie that decides which recipe "wins" a
- * board meta room (the real recipe vs the synthetic {@code block_room/...} recipe), and the
- * per-tick backfill ({@code TownRoomsHandle.getRoomsMatching}'s JOB_BOARD branch) maps the
- * quest id to the board's registered block-room key. A data edit that breaks any link
- * (direct-item ingredient, board item dropped from the tag, recipe id renamed) silently
- * changes quest-completion behavior - these assertions are the tripwire.
- */
+/** The job board quest's wanted id is the {@code questown:job_board} recipe, whose ingredient tag contains the board item. A data change that breaks this fails here. */
 class JobBoardRecipeDataTest {
 
     private static JsonObject resource(String path) throws Exception {

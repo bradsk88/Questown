@@ -98,12 +98,12 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     BlockPos getLook();
 
-    /** True for a trip: some status takes the villager out of the world (remove_from_world). */
+    /** True for a trip: the villager leaves the world for part of the job. */
     default boolean leavesTown() {
         return false;
     }
 
-    /** The job block the villager is working at now, or null (jobs without work spots). */
+    /** The job block the villager is working at, or null. */
     default @Nullable BlockPos getWorkSpotBlock() {
         return null;
     }
@@ -112,11 +112,7 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     Collection<String> getGlobalSpecialRules();
 
-    /**
-     * Whether the hungry->dining short-circuit may snap this townie straight to a dining
-     * work the moment it becomes hungry. Jobs without this rule end their current work and
-     * re-enter the work board first, where carried work output is deposited before eating.
-     */
+    /** Whether a hungry villager may switch straight to eating. Other jobs finish first, so carried output is stored before the meal. */
     default boolean canInstantlySwitchToEating() {
         return getGlobalSpecialRules().contains(SpecialRules.CAN_INSTANTLY_SWITCH_TO_EATING);
     }

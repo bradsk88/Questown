@@ -14,15 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 
-/**
- * Full-suite autotest hang (2026-10-13, test 16/58 arborist/cut_trees): the
- * warp's tree-chop flood fill read the live level for a chunk that was
- * generated but evicted from the chunk cache; the main-thread managed block
- * waited on the chunk system the main thread itself blocks, and the
- * watchdog killed the server after 600 s. The lookup must instead check
- * chunk PRESENCE (never blocks) and treat an unloaded chunk as the region
- * boundary.
- */
+/** The warp's chop never reads an unloaded chunk; it treats one as the region's edge. Reading it would hang the server. */
 class WarpWorldAccessChunkBoundaryTest {
 
     @BeforeAll
@@ -48,7 +40,6 @@ class WarpWorldAccessChunkBoundaryTest {
 
         assertNull(WarpWorldAccess.resolveLevelBlockState(level, pos),
                 "an unloaded chunk must be the region boundary, not a live read");
-        // The live level must never be consulted for a block read.
         Mockito.verify(level, Mockito.never()).getBlockState(any(BlockPos.class));
     }
 

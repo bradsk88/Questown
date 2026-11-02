@@ -45,13 +45,12 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_H_PADDING = 16;
     private static final int FOOTER_GAP = 2;
-    /** Space under the footer button, inside the grown panel. */
     private static final int FOOTER_PADDING = 6;
 
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
     private final Map<Position, Runnable> removes = new HashMap<>();
-    /** Per frame: the clickable item/tag icons of ITEM and LOOT cards (top-left → ingredient). */
+    /** This frame's clickable item icons on ITEM and LOOT cards. */
     private final Map<Position, Ingredient> itemIconClicks = new HashMap<>();
     private final SubUI tabs;
 
@@ -77,14 +76,9 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs = tabs;
     }
 
-    /**
-     * The cards on show: open quests only, until the player asks for the completed ones. Completed
-     * cards used to share the list and padded it to dozens of pages (2026-10-22 playtest: 4 open
-     * quests on "Page 1 / 7"). Card indices point into this list.
-     */
+    /** Open quests, or the completed ones once the player asks for them. */
     @Override
     protected ImmutableList<UIQuest> cardsData() {
-        // The completed view shows completed quests only (r17, dev: it listed open ones too).
         if (showingCompleted) {
             return quests.stream()
                          .filter(q -> Quest.QuestStatus.COMPLETED.equals(q.status))
@@ -106,13 +100,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         if (!anyCompleted()) {
             return;
         }
-        // A toggle between the open and the completed quests (r17: the completed view now shows
-        // completed quests only, so it needs a way back).
         Component link = Compat.translatable(showingCompleted ? "menu.quests.view_open" : "menu.quests.view_completed");
         int btnW = this.font.width(link) + BUTTON_H_PADDING;
-        // Always in the footer, so the button sits in one place on every view (dev playtest
-        // 2026-10-30: on the all-done view it was centred under the text; "Button placement
-        // should be consistent").
         int btnY = footerButtonY();
         this.viewCompletedButton = Compat.button(
                 link,
@@ -136,7 +125,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 : Compat.translatable("menu.quests.all_done_caught_up");
     }
 
-    // The all-done subtitle, vertically centred in the panel (the button is in the footer).
     private int emptyStateTop() {
         int bgY = (this.height - backgroundHeight) / 2;
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
@@ -176,10 +164,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         }
     }
 
-    /**
-     * No cards and no all-done state (a villager's Quests tab: its container has no all-done
-     * summary). The page used to be blank (2026-10-23 r10).
-     */
+    /** Shown when there are no cards and no all-done summary (a villager's quests tab). */
     private void renderNothingToShow(RenderContext ctx) {
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
         Component text = Compat.translatable("menu.quests.none_open");
@@ -189,8 +174,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     }
 
     private void renderAllDoneState(RenderContext ctx) {
-        // Draw the wrapped subtitle (the "View completed" button is a real widget added in init()
-        // at footerButtonY(), so it renders and hit-tests itself).
         int textWidth = backgroundWidth - 2 * TEXT_MARGIN;
         drawCenteredWrapped(ctx, subtitleComponent(), this.width / 2, emptyStateTop(), textWidth, TEXT_COLOR);
     }
@@ -199,7 +182,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return Compat.splitText(this.font, text, maxWidth).size() * this.font.lineHeight;
     }
 
-    /** Draw {@code text} wrapped to {@code maxWidth}, each line centred on {@code centerX}. Returns height. */
+    /** Draws {@code text} wrapped and centred. Returns its height. */
     private int drawCenteredWrapped(
             RenderContext ctx,
             Component text,
@@ -243,9 +226,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         int idX = card.coords().leftXPadded();
         int idY = card.coords().topYPadded();
-        // One line; a title that won't fit ends in "…" and shows whole on hover. It used to run
-        // past the card's right border ("Small Storeroom -> Storeroom", r3 #6). Leave room for
-        // the removal "x" when the card has one.
+        // One line; a title that doesn't fit ends in "…" and shows whole on hover.
         int titleRight = card.coords().rightXPadded() - (recipe.getBatchUUID() != null ? buttonWidth + 2 : 0);
         String fullTitle = recipeName.getString();
         String shownTitle = Compat.fitToWidth(this.font, fullTitle, titleRight - idX);
@@ -253,8 +234,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         String vID = recipe.villagerUUID();
         String jobName = recipe.jobName();
 
-        // "Villager N" when the menu sync carries display names (flag quest cards),
-        // otherwise the historical truncated UUID.
         Component tooltip = Compat.translatable("quests.job_owner", menu.villagerLabelFor(vID));
 
         CardCoordinates shiftedUp = card.coords().shiftedUp(5);
@@ -310,15 +289,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return null;
         }
 
-        // RoomBlock cards (welcome mat, empty room) get a fixed two-line tooltip -
-        // the action copy plus a grey "Click to open crafting" line - REGARDLESS of
-        // flavor text: the flavor is set server-side at post time and shadows the
-        // switch below, which is why the empty-room card shipped showing the generic
-        // room_quest line instead of its own copy (user report, 2026-10-14).
-        // JOB_BOARD joined the mat/room format on the same day (playtest chat):
-        // two-line tooltip + click-to-craft deep link, like the welcome mat.
-        // The mineshaft joined them in r22 (dev: "should have a hint for looking at the crafting
-        // tab, like the job board and welcome mat quests do").
+        // Room-block cards (welcome mat, empty room, job board, mineshaft) always say how to place them
+        // and that a click opens crafting.
         if (recipe.getType() == Quest.QuestType.ROOM && opensCrafting(recipe.getWantedId())) {
             String key;
             if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
@@ -356,10 +328,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 if (SpecialQuests.CAMPFIRE.equals(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable("menu.quests.campfire_quest"));
                 }
-                // RoomBlock quests (roomblock-quests-custom-place-tooltip.md): the quest is
-                // about placing a functional block, not crafting/collecting an item to hold.
-                // TOWN_GATE and EMPTY_ROOM are handled above the flavor check; the
-                // remaining room blocks get the free-placement line.
+                // Other room blocks: the quest is about placing the block.
                 if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())
                         || RoomBlock.isBlockRoom(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable(
@@ -381,8 +350,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return ImmutableList.of(Compat.translatable("menu.quests.item_quest", size, name));
     }
 
-    // A LOOT quest is satisfied by production (a townie extracting the loot), not by a chest
-    // deposit, so the tooltip must not promise the storage path the ITEM tooltip describes.
+    // A LOOT quest is done by a villager bringing the item back, not by putting it in storage.
     private static ImmutableList<Component> renderLootQuestTooltip(UIQuest recipe) {
         int size = recipe.getIngredients().size();
         Component name = recipe.getIngredients().isEmpty()
@@ -391,11 +359,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return ImmutableList.of(Compat.translatable("menu.quests.loot_quest", size, name));
     }
 
-    /**
-     * The card's own copy (flavor text, else the job line) plus a grey click hint while the
-     * villagers tab exists - a click opens it (2026-10-17 playtest feature request). Before
-     * the first villager the tab is hidden, and no hint shows.
-     */
+    /** The card's text, plus a grey click hint once the villagers tab exists. */
     private static List<Component> jobChangeTooltip(UIQuest recipe, boolean villagersTabShown) {
         List<Component> base = recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()
                 ? ImmutableList.of(Compat.literal(recipe.getFlavorText()))
@@ -403,13 +367,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return withVillagersHint(base, villagersTabShown);
     }
 
-    /**
-     * A skill is unlocked on a villager's skills tab, reached from the villagers tab, so the card
-     * opens it like a job-change card (dev playtest 2026-10-30).
-     */
+    /** A skill card opens the villager's skills tab, like a job-change card. */
     private static List<Component> skillUnlockTooltip(UIQuest recipe) {
         if (recipe.getLockedUntilLevel() != null) {
-            // Outfitter #20: a blank skill card says how far off it is, not what it is.
+            // A blank skill card says how far off it is, not what it is.
             return ImmutableList.of(Compat.translatable(
                     "menu.quests.skill_unlock.locked",
                     Compat.translatable("jobs." + MCQuest.skillTreeRoot(recipe.getWantedId())),
@@ -585,21 +546,15 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
-            // Job-change quests ALWAYS require the Block of Progress, so its
-            // icon is pure repetition - the card's item row is left empty
-            // instead (user call, 2026-10-15 playtest: "We can just not render
-            // the BOP").
+            // Job-change quests always need a Block of Progress, so the card leaves it out.
             ingredients = ImmutableList.of();
         }
         if (ingredients.isEmpty() && SpecialQuests.EMPTY_ROOM.equals(recipe.getWantedId())) {
-            // D#2: empty_room matches any room (zero required contents), so the card has
-            // no ingredient strip. Show the oak door - the block you actually point the
-            // Town Wand at - as the card's icon (user call, 2026-10-13 playtest).
+            // Any room counts, so the card shows the door the wand is used on.
             ingredients = ImmutableList.of(Ingredient.of(Items.OAK_DOOR));
         }
 
-        // 2026-10-17 playtest: an ITEM/LOOT card's icon opens "jobs that make this item"
-        // (for a tag icon, the jobs that make any member - the raw-food quest's case).
+        // An item icon opens the jobs that make it (for a tag, any of its items).
         boolean clickable = recipe.getType() == Quest.QuestType.ITEM || recipe.getType() == Quest.QuestType.LOOT;
         return RenderUtil.stripOfRequestableItems(
                 (ing, coord) -> {
@@ -638,11 +593,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         ctx.drawNineNine(this.background, x, y, backgroundWidth, panelHeight());
     }
 
-    /**
-     * The panel grows down to hold the "View completed quests" footer button while it shows, so
-     * the button sits inside the panel instead of floating below it (r17, dev 2026-10-25). The top
-     * edge stays put, so the cards and page row do not move.
-     */
+    /** The panel grows to hold the "View completed quests" button while it shows. */
     private int panelHeight() {
         if (!footerButtonShowing()) {
             return backgroundHeight;
@@ -659,7 +610,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         return false;
     }
 
-    /** Quest cards answered at the flag's crafting tab: a click opens it, and the tooltip says so. */
+    /** Quests done at the flag's crafting tab: the card opens it. */
     static boolean opensCrafting(ResourceLocation wantedId) {
         return SpecialQuests.TOWN_GATE.equals(wantedId)
                 || SpecialQuests.EMPTY_ROOM.equals(wantedId)
@@ -677,8 +628,6 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             if (quest == null) {
                 continue;
             }
-            // The welcome-mat, empty-room, job-board and mineshaft quests are answered at the
-            // flag's crafting tab, so their cards deep-link there.
             if (opensCrafting(quest.getWantedId())
                     && this.tabs instanceof Tabs tabs && tabs.openTab("tooltips.crafting")) {
                 return true;

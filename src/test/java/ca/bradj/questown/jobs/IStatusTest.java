@@ -5,10 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// A downtime townie's job has NO server-side status: getStatusForServer() is
-// null. Posting a board request re-evaluates the worker pool, so the
-// "is this worker busy?" check must treat a null status as not busy instead
-// of NPE-ing (see .scratch/work-board-request/downtime-townie-listener-npe.md).
+// A villager on downtime has no status, which counts as not busy.
 class IStatusTest {
 
     private static IStatus<NoopStatus> status(boolean busy) {

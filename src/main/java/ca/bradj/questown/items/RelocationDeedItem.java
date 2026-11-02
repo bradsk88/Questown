@@ -27,15 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The {@code relocation_deed} a player receives when a {@link ca.bradj.questown.blocks.FlagPhase#DORMANT
- * town shutdown} completes (ADR-0009, #199). It carries <em>only a reference</em> to the dormant
- * flag — the town UUID, the original flag {@link BlockPos}, and the origin dimension — never a town
- * snapshot. Because the authoritative data has exactly one home (the dormant flag), the deed is
- * dupe-proof and losing it never strands the town.
- *
- * <p>Unstackable and non-craftable: the only source is the shutdown ritual or a dormant-flag re-issue.
- */
+/** The deed a player gets when a town shuts down. It points at the dormant flag, which still holds the town, so it can't be duplicated and losing it doesn't lose the town. */
 public class RelocationDeedItem extends Item {
 
     public static final String ITEM_ID = "relocation_deed";
@@ -46,14 +38,10 @@ public class RelocationDeedItem extends Item {
     private static final String NBT_DIM = "dimension";
 
     public RelocationDeedItem() {
-        // Fresh Properties (not the shared DEFAULT_ITEM_PROPS) so stacksTo(1) doesn't mutate it.
         super(new Item.Properties().stacksTo(1));
     }
 
-    /**
-     * Build a deed referencing a dormant flag. The reference is everything Phase 3 placement needs
-     * to load, copy, and destroy the original: which town, where, and in which dimension.
-     */
+    /** A deed pointing at a dormant flag: the town, its position and its dimension. */
     public static ItemStack forReference(
             UUID townUuid,
             BlockPos flagPos,
@@ -72,14 +60,7 @@ public class RelocationDeedItem extends Item {
         return stack;
     }
 
-    /**
-     * Placing the deed relocates the town: the new flag goes at the block face the player clicked
-     * (one block off the clicked surface, the same idiom as placing a block). When some of the town's
-     * fixtures would land outside the new flag's tick radius, open the confirmation screen instead and
-     * let the player decide (bring / leave / cancel) — {@link RelocationChoiceMessage} finishes the
-     * placement. Otherwise place straight away, carrying everything. Either way the deed is consumed
-     * only on a successful placement, so a failed relocation never strands the town.
-     */
+    /** Places the town at the clicked face. If some of the town would be too far from the new flag, ask first. The deed is used up only when the move succeeds. */
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
         if (!(ctx.getLevel() instanceof ServerLevel level)) {
@@ -94,7 +75,6 @@ public class RelocationDeedItem extends Item {
                     player,
                     new OpenRelocationConfirmMessage(targetPos, farFixtures)
             );
-            // Deed stays in hand; RelocationChoiceMessage will place + consume it once they choose.
             return InteractionResult.SUCCESS;
         }
 
@@ -117,12 +97,7 @@ public class RelocationDeedItem extends Item {
         consumeFrom(ctx.getPlayer(), ctx.getHand());
     }
 
-    /**
-     * Take a placed deed out of the player's hand. Deeds are unstackable one-shots, so the slot is
-     * cleared explicitly rather than shrunk: creative restores the count of a used stack, and a deed
-     * that survives its own placement references a flag that no longer exists — place it again and
-     * the town has two.
-     */
+    /** Clears the deed from the player's hand. Creative would otherwise give it back, and a second placement would make a second town. */
     public static void consumeFrom(
             Player player,
             InteractionHand hand

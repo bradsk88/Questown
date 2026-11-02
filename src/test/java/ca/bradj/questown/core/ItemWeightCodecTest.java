@@ -7,9 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-// The item-weights config is stored as a single string so it round-trips through
-// Forge's TOML (a nightconfig Config value does not, which caused an endless
-// "not correct. Correcting" rewrite loop). These tests pin that round-trip.
+// The item weights are stored as one string so they survive a TOML load and save.
 class ItemWeightCodecTest {
 
     private static Config sampleWeights() {
@@ -41,7 +39,7 @@ class ItemWeightCodecTest {
 
     @Test
     void decodeSkipsMalformedPairs() {
-        // a pair without '=' is skipped; well-formed pairs survive
+        // A pair without '=' is skipped; the others survive.
         Map<String, Integer> decoded = ItemWeightCodec.decode("minecraft:torch=17;garbage;#minecraft:beds=23");
         Assertions.assertEquals(17, decoded.get("minecraft:torch"));
         Assertions.assertEquals(23, decoded.get("#minecraft:beds"));

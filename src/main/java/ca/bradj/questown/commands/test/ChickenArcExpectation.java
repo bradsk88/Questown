@@ -8,14 +8,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Bundle of assertions for a chicken-arc scenario. The {@code ChickenArcResultChecker}
- * reads these and emits one unified log line per assertion.
- *
- * <p>Item-count deltas are delegated to {@link TestExpectation} via composition; the
- * existing {@code TestResultChecker} handles them. Everything else is chicken-arc
- * specific and checked by {@code ChickenArcResultChecker} directly.
- */
+/** What must be true at the end of a helper-chicken scenario. Item counts reuse {@link TestExpectation}. */
 public record ChickenArcExpectation(
         @Nullable ChickenBeatState expectedFinalBeatState,
         Map<String, Boolean> expectedFlagBits,
@@ -26,7 +19,6 @@ public record ChickenArcExpectation(
         @Nullable BeatPhase expectedFinalPhase
 ) {
     public ChickenArcExpectation {
-        // Defensive immutable copy so holders cannot mutate after construction.
         expectedFlagBits = expectedFlagBits == null
                 ? Collections.emptyMap()
                 : Map.copyOf(expectedFlagBits);

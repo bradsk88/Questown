@@ -42,11 +42,7 @@ public interface VillagerHolder {
             UUID villagerId
     );
 
-    /**
-     * Same as {@link #showUI(ServerPlayer, String, UUID)} but carries the management-only flag:
-     * when {@code showInventoryTab} is false the opened villager menu hides its inventory tab
-     * (the flag's villager-card click-through, 2026-10-14 playtest).
-     */
+    /** As above; with {@code showInventoryTab} false the menu has no inventory tab. */
     void showUI(
             ServerPlayer sender,
             String type,
@@ -54,29 +50,19 @@ public interface VillagerHolder {
             boolean showInventoryTab
     );
 
-    /**
-     * The townie's user-facing display name ("Villager N", the monotonic arrival number;
-     * 2026-10-14 playtest), or an empty string when none is assigned yet.
-     */
+    /** The villager's "Villager N" name, or empty. */
     String displayNameFor(UUID villagerId);
 
-    /**
-     * How a chat message names a townie: its display name, or a shortened UUID when it has none.
-     * A raw UUID must never reach a translatable message (1.20.6 rejects non-primitive arguments).
-     */
+    /** How chat names a villager: its "Villager N" name, or a shortened UUID. */
     default String labelFor(UUID villagerId) {
         return label(displayNameFor(villagerId), villagerId);
     }
 
-    /** {@link #labelFor}'s rule: the display name, or a shortened UUID when it is empty. */
     static String label(String displayName, UUID villagerId) {
         return displayName.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerId) : displayName;
     }
 
-    /**
-     * Every assigned display name (villager UUID -&gt; "Villager N"); townies without a number
-     * are omitted, so callers fall back to the truncated UUID.
-     */
+    /** Every villager's "Villager N" name; villagers without one are left out. */
     Map<UUID, String> displayNamesForAll();
 
     void fillHunger(UUID uuid);
@@ -86,7 +72,6 @@ public interface VillagerHolder {
             float amount
     );
 
-    /** A meal worth {@code percent} of max fullness: adds to fullness, never lowers it. */
     void eat(UUID uuid, float percent);
 
     void makeAngry(UUID uuid);
@@ -106,34 +91,21 @@ public interface VillagerHolder {
 
     int getWorkSpeed(UUID uuid);
 
-    /**
-     * The townie's current proficiency level ∈ [0,1] for {@code proficiencyId}, or 0 if
-     * they hold no proficiency in it. See ADR-0010.
-     */
+    /** The villager's level in {@code proficiencyId}, 0 to 1; 0 when it has none. */
     float getProficiency(
             UUID uuid,
             String proficiencyId
     );
 
-    /**
-     * The townie's full proficiency map (proficiency-id → level). Read seam for autotests
-     * and the warp bridge.
-     */
     ImmutableMap<String, Float> getProficiencies(UUID uuid);
 
-    /**
-     * Force a single proficiency level (test seam + realtime leveling). Creates the map /
-     * entry if absent.
-     */
+    /** Sets one proficiency level. */
     void setProficiency(
             UUID uuid,
             String proficiencyId,
             float level
     );
 
-    /**
-     * Replace the townie's whole proficiency map (warp-load bridge).
-     */
     void setProficiencies(
             UUID uuid,
             java.util.Map<String, Float> levels
@@ -151,14 +123,10 @@ public interface VillagerHolder {
             boolean announce
     );
 
-    /** The player's switch from the skill tree: now (a trip in progress is dropped) or after the trip. */
+    /** The player's switch from the skill tree: now (dropping any trip) or after the trip. */
     void switchJob(VillagerUUID villagerUUID, JobID job, boolean afterTrip);
 
-    /**
-     * Makes the townie a {@code job} worker now, with everything a Block of Progress job change
-     * brings: the root's default work unlocked and its starter requests posted. A bare
-     * {@link #changeJobForVillager} sets the job only.
-     */
+    /** Makes the villager a {@code job} worker now, as a Block of Progress job change does. {@link #changeJobForVillager} only sets the job. */
     void assignJob(
             VillagerUUID villagerUUID,
             JobID job
@@ -207,10 +175,7 @@ public interface VillagerHolder {
             JobID id
     );
 
-    /**
-     * The townie's villager level (default 1). The skills-tab gate: a job is only visible /
-     * unlockable once the townie's level reaches the job's JSON {@code available_at_level}.
-     */
+    /** The villager's level; 1 by default. */
     int getVillagerLevel(
             UUID villagerUUID
     );
@@ -224,21 +189,13 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    /**
-     * Schedules a root change (no quest guarantee) and returns the pre-rolled root decided at
-     * the spend moment, or empty when instant or when no candidate root exists. The morning
-     * applies it unless a tutorial override wins.
-     */
+    /** Schedules a job change and returns the job rolled now; empty when instant or when there is no candidate. */
     Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             boolean instant
     );
 
-    /**
-     * Same as {@link #scheduleJobRootChange(UUID, boolean)} but carries a guaranteed root
-     * (an open job-change quest's root): when present, the pending change takes this root instead
-     * of picking randomly at handleMorning.
-     */
+    /** As above, with a promised job that is used instead of a random one. */
     Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             boolean instant,
@@ -247,22 +204,12 @@ public interface VillagerHolder {
 
     boolean isUnlocked(JobID jobID);
 
-    /** The villager's skills-tab nodes (level-gated, including ones already unlocked). */
     ImmutableSet<JobID> getUnlockableSkills(UUID villagerUUID);
 
-    /**
-     * Per-townie unlocked jobs. The JOB_UNLOCK quest checks the town-wide unlocked set to
-     * confirm a producer root is held by no one before suggesting the unlock, and to complete
-     * the quest once a root is unlocked by any townie.
-     */
+    /** Each villager's unlocked jobs. */
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs();
 
-    /**
-     * Whether a specific townie has unlocked this work (per-villager). The town-wide
-     * {@link #isUnlocked(JobID)} is the "can anyone in town do this" gate used by the
-     * request board; this is the narrower "can *this* townie do this" gate the
-     * work-seeker needs, so a freshly-minted townie only sees the works it itself holds.
-     */
+    /** Whether this villager has unlocked the job. {@link #isUnlocked(JobID)} asks whether anyone in town has. */
     boolean isUnlocked(UUID villagerUUID, JobID jobID);
 
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
@@ -288,7 +235,6 @@ public interface VillagerHolder {
 
     boolean isJobChangePending(VillagerUUID vuid);
 
-    /** The job a "switch after this trip" will apply, or null (dev 2026-10-30: shown on the card). */
     @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid);
 
     boolean isStarving(@Nullable VillagerUUID vuid);
@@ -302,15 +248,8 @@ public interface VillagerHolder {
 
     void toggleHunger();
 
-    /**
-     * True when the townie currently has an assigned bed the town's rooms provide
-     * (a bed inside a matched room recipe). Drives the SLEEPLESS debuff report.
-     */
+    /** Whether the villager has a bed in a matched room. */
     boolean hasBed(VisitorMobEntity v);
 
-    /**
-     * True when the given mood effect (e.g. SLEEPLESS after a bedless night) is
-     * currently active on the townie.
-     */
     boolean hasMoodEffect(UUID uuid, ResourceLocation effect);
 }

@@ -17,8 +17,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 /**
- * The day-1 onboarding beats the 2026-10-15/17 playtests kept re-checking by hand, as named
- * checks over the live town state (village/day1). An observer only: the driver
+ * The day-1 onboarding beats, as named checks over the live town state (village/day1). An observer only: the driver
  * ({@link VillageGrowthExecutor} in day1 mode) plays; this records PASS/FAIL as beats happen.
  */
 final class Day1BeatChecks {
@@ -37,15 +36,14 @@ final class Day1BeatChecks {
     private boolean toastBeforeDusk;
     private long lastRoster;
     // In-game day of the last arrival and how many arrived that day: onboarding brings at most
-    // one villager per morning (2026-10-18 playtest: the basics and hunter-gatherer batches
-    // both queued one, and they landed together; a roster step check sees 1->2->3 as two
-    // separate single arrivals).
+    // one villager per morning (a roster step check sees 1->2->3 as two separate single
+    // arrivals).
     private long lastArrivalDay = -1;
     private int arrivalsThatDay;
     private boolean workRequestQuestSeen;
     private boolean workRequestQuestCompletionSeen;
-    // The executor posted its own (the player's) first request. Dev 2026-10-22: only the
-    // player's request completes the quest, not a BOP job change's auto-posted starter request.
+    // The executor posted its own (the player's) first request: only the player's request
+    // completes the quest, not a BOP job change's auto-posted starter request.
     private final BooleanSupplier playerPostedFirstRequest;
     private boolean rawFoodSeenComplete;
     private boolean cookSeen;
@@ -184,8 +182,7 @@ final class Day1BeatChecks {
             check.accept("cook-starts-on-a-starting-job[" + v.getJobId().jobId() + "]",
                     !NOT_A_STARTING_COOK_JOB.contains(v.getJobId().jobId()));
             // A new root's default work (cook: extract + fuel + the starter recipe) must be
-            // unlocked however the root change happened; the BOP path used to unlock only the
-            // job it switched to (2026-10-18 playtest: no fuel / cook_mutton).
+            // unlocked however the root change happened.
             for (JobID starter : ServerJobsRegistry.getDefaultWork(v.getJobId())) {
                 check.accept("cook-starter-job-unlocked[" + starter.jobId() + "]",
                         flag.getVillagerHandle().isUnlocked(v.getUUID(), starter));

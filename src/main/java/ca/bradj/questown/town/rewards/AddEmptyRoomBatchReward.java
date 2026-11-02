@@ -8,12 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/**
- * Posts the day-one "empty room" quest batch (D#2). Applied when the welcome-mat
- * gate quest completes: the player learns "a room with a registered door" before
- * the basics batch (job board + store room) is posted, which happens when this
- * batch's quest completes.
- */
+/** Posts the first day's empty-room batch. */
 public class AddEmptyRoomBatchReward extends MCReward {
 
     public static final String ID = "add_empty_room_batch";

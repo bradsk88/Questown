@@ -7,19 +7,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Unit tests for the "all quests done" empty-state trigger.
- *
- * <p>{@link QuestCompletion#allComplete} is the regression-bearing seam for this
- * feature: the server computes the empty-state booleans from the exact quest list
- * it serializes, so the client view can never disagree with the cards it hides.
- *
- * <p>NOT covered here (or by the in-game autotest suite): the client render of the
- * empty-state and the "View completed quests →" click-through. The autotest suite
- * is server-driven gameplay and never opens a GUI, so it structurally cannot drive
- * the click or read the rendered text. Only pixels/clicks are uncovered — the
- * decision logic is fully exercised below.
- */
+/** {@link QuestCompletion#allComplete}, which decides the all-done state from the quests the server sends. */
 class QuestCompletionTest {
 
     @Test

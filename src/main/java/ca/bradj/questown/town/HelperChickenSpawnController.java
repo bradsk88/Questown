@@ -10,20 +10,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 
-/**
- * Spawns the helper chicken adjacent to the flag when gates pass (U3).
- *
- * <p>Gates (all must pass):
- * <ul>
- *   <li>{@code chicken-rotation-detected} is true (detector has run)</li>
- *   <li>{@code chicken-arc-forfeit} is false</li>
- *   <li>{@code chicken-ever-spawned} is false (one-shot)</li>
- *   <li>A player is within ~10 blocks of the flag</li>
- * </ul>
- *
- * <p>On spawn, the chicken's {@code ownerFlagPos} is set so its AI goals can
- * look up the flag BE each tick without a long-term reference.
- */
+/** Spawns the helper chicken next to the flag once: after rotation detection, unless the lessons ended, with a player within about 10 blocks. */
 public final class HelperChickenSpawnController {
 
     private static final double NEAR_PLAYER_RADIUS = 10.0D;
@@ -73,17 +60,7 @@ public final class HelperChickenSpawnController {
         return (dx * dx + dy * dy + dz * dz) <= NEAR_PLAYER_RADIUS_SQR;
     }
 
-    /**
-     * Force the helper chicken to spawn for {@code flag}, bypassing the
-     * rotation-detection and 20-tick forfeit gates that {@link #tick} uses. For
-     * a hand-placed flag (one that was not placed in an empty_town structure,
-     * so no campfire was ever detected) the normal arc is inert - this makes it
-     * live. It clears any forfeit, reads the rotation once (a campfire at a beat
-     * offset if present, else {@link Rotation#NONE}), marks rotation detected,
-     * and spawns the chicken; the individual beats still need their real
-     * conditions, this only starts the arc. Returns whether the chicken spawned
-     * ({@code chickenEverSpawned} is set by {@link #spawn} only on success).
-     */
+    /** Spawns the helper chicken for a hand-placed flag, skipping rotation detection. Returns whether it spawned. */
     public static boolean forceSpawn(TownFlagBlockEntity flag) {
         ServerLevel sl = flag.getServerLevel();
         if (sl == null) {
@@ -127,7 +104,6 @@ public final class HelperChickenSpawnController {
             ServerLevel sl,
             BlockPos flagPos
     ) {
-        // Try the 4 cardinal neighbours, above ground level. Fall back to flagPos.
         BlockPos[] candidates = new BlockPos[]{
                 flagPos.north(2),
                 flagPos.east(2),

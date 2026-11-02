@@ -19,8 +19,6 @@ public class ChopDownTree extends JobPhaseModifier implements QTNativeRule {
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
     ) {
-        // Start from the real context: the base beforeExtract returns null ("didn't handle"),
-        // so seeding from it would feed every chopped log to a null context and lose them.
         List<ItemStack> drops = chopFirstTree(event);
         if (drops.isEmpty()) {
             return null;
@@ -39,12 +37,7 @@ public class ChopDownTree extends JobPhaseModifier implements QTNativeRule {
         return outContext;
     }
 
-    /**
-     * Chops the workspot tree if it is a log; otherwise scans the job block positions for one.
-     * During warp {@code event.workSpot()} is unreliable (it can be the town origin), so — like
-     * {@code HarvestCropSpecialRule} — we fall back to scanning. {@code chopTree} only chops logs,
-     * so scanning non-log positions is a cheap no-op.
-     */
+    /** Chops the work spot's tree, or else the first log among the job's block positions. */
     private <CONTEXT> List<ItemStack> chopFirstTree(BeforeExtractEvent<CONTEXT> event) {
         List<ItemStack> atWorkSpot = event.world().chopTree(event.workSpot());
         if (!atWorkSpot.isEmpty()) {

@@ -63,7 +63,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         this.renderLabelsContent(this.renderContext(gui), mouseX, mouseY);
     }
 
-    // -- version-neutral hooks (leaves override these, not the GuiGraphics-taking methods)
+    // -- version-neutral hooks (leaves override these, not the PoseStack-taking methods)
     protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
 
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) { }

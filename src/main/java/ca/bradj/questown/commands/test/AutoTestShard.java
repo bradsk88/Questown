@@ -52,9 +52,8 @@ public record AutoTestShard(int index, int count) {
     /**
      * This shard's scenario names, with each {@code solo} scenario on a shard of its own (shards
      * 1..S) and the rest round-robin over the remaining shards. A scenario far longer than the
-     * rest sets the wall time of whichever shard holds it, so it should hold nothing else
-     * (perf/town_large: 218 s of a ~670 s suite, 2026-10-20). With as many solos as shards, it is
-     * plain round-robin.
+     * rest sets the wall time of whichever shard holds it, so it should hold nothing else. With as
+     * many solos as shards, it is plain round-robin.
      */
     public Set<String> selectNames(List<String> names, Set<String> solo) {
         List<String> solos = names.stream().filter(solo::contains).toList();

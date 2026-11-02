@@ -482,7 +482,6 @@ class TownNeedsTest {
         Assertions.assertEquals(
                 ImmutableList.of(ROOM_A), result.roomsWhereSuppliesCanBeUsed.get(STATUS_1));
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
-        // Tools are held, so the same room is workable
         Assertions.assertEquals(
                 ImmutableList.of(ROOM_A), result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1));
         Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_0).isEmpty());
@@ -518,8 +517,7 @@ class TownNeedsTest {
         );
         Assertions.assertFalse(result.roomsWhereSuppliesCanBeUsed.isEmpty());
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_0).isEmpty());
-        // The room matches state 1 AND is listed as a special-rule room - it must
-        // be present (special rooms are added on top of the state matches)
+        // Special-rule rooms are added on top of the state matches.
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_1).contains(ROOM_A));
         Assertions.assertTrue(result.roomsWhereSuppliesCanBeUsed.get(STATUS_2).isEmpty());
         Assertions.assertTrue(result.roomsWhereWorkCanBeDoneByEntity.get(STATUS_1).contains(ROOM_A));

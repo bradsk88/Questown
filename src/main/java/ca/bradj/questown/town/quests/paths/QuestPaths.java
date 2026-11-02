@@ -13,11 +13,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import java.util.List;
 import java.util.Map;
 
-/**
- * The loaded curated paths, from {@code data/<ns>/questown_paths/*.json}. Loaded at server start
- * beside the jobs ({@code JobFileEvents}). A file that fails to parse or validate is skipped with
- * an error, so one bad path never takes the others down.
- */
+/** The loaded curated paths. A file that fails to load is skipped with an error. */
 public final class QuestPaths {
 
     private static volatile ImmutableList<QuestPath> loaded = ImmutableList.of();

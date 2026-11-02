@@ -95,26 +95,15 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     @Override
     public MCReward makeReward(String phaseName) {
         return switch (phaseName) {
-            // The basics batch brings no villager: villager 2 is the hunter-gatherer batch's
-            // reward (dev ruling 2026-10-18; both used to queue one and they landed the same
-            // morning once the second waited on raw food).
             case TutorialTownView.PHASE_KICKOFF -> new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null));
-            // Villager 2 (hunter-gatherer) and villager 3 (cook) are fixed onboarding arrivals;
-            // the cook's used to be defaultQuestCompletionRewards, a coin flip once villager 2
-            // had quests, which could leave the miner beat (3 villagers) waiting forever.
+            // Villagers 2 and 3 always arrive, so the miner lesson is always reached.
             case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
-            // The cook-job batch pays the Block of Progress its follow-up's cook skill costs.
+            // The cook-job batch pays the Block of Progress the cook skill costs.
             case TutorialTownView.PHASE_COOK_JOB -> new MCInstantReward(flag, new GrantBlockOfProgressReward(flag, 1));
-            // Curated path batches (plan ruling 19): an arrival on some, nothing on the rest. The
-            // arrival brings no quest batch of its own: past the fork only path batches post
-            // (ruling 20), and a visitor batch put a stray crafting room + mineshaft on the board.
+            // Path batches: some bring a villager, with no quest batch of its own.
             case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalOnly();
             case TutorialTownView.PHASE_PATH -> new MCRewardList(flag);
-            // The miner batch brings villager 4, the one a curated path's starter turns into its
-            // first new job (the Outfitter's crafter). defaultQuestCompletionRewards could roll an
-            // upgrade quest instead, and the path's job change then had no free villager (r22
-            // overnight growth: roster 3 at the fork, "Job change: crafter" never closed). No quest
-            // batch with it, for the same reason as the path arrivals.
+            // The miner batch brings villager 4, the one a path's first job change uses.
             case TutorialTownView.PHASE_MINER -> arrivalOnly();
             case TutorialTownView.PHASE_NEW_JOB_ROOM -> new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
@@ -135,12 +124,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         flag.getTownVillagerHandle().revealSkill(skill);
     }
 
-    /** A morning arrival and nothing else (the gate batch's reward shape). */
     private MCReward arrivalOnly() {
         return new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random()));
     }
 
-    /** A morning arrival plus its quest batch, under one id so the batch belongs to the villager who arrives. */
+    /** A morning arrival with its quest batch, which belongs to the villager who arrives. */
     private MCReward arrivalWithQuestBatch() {
         VillagerUUID nextVisitorUUID = VillagerUUID.random();
         return new MCRewardList(

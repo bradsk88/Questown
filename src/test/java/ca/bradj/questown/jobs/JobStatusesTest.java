@@ -418,11 +418,6 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
-    /**
-     * 2026-10-20 playtest: hunters and miners "stuck working and not returning". Holding the
-     * tool (a work item) plus loot (non-work items), "use items" sent them on the next trip with
-     * the loot in hand. A villager holding work output drops it before starting a new cycle.
-     */
     @Test
     void StatusShouldBe_DroppingLoot_WhenHoldingOutput_BeforeUsingItemsForANewCycle() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -438,11 +433,6 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
-    /**
-     * 2026-10-21 playtest: a miner woke holding coal and walked straight back to the mineshaft.
-     * Itemless work (the root, prioritised extraction) outranked dropping loot. A villager holding
-     * work output drops it before any further work, itemless or not.
-     */
     @Test
     void StatusShouldBe_DroppingLoot_WhenHoldingOutput_EvenIfItemlessWorkIsAvailable() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -456,11 +446,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
-    /**
-     * 2026-10-21 playtest (dev ruling: "b"): with the storeroom full, a hunter and a miner holding
-     * loot went back out with it. A villager holding work output when the town has no storage
-     * space stops with the no-space status (visible) instead of working on.
-     */
+    /** Holding work output with no storage space: stop with the no-space status. */
     @Test
     void StatusShouldBe_NoSpace_WhenHoldingOutput_AndTownHasNoSpace() {
         TestStatus s = JobStatuses.usualRoutine(
@@ -474,12 +460,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
     }
 
-    /**
-     * 2026-10-15 and 2026-10-21 playtests: a hunter at the storeroom chests, holding its sword,
-     * with its finished hunt waiting on the welcome mat, sat in COLLECTING_SUPPLIES forever - the
-     * itemless-work root only collects a finished product when already on site. A finished product
-     * elsewhere outranks collecting supplies: go to the job site.
-     */
+    /** A finished product elsewhere outranks collecting supplies. */
     @Test
     void StatusShouldBe_GoingToJob_WhenAFinishedProductWaitsElsewhere_EvenWithSuppliesInTown() {
         JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
@@ -509,12 +490,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
     }
 
-    /**
-     * 2026-10-21 agent playtest: with every chest full, a miner holding nothing left its finished
-     * coal at the mineshaft and wandered as "going to work" (no storage signal); only villagers
-     * already holding output stopped visibly. Collecting a finished product with no storage only
-     * moves it into the villager's hands, so a waiting product with no space is the no-space stop.
-     */
+    /** A finished product waiting with no space is the no-space stop too. */
     @Test
     void StatusShouldBe_NoSpace_WhenAFinishedProductWaits_AndTownHasNoSpace() {
         JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
@@ -544,10 +520,7 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.NO_SPACE, s);
     }
 
-    /**
-     * The no-space stop above must not catch a job whose finished product is consumed, not stored
-     * (a diner's meal): with full storage it would never eat.
-     */
+    /** The no-space stop doesn't catch a job whose product is used up, or a diner would never eat. */
     @Test
     void StatusShouldBe_GoingToJob_WhenAFinishedProductWaits_AndTownHasNoSpace_ButTheProductNeedsNoStorage() {
         JobStatuses.Job<TestStatus, TestStatus> mealWaiting = new JobStatuses.Job<>() {
@@ -775,9 +748,6 @@ class JobStatusesTest {
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
-        // root = "drop loot before more work"; then "stop when holding output and no space";
-        // then "stop when a finished product waits and no space"; then "collect a finished
-        // product"; then itemless work; then use items.
         if (!(root.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileHolding)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
         }
@@ -940,9 +910,7 @@ class JobStatusesTest {
 
     @Test
     void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_AndInventoryHasRoom() {
-        // BOP depositor shape (was: "THIS IS BLOCKING BOP Depositor"): the
-        // townie holds its work item (the BOP) and a finished product is
-        // available at the flag - the extract path must win over dropping loot.
+        // The depositor holds its Block of Progress and a product waits at the flag: extracting wins.
         @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
                 new JobID("test", "bop_depositing"),
                 TestStatus.IDLE,
@@ -970,8 +938,7 @@ class JobStatusesTest {
 
     @Test
     void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_EvenWhenInventoryIsFull() {
-        // With prioritized extraction, a full inventory still extracts the
-        // product rather than dropping the held work item as loot.
+        // With extraction prioritized, a full inventory still extracts.
         @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
                 new JobID("test", "bop_depositing"),
                 TestStatus.IDLE,

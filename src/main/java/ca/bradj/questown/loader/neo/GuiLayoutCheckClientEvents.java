@@ -19,15 +19,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Dev-only client adapter that validates Questown screen layouts and logs violations.
- *
- * <p>Layer 2 (widget geometry) and Layer 1 (wrapped-text overflow) run together: on a screen's
- * first render after init, capture is active so {@code Compat.drawDarkTextWrap} records each text
- * block's bounding box; those boxes plus the widgets are fed into {@link GuiLayoutLinter}, so a
- * description that overruns its row into the next element is caught as an overlap. Runs once per
- * screen open (no per-frame spam). Inert in shipped jars via {@link FMLEnvironment#production}.
- */
+/** Dev-only: checks each Questown screen's layout once when it opens and logs problems. Off in released jars. */
 @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class GuiLayoutCheckClientEvents {
 

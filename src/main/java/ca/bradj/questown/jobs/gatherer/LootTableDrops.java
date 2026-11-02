@@ -7,20 +7,12 @@ import com.google.gson.JsonObject;
 
 import java.util.Map;
 
-/**
- * The items a leaver's loot tables can drop, read from the table JSON (every {@code minecraft:item}
- * entry, nested pools and alternatives included). Player-facing producer lists use it so a job
- * counts as producing an item only when its own table can drop it: the town's known gather
- * results are not scoped per table, so without this every biome-loot job claimed every other
- * job's finds ("20 known jobs produce wheat seeds", five do; dev 2026-10-22: narrow the count
- * only, the extraction gate stays as it is).
- */
+/** The items a trip's loot tables can drop, read from the table files. A job produces an item only if its own tables can drop it. */
 public final class LootTableDrops {
 
     private LootTableDrops() {
     }
 
-    /** Item ids every table in {@code tables} can drop. */
     public static ImmutableSet<String> itemIds(Iterable<JsonElement> tables) {
         ImmutableSet.Builder<String> b = ImmutableSet.builder();
         for (JsonElement table : tables) {

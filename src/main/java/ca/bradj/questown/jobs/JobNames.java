@@ -8,23 +8,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * A readable fallback name for a job variant ("rod_half_day" -> "Rod (half day)"), shown where the
- * raw id used to leak to the player: the skill tree's nodes and the "Learn More" job pages
- * (2026-10-22 r3 #13, #16). A {@code jobs.<root>.<job>} lang key, when present, wins over it.
- */
+/** A readable name for a job variant ("rod_half_day" -> "Rod (half day)"). A {@code jobs.<root>.<job>} lang key wins. */
 public final class JobNames {
 
     private JobNames() {
     }
 
-    /**
-     * The item a product job is named for: its icon, when the icon's path is the job id
-     * ({@code crafter/wooden_shovel} -> {@code minecraft:wooden_shovel}). Its name then reads like
-     * the item's tooltip, "Wooden Shovel" (dev ruling 2026-10-26, Outfitter playtest #19). Leaver
-     * variants and helper jobs ({@code hunter/sword_half_day}, {@code cook/fuel}) have none and
-     * keep {@link #variant}.
-     */
+    /** The item a product job is named for: its icon, when the icon matches the job id. Null for trip and helper jobs. */
     public static @Nullable ResourceLocation product(JobID job, @Nullable ResourceLocation icon) {
         if (icon == null || !icon.getPath().equals(job.jobId())) {
             return null;
@@ -43,7 +33,6 @@ public final class JobNames {
         return length == null ? name : name + " (" + length + ")";
     }
 
-    /** Removes a trailing trip-length marker from {@code words} and returns its reading. */
     private static String tripLength(List<String> words) {
         int n = words.size();
         if (n >= 3 && words.get(n - 1).equals("day") && (words.get(n - 2).equals("half") || words.get(n - 2).equals("full"))) {

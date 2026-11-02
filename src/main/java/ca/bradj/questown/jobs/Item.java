@@ -5,10 +5,7 @@ public interface Item<I extends Item<I>> {
 
     boolean isFood();
 
-    /**
-     * A Block of Progress belongs on the town flag (dev 2026-10-30: "BOPs should ALWAYS be deposited
-     * on the flag"): loot drops leave it with the villager, see {@link HeldItem#staysWithVillager}.
-     */
+    /** A Block of Progress stays with the villager through a loot drop; it goes to the flag. */
     default boolean isBlockOfProgress() {
         return false;
     }

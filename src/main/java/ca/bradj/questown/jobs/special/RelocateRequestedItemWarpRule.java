@@ -16,25 +16,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-/**
- * Warp-interleaved hook that gives {@code organizer/fetch} a time-warp model. The realtime fetcher
- * (see {@link ca.bradj.questown.jobs.fetcher.FetcherHack}) walks a villager between chests to move a
- * requested ingredient into the chest holding its {@link StockRequestItem}; warp has no entity, so
- * this rule performs the same source&rarr;target relocation directly on the warp town state.
- * <p>
- * For each chest that holds a stock request, the requested ingredient is moved out of some OTHER
- * chest and into the request's own chest (the request's delivery destination — the realtime path
- * stamps the request's job block to the chest it sits in). Relocation stops when no other chest
- * holds the ingredient or the target chest is down to {@link #MIN_FREE_SLOTS_IN_TARGET} free slots
- * (mirroring the job's {@code require_two_free_spots} invariant). Each move is balanced (one unit
- * out, one unit in), so the town-wide item total is conserved.
- * <p>
- * Declared as a {@code global} rule in {@code organizer_fetcher.json}.
- */
+/** During a warp, moves a requested item from other chests into the chest that holds its stock request, as the fetcher would. Stops when the target is down to {@link #MIN_FREE_SLOTS_IN_TARGET} free slots. */
 public class RelocateRequestedItemWarpRule extends JobPhaseModifier implements QTNativeRule {
 
     private static final int MIN_FREE_SLOTS_IN_TARGET = 2;
-    // Bounds work per call so a misconfigured request can never spin the warp tick forever.
     private static final int MAX_RELOCATIONS_PER_REQUEST = 64;
 
     private record RequestTarget(BlockPos chestPos, WorkRequest request) {

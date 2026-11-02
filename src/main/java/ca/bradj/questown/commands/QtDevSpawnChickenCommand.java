@@ -12,13 +12,7 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-// Dev-only: force the helper chicken to spawn for a hand-placed flag, so a
-// held run can drive onboarding on a flag that was not placed in an
-// empty_town structure (and so never had its rotation detected). The action
-// lives on the owner, HelperChickenSpawnController.forceSpawn, which clears the
-// forfeit, reads the rotation once, and spawns the chicken - this command only
-// finds the flag and reports the result. No permission gate, so it runs from the
-// console (FIFO). Registered like the other _qtdev commands.
+// Dev-only: spawn the helper chicken for a flag placed by hand.
 public class QtDevSpawnChickenCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(

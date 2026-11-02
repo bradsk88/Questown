@@ -190,8 +190,6 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
             String vID = recipe.villagerUUID();
             String jobName = recipe.jobName();
 
-            // "Villager N" when the menu sync carries display names, otherwise the
-            // historical truncated UUID.
             Component tooltip = Compat.translatable(
                     "quests.job_owner",
                     AbstractQuestsContainer.villagerLabelFor(menu.villagerDisplayNames(), vID)
@@ -245,10 +243,7 @@ public class QuestRemoveConfirmScreen extends CompatContainerScreen<TownRemoveQu
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
         if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
-            // Job-change quests ALWAYS require the Block of Progress; the
-            // card's item row is left empty instead of repeating it
-            // (user call, 2026-10-15 playtest: "We can just not render the
-            // BOP") - kept in step with QuestsScreen.renderRecipeCardIcons.
+            // Job-change quests always need a Block of Progress, so the card leaves it out.
             ingredients = ImmutableList.of();
         }
         int j = 0;

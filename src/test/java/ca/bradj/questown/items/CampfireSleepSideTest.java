@@ -14,17 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 
-/**
- * campfire-sleep-feels-close-enough.md: the temp bed must be placed on the SAFE side of the
- * campfire that is CLOSEST to the sleeping player. Vanilla rejects the bed with
- * TOO_FAR_AWAY when it is more than 3 blocks from the player (ServerPlayer's
- * isReachableBedBlock), so a bed placed on the far side of the fire makes every sleep
- * attempt fail from an adjacent position.
- *
- * The mocked level is open air everywhere (isFaceSturdy true on the block below, no
- * obstruction, no fluid), so all four candidate sides are safe and the choice is purely the
- * distance scoring - the behaviour under test.
- */
+/** The temp bed goes on the campfire's side nearest the player; vanilla won't let a player sleep in a bed more than 3 blocks away. */
 class CampfireSleepSideTest {
 
     @BeforeAll
@@ -33,11 +23,9 @@ class CampfireSleepSideTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
-    /** Open-air world: every candidate bed spot passes isSafeToLieOn. */
     private static ServerLevel openAirLevel() {
         ServerLevel level = Mockito.mock(ServerLevel.class);
-        // A mocked AIR state: no real block-state internals to NPE on, and the face-sturdiness
-        // / fluid probes the handler makes are stubbed open-air-true.
+        // A mocked air state, so every side is safe and only the distance decides.
         BlockState air = Mockito.mock(BlockState.class);
         Mockito.when(air.isFaceSturdy(Mockito.any(net.minecraft.world.level.Level.class),
                 any(BlockPos.class), Mockito.any(Direction.class)))
@@ -54,14 +42,12 @@ class CampfireSleepSideTest {
     @Test
     void bedGoesOnThePlayersSideOfTheCampfire() {
         BlockPos campfire = new BlockPos(0, 70, 0);
-        // Player standing 1 block north of the fire (looking at it).
         Vec3 playerPos = Vec3.atCenterOf(campfire).add(0, 0, -1);
 
         BlockPos head = CampfireSleepHandler.findSafeSleepPosition(openAirLevel(), campfire,
                 playerPos);
 
-        // The bed must be on the north side of the fire (the player's side), NOT the first
-        // direction in iteration order: the head lands 2 blocks north of the campfire.
+        // On the player's side, two blocks north of the fire.
         assertEquals(campfire.relative(Direction.NORTH, 2), head,
                 "bed head should be placed 2 blocks on the player's side of the campfire");
     }
@@ -69,7 +55,7 @@ class CampfireSleepSideTest {
     @Test
     void oppositeSidePlayerGetsOppositeSideBed() {
         BlockPos campfire = new BlockPos(0, 70, 0);
-        Vec3 playerPos = Vec3.atCenterOf(campfire).add(0, 0, 3); // 3 blocks south
+        Vec3 playerPos = Vec3.atCenterOf(campfire).add(0, 0, 3);
 
         BlockPos head = CampfireSleepHandler.findSafeSleepPosition(openAirLevel(), campfire,
                 playerPos);
@@ -84,8 +70,7 @@ class CampfireSleepSideTest {
 
         BlockPos head = CampfireSleepHandler.findSafeSleepPosition(openAirLevel(), campfire);
 
-        // Pre-player-aware behavior: first safe direction in Direction.Plane.HORIZONTAL
-        // iteration order (NORTH).
+        // With no player: the first safe direction, north.
         assertEquals(campfire.relative(Direction.NORTH, 2), head);
     }
 

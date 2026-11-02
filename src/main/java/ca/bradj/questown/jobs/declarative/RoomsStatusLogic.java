@@ -31,10 +31,9 @@ class RoomsStatusLogic {
      * @param getIngredients    Function to get required ingredients for a state (null or empty if none required)
      * @param getQuantityForStep Function to get required ingredient quantity for a state (null if none required)
      * @param getTools          Function to get required tools for a state (null or empty if none required)
-     * @param workDeclaredAt    Predicate-ish function: true when the job declares work at the given state
-     *                          (key presence, even if the floored value is 0 - e.g. cook_extract's 0.1).
-     * @param getContainedBlocks Function to get all block positions in a room
-     * @param maxState          The maximum processing state for this job
+     * @param workDeclaredAt     true when the job declares work at the state, even if it rounds to 0
+     * @param getContainedBlocks all block positions in a room
+     * @param maxState           the job's last processing state
      */
     static <
             RL,
@@ -104,12 +103,7 @@ class RoomsStatusLogic {
             }
         }
 
-        // If no tools are required, also include rooms where work can be done. A state that
-        // declares work is admitted even on a fresh/finished block (workLeft 0): a work-only
-        // state (cook_extract: 0.1 floors to int 0) otherwise produced an empty bucket and the
-        // job idled in NO_JOBSITE. Time-wait blocks never match: a completed work state
-        // advances its processing state before the timer starts, and time states declare no work.
-        // canClaim still excludes the block (lock-in: matExcludedByCanClaim, 2026-10-07).
+        // With no tools needed, rooms that only need work count too, even on a fresh or finished block.
         if (!requiresTools) {
             for (int i = 0; i < maxState; i++) {
                 Predicate<State> workable = workDeclaredAt.apply(i) ? s -> true : State::hasWorkLeft;

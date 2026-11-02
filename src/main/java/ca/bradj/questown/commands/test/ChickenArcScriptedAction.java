@@ -6,104 +6,66 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * One scripted player action in a chicken-arc scenario.
- *
- * <p>Each subtype corresponds to a single server-side call the real player would have
- * triggered — giving items to the fake player, right-clicking the wand, placing a
- * block, depositing into a container, running a command, etc. The
- * {@code ChickenArcTestExecutor} dispatches on the concrete subtype and calls the
- * matching server-side entry point directly. No input packets are synthesized.
- *
- * <p>Each action carries its own {@code postActionWaitTicks}; the executor settles
- * that many ticks after dispatching the action before moving on to the next.
+ * One scripted player action in a helper-chicken scenario. The executor calls the server-side
+ * entry point a player's action would reach, then waits {@code postActionWaitTicks}.
  */
 public sealed interface ChickenArcScriptedAction {
 
-    /** Ticks of settle to advance after this action fires, before the next action runs. */
     int postActionWaitTicks();
 
-    /** Add {@code count} of {@code item} to the fake player's inventory. */
     record GiveItem(
             Item item,
             int count,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Give the fake player a {@code TOWN_WAND} stack whose NBT is already bound to
-     * the flag at {@code boundFlagOffset} (structure-local, rotated at dispatch).
-     * Required before any {@link WandRightClick} — {@code TownWand.onRightClicked}
-     * dereferences the bound-flag NBT without a null guard.
-     */
+    /** Gives the fake player a town wand already bound to the flag. Needed before {@link WandRightClick}. */
     record GiveBoundWand(
             BlockPos boundFlagOffset,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Call {@code TownWand.onRightClicked} against the block at {@code offset}
-     * (structure-local, rotated at dispatch) using the fake player's main-hand stack.
-     */
     record WandRightClick(
             BlockPos offset,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /** Place {@code blockState} at {@code offset} (structure-local, rotated at dispatch). */
     record PlaceBlock(
             BlockPos offset,
             BlockState blockState,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Give a bound wand, then right-click it on the door block at {@code doorOffset}.
-     * Composed action — a sugar over {@code GiveBoundWand + WandRightClick}.
-     */
+    /** {@link GiveBoundWand} then {@link WandRightClick} on the door. */
     record RegisterDoorViaWand(
             BlockPos doorOffset,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Deposit {@code stack} into the first container reachable from the flag
-     * (via {@code TownContainers.getAllContainers}). Used for the Worldly-Seeds
-     * delivery in F4.
-     */
+    /** Puts {@code stack} in the first town container. */
     record DepositIntoContainer(
             ItemStack stack,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Bulk-apply the F3 preamble: place walls, a door, a sign (auto-converts to
-     * job board), a chest, and wand-register the door. Keeps F4 scenarios from
-     * replaying the 14+ individual F3 steps inline. F3's own scenario still
-     * runs the fine-grained steps because that's what it's verifying.
-     */
+    /** Builds a registered room with walls, a door, a job board and a chest in one step. */
     record SetUpRegisteredRoomWithChest(
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /** Direct call to {@code ChickenArcUiObservations.markVillagerUiOpened}. */
     record MarkVillagerUiOpened(
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /** Direct call to {@code ChickenArcUiObservations.markFlagUiOpened}. */
     record MarkFlagUiOpened(
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Right-click the flag block with the fake player, through the block's own use path (what a
-     * player does), rather than marking the flag-UI observation directly.
-     */
+    /** Right-clicks the flag as a player does. */
     record RightClickFlag(
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /** Advance {@code ticks} server ticks with no action. */
     record AdvanceTicks(
             int ticks
     ) implements ChickenArcScriptedAction {
@@ -113,41 +75,19 @@ public sealed interface ChickenArcScriptedAction {
         }
     }
 
-    /**
-     * Find the helper chicken and call {@code chicken.interactAt(fakePlayer, ...)}
-     * with {@code item} in the fake player's main hand. Drives the F4 seeds hand-off.
-     */
+    /** Right-clicks the helper chicken with {@code item} in the fake player's hand. */
     record RightClickChickenWithHand(
             Item item,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Dispatch a server command via the fake player's command source so
-     * {@code source.getPlayer()} is non-null — some command handlers (e.g.
-     * {@code FlagCommand.setBlock}) call {@code APPROACH_TOWN_TRIGGER.trigger(player, ...)}
-     * and would NPE with {@code server.createCommandSourceStack()}.
-     */
+    /** Runs a command as the fake player, for commands that need a player source. */
     record RunCommand(
             String command,
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Move the fake player by writing its position directly ({@code setPos}).
-     * Do NOT use {@code teleportTo} or a {@code /tp @s} RunCommand: same-level
-     * {@code ServerPlayer.teleportTo} delegates to {@code connection.teleport(...)}
-     * (verified in 1.20.6 bytecode: the connection-null branch is the only
-     * direct-setPos path), which records a pending teleport applied on the
-     * connection's next tick — and NeoForge's {@code FakePlayer.tick()} is an
-     * empty {@code return}, so its connection never ticks and the pending
-     * teleport is never applied. A {@code /tp @s} command logs a successful
-     * teleport for the same reason. Direct {@code setPos} writes x/y/z
-     * synchronously and is what the goals read ({@code blockPosition()}).
-     * Note {@code teleportPlayerNearFlag} has the same latent no-op: the fake
-     * player already sits at the AutoTestRunner setPos origin, so the no-op
-     * was never visible.
-     */
+    /** Moves the fake player by setting its position: a teleport or /tp never applies to a fake player. */
     record MovePlayer(
             double x,
             double y,
@@ -155,13 +95,7 @@ public sealed interface ChickenArcScriptedAction {
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}
 
-    /**
-     * Directly flip {@code chicken-observed-sleep-since-sunset} on the flag BE.
-     * The helper-chicken plan's F2 (sunset + sleep) relies on a real campfire
-     * sleep cycle, which is out-of-reach for a fake player. The plan's risks
-     * table explicitly calls this out as the F3-unblocking workaround:
-     * F1/F3/F4 do not require sleep semantics, only the observation flag.
-     */
+    /** Marks the campfire sleep as seen, since a fake player can't sleep. */
     record MarkSleepObserved(
             int postActionWaitTicks
     ) implements ChickenArcScriptedAction {}

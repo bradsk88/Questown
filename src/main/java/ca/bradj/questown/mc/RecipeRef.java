@@ -11,30 +11,14 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
 /**
- * The 1.20 recipe-holder seam.
- *
- * <p>1.20.x split recipe data into a pair: the holder owns the recipe <b>id</b>; the value owns
- * the data plus {@code assemble(...)}/{@code getResultItem(...)}. In 1.19.2 the recipe itself
- * carried its id. A leaf never names the holder type - it calls one of these helpers:
- *
- * <ul>
- *   <li>{@link #recipesOf} - every recipe value of a type (the 1.19.2 {@code List<Recipe>} shape);</li>
- *   <li>{@link #recipeById} - the value whose holder-id matches (the value's own id can be null
- *       when codec-constructed, hence the holder lookup);</li>
- *   <li>{@link #assembleMatching} - "look up the matching recipe and assemble its result",
- *       the one-call form of the 1.19.2 {@code getRecipeFor(...).assemble(...)};</li>
- *   <li>{@link #pairsOf} - every (id, value) pair of a type, for a leaf that needs both the
- *       canonical holder-id and the recipe data.</li>
- * </ul>
- *
- * <p>The two-type-variable bounds ({@code IN extends Container, T extends Recipe<IN>}) mirror
- * the vanilla {@code RecipeManager} generic shape so its call resolves by inference.
+ * Recipe lookups by id. On 1.20.2+ a recipe's id lives on its holder, not the recipe, so leaves
+ * look recipes up through these helpers instead of naming the holder type.
  */
 public final class RecipeRef {
 
     private RecipeRef() {}
 
-    /** Every recipe value of the given type, as a plain list (the 1.19.2 shape). */
+    /** Every recipe of the given type. */
     public static
     <IN extends net.minecraft.world.Container,
      T extends net.minecraft.world.item.crafting.Recipe<IN>>
@@ -99,7 +83,7 @@ public final class RecipeRef {
                  .orElse(null);
     }
 
-    /** Every (id, value) pair of the given type (the holder owns the id in 1.20.x). */
+    /** Every (id, value) pair of the given type. */
     public static
     <IN extends net.minecraft.world.Container,
      T extends net.minecraft.world.item.crafting.Recipe<IN>>
@@ -113,7 +97,7 @@ public final class RecipeRef {
                  .collect(Collectors.toList());
     }
 
-    /** Every recipe id of the given type (the holder owns the id in 1.20.x). */
+    /** Every recipe id of the given type. */
     public static
     <IN extends net.minecraft.world.Container,
      T extends net.minecraft.world.item.crafting.Recipe<IN>>
@@ -127,7 +111,7 @@ public final class RecipeRef {
                  .collect(Collectors.toList());
     }
 
-    /** A neutral (id, value) recipe pair - the leaf-facing shape of the 1.20 split. */
+    /** A recipe and its id. */
     public static final class RecipePair<T> {
 
         private final ResourceLocation id;

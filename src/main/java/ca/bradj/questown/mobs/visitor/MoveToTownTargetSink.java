@@ -29,21 +29,10 @@ import java.util.Optional;
 public class MoveToTownTargetSink extends Behavior<Mob> {
     private static final int MAX_COOLDOWN_BEFORE_RETRYING = 5;
 
-    /**
-     * How long a townie may fail to get somewhere before it gives up and asks for help (ADR-0011).
-     *
-     * <p>Ten seconds. Deliberately NOT {@code WanderGiveUpTicks}: that is this behaviour's maximum
-     * duration, so it caps healthy long walks too — shortening it would abandon townies mid-journey
-     * in a large town. This is keyed on <em>failure</em> instead, so a townie walking a good path is
-     * never interrupted no matter how far it has to go.
-     */
+    /** Ticks a villager may fail to reach somewhere before it asks for help. Counts failure, not travel, so a long walk is never cut short. */
     private static final int CANT_REACH_GIVEUP_TICKS = 200;
 
-    /**
-     * How many escalating unstick shoves may fail before the townie gives up on a target it has a
-     * path to but cannot physically follow. Counted rather than timed because each shove resets the
-     * stuck counters, so the ladder (nudge, then harder push) has to run its course first.
-     */
+    /** Unstick shoves allowed before a villager gives up on a target it can't follow its path to. */
     private static final int MAX_UNSTICK_ATTEMPTS = 3;
     private int remainingCooldown;
     @Nullable
@@ -157,8 +146,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     ) {
         p_23610_.getBrain().setMemory(MemoryModuleType.PATH, this.path);
         p_23610_.getNavigation().moveTo(this.path, (double) this.speedModifier);
-        // A fresh attempt gets the full unstick ladder; otherwise a townie that gave up once would
-        // give up on its NEXT target immediately, on a count it earned somewhere else.
+        // A new attempt gets every shove again.
         failedUnsticks = 0;
     }
 
@@ -262,7 +250,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         return stranded.observeWater(inWater, distance) && vme.isStrandedOutsideTown();
     }
 
-    /** Outside the town nothing the player built is in the way, so skip the bubble and go home. */
+    /** Outside the town, skip the bubble and go home. */
     private void rescue(VisitorMobEntity vme, Brain<?> brain, String why) {
         vme.rescueToGate(why);
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -274,12 +262,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         failedUnsticks = 0;
     }
 
-    /**
-     * Two ways to fail to get somewhere, both meaning "the player needs to look at this":
-     * pathfinding says the target is unreachable, or a path exists but the townie is physically
-     * wedged and the unstick nudges have not freed it.
-     */
-    /** The recipe id of the room holding the walk target, or "" when it is not in a room. */
+    /** The recipe id of the room holding the walk target, or "" outside a room. */
     private static String unreachableRoomKey(
             VisitorMobEntity vme,
             Brain<?> brain
@@ -293,7 +276,6 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
                     .orElse("");
     }
 
-    /** A townie that can get where it is going is no longer asking for help. */
     private void clearCantReachNeed(Mob mob) {
         failedUnsticks = 0;
         if (!(mob instanceof VisitorMobEntity vme)) {

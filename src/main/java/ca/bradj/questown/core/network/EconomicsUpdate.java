@@ -14,7 +14,7 @@ import java.util.List;
 
 public record EconomicsUpdate(
         ImmutableList<ItemEconomicsData> data,
-        /** The same needs over the last NoMCEconomics.RECENT_WINDOW_TICKS (empty where not sent). */
+        /** The same, over the last {@code NoMCEconomics.RECENT_WINDOW_TICKS}; empty if not sent. */
         ImmutableList<ItemEconomicsData> recent
 ) {
 

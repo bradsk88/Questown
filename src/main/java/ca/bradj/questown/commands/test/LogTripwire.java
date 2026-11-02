@@ -14,11 +14,8 @@ import java.util.function.LongSupplier;
 
 /**
  * Collects the log lines an autotest should fail on but that the game survives: a work spot the
- * stuck-block self-heal had to reseed, and any Questown ERROR. village/day1 passed 31/31 while
- * its log carried both (2026-10-17: the flag eating spot reseeded after the diner stall that the
- * player later hit as the "carrot take/put loop"). Also two quest announcements within one
- * broadcast slot (2026-10-17: "New quests are available!" then, a second later, "New quest is
- * available: post your first work request…").
+ * stuck-block self-heal had to reseed, any Questown ERROR, and two quest announcements within one
+ * broadcast slot.
  */
 final class LogTripwire {
 

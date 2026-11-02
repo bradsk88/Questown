@@ -22,7 +22,6 @@ public interface RoomsHolder {
 
     Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include);
 
-    /** The registered-room map (un-matched registered rooms included). */
     TownRoomsMap getRegisteredRooms();
 
     Collection<BlockPos> findMatchedRecipeBlocks(TownInterface.MatchRecipe mr);
@@ -47,10 +46,7 @@ public interface RoomsHolder {
 
     void registerBlockAsRoom(ResourceLocation blockId, BlockPos clickedPos);
 
-    /**
-     * The doorway of the registered room that holds {@code pos} (e.g. a bed): where a townie
-     * stands when there is no free floor beside that block.
-     */
+    /** The doorway of the room holding {@code pos}, for a villager with no free floor beside a block. */
     default Optional<BlockPos> findDoorOfRoomContaining(BlockPos pos) {
         return RoomDoors.doorOfRoomContaining(getRegisteredRooms().getAllRooms(), pos);
     }

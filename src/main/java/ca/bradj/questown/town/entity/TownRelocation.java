@@ -26,22 +26,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 
-/**
- * Town-flag relocation (ADR-0009, #199): copy a dormant town to a new flag, re-anchor its
- * registered fixtures to the new origin, and destroy the original — atomically and same-dimension
- * only. Mirrors {@link TownShutdownController} as the home of the relocation ritual.
- *
- * <p>The pure decisions — fixture re-anchoring ({@link #planFixtureRebase}) and precondition
- * validation ({@link #validate}) — are split out so they can be unit-tested without a server
- * (see {@code TownRelocationTest}); the world-bound copy/destroy/re-activate path in {@link #place}
- * is exercised by the {@code flag/relocate_nearby} autotest.
- */
+/** Moves a dormant town to a new flag: copies its data, re-anchors its doors and gates, and removes the original. Same dimension only. */
 public final class TownRelocation {
 
     private TownRelocation() {
     }
 
-    /** The outcome of attempting (or pre-checking) a relocation. */
     public enum RelocationResult {
         OK,
         CROSS_DIMENSION,
@@ -49,24 +39,13 @@ public final class TownRelocation {
         ORIGINAL_UNREACHABLE
     }
 
-    /**
-     * What to do with fixtures (doors/gates) that land outside the new flag's tick radius (ADR-0009,
-     * #199 Phase 4). {@link #BRING_ALL} carries every fixture verbatim (the Phase-3 behaviour, and the
-     * default when nothing is out of range); {@link #LEAVE_BEHIND} drops the out-of-range fixtures and
-     * carries only the rest. The third player choice — cancel — is simply "don't call {@link #place}".
-     */
+    /** What to do with doors and gates that land outside the new flag's reach: bring them all, or leave them behind. */
     public enum FarFixturePolicy {
         BRING_ALL,
         LEAVE_BEHIND
     }
 
-    /**
-     * Place a relocation deed: load the dormant flag it references, copy the town to a new flag at
-     * {@code targetPos} with fixtures re-anchored, then destroy the original — atomically and
-     * same-dimension only. Validates fully before mutating anything, so a non-{@link
-     * RelocationResult#OK} result leaves the world (and the deed) untouched ("fail loudly, consume
-     * nothing").
-     */
+    /** Places a relocation deed: copies the town to a new flag at {@code targetPos} and removes the original. Checks everything first, so a failure changes nothing. */
     public static RelocationResult place(
             ServerLevel level,
             ItemStack deedStack,
@@ -75,12 +54,7 @@ public final class TownRelocation {
         return place(level, deedStack, targetPos, FarFixturePolicy.BRING_ALL);
     }
 
-    /**
-     * Place a relocation deed with an explicit {@link FarFixturePolicy} for fixtures that fall outside
-     * the new flag's tick radius (ADR-0009, #199 Phase 4). Uses the configured {@link
-     * Config#TOWN_TICK_RADIUS} as the cutoff — the same squared distance the ticker uses to decide
-     * whether a flag is close enough to a player to keep ticking.
-     */
+    /** As above, with a policy for fixtures outside the new flag's reach, using the configured tick radius. */
     public static RelocationResult place(
             ServerLevel level,
             ItemStack deedStack,
@@ -90,11 +64,7 @@ public final class TownRelocation {
         return place(level, deedStack, targetPos, policy, Config.TOWN_TICK_RADIUS.get());
     }
 
-    /**
-     * Place a relocation deed with an explicit policy and tick-radius cutoff. The radius is a
-     * parameter (not read from config inside the geometry) so tests can force fixtures out of range
-     * against a nearby, solid-ground target without depending on far terrain.
-     */
+    /** As above, with the radius passed in. */
     public static RelocationResult place(
             ServerLevel level,
             ItemStack deedStack,
@@ -118,9 +88,7 @@ public final class TownRelocation {
             return RelocationResult.ORIGINAL_UNREACHABLE;
         }
 
-        // Whole-blob copy of the authoritative town data, re-anchoring only the origin-derived bits
-        // (door/gate scanLevels). Everything else — roster, knowledge, economics, chicken arc —
-        // rides along verbatim (ADR-0009 copy fidelity).
+        // Copy the whole town; only the doors' and gates' heights change.
         CompoundTag carried = freshTownData(original);
         rebaseFixturesInTag(carried, originalPos.getY(), targetPos.getY());
         if (policy == FarFixturePolicy.LEAVE_BEHIND) {
@@ -146,10 +114,7 @@ public final class TownRelocation {
                 && state.getValue(TownFlagBlock.PHASE) == FlagPhase.DORMANT;
     }
 
-    /**
-     * The persistent tag is normally written on the tick; force a fresh serialize so the copy
-     * reflects the current roster/knowledge, then snapshot it.
-     */
+    /** The flag's town data, saved fresh. */
     private static CompoundTag freshTownData(TownFlagBlockEntity flag) {
         CompoundTag persistent = Compat.getBlockStoredTagData(flag);
         flag.writeTownData(persistent);
@@ -169,11 +134,7 @@ public final class TownRelocation {
         townData.put(TownFlagTileData.NBT_ROOMS, rooms);
     }
 
-    /**
-     * Drop carried doors/gates that sit beyond {@code tickRadiusSq} of the new flag — the "leave it
-     * behind" half of the far-away choice (#199 Phase 4). Runs after {@link #rebaseFixturesInTag}, so
-     * the fixtures' {@code position_y} is already relative to {@code targetPos.getY()}.
-     */
+    /** Drops carried doors and gates beyond the new flag's reach. */
     private static void dropFarFixturesInTag(
             CompoundTag townData,
             BlockPos targetPos,
@@ -189,13 +150,7 @@ public final class TownRelocation {
         townData.put(TownFlagTileData.NBT_ROOMS, rooms);
     }
 
-    /**
-     * The dormant town's currently-registered fixtures that would land outside the configured tick
-     * radius of {@code targetPos} — what the deed-use confirmation screen warns about (#199 Phase 4).
-     * Returns empty when the deed can't be resolved or the original flag is gone, so deed-use falls
-     * straight through to {@link #place}, which reports the precise failure. Reads the live room
-     * handle (the same fixtures {@link #place} serializes and drops).
-     */
+    /** The town's doors and gates that would land outside the new flag's reach, for the confirmation screen. Empty when the deed can't be read. */
     public static List<TownPosition> farFixturesFor(
             ServerLevel level,
             ItemStack deedStack,
@@ -216,7 +171,7 @@ public final class TownRelocation {
         );
     }
 
-    /** Registered doors plus fence gates — the spatial fixtures relocation re-anchors and can drop. */
+    /** Registered doors and fence gates. */
     private static Set<TownPosition> registeredFixtures(TownFlagBlockEntity flag) {
         Set<TownPosition> all = new HashSet<>(flag.getRoomHandle().getAllRegisteredDoors());
         if (flag.getRoomHandle() instanceof TownRoomsHandle rh) {
@@ -225,12 +180,7 @@ public final class TownRelocation {
         return all;
     }
 
-    /**
-     * The fixtures that would land outside a flag at {@code targetPos} with cutoff {@code tickRadiusSq}
-     * — i.e. "too far away to come with you" (#199 Phase 4). Pure: the GUI uses it to decide whether to
-     * show the confirmation screen, and {@code TownRelocationTest} locks the split directly. {@code
-     * flagY} re-anchors each fixture's flag-relative {@code scanLevel} to an absolute world Y.
-     */
+    /** The fixtures that would be too far from a flag at {@code targetPos}. */
     public static List<TownPosition> fixturesBeyondRadius(
             BlockPos targetPos,
             int flagY,
@@ -247,11 +197,7 @@ public final class TownRelocation {
         return beyond;
     }
 
-    /**
-     * Whether {@code fixturePos} is farther from {@code targetPos} than the tick radius — using the
-     * same squared-distance comparison the ticker uses against {@link Config#TOWN_TICK_RADIUS}, so
-     * "can't tick it from here" and "too far to bring" stay one definition.
-     */
+    /** Whether {@code fixturePos} is beyond the tick radius from {@code targetPos}, as the ticker measures it. */
     public static boolean isBeyondRadius(
             BlockPos targetPos,
             BlockPos fixturePos,
@@ -271,12 +217,7 @@ public final class TownRelocation {
         return TownFlagBlockEntity.getFromPos(level, targetPos);
     }
 
-    /**
-     * Seed the new flag with the carried town data and re-run the chunk-reload init order
-     * (deserialize, then common init) against it, so the town hydrates instead of starting empty.
-     * {@code onLoad} already queued the fresh-flag path; discard it first. The roster respawn runs
-     * last, after the villager data has been deserialized.
-     */
+    /** Loads the carried town into the new flag, as a chunk reload does, then brings the villagers back. */
     private static void hydrateFrom(
             TownFlagBlockEntity relocated,
             CompoundTag carried,
@@ -295,8 +236,7 @@ public final class TownRelocation {
 
     private static Function<TownFlagBlockEntity, Boolean> respawnRosterTask() {
         return flag -> {
-            // The roster persists as villager stats keyed by UUID, independent of live entities;
-            // spawn each member back under its original UUID so per-villager jobs/knowledge re-attach.
+            // Bring each villager back under its own UUID.
             for (UUID villager : flag.villagerHandle.getFullness().keySet()) {
                 flag.addImmediateReward(new SpawnVisitorReward(flag, persistedVillagerUuid(villager)));
             }
@@ -304,11 +244,7 @@ public final class TownRelocation {
         };
     }
 
-    /**
-     * Wrap a persisted roster UUID as a {@link VillagerUUID} via the NBT round-trip — the sanctioned
-     * persisted-identity constructor — rather than the deprecated {@code VillagerUUID.from}. Fitting
-     * here: relocation rehydrates a roster that was itself persisted as raw UUIDs.
-     */
+    /** A saved UUID as a {@link VillagerUUID}. */
     static VillagerUUID persistedVillagerUuid(UUID uuid) {
         CompoundTag tag = new CompoundTag();
         tag.putUUID("uuid", uuid);
@@ -325,11 +261,7 @@ public final class TownRelocation {
         level.removeBlock(pos, false);
     }
 
-    /**
-     * Re-anchor every registered fixture to a flag at {@code newFlagY} while preserving each
-     * fixture's absolute world Y (X/Z are already absolute). Pure aggregate of
-     * {@link TownPosition#rebasedTo(int, int)} — the core invariant of relocation.
-     */
+    /** Re-anchors every fixture to a flag at {@code newFlagY}, keeping its world height. */
     public static List<TownPosition> planFixtureRebase(
             int oldFlagY,
             int newFlagY,
@@ -342,11 +274,7 @@ public final class TownRelocation {
         return rebased;
     }
 
-    /**
-     * The precondition decision: a relocation is allowed only when the deed carries a well-formed
-     * reference (town UUID, original flag pos, origin dimension) and the target is in the same
-     * dimension. Pure — the world-bound "original unreachable" check happens in {@link #place}.
-     */
+    /** A relocation needs a complete deed (town, flag position, dimension) and a target in the same dimension. */
     public static RelocationResult validate(
             @Nullable UUID townUuid,
             @Nullable BlockPos flagPos,

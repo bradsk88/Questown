@@ -224,8 +224,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Hospital bed is not associated to an existing flag");
             TownFlagBlock.tellPlacerNotLinked(ctx, "message.hospital_bed.not_linked");
-            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
-            // a copy duplicated it whenever the player kept the stack (2026-10-22 playtest).
+            // Null cancels the placement and keeps the stack.
             return null;
         }
 

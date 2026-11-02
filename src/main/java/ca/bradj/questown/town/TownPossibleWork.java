@@ -62,24 +62,13 @@ import static ca.bradj.questown.mc.Util.info;
  */
 public class TownPossibleWork {
 
-    /**
-     * The smelter fuel tag - the same one the family's own fuel jobs declare
-     * (the cook/baker fuel jobs' state-1 ingredient). The surfacing key for a
-     * furnace that is present but unlit: an {@link GateReason#Blocked} naming it,
-     * so the item store, the UNMET_ITEM bubble and the economics tab say
-     * "coal" instead of hiding the need behind "no room".
-     */
+    /** The smelter fuel tag. An unlit furnace with something to smelt is reported as needing this, not as missing a room. */
     public static final String SMELTER_FUEL_KEY = "#" + ItemTags.COALS.location().toString();
 
     private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
-    /**
-     * The warp's list: scored with job-block slot preconditions ignored. A warp picks from its
-     * list once and then simulates the furnace step by step, so a stage whose slot is not ready
-     * at warp start (cook/extract on an empty output slot) must still be in it. Realtime picks
-     * from {@link #preselectedJobs}, where an unmet slot scores the stage 0.
-     */
+    /** The warp's job list, scored without slot preconditions, since the warp fills the slots itself. */
     private final Map<String, List<JobID>> warpPreselectedJobs = new HashMap<>();
     private final Map<UUID, JobCycler> villagerCyclers = new HashMap<>();
     private final Queue<String> rootsAwaitingRecompute = new ArrayDeque<>();
@@ -87,15 +76,12 @@ public class TownPossibleWork {
     private boolean shouldRecompute = true;
     private int buffer;
 
-    /**
-     * The town's live unmet needs (design: .scratch/gannet-top-need/unmet-need-design.md):
-     * idempotent per (townie, item key), since-at-first-enter, bounded by the roster.
-     */
+    /** The town's current unmet needs, by villager and item. */
     private final UnmetNeedTracker unmetNeeds = new UnmetNeedTracker();
-    // Idle villagers whose fillable requests are all stocked (RequestsDone), refreshed per root pass.
+    // Idle villagers whose requests are all stocked.
     private final Set<UUID> requestsDone = new HashSet<>();
 
-    /** Half a millisecond: a tenth of what a hitch needs to be visible, out of a 50ms server tick. */
+    /** Half a millisecond of each tick for rescoring jobs. */
     private static final long RECOMPUTE_NANOS_PER_TICK = 500_000;
 
     public TownPossibleWork() {
@@ -129,15 +115,10 @@ public class TownPossibleWork {
     public void recomputeNow() {
         beginRecomputePass();
         while (scoreOneJob()) {
-            // Warp has no ticks to spread the work across, so the whole pass runs here.
         }
     }
 
-    /**
-     * Scoring one job scans the town's containers for each of its states, and a root can own
-     * dozens of jobs (there is one cook job per cookable item). A whole pass in one tick is a
-     * visible hitch, so a pass is spread over as many ticks as it takes to stay inside the budget.
-     */
+    /** Spreads a rescoring pass over as many ticks as it needs to stay within budget. */
     private boolean spendTickBudgetOnRecompute() {
         if (!isRecomputePassInProgress()) {
             return false;
@@ -163,7 +144,6 @@ public class TownPossibleWork {
         shouldRecompute = false;
     }
 
-    /** @return false once the pass has nothing left to do. */
     private boolean scoreOneJob() {
         if (scoringInProgress == null) {
             String root = rootsAwaitingRecompute.poll();
@@ -186,7 +166,6 @@ public class TownPossibleWork {
     }
 
     private static Queue<Map.Entry<JobID, Supplier<Work>>> jobsOfRoot(String root) {
-        // FIXME: Only include jobs that are known by the villagers
         return Works.regularJobs()
                     .stream()
                     .filter(v -> root.equals(v.getKey().rootId()))
@@ -217,10 +196,7 @@ public class TownPossibleWork {
         ImmutableList<JobID> preselected = band(unfilteredJobs, v -> v.score.value);
         preselectedJobs.put(root, preselected);
         warpPreselectedJobs.put(root, band(unfilteredJobs, JobPossibility::warpScore));
-        // Needs are a property of the world state, not of the score band: a
-        // job above the acceptance thresholds can still be blocked on a supply
-        // (no workable spot until the chest has coal), and that block is what
-        // the player needs to see. Refreshed every pass, union diffed.
+        // Needs come from the world, not the score: a job can score well and still wait on a supply.
         refreshUnmetNeeds(root, unfilteredJobs);
         t.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                 "Prepared for {}: [{}]",
@@ -243,7 +219,6 @@ public class TownPossibleWork {
             String root,
             List<JobPossibility> unfilteredJobs
     ) {
-        // Joining every job's toString is not cheap; skip it when the output would be discarded.
         if (!t.isDebugLogConsuming(DebugLogArgument.JOB_POSSIBILITIES_COMPUTE)) {
             return;
         }
@@ -258,19 +233,7 @@ public class TownPossibleWork {
         );
     }
 
-    /**
-     * One recompute pass's view of the root's live unmet needs: the UNION of
-     * the named keys across every unlocked candidate job (a root can be
-     * blocked on coal AND raw food at once - 2026-10-15 ruling, playtest
-     * ticket cook-status-blocker-surfacing-10-14), diffed against the
-     * tracker: stale keys exit, live ones keep their first-enter age. The old
-     * best-job-only registration flapped the hint with the pass's argmax
-     * (coal / raw food / nothing) and only ran on no-viable-job passes, so
-     * the hint was invisible exactly when a job scored above the threshold
-     * yet still could not start. Job-set-agnostic by construction (the job
-     * independence principle - no ordering or priority between specific
-     * jobs; CONTEXT.md).
-     */
+    /** A root's unmet needs this pass: every key across its unlocked jobs, compared with what was tracked before. */
     private void refreshUnmetNeeds(String root, List<JobPossibility> unfilteredJobs) {
         try {
             TownFlagBlockEntity t = town.getUnsafe();
@@ -278,17 +241,14 @@ public class TownPossibleWork {
             long tick = Util.getTick(sl);
             Map<String, GateReason> liveKeys = new HashMap<>();
             Map<String, Set<JobID>> keyJobs = new HashMap<>();
-            // The keys of jobs that answer an open request, which the bubble names first.
+            // Keys behind open requests come first in the bubble.
             Map<String, Set<JobID>> openKeyJobs = new HashMap<>();
             for (JobPossibility p : unfilteredJobs) {
                 if (p.facts() == null || p.board() == null) {
                     continue;
                 }
                 GateReason reason = gateReason(t, p);
-                // Town-level needs must come from a variant the town can actually run:
-                // at least one villager has unlocked it. Without this, locked tool
-                // variants (e.g. gatherer:axe on day one) register needs the town can
-                // never fill, because nobody may take that job (2026-10-13 econ-tab bug).
+                // Only jobs a villager has unlocked count.
                 if (!t.getVillagerHandle().isUnlocked(p.jobID())) {
                     continue;
                 }
@@ -301,7 +261,7 @@ public class TownPossibleWork {
                     openKeyJobs.computeIfAbsent(key, k -> new HashSet<>()).add(p.jobID());
                 }
                 GateReason existing = liveKeys.get(key);
-                // A supply-item need beats a keyless product handle for the same key.
+                // A supply item beats a product with no item.
                 if (existing == null || (reason.supplyItem() && !existing.supplyItem())) {
                     liveKeys.put(key, reason);
                 }
@@ -317,11 +277,7 @@ public class TownPossibleWork {
                 if (!fe.reason().supplyItem()) {
                     continue;
                 }
-                // First enter of this (townie, key) only: one econ record, not one
-                // per recompute pass (the run-2 swords=61 failure mode). Only a
-                // supply-item need writes the item store; a NoRoom's product is the
-                // tracker's producer handle, not a supply — routing it here is the
-                // oak_wood leak the item store mis-sourced.
+                // Recorded once, on the first enter; only a supply item goes in the item store.
                 econ.registerUnmetNeed(tick, fe.townie(), fe.key());
             }
             for (VisitorMobEntity villager : townies) {
@@ -341,9 +297,7 @@ public class TownPossibleWork {
                     }
                     continue;
                 }
-                // A need behind an open request outranks an unrequested job's (dev ruling
-                // 2026-10-31: a porkchop request with no raw pork names raw pork, not the beef the
-                // cook could also cook). With no open request behind any need, any held job's.
+                // A need behind an open request outranks one from an unrequested job.
                 Predicate<String> holdsOpen = key -> canHoldAnyOf(t, villager.getUUID(), openKeyJobs.get(key));
                 String primary = unmetNeeds.primaryKey(root, villager.getUUID(), holdsOpen);
                 String room = primary != null ? null : unmetNeeds.primaryRoom(root, villager.getUUID(), holdsOpen);
@@ -353,7 +307,6 @@ public class TownPossibleWork {
                     room = primary != null ? null : unmetNeeds.primaryRoom(root, villager.getUUID(), holds);
                 }
                 if (room != null) {
-                    // NO_STORAGE outranks it, as it does UNMET_ITEM.
                     if (villager.getNeed() != TownieNeed.MISSING_ROOM && villager.getNeed() != TownieNeed.NO_STORAGE) {
                         villager.setNeed(TownieNeed.MISSING_ROOM);
                     }
@@ -363,8 +316,7 @@ public class TownPossibleWork {
                     continue;
                 }
                 if (primary != null) {
-                    // NO_STORAGE (stopped for lack of storage) outranks it; that consumer clears
-                    // its own need when space frees, and this pass re-applies UNMET_ITEM then.
+                    // No storage outranks it.
                     if (villager.getNeed() != TownieNeed.UNMET_ITEM && villager.getNeed() != TownieNeed.NO_STORAGE) {
                         villager.setNeed(TownieNeed.UNMET_ITEM);
                     }
@@ -380,7 +332,6 @@ public class TownPossibleWork {
         }
     }
 
-    /** {@link RequestsDone} over the jobs this villager has unlocked. */
     private static boolean hasDoneAllRequests(
             TownFlagBlockEntity t,
             UUID villager,
@@ -398,20 +349,12 @@ public class TownPossibleWork {
         return RequestsDone.allDone(views);
     }
 
-    /**
-     * Whether this idle villager's fillable requests are all stocked (dev ruling 2026-10-30): its
-     * status says "All my requests are done" and it shows no need. Server-side only.
-     */
+    /** Whether this idle villager's requests are all stocked. Server only. */
     public boolean hasDoneAllRequests(UUID townie) {
         return requestsDone.contains(townie);
     }
 
-    /**
-     * Whether this townie has unlocked any of the jobs that need a key. The town-wide unlock
-     * gate above keeps a key live for the town; this narrower gate keeps a townie from asking
-     * for an item only another townie's job needs (2026-10-11 playtest: "I need a fishing rod
-     * to work" with the rod job locked on that townie's jobs screen).
-     */
+    /** Whether this villager has unlocked any of the jobs that need a key, so it asks only for its own needs. */
     private static boolean canHoldAnyOf(TownFlagBlockEntity t, UUID townie, @Nullable Set<JobID> jobs) {
         if (jobs == null) {
             return false;
@@ -424,14 +367,7 @@ public class TownPossibleWork {
         return false;
     }
 
-    /**
-     * The best-scoring job's typed gate reason. Best-scoring (not random - the old
-     * path picked a random work's first ingredient and mislabelled non-sword
-     * failures as "swords"): the town's own statement of what it waits for.
-     * A surfacing-labelled facts (a smelter present but unlit) classifies as a
-     * supply need on the fuel, not a room gap - the decision layer (what counts
-     * as a workable block) is unchanged; only the named blocker is corrected.
-     */
+    /** Why the best-scoring job can't start. An unlit smelter with input counts as a fuel need. */
     private static GateReason gateReason(TownFlagBlockEntity t, JobPossibility p) {
         JobFacts facts = p.facts();
         RequestCheck board = p.board();
@@ -449,7 +385,6 @@ public class TownPossibleWork {
         );
     }
 
-    /** The job's product supply key, or null when the job names no single product. */
     private static @Nullable String supplyKey(TownFlagBlockEntity t, Work work) {
         if (work.initialRequest == null) {
             return null;
@@ -503,9 +438,7 @@ public class TownPossibleWork {
         // Check if product is requested
         RequestCheck board = boardCheck(t, j.getId());
 
-        // Only a job that declares a slot precondition has a slot-blind (warp) view: the
-        // slot-blind context also skips special-rule job-block checks, which must keep
-        // applying to every other job.
+        // Only a job with a slot precondition has a slot-blind view.
         boolean slotGated = work.getSlotPrecondition() != null;
         JobFacts facts = gateFacts(t, dj, false, slotGated);
         double v = dj.specialGlobalRules.contains(SpecialRules.ALWAYS_CONSIDER)
@@ -551,12 +484,7 @@ public class TownPossibleWork {
             this(highestState, description, anyStateHasRoom, roomKey, firstBlockedState, missingIngredientLabel, missingToolLabel, blockedOnLabel, false);
         }
 
-        /**
-         * The job's site exists, but no job block meets its slot precondition right now (the
-         * job JSON's {@code block.has_item_in_slot_initially}, e.g. cook/extract on an empty
-         * output slot). Nothing is missing, so it carries no item label and registers no need;
-         * the stage just has nothing to do yet.
-         */
+        /** The job's site exists but no block is ready yet. Nothing is missing, so no need is recorded. */
         static JobFacts slotNotReady(String reason) {
             return new JobFacts(0, "Job site present but its slot precondition does not hold now (" + reason + ")",
                     true, null, -1, null, null, null, true);
@@ -576,10 +504,9 @@ public class TownPossibleWork {
     }
 
     /**
-     * @param satisfied      the request the job may work for (a job that makes nothing may take a
-     *                       paused one: {@link BoardRequests#toWorkFor})
-     * @param answersOpen    the job answers an unpaused request ({@link RequestsDone})
-     * @param answersStocked the job answers only paused (stocked) requests ({@link RequestsDone})
+     * @param satisfied      the request the job may work for
+     * @param answersOpen    the job answers an unpaused request
+     * @param answersStocked the job answers only paused requests
      */
     private record RequestCheck(
             boolean boardEmpty,
@@ -605,15 +532,13 @@ public class TownPossibleWork {
         }
         WorksBehaviour.TownData td = t.getTownData();
         WorkRequest satisfied = ServerJobsRegistry.firstAnswerable(td, jobId, requests).orElse(null);
-        // A job that makes nothing answers paused requests too, so "open" is checked on its own.
         boolean open = satisfied != null && ServerJobsRegistry.answersUnpaused(td, jobId, requests);
         boolean stocked = !open && ServerJobsRegistry.answersPaused(td, jobId, requests);
         return new RequestCheck(false, satisfied, open, stocked);
     }
 
     /**
-     * @param ignoreSlot test job blocks without their slot precondition (the warp's view: the
-     *                   warp simulates the slot contents itself); only for a slot-gated job
+     * @param ignoreSlot check job blocks without their slot precondition, as the warp does
      * @param slotGated  the job declares {@code block.has_item_in_slot_initially}
      */
     private static JobFacts gateFacts(TownFlagBlockEntity t, DeclarativeJob dj, boolean ignoreSlot, boolean slotGated) {
@@ -621,8 +546,7 @@ public class TownPossibleWork {
             return new JobFacts(dj.getMaxState(), "Special rule ALWAYS_CONSIDER present (scored between the acceptance bands)", true, null, -1, null, null);
         }
         WithReason<Boolean> lastRoomCheck = hasJobSite(t, dj, ignoreSlot);
-        // A slot that is not ready only because the furnace has input and no fuel is a fuel need,
-        // not "nothing to do yet": that case keeps the smelter fuel surfacing below.
+        // A furnace with input and no fuel is a fuel need.
         if (!lastRoomCheck.value() && !ignoreSlot && slotGated && smelterFuelBlocker(t, dj) == null
                 && hasJobSite(t, dj, true).value()) {
             return JobFacts.slotNotReady(lastRoomCheck.reason());
@@ -646,8 +570,7 @@ public class TownPossibleWork {
             );
         }
         ServerLevel sl = Preconditions.checkNotNull(t.getServerLevel());
-        // The scan only depends on the job's location (not on the state), and it does not change
-        // within one scoring pass, so it is computed once per job and reused across all states.
+        // The same for every state, so scan once per job.
         @Nullable List<ContainerTarget<MCContainer, MCTownItem>> jobSiteContainers = null;
         for (int i = 0; i < dj.getMaxState(); i++) {
             int ii = i;
@@ -710,13 +633,7 @@ public class TownPossibleWork {
         return ingredient == null ? null : Ingredients.toString(ingredient);
     }
 
-    /**
-     * A town "has" a tool if it is in any town container <em>or in any townie's inventory</em>.
-     * The container-only check scored a worker holding the town's only tool as unequipped, so
-     * warp reassigned them away from the job they'd do live (the held-tool warp regression
-     * scenario). The hand is the first inventory slot; the whole journal inventory is checked
-     * because tools can sit in later slots too.
-     */
+    /** A town has a tool if any container or any villager holds it. */
     private static boolean townHasTool(
             TownFlagBlockEntity t,
             IPredicateCollection<MCTownItem> tool
@@ -737,10 +654,7 @@ public class TownPossibleWork {
                 .anyMatch(stack -> !stack.isEmpty() && tool.test(MCTownItem.fromMCItemStack(stack)));
     }
 
-    /**
-     * Whether any non-claim-spot state of the job has a job block in a base room. The first
-     * passing state wins; otherwise the last state's reason is returned.
-     */
+    /** Whether any state of the job has a job block in a room. Otherwise, the last state's reason. */
     private static WithReason<Boolean> hasJobSite(TownFlagBlockEntity t, DeclarativeJob dj, boolean ignoreSlot) {
         WithReason<Boolean> last = WithReason.always(false, "No states checked");
         for (int i = 0; i < dj.getMaxState(); i++) {
@@ -764,22 +678,11 @@ public class TownPossibleWork {
             boolean ignoreSlot,
             Supplier<? extends Collection<Item>> stored
     ) {
-        // blockAlreadyUsed=true is the context switch that skips the slot precondition
-        // (ResourceJobLoader.isJobBlockV2).
         return dj.location().isJobBlock()
                  .test(new JobBlockTestContext(new MinecraftWorldAccess(sl), info(sl), bp, ImmutableList::of, stored, ignoreSlot, false));
     }
 
-    /**
-     * Surfacing (2026-10-13, ruling b - status/econ name the fuel, the decision layer
-     * stays as-is): when a smelter job's room check fails, a smelter block that
-     * physically exists in the base room, is NOT lit and has input waiting is exactly the "blocked on
-     * fuel" state - the missing input is FUEL ({@link #SMELTER_FUEL_KEY}, the same
-     * tag the family's own fuel jobs declare), not the site. Naming it keeps the
-     * need visible in the item store / UNMET_ITEM bubble / economics tab. The room
-     * check already established no workable spot; this adds the LIT check so a lit
-     * smelter failing the room check for another reason is not misnamed "needs coal".
-     */
+    /** A smelter job's room check failed but an unlit smelter with input is there: the town needs fuel. */
     private static @Nullable String smelterFuelBlocker(
             TownFlagBlockEntity t,
             DeclarativeJob dj
@@ -798,8 +701,7 @@ public class TownPossibleWork {
                 if (!(state.getBlock() instanceof AbstractFurnaceBlock) || state.getValue(AbstractFurnaceBlock.LIT)) {
                     continue;
                 }
-                // Unlit with nothing to smelt is idle, not blocked: an empty furnace must not
-                // read as "needs coal" (2026-10-23, the slot-gated furnace stages).
+                // An empty unlit furnace is idle, not short of fuel.
                 if (sl.getBlockEntity(bp) instanceof AbstractFurnaceBlockEntity f && !f.getItem(0).isEmpty()) {
                     return SMELTER_FUEL_KEY;
                 }
@@ -808,7 +710,7 @@ public class TownPossibleWork {
         return null;
     }
 
-    /** Read once per scan, not once per position: it walks every town container. */
+    /** Read once per scan: it walks every town container. */
     private static Supplier<? extends Collection<Item>> unique(TownFlagBlockEntity t) {
         return Suppliers.memoize(() -> TownContainers.getUniqueItems(t));
     }
@@ -817,18 +719,11 @@ public class TownPossibleWork {
         return UtilClean.getOrDefaultCollection(preselectedJobs, jobId.rootId(), ImmutableList.of());
     }
 
-    /** The warp's list for this job's root (see {@link #warpPreselectedJobs}). */
     public ImmutableList<JobID> getForWarp(JobID jobId) {
         return UtilClean.getOrDefaultCollection(warpPreselectedJobs, jobId.rootId(), ImmutableList.of());
     }
 
-    /**
-     * Dev/observation: score every regular job of a root and return each job's
-     * id, score and the reason the gate scanner stopped (missing room / lacking
-     * tools or ingredients for state N), plus the current job-board requests.
-     * Mirrors what {@link #applyScores} sees, without needing the debug-log toggle.
-     */
-    // DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+    /** Dev-only: each of the root's jobs with its score and why it can't start, plus the board's requests. */
     public String scoreDump(String root) {
         TownFlagBlockEntity t = town.getUnsafe();
         StringBuilder b = new StringBuilder();
@@ -853,9 +748,7 @@ public class TownPossibleWork {
             WorksBehaviour.TownData td
     ) {
         JobCycler cycler = villagerCyclers.computeIfAbsent(villagerUUID, k -> new JobCycler());
-        // The precomputed list is the town-wide "known" set (all of the root's jobs); gate it to
-        // the works *this* townie has unlocked for itself, so a freshly-minted townie only ever
-        // sees the one work it holds rather than every tier another townie has unlocked.
+        // Only the jobs this villager has unlocked.
         VillagerHolder vh = town.getUnsafe().getVillagerHandle();
         ImmutableList<JobID> possible = getFor(currentJob).stream()
                 .filter(jobID -> vh.isUnlocked(villagerUUID, jobID))
@@ -865,22 +758,12 @@ public class TownPossibleWork {
                 ServerJobsRegistry::getAvailableAtLevel);
     }
 
-    /**
-     * The supply the town has recorded this townie as blocked on, whether or not its bubble shows
-     * now (a relaxing villager's is hidden, {@link #showsUnmetNeed}).
-     */
+    /** The supply this villager is recorded as blocked on, even when its bubble is hidden. */
     public @Nullable String trackedUnmetKey(String root, UUID townie) {
         return unmetNeeds.primaryKey(root, townie);
     }
 
-    /**
-     * Only a villager having a hard time shows an unmet-item or missing-room need: one looking for
-     * work, or one whose job is stuck for supplies or a job site. One that is working, eating or
-     * relaxing does not. Dev playtest 2026-10-30: a cook carried raw pork to the kitchen under "They
-     * need mutton to work" ("should only show need bubbles if they're having a hard time finding
-     * work to do"). 2026-10-29 hid it for relaxing villagers only. The next pass after the villager
-     * struggles again re-applies the need.
-     */
+    /** Only a struggling villager shows an unmet need: one looking for work or stuck for supplies or a site. Not one that is working, eating or relaxing. */
     public static boolean showsUnmetNeed(JobID currentJob, @Nullable IStatus<?> status) {
         if (WorkSeekerJob.isSeekingWork(currentJob)) {
             return true;

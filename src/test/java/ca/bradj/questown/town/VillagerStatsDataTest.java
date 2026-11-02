@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Test;
 
 class VillagerStatsDataTest {
 
-    // The `_qtdev villager_stats` console line: the server's own numbers, so a screen that shows
-    // something else (r9: "Lvl 1" on a level-4 hunter) can be checked without dumping flag NBT.
     @Test
     public void summary_namesEveryField() {
         VillagerStatsData stats = new VillagerStatsData(

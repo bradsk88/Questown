@@ -2,11 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.jobs.Signals;
 
-/**
- * "Your camp is ready / Use wand on campfire" asks for a campfire sleep, which can't start in
- * daylight. A player who didn't sleep kept it on screen the whole next day (2026-10-22 r3 #17), so
- * it hides once morning comes; the server re-arms it for the next evening.
- */
+/** The "Your camp is ready" toast asks for a campfire sleep, so it hides at dawn and comes back in the evening. */
 public final class CampReadyToast {
 
     public static final String TITLE_KEY = "tutorial.campfire_ready.title";

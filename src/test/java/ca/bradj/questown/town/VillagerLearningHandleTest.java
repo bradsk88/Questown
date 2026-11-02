@@ -136,9 +136,7 @@ class VillagerLearningHandleTest {
 
     @Test
     public void testShouldReturnAwarenessesForSameRootDifferentSubtrees() {
-        // A fishing-gatherer and a shovel-gatherer share the "gatherer" root but
-        // have different sub-trees: each of the villager's jobs reveals its own
-        // children - 4 awarenesses in total, none crossing between sub-trees.
+        // Two gatherer jobs with different sub-trees each reveal their own children.
         ImmutableList<String> allJobs = ImmutableList.of(
                 "gatherer",
                 "gatherer:fishing", "gatherer:fishing:1", "gatherer:fishing:2",
@@ -147,7 +145,6 @@ class VillagerLearningHandleTest {
         VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
                 () -> ImmutableSet.copyOf(allJobs),
                 j -> allJobs,
-                // direct-parent relation, as in ServerJobsRegistry.isParentOf
                 (p, c) -> c.contains(":") && p.equals(c.substring(0, c.lastIndexOf(':'))),
                 (j) -> true,
                 2
@@ -167,18 +164,16 @@ class VillagerLearningHandleTest {
 
     @Test
     public void testShouldNotCountTheVillagersOwnJobAsAnAwareness() {
-        // Pins the equality-skip in tick(): a root job must not appear in its own
-        // awareness list, even when the parent predicate is broad enough to
-        // include the job itself.
+        // A root job is never in its own awareness list.
         ImmutableList<String> allJobs = ImmutableList.of("a", "aa", "ab");
         VillagerLearningHandle<String> h = new VillagerLearningHandle<>(
                 () -> ImmutableSet.copyOf(allJobs),
                 j -> allJobs,
-                (p, c) -> c.startsWith(p), // deliberately includes c == p
+                (p, c) -> c.startsWith(p),
                 (j) -> true,
                 2
         );
-        h.init(ImmutableList.of("aa")); // "aa" already known
+        h.init(ImmutableList.of("aa"));
         h.tick(ImmutableList.of("a"));
         assertIterableEquals(ImmutableList.of("ab"), h.getNextJobAwareness("a"));
     }
@@ -207,7 +202,6 @@ class VillagerLearningHandleTest {
     }
 
 
-    /** Dev playtest 2026-10-29: beef was not offered because only 2 random children were revealed. */
     @Test
     public void revealAll_offersEveryUnknownChild() {
         ImmutableSet<String> allJobs = ImmutableSet.of("mutton", "beef", "porkchop", "chicken", "rabbit", "potato");

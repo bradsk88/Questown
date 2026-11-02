@@ -10,14 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
-/**
- * Pins the typed unmet-need gate reasons (design:
- * {@code .scratch/gannet-top-need/unmet-need-design.md}): no room built beats
- * a missing input, which beats "product not requested". Precedence and key
- * choice are pure decisions over labels and booleans; the town side supplies
- * the labels from the registry-bound job data and container scans (covered by
- * compile + the held self_sufficiency run).
- */
+/** Why a job can't run, by precedence: no room, then a missing input, then nothing requested. */
 class GateReasonTest {
 
     private static final List<String> NONE = List.of();
@@ -93,11 +86,7 @@ class GateReasonTest {
         assertNull(r.itemKey());
     }
 
-    // A supply-item need is one the town writes to its ITEM store (and shows as
-    // a UNMET_ITEM bubble). NoRoom is a job-site gap (room store / work-seeker status,
-    // not the item store) and NoRequest is a board problem; only a Blocked on a
-    // missing ingredient/tool names a supply item. itemKey() may still carry the
-    // job's product (the tracker's producer handle) without it being a supply need.
+    // Only a missing ingredient or tool is a supply-item need.
     @Test
     void noRoomIsNotASupplyItem_evenThoughItCarriesTheProductKey() {
         GateReason r = GateReason.classify(false, "block.questown.mineshaft", -1, NONE, NONE, true, "coal");

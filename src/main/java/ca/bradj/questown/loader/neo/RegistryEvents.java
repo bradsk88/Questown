@@ -10,7 +10,7 @@ import net.neoforged.neoforge.registries.RegistryBuilder;
 @net.neoforged.fml.common.EventBusSubscriber(modid = Questown.MODID, bus = net.neoforged.fml.common.EventBusSubscriber.Bus.MOD)
 public class RegistryEvents {
 
-    private static final int MAX_VARINT = Integer.MAX_VALUE - 1; // Copying Forge
+    private static final int MAX_VARINT = Integer.MAX_VALUE - 1;
 
     @SubscribeEvent()
     public static void register(NewRegistryEvent event) {

@@ -12,19 +12,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-14 playtest (server-19): BOP deposit soft-lock. The flag block is a shared
- * work location for works with different state numberings - bop_depositing (states 0-2)
- * and downtime (states 0-9). When the gatherer's downtime cycle was interrupted
- * (downtime → seeking_work mid-sequence), the flag's per-owner state record was left at
- * 3. The status gate ({@code DeclarativeJobs.rooms}) read the raw 3, found no spot at
- * state 0 or 1, and the depositor looped in NO_JOBSITE forever - and each re-entry
- * re-granted a BOP ("duplicating BOPs", user chat 04:17:58/04:18:18).
- *
- * <p>An out-of-range record (state &gt; this job's maxState) can never advance itself in
- * this job's state machine; it must be read as fresh - the same rule the supply-loop
- * guard already applies ({@code DeclarativeJobTicker.computeRoomsNeedingInput}).
- */
+/** Jobs that share the flag number their states differently, so a record beyond this job's last state reads as fresh. */
 class DeclarativeJobsRoomsForeignStateTest {
 
     private static final Position FLAG = new Position(0, 0);
@@ -46,7 +34,7 @@ class DeclarativeJobsRoomsForeignStateTest {
 
     @Test
     void rooms_foreignStateBeyondMaxStateReadsAsFresh() {
-        // A foreign work's (downtime's, max 9) mid-sequence record: 3.
+        // Downtime's record, at 3.
         var gates = DeclarativeJobs.rooms(
                 DeclarativeJobsRoomsForeignStateTest::flagSites,
                 pos -> FLAG.equals(pos) ? State.freshAtState(3) : null,
@@ -61,8 +49,7 @@ class DeclarativeJobsRoomsForeignStateTest {
 
     @Test
     void rooms_inRangeRecordStillGatesOnItsOwnState() {
-        // An in-range record must NOT be read as fresh: a state-1 spot is workable for
-        // the state-1 gate only. Guards against over-normalizing every record to fresh.
+        // An in-range record is not read as fresh.
         var gates = DeclarativeJobs.rooms(
                 DeclarativeJobsRoomsForeignStateTest::flagSites,
                 pos -> FLAG.equals(pos) ? State.freshAtState(1) : null,
@@ -78,8 +65,7 @@ class DeclarativeJobsRoomsForeignStateTest {
 
     @Test
     void rooms_nullRecordStillReadsAsFresh() {
-        // Pre-existing contract (WorkStatusStoreMatSeedTest lineage): an unseeded block
-        // is unstarted work, not "no state".
+        // A block with no record is fresh.
         var gates = DeclarativeJobs.rooms(
                 DeclarativeJobsRoomsForeignStateTest::flagSites,
                 pos -> null,
@@ -91,12 +77,7 @@ class DeclarativeJobsRoomsForeignStateTest {
                 "an unseeded block must read as state 0");
     }
 
-    /**
-     * 2026-10-29 (dev playtest 2026-10-28, autotest {@code flag/bop_deposit_at_night}): the
-     * depositor's work loop lists spots by state from the raw record ({@code
-     * DeclarativeJob.listAllWorkSpots}); downtime's 6 or 8 at the flag filed the flag under a
-     * state the depositor never works, so it stood at state 0 holding its BOP all night.
-     */
+    /** Downtime's record at the flag doesn't put the flag under a state the depositor never works. */
     @Test
     void inRange_foreignStateBeyondMaxStateReadsAsFresh() {
         var read = DeclarativeJobs.inRange(pos -> State.freshAtState(8), 2);

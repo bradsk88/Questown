@@ -17,44 +17,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One-shot tool that reshapes {@code empty_town.nbt} into a more terrain-
- * friendly footprint:
- *
- * <ol>
- *   <li><b>Clear-above ceiling.</b> 16 layers of {@code minecraft:air} above
- *       the existing top-Y across the original XZ footprint, so trees and
- *       overhangs from the surrounding biome can't protrude into the
- *       buildable plane after placement.</li>
- *   <li><b>Dirt-floor underlayer.</b> The existing payload is shifted up by
- *       {@link #FLOOR_DEPTH} blocks; the freed Y=0..FLOOR_DEPTH-1 cells
- *       across the original footprint become {@code minecraft:dirt}, giving
- *       the flat plane visible soil instead of a sheer cube wall.</li>
- *   <li><b>Cascade boundary ring.</b> Around the original footprint,
- *       {@link #CASCADE_DISTANCE} concentric rings of grass-topped dirt
- *       slope down 1 block per ring, replacing the cliff edge with a 1:1
- *       falloff.</li>
- * </ol>
- *
- * <p>The Y shift requires a matching adjustment to
- * {@code worldgen/structure/empty_town.json}'s {@code start_height.absolute}
- * (subtract {@link #FLOOR_DEPTH}) so the plane lands at the same world Y
- * after the in-NBT shift. The shaper does NOT mutate that JSON — that's a
- * separate one-line edit handled by the developer.
- *
- * <p>Sibling to {@link ChickenScaffoldingNbtEditor} and
- * {@link EmptyTownGrassThinner} — same one-shot devtool pattern (run the
- * disabled JUnit entry point in this class's test, commit the resulting
- * NBT change, re-{@code @Disabled} the test).
+ * Reshapes {@code empty_town.nbt} to sit better in terrain: air above it so trees can't grow in,
+ * a dirt floor under it, and grass slopes stepping down around it. The structure moves up by
+ * {@link #FLOOR_DEPTH}, so {@code worldgen/structure/empty_town.json}'s {@code start_height} has
+ * to come down by the same amount.
  */
 public final class EmptyTownTerrainShaper {
 
     public static final Path DEFAULT_STRUCTURE_PATH = ChickenScaffoldingNbtEditor.DEFAULT_STRUCTURE_PATH;
 
-    /** Layers of air placed directly above the existing structure top-Y. */
     public static final int CEILING_HEIGHT = 16;
-    /** Layers of dirt added below the existing flat plane (= Y shift amount). */
     public static final int FLOOR_DEPTH = 3;
-    /** Number of concentric cascade rings around the original XZ footprint. */
     public static final int CASCADE_DISTANCE = 3;
 
     private static final String PALETTE_KEY = "palette";
@@ -91,14 +64,7 @@ public final class EmptyTownTerrainShaper {
         return 0;
     }
 
-    /**
-     * Pure mutation — input is not modified.
-     *
-     * <p>Algorithm in order: capture original size, shift internal payload by
-     * (X,Y,Z) = (CASCADE_DISTANCE, FLOOR_DEPTH, CASCADE_DISTANCE), then layer
-     * floor + ceiling + cascade rings. Resize the {@code size} tag to enclose
-     * everything.
-     */
+    /** The reshaped structure. The input is not changed. */
     public static CompoundTag shape(CompoundTag source) {
         CompoundTag root = source.copy();
         ListTag palette = root.getList(PALETTE_KEY, Tag.TAG_COMPOUND);
@@ -119,7 +85,7 @@ public final class EmptyTownTerrainShaper {
         int footprintZ0 = CASCADE_DISTANCE;
         int footprintX1 = footprintX0 + origX - 1;
         int footprintZ1 = footprintZ0 + origZ - 1;
-        int planeGroundY = FLOOR_DEPTH;          // top of the dirt floor (= NBT Y of original Y=0 grass)
+        int planeGroundY = FLOOR_DEPTH;
         int yTopAfterShift = origY - 1 + FLOOR_DEPTH;
 
         addFloor(blocks, dirtIdx, footprintX0, footprintZ0, footprintX1, footprintZ1, planeGroundY);
@@ -134,16 +100,11 @@ public final class EmptyTownTerrainShaper {
         return root;
     }
 
-    // -------------------------------------------------------------------------
-    // Layer builders
-    // -------------------------------------------------------------------------
-
     private static void addFloor(
             ListTag blocks, int dirtIdx,
             int x0, int z0, int x1, int z1,
             int planeGroundY
     ) {
-        // Y = 0 .. planeGroundY-1 across the original footprint.
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 for (int y = 0; y < planeGroundY; y++) {
@@ -158,7 +119,6 @@ public final class EmptyTownTerrainShaper {
             int x0, int z0, int x1, int z1,
             int yTopAfterShift
     ) {
-        // Y = yTopAfterShift+1 .. yTopAfterShift+CEILING_HEIGHT.
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 for (int dy = 1; dy <= CEILING_HEIGHT; dy++) {
@@ -168,12 +128,7 @@ public final class EmptyTownTerrainShaper {
         }
     }
 
-    /**
-     * Ring r ∈ [1..CASCADE_DISTANCE] places a grass-topped column at every
-     * cell whose Chebyshev distance from the original footprint equals r.
-     * Top grass sits at Y = planeGroundY - r (1 block lower per ring); dirt
-     * fills from Y=0 up to one below the grass.
-     */
+    /** Ring r drops r blocks below the floor, one per ring outward. */
     private static void addCascade(
             ListTag blocks, int dirtIdx, int grassIdx,
             int x0, int z0, int x1, int z1,
@@ -197,10 +152,7 @@ public final class EmptyTownTerrainShaper {
         }
     }
 
-    /**
-     * Rectangular ring: cells inside the outer rectangle [ox0..ox1]×[oz0..oz1]
-     * but outside the inner rectangle [ix0..ix1]×[iz0..iz1].
-     */
+    /** Cells inside the outer rectangle and outside the inner one. */
     private static List<BlockPos> ringCells(
             int ox0, int oz0, int ox1, int oz1,
             int ix0, int iz0, int ix1, int iz1
@@ -216,10 +168,6 @@ public final class EmptyTownTerrainShaper {
         }
         return out;
     }
-
-    // -------------------------------------------------------------------------
-    // NBT plumbing
-    // -------------------------------------------------------------------------
 
     private static int[] readSize(CompoundTag root) {
         ListTag size = root.getList(SIZE_KEY, Tag.TAG_INT);
@@ -265,10 +213,7 @@ public final class EmptyTownTerrainShaper {
             case GRASS_BLOCK -> Blocks.GRASS_BLOCK.defaultBlockState();
             default -> throw new IllegalArgumentException("unknown block: " + blockName);
         });
-        // grass_block has properties (snowy=false) but we want the default
-        // form; writeBlockState emits Properties when the state has any
-        // non-default value. Default is fine — strip Properties to keep our
-        // "no properties" reuse predicate honest.
+        // Write the plain default grass block.
         entry.remove("Properties");
         palette.add(entry);
         return palette.size() - 1;

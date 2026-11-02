@@ -11,14 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-23 playtest r12 #11: the server crashed with "Multiple entries with same key"
- * while a diner evaluated its rooms gate in a town with a Kitchen Diner. The gate's
- * per-spot maps were built across every job-site match, so a block contained by two
- * matches (overlapping job sites) was put twice into an {@code ImmutableMap.Builder}.
- * A spot's state and job-block flag depend only on its position, so one entry per
- * position is the whole truth.
- */
+/** A block in two overlapping job sites appears once in the per-spot maps. */
 class DeclarativeJobsRoomsSharedBlockTest {
 
     private static final Position SHARED = new Position(1, 1);

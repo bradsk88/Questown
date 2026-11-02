@@ -149,7 +149,6 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             this.hngBar = renderHunger(rc, position);
             position++;
         }
-//        renderDamage(rc, position);
         renderCustomTooltip(rc, mouseX, mouseY);
     }
 
@@ -164,7 +163,6 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
                 title,
                 (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
         );
-        // "Lvl N" right-aligned on the title line (2026-10-11 playtest).
         Component level = Compat.translatable("menu.villager_stats.level", menu.getLevel());
         int bgX = (this.width - backgroundWidth) / 2;
         int titleY = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
@@ -172,11 +170,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         return bar;
     }
 
-    /**
-     * What is weighing on the villager, in words ("Didn't sleep"): the mood effects the townie
-     * carries. The stats page showed no sign of a sleepless or raw-food day (2026-10-11 playtest).
-     * Nothing is drawn when no effect is active.
-     */
+    /** The villager's mood effects in words ("Didn't sleep"). Nothing when none are active. */
     private void renderMoodEffects(
             RenderContext rc,
             int position
@@ -187,8 +181,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         }
         int bgX = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
-        // One line in the stats row (rows are 25 px apart); a long list ends in "..." and shows
-        // whole on hover (r16 #13: "Didn't sleep, works slower, Ate…" had no way to read the rest).
+        // One line; a long list ends in "..." and shows whole on hover.
         List<String> names = new ArrayList<>();
         for (String effect : menu.getMoodEffects()) {
             String path = effect.substring(effect.indexOf(':') + 1);
@@ -245,11 +238,8 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         int y = 28 + bxY;
         int height = 5;
         int barLeftX = x - 1;
-        // bars.png (256x256): left half-bands at u0..94, right half-bands at u100..181
-        // (rebaked with the dark right cap the golden had). Band rows: track v64..68,
-        // fill v69..73 (v74 down is the purple bands). Each 82px half fills 0..50% /
-        // 50..100%, like the golden's two-half layout. Util.blit is the verified
-        // 1:1 pixel blit over the 256 sheet.
+        // bars.png: left half-bars at u 0-94, right at u 100-181; track at v 64-68, fill at v 69-73.
+        // Each half fills 50%.
         Util.blit(rc.gui(), icons, barLeftX, y, 1, 64, HALF_WIDTH, height);
         Util.blit(rc.gui(), icons, x + 78, y, 100, 64, HALF_WIDTH, height);
         float fP = fullnessPercent / 100f;

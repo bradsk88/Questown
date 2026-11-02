@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Unit coverage for the per-position container-content oracle (U1). A fetch relocates an item
+ * Unit coverage for the per-position container-content oracle. A fetch relocates an item
  * (town-wide delta ~0), so the town-wide {@link TestResultChecker#check} model cannot gate it;
  * {@link TestResultChecker#checkContainerContents} asserts both-sides conservation per position.
  */

@@ -13,7 +13,7 @@ public class TagsInit {
     public static class Items {
 
         public static final TagKey<Item> VILLAGER_FOOD = createTag("villager_food");
-        /** What a kitchen makes: the cook batch's food quest counts these, not gathered food (r17). */
+        /** Food a kitchen makes; the cook batch's food quest counts only these. */
         public static final TagKey<Item> VILLAGER_COOKED_FOOD = createTag("villager_cooked_food");
         public static final TagKey<Item> VILLAGER_RAW_FOOD = createTag("villager_raw_food");
         public static final TagKey<Item> VILLAGER_SIMPLE_FURNACE_FOOD_RAW = createTag("villager_simple_furnace_food_raw");

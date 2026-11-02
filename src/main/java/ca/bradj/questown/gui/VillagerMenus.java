@@ -48,8 +48,7 @@ public class VillagerMenus {
         menus.initQuestsMenu(windowId, p.villager, p.quests, p.flagPos, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
         VillagerStatsMenu statsMenu =
                 new VillagerStatsMenu(windowId, p.villager, p.flagPos, p.stats, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
-        // Best-effort: the local entity may have despawned since the server
-        // sent this. Without it the menu degrades to the wire's static data.
+        // The villager may have despawned; the menu then shows the sent data only.
         if (player.level().getEntity(p.entityId) instanceof VisitorMobEntity local) {
             statsMenu.attach(local);
         }

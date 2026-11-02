@@ -9,7 +9,6 @@ class MissedMorningTest {
 
     @Test
     void awayOvernight_backAtNoon_missedTheMorning() {
-        // The playtest: left in the evening of day 2, back at noon of day 3.
         assertTrue(MissedMorning.missedDuringAbsence(61_000, 80_296));
     }
 

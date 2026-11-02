@@ -92,9 +92,7 @@ class JobIntegrationTest {
     void testJobLoader_shouldParseAllWorkStates() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
 
-        // Cook-shaped baker family (2026-10-10 migration): baker/bread is a
-        // slot-insert job (tool wheat -> insert wheat into oven slot 0), no
-        // timer state. Coal moved to baker/fuel, extraction to baker/extract.
+        // baker/bread: hold wheat, insert it in slot 0. Fuel and extraction are their own jobs.
         Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
         Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
         Assertions.assertEquals(Integer.valueOf(1), definition.ingredientQtyRequiredAtStates().get(1));
@@ -119,7 +117,6 @@ class JobIntegrationTest {
 
         Assertions.assertEquals(new JobID("baker", "extract"), definition.jobId());
         Assertions.assertEquals(1, definition.maxState());
-        // Mirror of cook_extract: work-only state 0, no tools.
         Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
                 "baker/extract must have no tools (work-only state 0)");
         Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0));
@@ -260,8 +257,6 @@ class JobIntegrationTest {
 
     @Test
     void blacksmith_wood_sword_shouldLoadCorrectly() {
-        // the sword column of the crafter tool matrix (2026-10-09, gannet Factor 3
-        // ruling: the tool producer should make swords, not just axes/shovels/hoes/pickaxes)
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "blacksmith_wood_sword.json");
 
         Assertions.assertEquals(new JobID("crafter", "wooden_sword"), definition.jobId());
@@ -475,8 +470,6 @@ class JobIntegrationTest {
 
         Assertions.assertEquals(new JobID("cook", "extract"), definition.jobId());
         Assertions.assertEquals(1, definition.maxState());
-        // De-sticked 2026-10-09: the stick was a load workaround ("//TODO: Make jobs work
-        // without tools"); state 0 is now pure work-only.
         Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
                 "cook/extract must have no tools (work-only state 0)");
         // Note: work is 0.1 in JSON, parsed as integer 0
@@ -898,14 +891,6 @@ class JobIntegrationTest {
     }
 
     // ========== Baker Bread Ticker Tests ==========
-    //
-    // The 2026-10-10 cook-shape migration replaced the timer-shape ticker
-    // tests here (consume-ingredients / transition-to-time-state /
-    // timer-expiry extraction) with ticker-vs-advancer equivalence
-    // coverage: see BakerEquivalenceTest (baker_bread / baker_fuel /
-    // baker_extract, incl. the work-only state-0 empty-inventory extract).
-    // The parser shape of the new family is pinned above in
-    // testJobLoader_shouldParseAllWorkStates + baker_extract/fuel_shouldLoadCorrectly.
 
     /**
      * Reproduction test for bug: Villager gets NO_JOBSITE status instead of EXTRACTING_PRODUCT
@@ -1358,10 +1343,7 @@ class JobIntegrationTest {
         // Give the villager an axe (tool at state 0)
         setup.inventory.set(0, new GathererJournalTest.TestItem("#questown:axes"));
 
-        // Run ticks - ticker should verify tool, complete work, and transition to time state.
-        // Checked each tick, not only at the end: the cycle can finish within the window, and a
-        // villager holding the loot then waits to carry it to storage before a new cycle (2026-10-20),
-        // which this harness cannot do (its store accepts no items).
+        // Checked each tick: the cycle can finish within the window.
         int maxState = 0;
         Integer timerAtTimeState = null;
         for (int i = 0; i < 30; i++) {

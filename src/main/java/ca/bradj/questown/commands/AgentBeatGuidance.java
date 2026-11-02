@@ -3,34 +3,12 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Agent-facing guidance for the helper-chicken onboarding arc, surfaced by
- * {@code /_qtdev help}.
- *
- * <p>The helper chicken shows a player a bubble icon and a right-click hint
- * (see {@code ChickenArcPresentation}). An agent driving a held run has no
- * mouse, so the same beats are restated here as a {@code need} (the action the
- * town wants, in the player's terms) and a {@code how} (the world interaction
- * that fulfils it, also in the player's terms - what a player would do). The
- * text names the interaction, not the command that performs it: a headless
- * agent maps the interaction onto the tools it has (a {@code _qtdev} command, a
- * vanilla command, or a player action) itself. Where no agent-side action can do
- * the step, the {@code how} says so plainly, and that is the stumbling point the
- * agent is meant to find.
- *
- * <p>The {@code need} text mirrors the chicken's plain hint intent (the
- * imperative fourth-wall line in {@code ChickenArcPresentation}) but is
- * reworded for an agent that cannot right-click; keep the two aligned if the
- * chicken's hints change. This is a separate mapping, not a reuse of
- * {@code ChickenArcPresentation}, because the chicken's leaf keys are
- * right-click imperatives an agent can't act on.
- */
+/** What {@code /_qtdev help} says about each helper-chicken lesson: what the town needs, and how to do it. */
 final class AgentBeatGuidance {
 
     private AgentBeatGuidance() {
     }
 
-    /** The current beat's agent-facing guidance, or {@code null} for terminal beats. */
     record Guidance(String need, String how, String teaches) {
     }
 
@@ -175,11 +153,7 @@ final class AgentBeatGuidance {
         };
     }
 
-    /**
-     * A compact map of the whole arc (every beat, in order) with the current one
-     * marked, so an agent sees all the beats the chicken walks without a
-     * step-by-step tutorial. Terminal states are not part of the walkable map.
-     */
+    /** Every beat of the arc, in order, with the current one marked (terminal states left out). */
     static String mapLine(ChickenBeatState current) {
         StringBuilder sb = new StringBuilder("map:");
         for (ChickenBeatState beat : ChickenBeatState.values()) {
@@ -196,10 +170,7 @@ final class AgentBeatGuidance {
         return sb.toString();
     }
 
-    /**
-     * 1-based position of {@code state} among the walkable beats (excludes the
-     * terminal COMPLETE and FORFEIT), or 0 for a terminal state.
-     */
+    /** The lesson's 1-based position, or 0 once the lessons have ended. */
     static int walkableIndex(ChickenBeatState state) {
         if (state == ChickenBeatState.COMPLETE || state == ChickenBeatState.FORFEIT) {
             return 0;

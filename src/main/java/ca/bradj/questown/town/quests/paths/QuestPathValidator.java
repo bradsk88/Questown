@@ -7,12 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * The structure rules a path file must meet: unique batch ids, {@code opens_after} names a batch
- * of the same path, no cycle, at least one starter, quests in every batch, positive counts, and a
- * {@code root/job} id on job-change and skill quests, and a bare job root on level quests. Whether the ids exist in the game's data is
- * {@code QuestPathDataTest}'s job (it reads the job and recipe files).
- */
+/** The rules a path file must follow: unique batch ids, {@code opens_after} within the path, no cycles, a starter, no empty batches, positive counts, valid job ids. */
 public final class QuestPathValidator {
 
     private QuestPathValidator() {

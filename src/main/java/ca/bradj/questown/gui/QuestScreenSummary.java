@@ -1,10 +1,6 @@
 package ca.bradj.questown.gui;
 
-/**
- * Server-computed summary of the town quests screen, synced as two booleans
- * alongside the existing town-quests data. {@code allComplete} drives the
- * empty-state view; {@code pendingReward} chooses the morning vs caught-up line.
- */
+/** The quests screen's summary: whether all quests are done, and whether a morning reward is waiting. */
 public record QuestScreenSummary(
         boolean allComplete,
         boolean pendingReward

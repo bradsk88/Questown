@@ -13,17 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The villager-menu wire payload. Carries the villager's UUID and slot locks
- * so the client builds the menus from wire data alone instead of resolving
- * the local entity by raw id — a local entity that despawned in the interim
- * used to NPE the screen open and disconnect the client (see
- * .scratch/work-board-request/quests-menu-null-townie-client-crash.md).
- *
- * {@code entityId} is best-effort only: it lets the client attach live
- * stats updates when the local entity happens to still be present, and is
- * ignored (degrading to the wire's static data) when it is not.
- */
+/** The villager menus' network data. The client builds the menus from it, not from the local entity, which may have despawned. */
 public final class VillagerMenusPayload {
     public final int entityId;
     public final UUID villager;
@@ -38,21 +28,15 @@ public final class VillagerMenusPayload {
     public final boolean showInventoryTab;
     public final boolean jobChangeAlreadyPending;
     public final List<Boolean> slotLocks;
-    /**
-     * "Villager N" display name (the townie's monotonic arrival number, 2026-10-14
-     * playtest). Empty string when unassigned - screens fall back to the truncated UUID.
-     */
+    /** The villager's "Villager N" name; empty when it has none. */
     public final String villagerDisplayName;
-    /** Red dot on the change-profession tab (TownQuests.wantsJobChangeFrom, server-computed). */
+    /** Red dot on the change-job tab. */
     public final boolean changeRootAttention;
-    // The root a BOP spend is promised to give (an open onboarding job-change quest), or "".
+    // The job a Block of Progress spend is promised to give, or "".
     public final String promisedRoot;
-    /** False while onboarding hides the change-job tab from this (non-gatherer) villager. */
+    /** False while onboarding hides the change-job tab from this villager. */
     public final boolean showChangeRootTab;
-    /**
-     * Opened from the flag (management-only): the flag's Block of Progress count. The change-job
-     * panel spends one instead of the player's (dev playtest 2026-10-29). Zero otherwise.
-     */
+    /** Opened from the flag: the flag's Block of Progress count, spent instead of the player's. Zero otherwise. */
     public final int flagBops;
 
     public VillagerMenusPayload(
@@ -106,8 +90,7 @@ public final class VillagerMenusPayload {
         if (questCount > 0) {
             UIQuest.Serializer ser = new UIQuest.Serializer();
             for (UIQuest q : quests) {
-                // Mirrors AbstractQuestsContainer.writeQuests: null is a sentinel
-                // rendered as the BROKEN quest.
+                // Null is sent as the BROKEN quest.
                 buf.writeResourceLocation(q == null ? SpecialQuests.BROKEN : q.getWantedId());
                 ser.toNetwork(buf, q);
             }
@@ -116,7 +99,6 @@ public final class VillagerMenusPayload {
         buf.writeInt(flagPos.getY());
         buf.writeInt(flagPos.getZ());
         VillagerStatsMenu.write(stats, buf);
-        // econ is passed through, not serialized (see note on VillagerEconomicsMenu)
         buf.writeBoolean(showBlockOfProgressTab);
         buf.writeBoolean(showSkillsTab);
         buf.writeBoolean(showInventoryTab);
@@ -142,7 +124,6 @@ public final class VillagerMenusPayload {
         if (questCount == 0) {
             quests = ImmutableList.of();
         } else {
-            // Mirrors AbstractQuestsContainer.readQuests (decode + sort).
             quests = buf.readCollection(
                     c -> new ArrayList<>(questCount), b -> {
                         ResourceLocation id = b.readResourceLocation();
@@ -153,8 +134,7 @@ public final class VillagerMenusPayload {
         }
         BlockPos flagPos = new BlockPos(buf.readInt(), buf.readInt(), buf.readInt());
         VillagerStatsData stats = VillagerStatsMenu.read(buf);
-        // econ is passed through, not serialized: economics data flows via the
-        // separate `EconomicsUpdate` message, so decoded payloads always carry none().
+        // Economics data is sent separately.
         VillagerEconomicsData econ = VillagerEconomicsData.none();
         boolean showBlockOfProgressTab = buf.readBoolean();
         boolean showSkillsTab = buf.readBoolean();

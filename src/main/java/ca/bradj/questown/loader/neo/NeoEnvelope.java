@@ -5,12 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 
-/**
- * The one wire type the NeoForge impl registers for all Questown messages. It carries the
- * per-message id (assigned by {@link NeoChannel#message}) plus the decoded neutral message POJO on
- * the receiving side; the wire format (varint id + the message's neutral encoder bytes) is built by
- * the StreamCodec in {@link NeoChannel}.
- */
+/** The one payload type every Questown message travels in: the message id, plus the decoded message on arrival. */
 public final class NeoEnvelope implements CustomPacketPayload {
 
     public static final Type<NeoEnvelope> TYPE = new Type<>(new ResourceLocation("questown", "network_message"));

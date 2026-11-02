@@ -2,12 +2,7 @@ package ca.bradj.questown.items;
 
 import net.minecraft.world.item.Item;
 
-/**
- * "Worldly Seeds" — pure trigger currency for the helper-chicken onboarding arc.
- *
- * <p>v1 behaviour: stackable to 64, no recipe, no right-click handler,
- * not plantable. Existence + container presence is the trigger.
- */
+/** Worldly Seeds: having them in a town chest moves the helper chicken's lessons on. They do nothing else. */
 public class WorldlySeeds extends Item {
     public static final String ITEM_ID = "worldly_seeds";
 

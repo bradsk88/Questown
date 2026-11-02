@@ -8,9 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-// Adding LOOT to QuestType must round-trip through the NBT and network codecs with no
-// codec change: both sides use name() / valueOf, and old saves (which never contain LOOT)
-// stay valid.
+// LOOT round-trips by name, and older saves have none.
 class QuestTypesTest {
 
     @Test
@@ -32,7 +30,7 @@ class QuestTypesTest {
     void existingTypesStillRoundTripThroughNBT() {
         for (Quest.QuestType type : Quest.QuestType.values()) {
             if (type == Quest.QuestType.UNKNOWN) {
-                continue; // UNKNOWN is a sentinel, never serialized by a real quest
+                continue;
             }
             assertEquals(type, QuestTypes.deserializeNBT((CompoundTag) QuestTypes.serializeNBT(type)), type.name());
         }

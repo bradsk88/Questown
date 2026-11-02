@@ -52,8 +52,6 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
         super.init();
         this.unlockButton = this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
-            // The server answers by re-opening this tab with the new count (r17 #11: closing the
-            // whole menu after every take was annoying). One click per BOP.
             p_96776_.active = false;
             QuestownNetwork.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
         }, 0, 0, backgroundWidth - 8, BUTTON_HEIGHT));
@@ -117,9 +115,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
                 text
         );
         bgY += 8;
-        // Day-1 playtest: "The town has 3 BOPs!" with no way to see why. The deposited BOPs carry
-        // the root job that earned them (BlockOfProgress.markEarnedBy), so group and list
-        // them - the player's "why".
+        // List the deposited Blocks of Progress by the job that earned them.
         Map<String, Integer> byRoot = new java.util.LinkedHashMap<>();
         for (String root : menu.bopRootJobs) {
             if (!root.isEmpty()) {
@@ -138,7 +134,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
             );
             bgY += 8;
         }
-        // A full flag silently loses further BOPs, so warn the player in red (captured by gui-lint).
+        // A full flag loses any more Blocks of Progress, so warn in red.
         if (menu.getFlagInfo().bopFull()) {
             bgY += ctx.redTextWrap(
                     topLeft.withY(bgY),
@@ -152,8 +148,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
                 tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
-        // Bottom-aligned (r17 #3): the optional "Earned by" / "flag full" lines used to push the
-        // button down, so it moved and a click at its old spot took nothing.
+        // Bottom-aligned, so the extra lines never move the button.
         this.buttonY = (this.height - backgroundHeight) / 2 + backgroundHeight - BUTTON_HEIGHT - BUTTON_MARGIN;
         this.buttonX = bgX;
     }

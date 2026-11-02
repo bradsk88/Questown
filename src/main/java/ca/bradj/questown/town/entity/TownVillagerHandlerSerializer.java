@@ -87,13 +87,11 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> experience = deserializeMap(compound, NBT_EXP, simpleInt);
         ImmutableMap<UUID, Integer> level = deserializeMap(compound, NBT_LEVELS, simpleInt);
         ImmutableMap<VillagerUUID, Boolean> pending = deserializeVMap(compound, NBT_PENDING_JOB_CHANGES, simpleBool);
-        // Quest-promised roots pending against root changes, persisted so a spend
-        // overnight still forces the root after a save/quit in between.
+        // Jobs promised by quests, saved so a spend survives a save and quit.
         ImmutableMap<UUID, JobID> guaranteedRoots = deserializeMap(
                 compound, NBT_GUARANTEED_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
         );
-        // Pre-rolled at the BOP-spend moment for ordinary (unpromised) changes; persisted so a
-        // spend overnight still applies the settled root after a save/quit in between.
+        // Jobs rolled at a spend, saved so they survive a save and quit.
         ImmutableMap<UUID, JobID> preRolls = deserializeMap(
                 compound, NBT_PRE_ROLL_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
         );
@@ -115,8 +113,7 @@ public class TownVillagerHandlerSerializer {
                 fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
                 guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
         );
-        // A villager that levelled up but has not yet deposited its BOP stays routed to the flag
-        // after a reload (2026-10-30: the unsaved latch let a carried BOP go into a storage chest).
+        // A villager with an undelivered Block of Progress still goes to the flag after a reload.
         villagerHandle.restoreBlockOfProgress(deserializeMap(compound, NBT_BOP_LATCHES, simpleBool));
     }
 

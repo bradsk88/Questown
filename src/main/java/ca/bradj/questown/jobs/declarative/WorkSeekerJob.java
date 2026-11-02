@@ -132,8 +132,7 @@ public class WorkSeekerJob extends DeclarativeJob {
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
-        // A level-up's BOP goes to the flag at any hour (dev playtest 2026-10-28: "Its night time,
-        // but that shouldn't matter"); the deposit job itself works in the evening.
+        // A level-up's Block of Progress goes to the flag at any hour.
         if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
             town.changeJobForVisitorFromBoard(ownerUUID, getId());
         }

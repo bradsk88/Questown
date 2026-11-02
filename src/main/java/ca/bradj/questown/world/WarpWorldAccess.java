@@ -55,28 +55,19 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     private final Map<BlockPos, List<ItemStack>> containerSlots = new HashMap<>();
     // cookProgress[0] = cookTime, cookProgress[1] = litTime
     private final Map<BlockPos, int[]> cookProgress = new HashMap<>();
-    // Bread-oven bake state machines, per oven position. Bound to that position's
-    // in-memory slot list; bake progress persists across advanceProcessing calls
-    // within a warp, starting at 0 per warp (any mid-bake state is re-baked,
-    // matching the cookProgress reset).
+    // Each oven's baking during this warp; every warp starts from 0.
     private final Map<BlockPos, BreadOvenBake> ovenBakes = new HashMap<>();
 
     final Set<BlockPos> dirtyBlocks = new HashSet<>();
     final Set<BlockPos> dirtyContainers = new HashSet<>();
 
-    // Saplings planted this warp (and farm-seeded at warp start), keyed by block position,
-    // awaiting in-warp growth by GrowTreesWarpRule.
+    // Saplings planted this warp, waiting to grow.
     private final Map<BlockPos, PlantedSapling> plantedSaplings = new HashMap<>();
-    // Updated each warp tick boundary so plantings record an approximate plant tick.
     private long currentWarpTick = 0;
 
     private final Function<ItemStack, Optional<SmeltResult>> recipeResolver;
     private final Function<ItemStack, Integer> fuelTimeProvider;
-    /**
-     * Test-only miss source for {@link #resolveBlockState(BlockPos)}: when a position is
-     * absent from the snapshot map and {@code level} is null, this stands in for the real
-     * world (which a warp never mutates) so tests can exercise the fallback path.
-     */
+    /** For tests: where to read a position missing from the snapshot when there is no level. */
     private final Function<BlockPos, @Nullable BlockState> fallbackStateProvider;
 
     private static final int MAX_PROCESSING_TICKS = 13_000;
@@ -107,11 +98,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         this(blockStates, containerSlots, recipeResolver, fuelTimeProvider, null);
     }
 
-    /**
-     * Test constructor with a miss source: positions absent from the snapshot map resolve
-     * through {@code fallbackStateProvider} instead of {@code null} (see
-     * {@code fallbackStateProvider}).
-     */
+    /** For tests, with a fallback for missing positions. */
     WarpWorldAccess(
             Map<BlockPos, BlockState> blockStates,
             Map<BlockPos, List<ItemStack>> containerSlots,
@@ -215,16 +202,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return fallbackStateProvider == null ? null : fallbackStateProvider.apply(pos);
     }
 
-    /**
-     * The real-world state at {@code pos}, or {@code null} when the containing
-     * chunk is not loaded. The presence check ({@code hasChunk}) never blocks:
-     * an unconditional {@code getBlockState} on an evicted-but-generated chunk
-     * goes through the chunk system's managed block, which waits for the main
-     * thread that is itself running the warp - a 600 s watchdog-kill hang
-     * (the 2026-10-13 full-suite run, arborist/cut_trees). A warp that meets
-     * an unloaded chunk treats it as the region boundary instead of
-     * generating it.
-     */
+    /** The block at {@code pos}, or null when its chunk isn't loaded. Never waits for a chunk to load, which would hang the warp. */
     static BlockState resolveLevelBlockState(ServerLevel level, BlockPos pos) {
         net.minecraft.world.level.ChunkPos chunkPos = new net.minecraft.world.level.ChunkPos(pos);
         if (!level.getChunkSource().hasChunk(chunkPos.x, chunkPos.z)) {
@@ -269,8 +247,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = resolveBlockState(trunkPos);
-        // Only chop logs: ChopDownTree scans every room position. A RotatedPillarBlock stand-in
-        // also took deepslate, basalt and hay bales (2026-10-20: the warp arborist banked deepslate).
+        // Only logs.
         if (trunkState == null || !trunkState.is(BlockTags.LOGS)) {
             return List.of();
         }
@@ -280,15 +257,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return drops;
     }
 
-    /**
-     * Flood-fills a connected log region and cuts it, in memory. Iterative (explicit work stack)
-     * rather than recursive: the region can be far larger than the JVM stack budget — when the
-     * trunk's log type also occurs in real terrain beyond the in-memory snapshot, the fill reads
-     * the live level and can span tens of thousands of blocks. One stack frame per block would
-     * overflow; a heap work stack does not. Reads stop at the edge of an UNLOADED chunk
-     * ({@link #resolveLevelBlockState}): generating chunks from the warp tick would deadlock the
-     * main thread, so an unloaded chunk counts as the region boundary.
-     */
+    /** Cuts a connected log region in memory. Iterative, since the region can be huge; an unloaded chunk counts as its edge. */
     private void chopTreeInMemory(
             BlockPos center, Block matchBlock,
             List<ItemStack> drops, Set<BlockPos> visited
@@ -317,14 +286,11 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Tree growth — real worldgen against the in-memory snapshot (see ADR-0005)
-    // -------------------------------------------------------------------------
 
     @Override
     public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
         if (level == null) {
-            // Unit-test constructor: worldgen + registries are unavailable. Autotest-covered instead.
+            // Unit tests have no worldgen; the autotests cover this.
             return false;
         }
         TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
@@ -346,8 +312,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         if (r == null) {
             return false;
         }
-        // Clear the sapling first (as vanilla SaplingBlock.advanceTree does): TreeFeature needs the
-        // trunk base to be air/leaves, and a sapling block isn't "free". Restore it if growth fails.
+        // Clear the sapling first, as vanilla does; restore it if growth fails.
         BlockState previous = resolveBlockState(pos);
         setBlock(pos, Blocks.AIR.defaultBlockState());
         boolean placed = r.feature().place(
@@ -370,16 +335,11 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         plantedSaplings.remove(pos);
     }
 
-    /** Set by the warp loop at each tick boundary so plantings record an approximate plant tick. */
     public void setCurrentWarpTick(long tick) {
         this.currentWarpTick = tick;
     }
 
-    /**
-     * Seeds saplings that already exist in farm rooms at warp start so prior-warp arborist
-     * plantings also grow. Recorded with {@code plantTick = 0} (grows early in the warp).
-     * Non-farm (decorative) saplings are never passed here, so warp won't burst them.
-     */
+    /** Saplings already in farm rooms at the start of the warp grow too. Decorative saplings are never passed in. */
     public void seedFarmSaplings(Iterable<BlockPos> farmPositions) {
         for (BlockPos pos : farmPositions) {
             BlockPos immutable = pos.immutable();
@@ -392,7 +352,6 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         }
     }
 
-    // SnapshotWorldGenLevel.SnapshotAccess — reads snapshot-first, writes into the snapshot/dirty-set.
 
     @Override
     public BlockState getBlock(BlockPos pos) {
@@ -406,17 +365,10 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         dirtyBlocks.add(pos.immutable());
     }
 
-    // Realtime bone meal rolls a random 2-5 age advance; warp uses a deterministic
-    // +3 (the floor of that 3.5 expected value) to keep warp autotests reproducible.
+    // Bone meal grows a crop by 3 during a warp (2 to 5 at random in real time).
     private static final int BONE_MEAL_AGE_BOOST = 3;
 
-    /**
-     * Hand-rolled in-memory planting / bone meal. We deliberately do NOT delegate to
-     * {@code Item.useOn} as realtime does: warp has no live {@code Level} to mutate
-     * (the test constructor's {@code level} is even {@code null}), and routing through
-     * the snapshot/dirty-set is what lets {@code GrowCropsWarpRule} see the planted crop
-     * in the same warp and {@code applyTo} commit it only when the warp succeeds.
-     */
+    /** Planting and bone meal in memory, so the warp's crop rules see them and they are kept only if the warp succeeds. */
     @Override
     public boolean useItemOnBlock(ItemStack item, BlockPos pos) {
         if (item.getItem() instanceof BoneMealItem) {
@@ -444,7 +396,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         blockStates.put(above, blockItem.getBlock().defaultBlockState());
         dirtyBlocks.add(above);
         if (blockItem.getBlock() instanceof SaplingBlock) {
-            // Record so GrowTreesWarpRule can grow it into a real tree later this warp.
+            // GrowTreesWarpRule grows it later this warp.
             plantedSaplings.put(above, new PlantedSapling(above, item.copy(), currentWarpTick));
         }
         return true;
@@ -551,7 +503,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return extracted;
     }
 
-    /** No displays in warp: the display jobs are excluded from it. */
+    /** No displays during a warp: the display jobs don't run then. */
     @Override
     public List<ItemStack> getDisplaySlots(BlockPos pos) {
         return List.of();
@@ -562,7 +514,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         return false;
     }
 
-    /** No item entities in warp; the display jobs, the only callers, are excluded from it. */
+    /** No item entities during a warp: the display jobs don't run then. */
     @Override
     public void dropItem(BlockPos pos, ItemStack item) {
     }
@@ -699,13 +651,7 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
         );
     }
 
-    /**
-     * Warp-lane bake for the bread oven. Drives the SAME {@link BreadOvenBake}
-     * state machine the realtime block entity runs (1 wheat + 1 coal -> 1
-     * bread over {@link BreadOvenBake#BAKE_TICKS} ticks, partial-progress
-     * reset on a slot change) against the in-memory slot snapshot, so the
-     * warp lane cannot drift from the real-time arithmetic.
-     */
+    /** Bakes in the oven's in-memory slots during a warp, with the same {@link BreadOvenBake} as real time. */
     private void advanceBreadOven(BlockPos pos, List<ItemStack> slots, int ticks) {
         BreadOvenBake bake = ovenBakes.computeIfAbsent(pos, p -> new BreadOvenBake(slots));
         if (bake.advance(ticks)) {

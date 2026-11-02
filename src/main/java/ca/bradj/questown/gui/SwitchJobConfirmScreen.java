@@ -18,12 +18,7 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Clicking an already-unlocked job in the skill tree switched the villager at once (dev playtest
- * 2026-10-29: "It instantly switched without informing me of the consequences and asking for
- * confirmation"). This says what will happen and asks first. A villager away on a trip gets the
- * dev's two options: switch after the trip, or now (the trip's progress is lost).
- */
+/** Asks before switching a villager to a job it already has unlocked. A villager away on a trip can switch now or after the trip. */
 public class SwitchJobConfirmScreen extends CompatScreen {
 
     private static final int backgroundWidth = 176;
@@ -56,7 +51,6 @@ public class SwitchJobConfirmScreen extends CompatScreen {
         this.awayOnTrip = awayOnTrip;
     }
 
-    /** Opens the confirm for {@code villager} (its name and trip state read from the client entity). */
     public static void open(BlockPos flagPos, UUID villagerUUID, JobID job) {
         Minecraft mc = Minecraft.getInstance();
         VisitorMobEntity villager = null;

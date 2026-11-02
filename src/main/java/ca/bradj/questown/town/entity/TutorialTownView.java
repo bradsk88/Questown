@@ -26,7 +26,7 @@ public interface TutorialTownView {
 
     int villagerCount();
 
-    /** Whether a villager's current job is on {@code rootId} (a job change applies in the morning, after its quest closed). */
+    /** Whether a villager's current job is on {@code rootId}. */
     boolean anyVillagerOnRoot(String rootId);
 
     boolean tutorialBopGranted();
@@ -46,16 +46,9 @@ public interface TutorialTownView {
 
     MCReward makeReward(String phaseName);
 
-    /**
-     * Adds the bed and storage quests a villager-bringing {@code reward} needs
-     * ({@code TownQuests.provisionArrival}). {@code wanted} is the batch's room ids so far.
-     */
+    /** Adds the bed and storage quests a villager-bringing {@code reward} needs. */
     void provisionArrival(MCReward reward, Collection<ResourceLocation> wanted, Consumer<ResourceLocation> addRoomQuest);
 
-    /**
-     * Makes {@code skill} a node the town knows exists, so the skills tab can offer it once its
-     * level gate and parent allow. Progressive discovery reveals only a few random children per
-     * job (JobTreeGrowth); a path's named skill quest must not hinge on that roll.
-     */
+    /** Reveals {@code skill} so the skills tab can offer it once its level and parent allow. */
     void revealSkill(JobID skill);
 }

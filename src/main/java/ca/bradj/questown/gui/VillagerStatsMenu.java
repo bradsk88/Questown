@@ -76,10 +76,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         this.moodEffects = initialData.moodEffects();
     }
 
-    /**
-     * Subscribe this menu to the townie's live stats updates; degrades to the
-     * static wire data when the local entity is unavailable.
-     */
+    /** Shows the villager's live stats, when its entity is present. */
     public void attach(VisitorMobEntity e) {
         e.addStatsListener(this);
         this.closers.add(() -> e.removeStatsListener(this));

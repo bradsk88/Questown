@@ -145,7 +145,6 @@ public class ItemsInit {
             StockRequestClipboardItem::new
     );
 
-    /** Neutral interaction core; the per-loader {@code @SubscribeEvent} binder (see {@code loader.neo.ItemsInteract}) calls this. */
     public static boolean onInteractRightClick(
             net.minecraft.server.level.ServerLevel level,
             net.minecraft.server.level.ServerPlayer sp,

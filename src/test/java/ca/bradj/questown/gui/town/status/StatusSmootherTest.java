@@ -13,11 +13,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * The villagers page smooths each card's status over the last few frames. 2026-10-21 playtest:
- * with the page left open, the leaver-return bar stayed full after the hunter's next trip began,
- * and toggling tabs (a fresh screen) fixed it.
- */
+/** The villagers page smooths each card's status, and the trip bar resets when the next trip starts. */
 class StatusSmootherTest {
 
     private static final UUID HUNTER = UUID.randomUUID();

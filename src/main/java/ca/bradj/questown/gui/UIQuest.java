@@ -50,11 +50,7 @@ public class UIQuest implements Comparable<UIQuest> {
     private final ResourceLocation wantedId;
 
 
-    /**
-     * The LOOT quest's name key by what it wants: the hunter's raw-food quest is "Raw Food",
-     * any other (the cook's #questown:villager_food) is "Food" (2026-10-15/17 playtest calls).
-     */
-    /** A LOOT quest's name: its tag's name, or the wanted item's own name ({@link LootQuestNames}). */
+    /** A LOOT quest's name: its tag's name, or the wanted item's own name. */
     public static MutableComponent lootName(ResourceLocation wantedId) {
         String key = LootQuestNames.key(wantedId);
         if (key == null) {
@@ -70,20 +66,10 @@ public class UIQuest implements Comparable<UIQuest> {
     private final String jobName;
     @Nullable
     private final String flavorText;
-    /**
-     * Progress toward the quest's count: for ITEM quests, how many of the wanted
-     * item the town containers already hold; for LOOT quests, how much has been
-     * extracted so far (the 2026-10-15 accumulation counter). Rendered as
-     * "(progress/target)" on the card, capped at the target. Null for every
-     * other quest type and for ITEM/LOOT quests whose progress was not
-     * computed.
-     */
+    /** Progress toward the quest's count (stored items for ITEM, items brought back for LOOT), or null. */
     @Nullable
     private final Integer deposited;
-    /**
-     * For a named-skill quest no villager in the skill's job is levelled for yet: the level it
-     * needs. The card then names neither the skill nor its item (Outfitter #20). Null otherwise.
-     */
+    /** The villager level a skill quest's card needs before it shows the skill, or null. */
     @Nullable
     private final Integer lockedUntilLevel;
     public final boolean isBroken;
@@ -147,12 +133,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return fromLevel(level, aQ, java.util.Map.of());
     }
 
-    /**
-     * Same as the two-arg form, but each open ITEM or LOOT quest whose wanted
-     * id appears in {@code questProgress} carries its progress count (ITEM:
-     * deposits so far; LOOT: extractions so far - the card renders
-     * "(n/target)").
-     */
+    /** As above, with each open ITEM or LOOT quest's progress from {@code questProgress}. */
     public static List<UIQuest> fromLevel(
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
@@ -161,10 +142,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return fromLevel(level, aQ, questProgress, java.util.Map.of());
     }
 
-    /**
-     * Same as the three-arg form, and each quest id in {@code lockedSkillLevels} (the flag's
-     * {@code lockedSkillQuestLevels}) shows as a blank skill card needing that level.
-     */
+    /** As above, with the quests in {@code lockedSkillLevels} shown as blank skill cards. */
     public static List<UIQuest> fromLevel(
             Level level,
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
@@ -178,12 +156,7 @@ public class UIQuest implements Comparable<UIQuest> {
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
-        // The basics-batch board quest carries the legacy blueprint room recipe id
-        // (questown:job_board = sign + log room); the card should show the block the
-        // player actually crafts and places - the job board block itself, not a sign
-        // (job-board-quest-card-shows-sign.md). Override after the level recipes and
-        // keep the last write for this one deliberate duplicate (no other id is
-        // duplicated across the three sources).
+        // The job board quest's card shows the job board itself, not the sign in its room recipe.
         rMapB.put(SpecialQuests.JOB_BOARD, RoomRecipes.standard(
                 SpecialQuests.JOB_BOARD,
                 NonNullList.withSize(1, Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()))
@@ -303,8 +276,6 @@ public class UIQuest implements Comparable<UIQuest> {
                 yield name;
             }
             case LOOT -> {
-                // The card is "Raw Food"/"Food" + "(extracted/count)": the extraction
-                // progress the 2026-10-15 accumulation ruling made real.
                 MutableComponent name = lootName(wantedId);
                 if (deposited != null) {
                     name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
@@ -326,7 +297,7 @@ public class UIQuest implements Comparable<UIQuest> {
         };
     }
 
-    /** "Train a Crafter to level 3 (1/3)": the progress is the root's highest villager level. */
+    /** "Train a Crafter to level 3 (1/3)": the progress is the job's highest villager level. */
     public static MutableComponent villagerLevelName(ResourceLocation wantedId, @Nullable Integer highestLevel) {
         Optional<VillagerLevelQuests.Target> t = VillagerLevelQuests.target(wantedId);
         if (t.isEmpty()) {
@@ -340,7 +311,6 @@ public class UIQuest implements Comparable<UIQuest> {
         return name;
     }
 
-    /** The level a blank (locked) skill card needs, or null when the card shows its skill. */
     public @Nullable Integer getLockedUntilLevel() {
         return lockedUntilLevel;
     }
@@ -350,8 +320,6 @@ public class UIQuest implements Comparable<UIQuest> {
         return flavorText;
     }
 
-    // Root jobs carry a localized name (jobs.<root> in the lang files); the bare root id
-    // read as a raw key to players.
     private Component extractRootJobName() {
         return Compat.translatable("jobs." + JobID.fromRL(wantedId).rootId());
     }
@@ -364,10 +332,7 @@ public class UIQuest implements Comparable<UIQuest> {
         return VillagerUUID.getStringUUID(villagerUUID);
     }
 
-    /**
-     * The batch the card's "Remove request" x would discard, or null for no x: only a discardable
-     * (procedurally generated) quest offers removal. The card's batch id is used for nothing else.
-     */
+    /** The batch the card's remove button discards, or null when the quest can't be removed. */
     public static @Nullable UUID removableBatch(Quest<?, ?> quest) {
         return quest.isDiscardable() ? quest.getBatchUUID() : null;
     }

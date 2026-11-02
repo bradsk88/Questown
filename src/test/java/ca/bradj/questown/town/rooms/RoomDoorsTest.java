@@ -10,13 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-/**
- * Playtest r12 #6 (dev 2026-10-23): a townie with no free floor beside its bed stands in the
- * bedroom's doorway.
- */
 class RoomDoorsTest {
 
-    // Walls x -12..-8, z 131..135; door in the south wall; floor-level Y 69.
     private static final MCRoom BEDROOM = new MCRoom(
             new Position(-10, 135),
             ImmutableList.of(InclusiveSpace.from(-12, 131).to(-8, 135)),
@@ -52,8 +47,7 @@ class RoomDoorsTest {
         );
     }
 
-    // r23 #16 (dev 2026-10-30): a villager that gives up walking to a spot inside a room is told
-    // which room it cannot get into.
+    // A villager that can't reach a spot in a room says which room.
     @Test
     void walkTargetInsideARoom_isThatRoom() {
         Optional<MCRoom> room = RoomDoors.roomHolding(

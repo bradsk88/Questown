@@ -15,15 +15,7 @@ import java.util.List;
 import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Test;
 
-/**
- * Golden-file test for {@link TownieNames#nameFromPath(String)}.
- *
- * <p>The curated golden file holds real {@code minecraft:} item paths and their
- * expected names; a change to the stoplist or filters regenerates a diff against
- * it, so regressions (e.g. a townie named *Tarnished*) are caught here rather
- * than in play. The pure extractor is asserted directly, so no registry
- * bootstrap is required.
- */
+/** {@link TownieNames#nameFromPath(String)} against a golden file of real item ids. */
 class TownieNamesTest {
 
     @Test

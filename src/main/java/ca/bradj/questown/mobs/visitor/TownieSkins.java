@@ -6,21 +6,11 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * The texture pool a townie skin is picked from, and the deterministic
- * per-UUID pick. Pure (no client/Forge state) so the pool and the pick are
- * unit-testable without instantiating the renderer.
- *
- * <p>The vanilla character skins come from {@code Compat.vanillaCharacterSkins()} (nine slim
- * skins on 1.20.6, Steve and Alex on 1.19.2). The mod's own {@code textures/entity/1-6.png}
- * skins stay in the pool alongside them.
- */
+/** The skins a villager can have: the vanilla character skins and the mod's own, picked by UUID. */
 final class TownieSkins {
 
-    /** The vanilla character skins this Minecraft version ships ({@link ca.bradj.questown.mc.Compat}). */
     static final List<ResourceLocation> VANILLA_SKINS = ca.bradj.questown.mc.Compat.vanillaCharacterSkins();
 
-    /** The mod's custom townie skins (kept on top of the vanilla pool). */
     static final List<ResourceLocation> CUSTOM_SKINS = ImmutableList.of(
             new ResourceLocation("questown", "textures/entity/1.png"),
             new ResourceLocation("questown", "textures/entity/2.png"),
@@ -33,7 +23,6 @@ final class TownieSkins {
     private TownieSkins() {
     }
 
-    /** The full pool: vanilla skins first, then the mod's custom skins. */
     static List<ResourceLocation> pool() {
         return ImmutableList.<ResourceLocation>builder()
                 .addAll(VANILLA_SKINS)
@@ -41,11 +30,7 @@ final class TownieSkins {
                 .build();
     }
 
-    /**
-     * The deterministic skin for an entity UUID - the same townie always gets
-     * the same skin. Floor-mod like vanilla's character-skin picker (a plain
-     * {@code Math.abs} mis-picks on a {@code Integer.MIN_VALUE} hash).
-     */
+    /** The skin for a UUID; the same villager always gets the same skin. */
     static ResourceLocation pick(UUID uuid) {
         List<ResourceLocation> skins = pool();
         int index = Math.floorMod(uuid.hashCode(), skins.size());

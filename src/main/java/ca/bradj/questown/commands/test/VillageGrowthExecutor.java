@@ -50,8 +50,8 @@ import java.util.UUID;
  * the real wand click, and fulfils villager needs and quests by depositing
  * items into town containers. It stops when the roster reaches 5 villagers.
  *
- * <p>Everything is reported on the {@code [village]} log prefix so a watching
- * agent can follow progress with {@code grep '\[village\]'}. On every
+ * <p>Everything is reported on the {@code [village]} log prefix so a watcher
+ * can follow progress with {@code grep '\[village\]'}. On every
  * observation beat it also answers the two player questions: what do I know
  * about the village right now (KNOWN), and what is unclear or confusing
  * (UNCLEAR — anomalies a player could not explain from what they can see).
@@ -103,7 +103,7 @@ public final class VillageGrowthExecutor {
     private final @Nullable LogTripwire tripwire;
     private final List<BlockPos> buildingCorners = new ArrayList<>();
     // Keyed by batch + room id, not room id alone: a discarded room quest can come back in a new
-    // batch (an inn reposted after its discard stalled a run at roster 3, 2026-10-24), and that
+    // batch, and that
     // copy must be handled again.
     private final java.util.Set<String> furnishedRoomQuests = new java.util.HashSet<>();
     private int nextSpareBuilding = 2;
@@ -134,7 +134,7 @@ public final class VillageGrowthExecutor {
         FIVE_VILLAGERS,
         /**
          * paths/at_fork: a curated path's starter batch has posted - a town at the fork, held as
-         * the jumping-off point for path playtests (dev, 2026-10-26).
+         * the jumping-off point for path tests.
          */
         FORK,
         /**
@@ -193,8 +193,8 @@ public final class VillageGrowthExecutor {
     // ---- phases ----
 
     private void resetArena() {
-        // The arena must cover every building row: a path run's fourth row once stood on raw terrain,
-        // and room detection around its doors cut the run to ~18 t/s (2026-10-29).
+        // The arena must cover every building row: room detection around doors on raw terrain is
+        // slow.
         int farthestRow = Arrays.stream(rowZs()).map(Math::abs).max().orElse(0);
         int halfWidth = Math.max(28, farthestRow + BUILDING_SIZE + 3);
         TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(halfWidth, true, true, true);
@@ -210,9 +210,8 @@ public final class VillageGrowthExecutor {
         buildingCorners.clear();
         // Two rows of four simple rectangular buildings, single south door. A path run adds a
         // third row: onboarding furnishes all eight, and the path's rooms (crafting room, armory,
-        // smithy) and its arrivals' beds need more (2026-10-26: armory "no spare building"); the
-        // showcase batch's Grand Armory and Grand Smithy need a fourth row (2026-10-28: "no spare
-        // building to furnish" for the Grand Smithy).
+        // smithy) and its arrivals' beds need more; the
+        // showcase batch's Grand Armory and Grand Smithy need a fourth row.
         int[] xs = {-21, -9, 3, 15};
         for (int z : rowZs()) {
             for (int x : xs) {
@@ -277,8 +276,8 @@ public final class VillageGrowthExecutor {
         if (flag != null) {
             // The scenario plants a hand-placed flag (not an empty_town structure),
             // so its chicken rotation was never detected and the onboarding arc is
-            // inert. In an agent-driven (held) run the agent drives onboarding via
-            // the chicken's guidance, so the chicken is a precondition - force it
+            // inert. In a held run onboarding is driven via the chicken's guidance, so the
+            // chicken is a precondition - force it
             // to spawn here so the arc is live every time, deterministically.
             if (System.getProperty("questown.village.agentDrive") != null) {
                 boolean spawned = HelperChickenSpawnController.forceSpawn(flag);
@@ -339,11 +338,11 @@ public final class VillageGrowthExecutor {
             return;
         }
         if (ticks % 200 == 0) {
-            // A held, FIFO-driven run: the agent drives block placement,
+            // A held, FIFO-driven run: the console drives block placement,
             // registration, item supply and the day/night cycle through the
             // console (real setblock / qt registerroom / give / time commands).
             // The executor only observes, so its own act() cannot fight the
-            // agent. Gated by questown.village.agentDrive.
+            // console. Gated by questown.village.agentDrive.
             if (System.getProperty("questown.village.agentDrive") == null) {
                 act();
             }
@@ -351,12 +350,12 @@ public final class VillageGrowthExecutor {
     }
 
     /**
-     * The player sleeps at the campfire as soon as vanilla allows it (night), the way the
-     * playtester does every night. The wake is the real one: the clock moves to the next
+     * The player sleeps at the campfire as soon as vanilla allows it (night). The wake is the real
+     * one: the clock moves to the next
      * morning exactly as vanilla's sleep end computes it, and the town gets the same
      * {@link TownFlags#onSleepFinished} morning step the {@code SleepFinishedTimeEvent} drives.
      * Only the cosmetic campfire bits (temp bed, extinguish) are skipped. Saves the ~11 000
-     * idle night ticks per day (2026-10-19: autotest runtime).
+     * idle night ticks per day.
      */
     /**
      * The driver sleeps a little after dark, like a player who reads the camp-ready toast first:
@@ -400,8 +399,8 @@ public final class VillageGrowthExecutor {
     // ---- day1: reload the town mid-run (the server-restart load order) ----
 
     /**
-     * Once, on the day after the first villager arrived while raw food is still open: the
-     * 2026-10-17 playtest's restart let villager 2 in on the next morning past the gate.
+     * Once, on the day after the first villager arrived while raw food is still open: a restart
+     * must not let villager 2 in past the gate.
      */
     private boolean shouldReloadNow() {
         if (reloadDone || flag.getVillagerHandle().size() != 1 || Day1BeatChecks.rawFoodComplete(flag)) {
@@ -479,8 +478,7 @@ public final class VillageGrowthExecutor {
     }
 
     /**
-     * The player stays away past the next dawn, as on the 2026-10-17 playtest's overnight trip:
-     * the flag was not ticking, so its own morning detection never sees that dawn.
+     * The player stays away past the next dawn: the flag was not ticking, so its own morning detection never sees that dawn.
      */
     private void skipToNextNoon() {
         long now = level.getDayTime();
@@ -605,8 +603,8 @@ public final class VillageGrowthExecutor {
             placeCampfireAndRegister();
             return;
         }
-        // The welcome mat is the day-one arrival gate (.scratch/mat-gated-arrival,
-        // ruling B: campfire first, mat right after it): registerWelcomeMat
+        // The welcome mat is the day-one arrival gate (campfire first, mat right after it):
+        // registerWelcomeMat
         // completes the TOWN_GATE quest, which enqueues the first villager for
         // the next morning tick and posts the basics batch (job board + store
         // room). It is also the gatherer job's base-room fixture (the
@@ -661,7 +659,7 @@ public final class VillageGrowthExecutor {
         if (requestPathLoot()) {
             return;
         }
-        // In a manual (FIFO-driven) run the agent owns the clock; the executor
+        // In a manual (FIFO-driven) run the console owns the clock; the executor
         // never advances it here. Stop before any non-manual clock logic.
         if (System.getProperty("questown.village.agentDrive") != null) {
             return;
@@ -850,17 +848,14 @@ public final class VillageGrowthExecutor {
      * Path runs only, past the fork: while a villager is starving and no chest holds villager
      * food, leave 8 cooked beef in a town chest (at most every {@link #FEED_INTERVAL_TICKS}), as a
      * player does when the town runs out of food. Past
-     * the fork the onboarding food economy runs dry at roster 5-6 and the crafter spent whole
-     * stretches cycling the dining jobs with nothing to eat (2026-10-26 runs 1 and 3; findings
-     * #12). Logged as an intervention each time so the economy gap stays visible.
+     * the fork the onboarding food economy runs dry at roster 5-6. Logged as an intervention each time so the economy gap stays visible.
      */
     private boolean feedAStarvingTown() {
         if (goal != Goal.PATHS_FINISHED || ticks - lastFedTick < FEED_INTERVAL_TICKS || !pathStarterPosted()) {
             return false;
         }
         if (townHasVillagerFood()) {
-            // Food in a chest means the diners can eat: feeding then only filled storage
-            // (run 11:39: 41 feedings, villagers stuck at NO_STORAGE).
+            // Food in a chest means the diners can eat: feeding then only fills storage.
             return false;
         }
         long starving = flag.getVillagerHandle().entities().stream()
@@ -883,8 +878,7 @@ public final class VillageGrowthExecutor {
     /**
      * Half the villagers say NO_STORAGE: take the surplus out of the chests, as a player emptying
      * them would. Board requests are standing orders and every deposit takes its own slot, so a
-     * crafter on a skill's request fills the chests and the leavers stop (2026-10-27 run 2: leather
-     * x4 open, chests full of leather boots, stone swords and shovels; 2026-10-26 #26). Keeps food,
+     * crafter on a skill's request fills the chests and the leavers stop. Keeps food,
      * anything with durability (leavers take their tools from these chests), and
      * {@link #KEEP_PER_ITEM} of everything else.
      */
@@ -948,7 +942,7 @@ public final class VillageGrowthExecutor {
                 continue;
             }
             if (q.getType() == Quest.QuestType.LOOT) {
-                // A LOOT quest counts the town's own production (r16 #7: Coal is mined), so a
+                // A LOOT quest counts the town's own production, so a
                 // delivery never fills it; depositing for it every pass filled storage (108 coal
                 // deposits) until no townie could work.
                 continue;
@@ -973,8 +967,8 @@ public final class VillageGrowthExecutor {
 
     /**
      * Spend a Block of Progress on a villager while a JOB_CHANGE quest is open - the
-     * player's change-job-tab spend (owner path: spendBopToRequestJobChange). Since the
-     * 2026-10-17 ruling the second villager waits on the raw-food quest, which only a
+     * player's change-job-tab spend (owner path: spendBopToRequestJobChange). The second
+     * villager waits on the raw-food quest, which only a
      * hunter completes, so the onboarding hunter job change is on the growth path.
      */
     private boolean spendBopOnOpenJobChange() {
@@ -1059,9 +1053,7 @@ public final class VillageGrowthExecutor {
 
     /**
      * A named skill is above the villager's level: ask the board for what its unlocked jobs make,
-     * once each, so it works and levels the way a player keeps a crafter busy. Without it the
-     * crafter idled at level 4 for 35 min after Weapons I, short of Weapons II's stone tier (5),
-     * with nothing on the board (2026-10-26 run 12:11, run 1).
+     * once each, so it works and levels the way a player keeps a crafter busy.
      */
     private void requestWorkToLevel(UUID villager) {
         java.util.Set<JobID> unlocked = flag.getVillagerHandle().getUnlockedJobs()
@@ -1191,9 +1183,8 @@ public final class VillageGrowthExecutor {
 
     /**
      * Take everything out of the spare building's chest before it is cleared for furnishing, the
-     * way a player empties a chest before breaking it. Clearing it with its contents deleted what
-     * the driver had just deposited there: the cook's coal and mutton went at 12:14:08-10 on
-     * 2026-10-26 (held run), and the cook beat stalled with an empty furnace (findings #4).
+     * way a player empties a chest before breaking it: clearing it would delete what the driver
+     * deposited there.
      */
     private List<ItemStack> emptyChest(BlockPos pos) {
         List<ItemStack> out = new ArrayList<>();
@@ -1221,8 +1212,7 @@ public final class VillageGrowthExecutor {
 
     /**
      * Re-place any furnishing block that did not land, for a room quest still open a while after
-     * it was furnished. An item use onto a cell a villager stands in places nothing, silently: a
-     * smithy got its light but no table and never became a room (2026-10-26 run 12:11, run 2).
+     * it was furnished: an item use onto a cell a villager stands in places nothing, silently.
      */
     private boolean refurnishMissing() {
         java.util.Set<String> open = flag.getQuestHandle().getAllQuestsWithRewards().stream()
@@ -1252,8 +1242,7 @@ public final class VillageGrowthExecutor {
     /**
      * Where furnishing goes in a spare building's 3x3 interior (offsets from its corner): the back
      * row, then the sides, keeping a corridor from the door (south wall, middle) clear. Seven slots,
-     * so the armory (armorer's table + 4 chests, curated Outfitter path) fits; one row of three
-     * made the driver discard it, and the path engine posted it again every tick (r22 overnight).
+     * so the armory (armorer's table + 4 chests, curated Outfitter path) fits.
      */
     private static final List<BlockPos> FURNISH_SLOTS = List.of(
             new BlockPos(1, 0, 1), new BlockPos(2, 0, 1), new BlockPos(3, 0, 1),
@@ -1263,9 +1252,7 @@ public final class VillageGrowthExecutor {
 
     /**
      * A room quest the 3x3 spare buildings can't hold (the inn: six beds) is discarded the way a
-     * player's remove-batch button does; the town posts a replacement next morning. Without it the
-     * run stalled at roster 4 on the inn upgrade
-     * (`.scratch/autotest-suite/growth-driver-cannot-build-inn-or-kitchen-upgrades.md`).
+     * player's remove-batch button does; the town posts a replacement next morning.
      */
     private boolean discardUnbuildable(MCQuest q) {
         if (q.pathBatch().isPresent()) {
@@ -1331,8 +1318,8 @@ public final class VillageGrowthExecutor {
         if (!open) {
             return false;
         }
-        // Post only after the first job change lands (the morning after the BOP spend), the order
-        // the 2026-10-21 playtest hit: the change auto-posts the new job's starter request, which
+        // Post only after the first job change lands (the morning after the BOP spend): the change
+        // auto-posts the new job's starter request, which
         // must not complete this quest.
         boolean jobChanged = flag.getVillagerHandle().getVillagerJobs().values().stream()
                 .anyMatch(j -> !"gatherer".equals(j.rootId()));
@@ -1353,8 +1340,7 @@ public final class VillageGrowthExecutor {
     /**
      * Post a job-board request for each open curated-path LOOT item, once, the way a player asks
      * for "Make a wooden sword": a production job only runs while the board asks for its product,
-     * and only a job change's starter work is requested automatically (2026-10-26: the crafter
-     * had wooden_sword unlocked and idled 10 min, "stays: no branch applied").
+     * and only a job change's starter work is requested automatically.
      */
     private boolean requestPathLoot() {
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
@@ -1380,8 +1366,7 @@ public final class VillageGrowthExecutor {
 
     /**
      * Take a path request off the board once its quest is done, as a player would: left up, the
-     * crafter kept forging (3 leather boots, 3 wooden swords) and used the stock the next quests
-     * needed (2026-10-26 run 11:39).
+     * crafter keeps forging and uses the stock the next quests need.
      */
     private void withdrawPathLootRequest(ResourceLocation wanted) {
         Item item = pathLootRequested.get(wanted);
@@ -1422,9 +1407,8 @@ public final class VillageGrowthExecutor {
     private boolean deposit(ItemStack stack) {
         List<ContainerTarget<MCContainer, MCTownItem>> containers = TownContainers.getAllContainers(flag, level);
         for (ContainerTarget<?, MCTownItem> target : containers) {
-            // Chests only, as a player stocks a town: a furnace is a town container too, and the
-            // driver once filled the kitchen's (cooked salmon in the input, bread in the fuel slot,
-            // a sword in the output) and the cook could never use it (2026-10-26 13:14).
+            // Chests only, as a player stocks a town: a furnace is a town container too, and
+            // filling one leaves the cook unable to use it.
             if (level.getBlockEntity(target.getBlockPos()) instanceof Container c
                     && !(c instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity)) {
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
@@ -1454,8 +1438,7 @@ public final class VillageGrowthExecutor {
     /**
      * Once per stall (the roster unchanged for {@link #STALL_DUMP_AFTER_TICKS}), log the work
      * seeker's scores for every villager's root: the same dump as {@code _qtdev work_score}, for
-     * unheld runs that have no console. Added for the hunter-beat stall (findings
-     * `.scratch/agent-playtest-2026-10-26-outfitter/` #23), whose debug log had rotated away.
+     * unheld runs that have no console.
      */
     private void dumpWorkScoresIfStalled() {
         if (ticks - rosterChangedTick < STALL_DUMP_AFTER_TICKS || stallDumpedAtTick >= rosterChangedTick) {
@@ -1497,9 +1480,8 @@ public final class VillageGrowthExecutor {
             (e.getKey().isComplete() ? done : open).add(e.getKey().toShortString());
         }
         // The lists come from the live quest handle, not a fresh snapshot: a
-        // post/lose loop (e.g. the retired JOB_UNLOCK reconcile) leaves lost-but-present
-        // entries and the same quest id accumulates (2026-10-11: 107x
-        // JOB_UNLOCK spam per id in two minutes). Collapse repeats to
+        // post/lose loop leaves lost-but-present entries and the same quest id accumulates.
+        // Collapse repeats to
         // `entry xN` so the accumulation is a one-line log find, not a
         // duplicate wall to eyeball.
         msg("KNOWN quests open=" + collapse(open) + " done=" + collapse(done));
@@ -1548,10 +1530,8 @@ public final class VillageGrowthExecutor {
             return null;
         }
         // A need may be an item id (e.g. "minecraft:bread") or a tag
-        // (e.g. "#questown:villager_food"). A real player faces the same
-        // confusion as the agent — the need bubble shows the tag's
-        // representative item via Ingredients.representativeItemStack, so the
-        // agent can do the same here and deposit a concrete member of the tag.
+        // (e.g. "#questown:villager_food"). The need bubble shows the tag's representative item
+        // (Ingredients.representativeItemStack), so deposit that concrete member of the tag.
         try {
             net.minecraft.world.item.crafting.Ingredient ing = ca.bradj.questown.gui.Ingredients.fromString(key);
             ItemStack stack = ca.bradj.questown.gui.Ingredients.representativeItemStack(ing);

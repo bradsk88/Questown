@@ -55,11 +55,7 @@ public class SpawnVisitorReward extends MCReward {
         return () -> spawnVisitorNearby(town, villagerUUID);
     }
 
-    /**
-     * Dev/test hook: spawn a fresh visitor for this flag using the reward's
-     * own path. Lets a headless run build a minimal flag + villager fixture
-     * without driving the village-arc gameplay.
-     */
+    /** Dev and tests: spawns a new villager for this flag. */
     public static void spawnNew(TownInterface town) {
         spawnVisitorNearby(town, null);
     }
@@ -79,7 +75,7 @@ public class SpawnVisitorReward extends MCReward {
             initUUID = vEntity.getVUID();
         }
         Vec3 vjp = entity.getVisitorJoinPos();
-        // A returning townie (wake, cancelled shutdown, relocation) keeps its journal (#26).
+        // A returning villager keeps its saved state.
         ImmutableSnapshot<MCHeldItem, ?> initJournal = Optional.ofNullable(villagerUUID)
                 .flatMap(entity::takeRespawnJournal)
                 .orElseGet(SpawnVisitorReward::newVisitorJournal);

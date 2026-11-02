@@ -2,7 +2,6 @@ package ca.bradj.questown.gui;
 
 import java.util.List;
 
-/** The buttons of {@link SwitchJobConfirmScreen}, in order (dev playtest 2026-10-29). */
 public enum SwitchJobChoice {
     AFTER_TRIP("menu.switch_job.after_trip"),
     NOW_LOSE_TRIP("menu.switch_job.now_lose_trip"),

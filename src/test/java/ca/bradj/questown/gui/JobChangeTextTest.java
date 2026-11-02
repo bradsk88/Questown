@@ -5,12 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
-/**
- * r9 findings #2 (dev ruling 2026-10-23): the change-job panel said "Insert a Block of Progress ...
- * (starting tomorrow morning)" with the Block of Progress already in the slot, and in creative,
- * where the change is instant. The line names the next action (insert, or click Unlock) and the
- * real timing.
- */
+/** The change-job panel's line: what to do next, and when the change happens. */
 class JobChangeTextTest {
 
     @Test
@@ -45,11 +40,7 @@ class JobChangeTextTest {
                 JobChangeText.of(true, true, Optional.of("hunter")).whenKey());
     }
 
-    /**
-     * Dev playtest 2026-10-28: "Text on job change screen still says \"will change tomorrow\" but it
-     * changed instantly." A quest-promised change applies at the spend
-     * ({@code TownFlagBlockEntity.requestJobRootChange}), in survival too.
-     */
+    /** A quest-promised change happens at the spend, in survival too. */
     @Test
     void promised_is_now_in_survival() {
         Assertions.assertEquals("menu.unlock_root.when_now",

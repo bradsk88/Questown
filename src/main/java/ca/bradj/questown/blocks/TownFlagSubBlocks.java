@@ -28,11 +28,7 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, OnOrphaned> runOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
-    // Set when the owning flag's chunk unloads. A sub-block whose chunk stayed loaded keeps its
-    // tick listener on THIS instance, but the reloaded flag is a new block entity with a new
-    // TownFlagSubBlocks: nothing would ever reset this instance's counters again, and the
-    // sub-block would remove itself ~20 ticks after the town came back (day1, 2026-10-18). The
-    // reloaded flag re-registers its sub-blocks on its own instance.
+    // Set when the flag's chunk unloads. The reloaded flag tracks its sub-blocks itself, so this one stops.
     private boolean retired;
 
     public TownFlagSubBlocks(BlockPos blockPos) {
@@ -90,10 +86,7 @@ public final class TownFlagSubBlocks {
             return;
         }
         if (!sl.shouldTickBlocksAt(flagPos)) {
-            // A flag whose chunk is unloaded, or loaded but not ticking block entities (the
-            // edge of the loaded area, e.g. as the player walks back), is away, not destroyed.
-            // Counting those ticks as "stopped ticking" removed live job boards (day1 overnight
-            // absence, 2026-10-18). Also avoids getBlockState force-loading the flag's chunk.
+            // The flag is unloaded, not gone: its job boards stay.
             ticksWithoutParent.put(pos, 0);
             return;
         }
@@ -139,7 +132,6 @@ public final class TownFlagSubBlocks {
             BlockPos pop
     ) {
         if (!sl.isLoaded(pop)) {
-            // Not loaded yet (town reload): waiting is not a failed detection.
             QT.FLAG_LOGGER.debug("Sub block at {} is in an unloaded chunk; waiting", pop);
             return false;
         }

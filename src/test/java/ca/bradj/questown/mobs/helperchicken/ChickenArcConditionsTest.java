@@ -10,18 +10,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-/**
- * Covers the new item-in-hand gating helpers added for the "follow until
- * player has the item, then peck" behaviour. The predicate map itself is
- * private; these tests exercise it via {@link ChickenArcConditions#shouldPeckRun}
- * and {@link ChickenArcConditions#playerHoldsRequiredItem} which are the
- * public surface used by the bubble factory and the peck goal.
- *
- * <p>Mod-registered items (Town Wand, Worldly Seeds, Welcome Mat) are not
- * exercised here because their {@code RegistryObject.get()} returns null
- * outside the Forge mod-loading lifecycle. They are covered by chicken-arc
- * autotest scenarios in-game.
- */
+/** Which lessons the chicken pecks for, and whether the player holds the right item. Mod items need the mod loaded, so the autotests cover them. */
 class ChickenArcConditionsTest {
 
     @BeforeAll
@@ -32,52 +21,37 @@ class ChickenArcConditionsTest {
 
     @Test
     void shouldPeckRun_uiBeats_alwaysTrue_evenWithNullPlayer() {
-        // UI beats have no held-item requirement: chicken pecks the campfire
-        // regardless of what (or whether) the player holds.
+        // Lessons with no item: the chicken always pecks.
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_VILLAGER_UI));
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_FLAG_UI));
     }
 
     @Test
     void shouldPeckRun_seedsDelivery_alwaysTrue() {
-        // F4 seeds-delivery is unchanged by the new requirement — chicken
-        // pecks whichever container holds the seeds, no item-in-hand gate.
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY));
     }
 
     @Test
     void shouldPeckRun_signBeat_noHeldSignRequired() {
-        // The sign beat lost its held-sign gate (1be1b64d): only the sign →
-        // job-board placement in the room gates it, so the peck gate is
-        // permissive even with a null player.
+        // The sign lesson waits on the job board, not on a held sign.
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_SIGN));
     }
 
     @Test
     void shouldPeckRun_terminals_returnTrue() {
-        // COMPLETE/FORFEIT have no peck target so the gate is moot, but it
-        // stays permissive — the false-gate semantic is reserved for "player
-        // needs the item but doesn't have it".
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.COMPLETE));
         Assertions.assertTrue(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.FORFEIT));
     }
 
     @Test
     void shouldPeckRun_sunsetAndMap_requiresWand() {
-        // Phase-3 SUNSET_AND_MAP (chest spawned + night) is when the chicken
-        // walks to the lit campfire to demonstrate the wand-on-fire sleep
-        // action. Gate behaves like other wand beats: peck stands down until
-        // the player is holding the wand.
+        // At night after the chest drop, the chicken waits for the player to hold the wand.
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.SUNSET_AND_MAP));
     }
 
     @Test
     void shouldPeckRun_itemBeat_nullPlayer_returnsFalse() {
-        // Player must be present and hold the item; null player → follow-near-flag
-        // goal picks up and the chicken trails the player until they fetch it.
-        // (The sign beat intentionally has no held-item requirement — see
-        // commit 1be1b64d, which gates it on the job-board placement alone —
-        // so it is covered by the permissive-beat test instead.)
+        // No player, or no item: the chicken follows instead.
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_STICK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_WALL_BLOCK));
         Assertions.assertFalse(ChickenArcConditions.shouldPeckRun(null, ChickenBeatState.WAITING_FOR_DOOR));
@@ -110,8 +84,7 @@ class ChickenArcConditionsTest {
 
     @Test
     void shouldPeckRun_doorBeat_anyDoorVariantSatisfies() {
-        // The door beat accepts any DoorBlock-backed item — oak today, birch
-        // tomorrow, no need to anchor to a specific wood type.
+        // Any door counts.
         Player playerWithBirch = Mockito.mock(Player.class);
         Mockito.when(playerWithBirch.getMainHandItem()).thenReturn(new ItemStack(Items.BIRCH_DOOR));
         Mockito.when(playerWithBirch.getOffhandItem()).thenReturn(ItemStack.EMPTY);
@@ -133,8 +106,7 @@ class ChickenArcConditionsTest {
 
     @Test
     void shouldPeckRun_wallBeat_anySolidBlockSatisfies() {
-        // Beat satisfaction is "any solid-render block placed" — the gate
-        // mirrors that, accepting any solid BlockItem the player picks up.
+        // Any solid block counts.
         Player playerWithStone = Mockito.mock(Player.class);
         Mockito.when(playerWithStone.getMainHandItem()).thenReturn(new ItemStack(Items.STONE));
         Mockito.when(playerWithStone.getOffhandItem()).thenReturn(ItemStack.EMPTY);
@@ -148,7 +120,7 @@ class ChickenArcConditionsTest {
 
     @Test
     void shouldPeckRun_wallBeat_nonBlockItem_returnsFalse() {
-        // A stick is not a wall block.
+        // Lessons with no item keep their single icon.
         Player player = Mockito.mock(Player.class);
         Mockito.when(player.getMainHandItem()).thenReturn(new ItemStack(Items.STICK));
         Mockito.when(player.getOffhandItem()).thenReturn(ItemStack.EMPTY);
@@ -157,9 +129,7 @@ class ChickenArcConditionsTest {
 
     @Test
     void playerHoldsRequiredItem_uiBeats_returnFalse_evenWithItem() {
-        // For UI beats there's no required item — the bubble must stay in
-        // its single-icon shape, so playerHoldsRequiredItem is false here
-        // even though shouldPeckRun is true.
+        // Lessons with no item keep their single icon.
         Player player = Mockito.mock(Player.class);
         Mockito.when(player.getMainHandItem()).thenReturn(new ItemStack(Items.STICK));
         Mockito.when(player.getOffhandItem()).thenReturn(ItemStack.EMPTY);

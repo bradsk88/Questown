@@ -31,7 +31,6 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
     }
 
     public static ResourceLocation getTextureLocation(UUID uuid) {
-        // Deterministic per-UUID pick from the vanilla-1.20 + custom skin pool.
         return TownieSkins.pick(uuid);
     }
 
@@ -53,11 +52,7 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         renderNeedBubble(entity, stack, buffer);
     }
 
-    /**
-     * The bubble must be drawn out here rather than as a {@code RenderLayer}: inside a layer the
-     * pose is still under the entity's body yaw, so the icon would spin as the townie turns.
-     * Same reason the helper chicken's bubble is a plain static call from its renderer.
-     */
+    /** Drawn here rather than in a render layer, so the bubble faces the camera instead of turning with the villager. */
     private void renderNeedBubble(
             VisitorMobEntity entity,
             PoseStack stack,
@@ -77,10 +72,7 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         );
     }
 
-    /**
-     * The bubble icon. A resolved {@code UNMET_ITEM} shows the actual missing item (a rotating
-     * representative, as the Inventory screen's "needs" row does); any other need keeps its icon.
-     */
+    /** The bubble icon: the missing item for an unmet-item need, else the need's own icon. */
     private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
         ItemStack roomBlock = NeedBubbleFocus.missingRoomIcon(entity);
         if (roomBlock != null) {

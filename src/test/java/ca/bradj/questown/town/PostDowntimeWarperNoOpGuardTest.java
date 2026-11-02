@@ -23,22 +23,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-/**
- * Reproduces the broken NoOp-warper guard in {@link PostDowntimeWarper}.
- *
- * <p>The guard {@code if (jobWarper instanceof NoOpWarper)} is meant to skip warping a
- * "seeking work" / no-work job, whose warper is {@link NoOpWarper#INSTANCE}. But
- * {@code NoOpWarper.INSTANCE} is an anonymous {@link Warper}, not a {@code NoOpWarper}, so
- * the guard never fires: {@code runToCompletion} runs the throwing warper and
- * {@link UnsupportedOperationException} escapes the warp, aborting the whole town warp.
- *
- * <p>Drives the real {@link PostDowntimeWarper#warp} (the seam {@code advanceTime} loop
- * cannot reach this guard). It must fail on current code (the guard is dead) and pass
- * once the guard is fixed to {@code jobWarper == NoOpWarper.INSTANCE}.
- */
+/** {@link PostDowntimeWarper} skips the no-op warper of a seeking-work job by identity; running it would abort the warp. */
 class PostDowntimeWarperNoOpGuardTest {
 
-    /** A "seeking work" job: {@code getWarper} returns {@link NoOpWarper#INSTANCE} for it. */
     private static final JobID SEEKING_WORK = new JobID("crafter", WorkSeekerJob.WORK_ID);
 
     @BeforeAll
@@ -49,8 +36,7 @@ class PostDowntimeWarperNoOpGuardTest {
 
     @Test
     void noOpWarper_isGuarded_notRun() {
-        // Arrange — one villager, no rooms (so findAssignedFurnace never dereferences the level),
-        // and a work source that resolves no preselected job, so the fallback (seeking work) is used.
+        // One villager, no rooms, no preselected job, so it falls back to seeking work.
         MCTownState liveState = singleVillagerTown();
         PostDowntimeWarper warper = new PostDowntimeWarper(
                 new NoWorkFlagStateWork(),
@@ -61,9 +47,6 @@ class PostDowntimeWarperNoOpGuardTest {
                 null
         );
 
-        // Act & Assert — the guard must turn the throwing NoOp warper into a no-op.
-        // On current code the guard is dead, warp runs the throwing NoOp warper and this throws
-        // UnsupportedOperationException; after the == fix it returns the live state unchanged.
         MCTownState result = assertDoesNotThrow(
                 () -> warper.warp(null, liveState, 1L, 1L, 0),
                 "NoOp warper must be guarded, not run"
@@ -89,7 +72,6 @@ class PostDowntimeWarperNoOpGuardTest {
         );
     }
 
-    /** A TownFlagState.Work that resolves no preselected jobs, so the fallback is used. */
     private static final class NoWorkFlagStateWork implements TownFlagState.Work {
         @Override
         public void recomputeNow() {

@@ -27,27 +27,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.crafting.Ingredient;
 
-/**
- * Dev-only: a read-only stand-in for a player right-clicking something, so an
- * agent driving a held run can "look closer" at a flag or the helper chicken the
- * way a brand-new player would, without a cheatsheet.
- *
- * <p>It returns the same static view a player gets from the menu, nothing behind
- * it: for a flag, the menu tabs (villagers, quests, economics, block of
- * progress, crafting) and their static content; for the chicken, the current
- * beat narrated as the chicken's observed behavior, dynamically from the
- * player's held item. It never prints the internal {@link ChickenBeatState}
- * enum, a {@code status}/condition line, or the arc map. The action (placing a
- * block, right-clicking a block) stays a separate command. Inspecting a
- * villager or the flag menu does set the corresponding chicken-arc UI
- * observation flag, so the beat advances the way it would for a player looking
- * at the same thing.
- *
- * <p>No permission gate, so it runs from the console (FIFO). Registered under
- * {@code _qtdev inspect}, replacing the direct {@code qt quests} /
- * {@code _qtdev villagers} commands (the cheat version that reached the quest
- * board without going through the menu the chicken opens).
- */
+/** Dev-only, read-only: what a player sees on right-clicking a flag or the helper chicken. Inspecting counts as looking, for the chicken's lessons. */
 public class QtDevInspectCommand {
 
     public static void register(
@@ -85,7 +65,7 @@ public class QtDevInspectCommand {
         return Commands.argument("pos", BlockPosArgument.blockPos());
     }
 
-    /** The flag menu: which tabs are shown, with red-dots, and the static content. */
+    /** The flag menu's tabs, with red dots, and their content. */
     private static int runMenu(CommandSourceStack source, BlockPos pos) {
         TownFlagBlockEntity flag = flagAt(pos);
         if (flag == null) {
@@ -100,7 +80,6 @@ public class QtDevInspectCommand {
         return 0;
     }
 
-    /** One tab's static content, mirroring what the menu's payload carries. */
     private static int runTab(
             CommandSourceStack source, BlockPos pos, String tab
     ) {
@@ -109,8 +88,7 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
             return 1;
         }
-        // doors is not a menu tab (a player does not see it in the flag menu); it is
-        // the agent's read of the door-trouble signal, so it bypasses the shown check.
+        // doors is not a menu tab, so it is always shown.
         if (tab.equals("doors")) {
             printDoors(flag);
             return 0;
@@ -135,20 +113,7 @@ public class QtDevInspectCommand {
         return 0;
     }
 
-    /**
-     * The chicken's current beat. This is the chicken's observed behavior - the
-     * new-player vantage the command is meant to be - plus what is in the player's
-     * hand. It is hand-holding (the chicken points at something and the player
-     * watches what happens), not an answer: it never prints what the town wants
-     * (the {@code to do}), the exact action or its place (the {@code how} / {@code where}),
-     * or a "needs a live player" note. Those are behind the curtain; a player reads
-     * the world (the quest, the room, the villager's need) and decides, and the
-     * actionable guidance lives in the {@code _qtdev help} cheatsheet, not here. The
-     * old version printed the actionable guidance off the same {@link AgentBeatGuidance}
-     * source as {@code _qtdev help}, so it could not drift - but drifting was the
-     * point, a hand-holding cue that told the agent the answer instead of letting it
-     * read the world. See the filed issues under .scratch/chicken-arc-campfire-sleep/.
-     */
+    /** The chicken's lesson as a player sees it, plus what is in the player's hand. */
     private static int runChicken(CommandSourceStack source, BlockPos pos) {
         TownFlagBlockEntity flag = flagAt(pos);
         if (flag == null) {
@@ -172,22 +137,11 @@ public class QtDevInspectCommand {
             return 0;
         }
         QT.FLAG_LOGGER.info("[_qtdev inspect] {}", chickenBehavior(flag, state));
-        // The player's held item, the way a new player looks down at their own hand.
-        // This is the eye a blind _qtdev clickheld lacks: it acts with whatever is
-        // held, so the agent must be able to see what that is and correct it, rather
-        // than retry clickheld at new spots hoping the held item is the one the beat
-        // wants. A no-op clickheld is usually "wrong hand," not "wrong spot."
+        // A clickheld that does nothing usually means the wrong item, so show what is held.
         printHeld(source, flag);
         return 0;
     }
 
-    /**
-     * What the player is holding in the main hand - the "look at my hand" a new
-     * player has but a headless agent does not. Lets the agent match the
-     * chicken's "use your held X" hint to the actual held item and correct it
-     * (e.g. the town wand is in the hand but the beat wants a sign), instead of
-     * blind-retrying _qtdev clickheld. Empty when the hand is empty.
-     */
     private static void printHeld(CommandSourceStack source, TownFlagBlockEntity flag) {
         Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
         if (player == null) {
@@ -199,13 +153,7 @@ public class QtDevInspectCommand {
                 held.isEmpty() ? "(empty)" : held.getHoverName().getString());
     }
 
-    /**
-     * The chicken's behavior, narrated as a player sees it and keyed off the
-     * player's held item so the same beat reads differently in different states
-     * (a new player sees the chicken's behavior change when they hold the right
-     * item). The internal state name, a condition line, and the arc map are never
-     * printed - only what the player would see.
-     */
+    /** The chicken's behaviour as a player sees it, which changes with the item the player holds. */
     private static String chickenBehavior(TownFlagBlockEntity flag, ChickenBeatState state) {
         Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
         boolean holdsWand = ChickenArcConditions.hasWandInInventory(player);
@@ -261,14 +209,7 @@ public class QtDevInspectCommand {
         };
     }
 
-    /**
-     * The sign beat names a spot the sign can go, the way a player would see the
-     * room's open floor. The agent places into that cell instead of guessing a
-     * coordinate (a guessed spot lands on a wall or outside the room, so it does
-     * not count, and an agent placing with setblock breaks the wall it lands on).
-     * The spot is the first empty interior cell of a registered room, the same
-     * cells {@code _qtdev place_block} lists - guaranteed inside a room.
-     */
+    /** Where the sign can go: the first empty cell inside a registered room. */
     private static String signInRoomLine(TownFlagBlockEntity flag) {
         BlockPos cell = flag.interiorCells().stream().findFirst().orElse(null);
         if (cell == null) {
@@ -278,8 +219,6 @@ public class QtDevInspectCommand {
         return "The chicken looks into the room and pecks. [Put a sign in the room - at "
                 + cell.getX() + ", " + cell.getY() + ", " + cell.getZ() + "]";
     }
-
-    // --- the menu tabs ---
 
     private static void listTabs(FlagTabsEmbedding.FlagInfo info, TownFlagBlockEntity flag) {
         QT.FLAG_LOGGER.info("[_qtdev inspect]   villagers {}{}",
@@ -315,36 +254,26 @@ public class QtDevInspectCommand {
             TownieNeed need = villager.getNeed();
             QT.FLAG_LOGGER.info("[_qtdev inspect]   villager {} job={} need={}",
                     villager.getUUID(), villager.getJobId(), need);
-            // The live job status (seeking work, hunting, dropping loot),
-            // what a player reads off the villager; job= is the job id, not
-            // the live status.
+            // The villager's live status (seeking work, hunting, dropping loot), not its job id.
             try {
                 ca.bradj.questown.jobs.IStatus<?> status = villager.getStatusForServer();
                 if (status != null) {
-                    // ProductionStatus.name() is the sync ordinal, not a
-                    // readable name; its `name` field holds the human one.
+                    // name() is the sync ordinal; the readable name is the `name` field.
                     String label = status instanceof ca.bradj.questown.jobs.production.ProductionStatus ps
                             ? ps.name : status.nameV2();
                     QT.FLAG_LOGGER.info("[_qtdev inspect]     status: {}", label);
                 }
             } catch (Exception ignored) {
-                // status is best-effort eyes, never a reason to fail the inspect
             }
-            // Work-site progress (processing state, work/time ticks left): how a
-            // player watching a leaver tells a genuine mid-trip (timer still
-            // counting down) from a trip cut short. Best-effort like status.
+            // Work left and time left: tells a villager mid-trip from one whose trip was cut short.
             try {
                 String progress = villager.getWorkProgressDebug();
                 if (progress != null) {
                     QT.FLAG_LOGGER.info("[_qtdev inspect]     progress: {}", progress);
                 }
             } catch (Exception ignored) {
-                // best-effort eyes, never a reason to fail the inspect
             }
-            // Eyes-level state a player sees on the villager's body: full hands
-            // (carried loot) and a Block of Progress bobbing above their head.
-            // Without this an agent reads need=NONE on a villager who is stuck
-            // holding goods they cannot deposit, and the stall is invisible.
+            // What the villager carries, and its Block of Progress.
             String carrying = describeCarrying(villager);
             boolean hasLoot = !carrying.isEmpty();
             if (hasLoot) {
@@ -374,15 +303,11 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.info("[_qtdev inspect]   no villagers");
             return;
         }
-        // The command a player cannot see but the agent needs named: the change
-        // job tab's action, as a console hand. The tab itself is player-facing;
-        // this line only says the hand exists and what it costs.
         QT.FLAG_LOGGER.info("[_qtdev inspect]   to change a villager's job: _qtdev change_job <villager uuid> "
                 + "- spends a Block of Progress from the flag and requests a job change (takes effect overnight)");
     }
 
-    /** What a player sees in the villager's hands: the non-empty stacks they
-     * carry, as "Nx item" entries. Empty string when their hands are empty. */
+    /** The villager's carried stacks as "Nx item", or empty. */
     private static String describeCarrying(VisitorMobEntity villager) {
         java.util.List<String> parts = new java.util.ArrayList<>();
         net.minecraft.world.Container inv = villager.getInventory();
@@ -397,10 +322,7 @@ public class QtDevInspectCommand {
 
     private enum ContainerSpace { HAS_SPACE, ALL_FULL, NO_CONTAINER }
 
-    /** Whether the town's registered containers can take one more item, the
-     * fact a player reads by opening the chests. Same rule as the deposit path
-     * (an empty slot anywhere); stacked-but-not-full slots are not counted,
-     * matching how the deposit code actually inserts. */
+    /** Whether the town's chests have an empty slot. */
     private static ContainerSpace townContainerSpace(TownFlagBlockEntity flag) {
         boolean sawContainer = false;
         for (ca.bradj.questown.jobs.leaver.ContainerTarget<ca.bradj.questown.integration.minecraft.MCContainer, ca.bradj.questown.integration.minecraft.MCTownItem> target :
@@ -426,15 +348,11 @@ public class QtDevInspectCommand {
             any = true;
             QT.FLAG_LOGGER.info("[_qtdev inspect]   {} wants {} ({} x{})",
                     q.status, q.getWantedId(), explain(q), q.getIngredients().size());
-            // The quest's flavor text, the guidance the quest UI shows a player.
             if (q.getFlavorText() != null && !q.getFlavorText().isEmpty()) {
                 QT.FLAG_LOGGER.info("[_qtdev inspect]     {}", q.getFlavorText());
             }
             if (q.getType() == Quest.QuestType.ROOM) {
-                // The blocks the room must contain, the way the quest UI shows the
-                // room recipe as icons: a player reads those and knows what to put
-                // in the room, so the agent gets the same read here. A tag entry
-                // also lists a few example items that count.
+                // The blocks the room needs, as the quest UI shows them, with examples for tags.
                 StringBuilder needs = new StringBuilder();
                 for (Ingredient ing : q.getIngredients()) {
                     if (needs.length() > 0) {
@@ -485,13 +403,7 @@ public class QtDevInspectCommand {
                 + "recipes (no per-tab payload beyond the flag)");
     }
 
-    /**
-     * The door-trouble read (ADR-0011): each registered door and why it has no
-     * room - NOT_ENCLOSED (walls or roof incomplete) or NO_RECIPE (enclosed, but
-     * the contents match no room recipe). For NO_RECIPE the room exists, so the
-     * range is printed (where the player must put the recipe block); a door with
-     * a room is shown as such.
-     */
+    /** Each registered door and why it has no room: not enclosed, or no room recipe matches. */
     private static void printDoors(TownFlagBlockEntity flag) {
         QT.FLAG_LOGGER.info("[_qtdev inspect] doors tab:");
         var doors = flag.getRoomHandle().getAllRegisteredDoors();
@@ -516,8 +428,6 @@ public class QtDevInspectCommand {
         }
     }
 
-    // --- helpers ---
-
     private static boolean tabShown(FlagTabsEmbedding.FlagInfo info, String tab) {
         return switch (tab) {
             case "villagers" -> info.showVillagersTab();
@@ -531,9 +441,6 @@ public class QtDevInspectCommand {
 
     private static String explain(UIQuest q) {
         Quest.QuestType type = q.getType();
-        // ITEM and LOOT both carry their want as ingredients (an item or a tag); LOOT's
-        // are satisfied by production rather than a chest deposit, but the "wants" line
-        // reads the same.
         if (type == Quest.QuestType.ITEM || type == Quest.QuestType.LOOT) {
             return q.getIngredients().isEmpty()
                     ? "item " + q.getWantedId()
@@ -554,18 +461,12 @@ public class QtDevInspectCommand {
         return String.valueOf(q.getWantedId());
     }
 
-    /** One ingredient of a room recipe, as a player reads it in the quest UI:
-     * the item or tag name (tags resolve to a readable name, e.g. the
-     * light_sources tag reads "Light Source").
-     */
+    /** A room-recipe ingredient's name as the quest UI shows it. */
     private static String describeIngredient(Ingredient ing) {
         return Ingredients.getName(ing).getString();
     }
 
-    /**
-     * Resolve an unmet-item key (a concrete item or a tag such as
-     * questown:villager_food) to the name a player reads in the need bubble.
-     */
+    /** The name a player sees for an item or tag key. */
     private static String resolveItemName(String itemKey) {
         if (itemKey == null || itemKey.isEmpty()) {
             return null;
@@ -579,15 +480,13 @@ public class QtDevInspectCommand {
         return null;
     }
 
-    /** The flag at the given position, or the first flag if none is at that spot. */
+    /** The flag at the position, or else the first flag. */
     private static TownFlagBlockEntity flagAt(BlockPos pos) {
         for (TownFlagBlockEntity f : TownFlags.all()) {
             if (f.getBlockPos() != null && f.getBlockPos().equals(pos)) {
                 return f;
             }
         }
-        // Fall back to the first flag so an agent inspecting the flag's own
-        // position (or a small offset) still gets a view.
         for (TownFlagBlockEntity f : TownFlags.all()) {
             if (f.getBlockPos() != null) {
                 return f;

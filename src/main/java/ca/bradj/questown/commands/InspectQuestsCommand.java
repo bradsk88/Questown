@@ -11,14 +11,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.resources.ResourceLocation;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 
-// Dev-only: inspect the active (and complete) quests of a town flag, the way a
-// player reading the flag's quest tab would. The held agent-run test observes
-// progress through the [village] log, but the quest lines only print an opaque
-// Quest{id=...} — the player question "what does this quest want?" was
-// unanswerable. This command answers it: for each quest it prints the type, the
-// count needed, and the concrete requirement (the block/item an ITEM quest wants;
-// the room recipe name a ROOM quest wants). No permission gate, so it runs from
-// the console (FIFO).
+// Dev-only, read-only: a flag's active and complete quests, with what each wants.
 public class InspectQuestsCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(
@@ -66,7 +59,7 @@ public class InspectQuestsCommand {
         return 0;
     }
 
-    /** What a quest actually wants, in player terms. Null when not resolvable. */
+    /** What a quest wants, in player terms, or null. */
     private static String explain(MCQuest q) {
         Quest.QuestType type = q.getType();
         if (type == Quest.QuestType.ITEM) {
@@ -74,8 +67,7 @@ public class InspectQuestsCommand {
             return (item != null ? item : "item " + q.getWantedId()) + " x" + q.getCountNeeded();
         }
         if (type == Quest.QuestType.LOOT) {
-            // Same shape as ITEM (item or tag id), but the want is satisfied by production:
-            // a townie extracting the loot, not by a chest deposit.
+            // Like ITEM, but a villager has to bring the item back, not the player.
             String item = resolveItemName(q.getWantedId());
             return (item != null ? item : "item " + q.getWantedId()) + " x" + q.getCountNeeded() + " (loot: completes on production)";
         }
@@ -97,12 +89,7 @@ public class InspectQuestsCommand {
         return null;
     }
 
-    /**
-     * Resolve an item-want id to a name. The want may be a concrete item
-     * (minecraft:bread) or a tag (questown:villager_food); either way
-     * {@link ca.bradj.questown.gui.Ingredients#fromString} handles it. The
-     * representative member's name is what a player sees in the need bubble.
-     */
+    /** The name a player sees for an item or tag id. */
     private static String resolveItemName(ResourceLocation id) {
         if (id == null) {
             return null;

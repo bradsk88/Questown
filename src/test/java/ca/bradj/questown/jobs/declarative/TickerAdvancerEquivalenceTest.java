@@ -221,16 +221,11 @@ class TickerAdvancerEquivalenceTest {
                 + ".\n" + comparison.diffMessage());
     }
 
-    // ========== Gatherer (raw-meat leaver) extraction-completion tests ==========
-    //
-    // The equivalence suite above only asserts ticker==advancer; it still passes if BOTH
-    // extract nothing (hollow pass). These assert the leaver actually produces its product,
-    // which is the factor that the held-run stall (zero LOOTTRACE) points at.
+    // Trip villagers: each must actually produce, not just match between real time and warp.
 
     static Stream<Arguments> notoolExtractVariants() {
         String food = "#questown:villager_food";
         return Stream.of(
-                // ticks = wait-state (time: 2000/4000/6000) + buffer
                 Arguments.of("gatherer_unmapped_notool_short.json", food, 4000),
                 Arguments.of("gatherer_unmapped_notool_med.json", food, 6000),
                 Arguments.of("gatherer_unmapped_notool_full.json", food, 8000)
@@ -256,13 +251,7 @@ class TickerAdvancerEquivalenceTest {
                         + " inventory=" + result.inventoryItems());
     }
 
-    // ========== Gatherer (raw-meat leaver) startability test ==========
-    //
-    // The held-run soft-lock's FIRST stage is COLLECTING_SUPPLIES: the mat sits at a FRESH
-    // state-0 (food needed) and never leaves it. This pins the two factors that keep a fresh
-    // mat startable: (a) the gate room / job block is visible (the 9f476c37 getMatches fix),
-    // and (b) the food is actually accepted as the state-0 input. It is independent of the
-    // `time:`-wait factor that the extraction test above already covers.
+    // A fresh mat at state 0 is startable when its room is visible and the food is accepted.
 
     @Test
     void gatherer_notool_freshMat_shouldStartAndLeaveState0() {
@@ -271,9 +260,6 @@ class TickerAdvancerEquivalenceTest {
         EquivalenceTestFramework.TickerSetup setup = EquivalenceTestFramework.createTickerSetup(definition);
         setup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
 
-        // Only enough to cross the food(state 0) + work(state 1) states — the state machine,
-        // not the store timer, drives these. If the gate room / job block were not visible
-        // (9f476c37 regression) or the food were not accepted, the mat would be stuck at state 0.
         EquivalenceTestFramework.runTickerWithStore(setup, 200);
         EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
 
@@ -285,30 +271,16 @@ class TickerAdvancerEquivalenceTest {
                         + result.inventoryItems());
     }
 
-    // ========== Gatherer (raw-meat leaver) unseeded-mat (Fix A null->fresh) test ==========
-    //
-    // The held-run logs showed the leaver's OWN per-owner work-status store with matState=null
-    // and matches=0 (the job never started). Fix A (computeRoomsNeedingInput: null -> fresh)
-    // is meant to make an unseeded mat startable. This drives that exact null-state path and
-    // asserts the leaver still starts AND completes. NOTE canInsertItem(pos) =
-    // jobStatuses.containsKey(pos), which is FALSE for a null/cleared mat — if the food insert
-    // that starts the job is gated on it, a null mat soft-locks even though the state read is
-    // "fresh". That would reproduce the held-run COLLECTING_SUPPLIES stall at the unit level.
+    // A villager whose store never seeded the mat still starts and finishes.
 
     @Test
     void gatherer_notool_unseededMat_shouldStillStartAndExtract() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_med.json");
 
         EquivalenceTestFramework.TickerSetup setup = EquivalenceTestFramework.createTickerSetup(definition);
-        // Simulate the leaver's per-owner store that never seeded the gate mat (whoever-seeds
-        // first race): the mat position is not in the store, so getJobBlockState(mat) == null.
         setup.workStatusHandle().clearState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
         setup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
 
-        // Phase 1: only enough ticks to cross the food(state 0) + work(state 1) states — the state
-        // machine, not the store timer, drives these (same shape as the freshMat sibling). If the
-        // null (unseeded) mat state were not startable (Fix A null->fresh, or the canInsertItem
-        // jobStatuses.containsKey gate), the mat would be stuck at state 0.
         EquivalenceTestFramework.runTickerWithStore(setup, 200);
         EquivalenceTestFramework.SimulationResult startResult = EquivalenceTestFramework.captureResult(setup);
 
@@ -319,9 +291,7 @@ class TickerAdvancerEquivalenceTest {
                         + "jobStatuses.containsKey) — the held-run COLLECTING_SUPPLIES soft-lock. "
                         + "inventory=" + startResult.inventoryItems());
 
-        // Phase 2: run long enough for the state-2 `time:` wait to elapse; the leaver must
-        // complete and extract. A completed leaver job legitimately resets the mat (consumed for
-        // the next leaver), so completion is proven by the extraction, not a mid-run state snapshot.
+        // Long enough for the timed wait; finishing shows as the extraction.
         EquivalenceTestFramework.runTickerWithStore(setup, 5800);
         EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
 

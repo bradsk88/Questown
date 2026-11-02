@@ -19,21 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Pins the warp-path LOOT-quest channel: the warp snapshot
- * ({@link MCTownState}) records non-empty extractions during the warp so the
- * settle point (next to the knowledge settle in {@code TownFlagState.warp}) can
- * apply them through the live quest handle — keeping the warper pure (no live
- * quest-handle reference).
- *
- * <p>Contract pinned here:
- * <ul>
- *   <li>records accumulate in order,</li>
- *   <li>they survive the state's copy/mutation paths (the list instance is
- *       threaded through {@code newTownState} copies, like {@code insertedItems}),</li>
- *   <li>{@code clearRecordedLootExtractions} consumes them exactly once.</li>
- * </ul>
- */
+/** The LOOT extractions a warp records: kept in order, carried through state copies, and cleared exactly once. */
 class MCTownStateLootExtractTest {
 
     @BeforeAll
@@ -64,7 +50,7 @@ class MCTownStateLootExtractTest {
         MCHeldItem mutton = MCHeldItem.fromTown(new MCTownItem(Items.COOKED_BEEF, 1, new net.minecraft.nbt.CompoundTag()));
         state.recordLootExtract(mutton);
 
-        // A real mutation path (newTownState copy) must not drop the record.
+        // A state copy keeps the record.
         MCTownState copied = state.setJobBlockState(new BlockPos(0, 64, 0), ca.bradj.questown.town.workstatus.State.fresh());
 
         List<MCHeldItem> recorded = copied.recordedLootExtractions();
@@ -81,7 +67,7 @@ class MCTownStateLootExtractTest {
         MCTownState cleared = state.clearRecordedLootExtractions();
 
         assertTrue(cleared.recordedLootExtractions().isEmpty(), "cleared state has no records");
-        // Second consume is a no-op, not an error.
+        // Clearing twice is harmless.
         state.clearRecordedLootExtractions();
         assertTrue(state.recordedLootExtractions().isEmpty());
     }

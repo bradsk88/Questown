@@ -10,18 +10,12 @@ import java.util.EnumSet;
 import java.util.Random;
 import java.util.function.Supplier;
 
-/**
- * Active during {@link ChickenBeatState#SUNSET_AND_MAP} phase 2 (chest already
- * spawned). Picks a random ground point within {@link #WANDER_RADIUS} blocks of
- * the flag and strolls there. After arriving, idles briefly before picking
- * another point. Keeps the chicken visually busy near the flag while the
- * player goes off to use the map / wait for night, instead of trailing them.
- */
+/** After the chest drop, before night: the chicken wanders near the flag instead of following the player. */
 public class HelperChickenWanderNearFlagGoal extends Goal {
 
     private static final int WANDER_RADIUS = 5;
-    private static final int IDLE_TICKS_MIN = 120;  // 6s
-    private static final int IDLE_TICKS_MAX = 240;  // 12s
+    private static final int IDLE_TICKS_MIN = 120;
+    private static final int IDLE_TICKS_MAX = 240;
     private static final int MAX_PICK_ATTEMPTS = 8;
     private static final double SPEED_MODIFIER = 0.6D;
 
@@ -63,11 +57,7 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
         return isWanderPhase() && this.phase != null;
     }
 
-    /**
-     * SUNSET_AND_MAP phase 2: chest already dropped but it's still daytime and
-     * the player has yet to sleep. At nightfall the chicken should walk to the
-     * campfire instead (phase 3, owned by {@link HelperChickenBeatPeckGoal}).
-     */
+    /** After the chest drop and before night; at night the chicken goes to the campfire. */
     private boolean isWanderPhase() {
         TownFlagBlockEntity flag = resolveFlag();
         if (flag == null) {
@@ -117,8 +107,6 @@ public class HelperChickenWanderNearFlagGoal extends Goal {
             case IDLING -> {
                 this.idleTicks--;
                 if (this.idleTicks <= 0) {
-                    // End of pause — drop targetPos so canContinueToUse fails
-                    // and the next canUse rolls a fresh point.
                     this.targetPos = null;
                     this.phase = null;
                 }

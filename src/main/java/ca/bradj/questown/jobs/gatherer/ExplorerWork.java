@@ -24,11 +24,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import java.util.Collection;
 
 public class ExplorerWork {
-    // The explorer is its OWN root ("explorer"), not a "gatherer" sub-job, so a villager
-    // assigned to it doesn't randomly cycle into the plain gather sub-jobs during warp —
-    // only "explore" is in its cycling pool, so it deterministically produces the map +
-    // scouts loot every trip. It still has a gatherer parent (see asWork) so it is unlocked
-    // through progression, the same way armorer/* is reached from crafter/*.
+    // Its own root, so an explorer only ever explores. Its gatherer parent unlocks it.
     public static final JobID ID = new JobID("explorer", "explore");
 
     public static final int BLOCK_STATE_NEED_FOOD = 0;
@@ -41,10 +37,7 @@ public class ExplorerWork {
 
     public static final ImmutableMap<Integer, Ingredient> INGREDIENTS_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, Ingredient.of(TagsInit.Items.VILLAGER_FOOD),
-            // Paper is held as a TOOL at NEED_PAPER then CONSUMED as an ingredient here. This is
-            // the cook's "tool→ingredient" idiom (cf. cook/simple_furnace_food holding then
-            // consuming beef): a mid-cycle ingredient can't be acquired during warp, but a held
-            // one is consumed fine — so grab it cheaply as a tool first, spend it from held here.
+            // Paper is held as a tool, then used up here: an item needed mid-cycle can't be fetched during a warp.
             BLOCK_STATE_USE_PAPER, Ingredient.of(Items.PAPER)
     );
     public static final ImmutableMap<Integer, Integer> INGREDIENT_QTY_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -52,8 +45,6 @@ public class ExplorerWork {
             BLOCK_STATE_USE_PAPER, 1
     );
     public static final ImmutableMap<Integer, Ingredient> TOOLS_REQUIRED_AT_STATES = ImmutableMap.of(
-            // Held (grabbed once, carried, rendered in hand) so it survives warp supply
-            // collection; spent the very next state as an ingredient (USE_PAPER).
             BLOCK_STATE_NEED_PAPER, Ingredient.of(Items.PAPER)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -101,8 +92,7 @@ public class ExplorerWork {
         ImmutableList.Builder<MCHeldItem> list = ImmutableList.builder();
         list.add(MCHeldItem.fromTown(map));
 
-        // The map is the only product. Learning a loot drop for this biome happens at
-        // extraction via SpecialRules.SCOUT_LOOT, which reads this map's biome (ADR-0004).
+        // The map is the only product; the town learns an item from its biome at extraction.
         ImmutableList<MCHeldItem> realList = list.build();
         QT.JOB_LOGGER.debug("Presenting items to explorer: {}", realList);
         return realList;

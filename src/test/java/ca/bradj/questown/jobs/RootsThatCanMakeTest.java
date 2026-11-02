@@ -14,7 +14,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** A job root can make an item when one of its jobs names it as its product. */
 class RootsThatCanMakeTest {
 
     @BeforeAll

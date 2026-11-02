@@ -29,10 +29,6 @@ class EmptyTownTerrainShaperTest {
         Bootstrap.bootStrap();
     }
 
-    // -------------------------------------------------------------------------
-    // Geometry — size, payload preservation, ceiling, floor, cascade
-    // -------------------------------------------------------------------------
-
     @Test
     void shape_sizeExpandsByCascadeAndCeiling() {
         CompoundTag tag = sampleStructure();
@@ -51,8 +47,7 @@ class EmptyTownTerrainShaperTest {
     void shape_originalPayloadShiftsButPalettePreserved() {
         CompoundTag tag = sampleStructure();
         CompoundTag result = EmptyTownTerrainShaper.shape(tag);
-        // Original sample has a stone block at (1, 0, 1) and a glass at (4, 4, 4).
-        // After shift by (CASCADE, FLOOR, CASCADE): (4, 3, 4) and (7, 7, 7).
+        // Shifted by (CASCADE, FLOOR, CASCADE).
         Assertions.assertNotNull(
                 findBlockOfPalette(result, 4, 3, 4, "minecraft:stone"));
         Assertions.assertNotNull(
@@ -90,7 +85,6 @@ class EmptyTownTerrainShaperTest {
         int z1 = z0 + ORIG_SZ - 1;
         for (int dy = 1; dy <= EmptyTownTerrainShaper.CEILING_HEIGHT; dy++) {
             int y = yTop + dy;
-            // Spot check four corners + center at this Y.
             for (int[] xz : new int[][]{
                     {x0, z0}, {x1, z1}, {x0, z1}, {x1, z0}, {(x0 + x1) / 2, (z0 + z1) / 2}
             }) {
@@ -112,22 +106,18 @@ class EmptyTownTerrainShaperTest {
         int x1 = x0 + ORIG_SX - 1;
         int z1 = z0 + ORIG_SZ - 1;
 
-        // Ring r=1 directly outside the footprint on the +x edge: top grass at planeGroundY-1.
         int sampleX = x1 + 1;
         int sampleZ = (z0 + z1) / 2;
         Assertions.assertNotNull(
                 findBlockOfPalette(result, sampleX, planeGroundY - 1, sampleZ, "minecraft:grass_block"),
                 "ring 1 grass top missing at " + sampleX + "," + (planeGroundY - 1) + "," + sampleZ
         );
-        // Ring r=2: 2 cells out, top at planeGroundY-2.
         Assertions.assertNotNull(
                 findBlockOfPalette(result, x1 + 2, planeGroundY - 2, sampleZ, "minecraft:grass_block")
         );
-        // Ring r=3: 3 cells out, top at planeGroundY-3 = 0.
         Assertions.assertNotNull(
                 findBlockOfPalette(result, x1 + 3, 0, sampleZ, "minecraft:grass_block")
         );
-        // Below the ring 1 grass top there should be dirt at Y=0..planeGroundY-2.
         for (int y = 0; y < planeGroundY - 1; y++) {
             Assertions.assertNotNull(
                     findBlockOfPalette(result, sampleX, y, sampleZ, "minecraft:dirt"),
@@ -154,10 +144,6 @@ class EmptyTownTerrainShaperTest {
                 "deterministic shaper must produce identical output across runs");
     }
 
-    // -------------------------------------------------------------------------
-    // On-demand: actually rewrite the committed empty_town.nbt
-    // -------------------------------------------------------------------------
-
     @Test
     @Disabled("On-demand tool; remove @Disabled to reshape the real empty_town.nbt.")
     void applyToRealStructure() throws IOException {
@@ -165,21 +151,14 @@ class EmptyTownTerrainShaperTest {
         Assertions.assertEquals(0, exit);
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    /** A 6x5x6 sample with stone at (1,0,1) and glass at (4,4,4). */
 
-    /**
-     * 6×5×6 cube with stone at (1,0,1), glass at (4,4,4), and an empty palette
-     * stub for everything else. Lets the assertions check shift correctness
-     * without bootstrapping the real empty_town.
-     */
+    /** A 6x5x6 sample with stone at (1,0,1) and glass at (4,4,4). */
     private static CompoundTag sampleStructure() {
         CompoundTag root = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.STONE.defaultBlockState())); // 0
-        palette.add(NbtUtils.writeBlockState(Blocks.GLASS.defaultBlockState())); // 1
-        // Strip Properties so ensurePaletteEntry's reuse check sees the bare entries.
+        palette.add(NbtUtils.writeBlockState(Blocks.STONE.defaultBlockState()));
+        palette.add(NbtUtils.writeBlockState(Blocks.GLASS.defaultBlockState()));
         for (int i = 0; i < palette.size(); i++) {
             palette.getCompound(i).remove("Properties");
         }
@@ -210,12 +189,7 @@ class EmptyTownTerrainShaperTest {
         return entry;
     }
 
-    /**
-     * Looks up the palette name of the block at {@code (x,y,z)}. Returns the
-     * matching block entry tag if a block of {@code expectedName} is found
-     * there, else null. Uses a per-call palette index so callers don't need
-     * to know palette layout.
-     */
+    /** The block entry at (x,y,z) if its palette name is {@code expectedName}, else null. */
     private static CompoundTag findBlockOfPalette(
             CompoundTag root, int x, int y, int z, String expectedName
     ) {

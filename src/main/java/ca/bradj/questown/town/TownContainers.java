@@ -103,11 +103,7 @@ public class TownContainers {
         return Stream.concat(allChestsStream, entities).toList();
     }
 
-    /**
-     * Every container plus the displays (armor stands, item frames) in town rooms: what the town
-     * holds, for counting. Displays stay out of {@link #getAllContainers}, which picks deposit
-     * targets, supply sources and "is there space" answers.
-     */
+    /** Every container plus the displays in town rooms, for counting what the town holds. */
     public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainersAndDisplays(
             TownInterface town,
             ServerLevel level
@@ -118,15 +114,11 @@ public class TownContainers {
         ).toList();
     }
 
-    /** Whether a container is a display (armor stand, item frame), {@link MCDisplayContainer}. */
     public static boolean isDisplay(ContainerTarget<?, ?> target) {
         return target.getContainer() instanceof MCDisplayContainer;
     }
 
-    /**
-     * Armor stands and item frames standing in a town room, as storage (dev 2026-10-28: they "count
-     * as storage"). One entity query per room, over the room's scanned positions.
-     */
+    /** Armor stands and item frames in town rooms. */
     private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllDisplaysStream(
             RoomsHolder rooms,
             ServerLevel level,
@@ -242,9 +234,7 @@ public class TownContainers {
 
         BlockState blockState = level.getBlockState(p);
         if (room != null) {
-            // A standable neighbour, door side first: the bare door-side step put a chest
-            // whose door side is a wall's walk target INSIDE the wall, and the villager stood
-            // on the chest unable to use it (2026-10-17 playtest).
+            // Where a villager can stand, door side first, never inside a wall.
             BlockPos spot = InteractionSpots.find(p, room, b -> WalkTargets.isStandable(level, b));
             if (spot == null) {
                 spot = p.relative(InteractionSpots.doorDirectionFromCenter(room));
@@ -269,9 +259,7 @@ public class TownContainers {
         }
 
         if (!blockState.getBlock().equals(block)) {
-            // Benign, expected: the block at a recorded chest position changed (broke, or the
-            // inset-corner/wall overwrote it). We return a REMOVED target below, so this is not
-            // an error. Logging it per-call on the server thread flooded the log and lagged the game.
+            // The block at a recorded chest changed; expected, so debug only.
             QT.BLOCK_LOGGER.debug(
                     "Given block is not present at given position. Actual blockstate {}", blockState
             );
@@ -325,8 +313,7 @@ public class TownContainers {
         }
         if (item.get() instanceof StockRequestItem) {
             if (room == null) {
-                // No room context (e.g. warp-state container scan) — nothing to stamp the workspot
-                // to; stamping would NPE in RoomSerializer. Warp has no fetcher model anyway.
+                // No room to link the request to.
                 return;
             }
             if (StockRequestItem.hasRoom(item.getItemNBT())) {

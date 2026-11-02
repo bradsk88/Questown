@@ -9,23 +9,12 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.UUID;
 
-/**
- * Pure proficiency math: the work-speed multiplier curve and the gain/decay
- * clamps. No Minecraft or Forge types so JUnit can drive it directly.
- * <p>
- * A proficiency <em>level</em> is always in {@code [0, 1]}. The multiplier is a
- * linear interpolation between {@code min} (level 0) and {@code max} (level 1).
- * See ADR-0010.
- */
+/** Proficiency math. A level is in [0, 1]; the work-speed multiplier runs from {@code min} at 0 to {@code max} at 1. */
 public final class Proficiency {
 
     private Proficiency() {
     }
 
-    /**
-     * The effective work-speed multiplier for a townie at {@code level} in the
-     * band {@code [min, max]}. Level is clamped to {@code [0, 1]} first.
-     */
     public static float multiplierFor(
             float level,
             float min,
@@ -35,10 +24,6 @@ public final class Proficiency {
         return min + clamped * (max - min);
     }
 
-    /**
-     * Adds {@code gainPerTick * durationTicks} to {@code level}, clamped to
-     * {@code [0, 1]}.
-     */
     public static float applyGain(
             float level,
             float gainPerTick,
@@ -47,10 +32,6 @@ public final class Proficiency {
         return clampLevel(level + gainPerTick * durationTicks);
     }
 
-    /**
-     * Subtracts {@code decayPerTick * durationTicks} from {@code level}, clamped
-     * to {@code [0, 1]}.
-     */
     public static float applyDecay(
             float level,
             float decayPerTick,
@@ -63,13 +44,7 @@ public final class Proficiency {
         return Math.max(0f, Math.min(1f, level));
     }
 
-    /**
-     * Apply one completed work action to a townie's proficiency map: {@code workedId} gains
-     * {@code gainPerTick × durationTicks} (created at 0 if absent), and every <em>other</em> held
-     * proficiency decays {@code decayPerTick × durationTicks} — all clamped to {@code [0,1]}.
-     * Pure so both the realtime and warp paths call the identical math (the leveling-parity crux
-     * of ADR-0010).
-     */
+    /** One completed work action: the worked proficiency grows and every other one decays, all within [0, 1]. */
     public static Map<String, Float> levelUp(
             Map<String, Float> current,
             String workedId,
@@ -88,13 +63,7 @@ public final class Proficiency {
         return out;
     }
 
-    /**
-     * Deterministically seed a fresh townie with up to {@code count} distinct proficiencies
-     * drawn from {@code declaredIds}, each at a random level in {@code [0,1)}. The draw is
-     * reproducible: the same UUID and declared-id set always produce the same map (the ids
-     * are sorted into a stable order before a UUID-seeded RNG shuffles them). If fewer than
-     * {@code count} ids are declared, seeds as many as exist. See ADR-0010.
-     */
+    /** Up to {@code count} random proficiencies for a new villager. The same UUID always gives the same result. */
     public static Map<String, Float> seed(
             UUID uuid,
             Collection<String> declaredIds,
@@ -104,7 +73,6 @@ public final class Proficiency {
         if (count <= 0 || declaredIds.isEmpty()) {
             return out;
         }
-        // Sort to a stable order so a HashSet's iteration order can't perturb the draw.
         List<String> pool = new ArrayList<>(new TreeSet<>(declaredIds));
         Random rng = new Random(uuid.getMostSignificantBits() ^ uuid.getLeastSignificantBits());
         java.util.Collections.shuffle(pool, rng);

@@ -89,8 +89,7 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Welcome mat is not associated to an existing flag");
             TownFlagBlock.tellPlacerNotLinked(ctx, "message.welcome_mat.not_linked");
-            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
-            // a copy duplicated it whenever the player kept the stack (2026-10-22 playtest).
+            // Null cancels the placement and keeps the stack.
             return null;
         }
 
@@ -127,15 +126,11 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
 
         private final List<Runnable> tickListeners = new ArrayList<>();
 
-        // c3 ("hard to use wrong"): a welcome mat must belong to a live flag (registered
-        // in that flag's POIs). Enforced post-load so the place->register ordering is fine
-        // (placeWelcomeMat registers synchronously before the first tick), and so a freshly
-        // reloaded world's flag POIs have settled before we judge ownership. Reported once.
+        // A welcome mat must belong to a live flag. Checked once, after a short wait so a reloaded flag has registered its mats.
         private int c3Ticks = 0;
         private boolean c3Reported = false;
         private static final int C3_GRACE_TICKS = 120; // 6s
 
-        /** true when some live flag has registered this mat position in its POIs. */
         private static boolean ownedByFlag(BlockPos pos) {
             for (TownFlagBlockEntity f : TownFlags.all()) {
                 if (f.getWelcomeMats().contains(pos)) {

@@ -9,37 +9,19 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Shows the helper chicken's monologue hint on the overlay message when the
- * player is looking squarely at it and close enough — the chicken's version
- * of the townie need-bubble "explain when examined" gesture (ADR-0011). The
- * hint key is synced by the server (see
- * {@link HelperChickenEntity#getHintKey()}); the client only decides <em>when</em>
- * to show it.
- *
- * <p>There is one helper chicken per town, so there is no crosshair contest
- * here (unlike {@link ca.bradj.questown.mobs.visitor.NeedBubbleFocus}); the
- * chicken simply shows its hint when the player is looking at it. The click
- * handler still owns the plain-text fourth-wall cycle; this only surfaces the
- * monologue.
- */
+/** Shows the helper chicken's hint on screen while the player looks straight at it from nearby. */
 @OnlyIn(Dist.CLIENT)
 public final class ChickenArcHintFocus {
 
-    /**
-     * Ticks between re-showing the hint. The overlay message fades on its own,
-     * so a focused chicken needs periodic re-showing; doing it every tick
-     * would restart the fade animation constantly.
-     */
+    /** Ticks between re-showing the hint; it fades on its own. */
     private static final int REPEAT_TICKS = 40;
 
-    /** How close the player must be before the text is shown (square metres). */
+    /** How close the player must be (squared blocks). */
     private static final double HINT_RANGE_SQR = 8.0 * 8.0;
 
-    /** How squarely the player must be looking before the text is shown (dot product). */
+    /** How squarely the player must look (dot product). */
     private static final double HINT_CONE_DOT = 0.985;
 
-    /** The box within which the helper chicken is considered. */
     private static final double SEARCH_DISTANCE = 16.0D;
 
     private static int cooldown;

@@ -39,7 +39,7 @@ public class MineshaftBlock extends RoomBlock {
             return InteractionResult.CONSUME;
         }
         Compat.sendMessage(sp, Compat.translatable("message.questown.mineshaft.use"));
-        // A deep-cave echo from the shaft (dev, r21): vanilla cave ambience, a random variant each use.
+        // A deep-cave echo from the shaft: vanilla cave ambience, a random variant each use.
         if (p_60504_ instanceof ServerLevel sl) {
             Compat.playSound(sl, p_60505_, Compat.caveAmbience(), SoundSource.BLOCKS);
         }

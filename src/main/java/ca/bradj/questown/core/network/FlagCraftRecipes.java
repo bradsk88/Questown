@@ -23,23 +23,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Supplier;
 
 /**
- * The flag crafting tab's recipes, in display order: the one table both the screen (rows, buttons,
- * tooltips) and {@link FlagCraftMessage} (by index) read. Every output is stamped with the flag it
- * was crafted at (TownFlagBlock.StoreParentOnNBT), which is what lets a wand act and a mat, board,
- * mineshaft or fishing station register its room on placement. Registry-bound values are suppliers
- * so loading this class touches no registry.
+ * The flag crafting tab's recipes, in display order. Each output is linked to the flag it was
+ * crafted at.
  *
- * @param input         what the craft consumes (one item)
- * @param icon          the input shown on the row
- * @param output        what the player gets
- * @param descKey       the row's tooltip description
- * @param advancement   fired on craft, or null
- * @param unlockedByQuest the room quest that unlocks this row once posted, or null for always
- *                        (r17 #1, {@code FlagCraftGates})
- * @param bopCost       Blocks of Progress the craft takes from the flag instead of an input item
- *                      (0 = an item recipe). Dev playtest 2026-10-30: the armorer's and
- *                      blacksmith's tables can also be made at the flag for 4 BOPs, "so players
- *                      can have a familiar place to craft" (their crafting-table recipes stay).
+ * @param unlockedByQuest the room quest that shows this row once posted, or null for always
+ * @param bopCost         Blocks of Progress taken from the flag instead of an item; 0 for an item recipe
  */
 public record FlagCraftRecipes(
         Supplier<Ingredient> input,
@@ -78,30 +66,21 @@ public record FlagCraftRecipes(
     public static final ResourceLocation FISHING_STATION_QUEST = Questown.ResourceLocation("block_room/block.questown.fishing_station");
 
     public static final ImmutableList<FlagCraftRecipes> ALL = ImmutableList.of(
-            // The "how to register" journal entry (003) opens on getting a wand.
             new FlagCraftRecipes(() -> Ingredient.of(Items.STICK), Items.STICK::getDefaultInstance,
                     ItemsInit.TOWN_WAND::get, "menu.flag_crafting.wand_desc", RoomTrigger.Triggers.WandGet, null),
-            // Any wooden pressure plate (the player may hold spruce, birch, ...).
             new FlagCraftRecipes(() -> Ingredient.of(ItemTags.WOODEN_PRESSURE_PLATES), Items.OAK_PRESSURE_PLATE::getDefaultInstance,
                     ItemsInit.WELCOME_MAT_BLOCK::get, "menu.flag_crafting.mat_desc", null, null),
-            // Any sign: the #questown:job_board_inputs recipe tag is #minecraft:signs plus the board.
             new FlagCraftRecipes(() -> Ingredient.of(ItemTags.SIGNS), Items.OAK_SIGN::getDefaultInstance,
                     ItemsInit.JOB_BOARD_BLOCK::get, "menu.flag_crafting.board_desc", null, null),
-            // Dev's recipe (2026-10-19), replacing the removed item-on-flag stamping.
             new FlagCraftRecipes(() -> Ingredient.of(Items.STONE_STAIRS), Items.STONE_STAIRS::getDefaultInstance,
                     ItemsInit.MINESHAFT_BLOCK::get, "menu.flag_crafting.mineshaft_desc", null, MINESHAFT_QUEST),
-            // Dev's recipe (2026-10-19): the fishing station is a stamped room block too.
             new FlagCraftRecipes(() -> Ingredient.of(Items.FISHING_ROD), Items.FISHING_ROD::getDefaultInstance,
                     ItemsInit.FISHING_STATION_BLOCK::get, "menu.flag_crafting.fishing_station_desc", null, FISHING_STATION_QUEST),
             forBops(ItemsInit.ARMORERS_TABLE_BLOCK::get, "menu.flag_crafting.armorers_table_desc"),
             forBops(ItemsInit.BLACKSMITHS_TABLE_BLOCK::get, "menu.flag_crafting.blacksmiths_table_desc")
     );
 
-    /**
-     * The player crafts this recipe at the flag: consume one input from their inventory, give them
-     * the output stamped with the flag, and fire the recipe's advancement. The flag crafting tab
-     * (FlagCraftMessage) and the village/growth driver both come through here.
-     */
+    /** Takes one input from the player and gives them the output, linked to this flag. */
     public void craft(ServerPlayer player, BlockPos flagPos) {
         if (costsBops()) {
             if (!(player.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)
@@ -112,9 +91,7 @@ public record FlagCraftRecipes(
         } else if (!consumeMatching(player, input().get())) {
             return;
         }
-        // Every output only works against its parent flag (wand actions, mat / board / room-block
-        // registration all resolve it through TownFlagBlock.GetParentFromNBT), so stamp the exact
-        // flag the player crafted at.
+        // Link the output to this flag.
         ItemStack crafted = new ItemStack(output().get());
         TownFlagBlock.StoreParentOnNBT(crafted, flagPos);
         giveAndNotify(player, crafted);
@@ -123,15 +100,9 @@ public record FlagCraftRecipes(
         }
     }
 
-    // The "Created X" message is the only confirmation a craft gives, so it must not be able to lie:
-    // a full inventory would otherwise swallow the item while the input was still consumed. Drop the
-    // remainder at the player's feet instead, the same fallback the flag uses for a block of progress.
+    // A full inventory drops the rest at the player's feet, so the "Created X" message is true.
     private static void giveAndNotify(ServerPlayer player, ItemStack crafted) {
-        // The display name must be captured BEFORE add(): on success the stack is
-        // consumed (count -> 0), and an empty stack's getItem() falls back to
-        // Items.AIR (vanilla behavior) - that fallback is what made the message read
-        // "Created Air" while the real item landed in the inventory (2026-10-11 report,
-        // welcome-mat-craft-chat-says-created-air.md).
+        // Read the name first: add() empties the stack.
         Component itemName = crafted.getHoverName();
         if (!player.getInventory().add(crafted)) {
             player.drop(crafted, false);

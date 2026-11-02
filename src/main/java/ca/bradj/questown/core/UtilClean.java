@@ -16,11 +16,7 @@ import java.util.stream.Stream;
 
 public class UtilClean {
 
-    /**
-     * {@code a + b}, capped at {@code Integer.MAX_VALUE}. Room recipe weights use MAX_VALUE for
-     * "never recommend" items, and a plain sum of four of them overflowed to -4 (r16 #5: the
-     * dining room outweighed by the empty room). Pinned by {@code SaturatingAddTest}.
-     */
+    /** {@code a + b}, capped at {@code Integer.MAX_VALUE}. */
     public static int saturatingAdd(int a, int b) {
         return (int) Math.min(Integer.MAX_VALUE, (long) a + b);
     }
@@ -41,16 +37,7 @@ public class UtilClean {
         };
     }
 
-    /**
-     * Forge-free extraction of the "all special rules pass" decision that
-     * {@code ResourceJobLoader.trySpecialRuleIsJobBlock} makes, so the freshness gate of
-     * {@code isJobBlock} can be unit-tested without Forge. {@code ruleResults} is each global
-     * special rule's {@code postJobBlockCheckPassed(ctx)} result, in order.
-     *
-     * <p>Semantics: every declared rule must pass; an EMPTY rule set means "no rules declared" and
-     * must NOT block a fresh job block. Per CONTEXT.md, global special rules are job-wide behavior
-     * flags / warp effects, not job-block qualification gates - so a job declaring none has no gate.
-     */
+    /** Whether every special rule passed. No rules means nothing blocks. */
     public static boolean specialRulesAllPass(List<Boolean> ruleResults) {
         for (Boolean rule : ruleResults) {
             if (!Boolean.TRUE.equals(rule)) {

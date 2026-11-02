@@ -5,12 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/**
- * r9 findings #4 (dev ruling 2026-10-23, "row + status line"): a swordless hunter's status said
- * "Hunter is looking for supplies. They will search in room chests." and its needs row showed a
- * Job Board; nothing named the sword the town knows it is blocked on. While a villager is not
- * working, its unmet item replaces the generic second line and the needs row.
- */
+/** While not working, the villager's missing item replaces the second line and the needs row. */
 class StatusNeedLineTest {
 
     @Test
@@ -49,10 +44,6 @@ class StatusNeedLineTest {
         Assertions.assertEquals(List.of("job_board"), StatusNeedLine.neededItems(List.of("job_board"), null, false));
     }
 
-    /**
-     * r10 #8 (dev 2026-10-23): a hungry cook read "Cook is looking for food. / They need Coal to
-     * work." A diner keeps its own lines; the job's blocker returns once it is back at work.
-     */
     @Test
     void aDiner_keepsItsOwnLines() {
         Assertions.assertTrue(StatusNeedLine.keepsOwnLines(false, true));
@@ -60,7 +51,6 @@ class StatusNeedLineTest {
         Assertions.assertFalse(StatusNeedLine.keepsOwnLines(false, false));
     }
 
-    /** Dev playtest 2026-10-29: "The 'they need food to work' tooltip on the longer job statuses is weird". */
     @Test
     void awayOnATimedTrip_countsAsWorking() {
         Assertions.assertTrue(StatusNeedLine.isWorking(ca.bradj.questown.jobs.production.ProductionStatus.WAITING_FOR_TIMED_STATE));

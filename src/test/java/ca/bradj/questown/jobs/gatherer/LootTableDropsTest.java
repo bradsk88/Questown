@@ -43,7 +43,6 @@ class LootTableDropsTest {
 
     @Test
     void theRealTablesPutWheatSeedsOnlyInTheNoToolGatherers() throws IOException, URISyntaxException {
-        // The 2026-10-22 report: the board claimed hunters, miners and tool gatherers make seeds.
         assertTrue(drops("gatherer_notool").contains("minecraft:wheat_seeds"));
         assertTrue(drops("gatherer_notool_full").contains("minecraft:wheat_seeds"));
         for (String prefix : List.of("hunter_sword", "miner", "gatherer_axe", "gatherer_shears")) {

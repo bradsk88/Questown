@@ -403,16 +403,7 @@ public abstract class ProductionJob<
         this.lookTarget = jobSite1;
     }
 
-    /**
-     * Where the villager must actually <em>stand</em> to interact with a container target: the
-     * container's interaction spot, but at the container's own floor level, not the roof. A container
-     * in a room is reached through the room's door at the room's floor level (its {@code yCoord});
-     * the interaction spot is the air in front of the container, which is normally at that same level.
-     * When the room's roof is reachable (stairs or a run of 1-block jumps), a target kept at the
-     * container's own height lets the ground pathfinder route over the roof instead of entering the
-     * room at the door. Pinning the walk target to the room's floor level closes that escape and
-     * forces the path through the door.
-     */
+    /** Where a villager stands to use a container: in front of it, at the room's floor level, so the path goes through the door rather than over the roof. */
     protected static @NotNull BlockPos navTargetForContainer(ContainerTarget<MCContainer, MCTownItem> target) {
         MCRoom room = target.getRoom();
         if (room == null) {

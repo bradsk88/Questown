@@ -22,24 +22,10 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
     // Key: villager index, Value: map of (workBlockPos -> list of inserted items)
     private final ImmutableMap<Integer, ImmutableMap<BlockPos, ImmutableList<MCHeldItem>>> insertedItems;
 
-    /**
-     * Warp-path LOOT-quest channel: non-empty extractions the warper recorded
-     * during the warp. Mutated in place and shared by reference through the
-     * state-copy paths (like the {@code knowledge} list) so the settle point
-     * (next to the knowledge settle in {@code TownFlagState.warp}) sees every
-     * record and applies it once through the live quest handle. Keeping the
-     * record on the snapshot — not on the warper — keeps the warper pure
-     * (no live flag/QuestsHolder reference).
-     */
+    /** LOOT extractions recorded during a warp, applied once when the warp ends. Shared across state copies. */
     private final ArrayList<MCHeldItem> recordedLootExtractions;
 
-    /**
-     * Warp-path XP channel, beside the LOOT one and kept the same way: XP each townie earned from
-     * job completions during the warp (by UUID), shared by reference through the copy paths so the
-     * settle point ({@code TownFlagState.warp}) grants it once through the live villager handle.
-     * Realtime grants XP from a job-completion listener on the townie's own job; the warp's world
-     * interactions had none, so a warp paid no XP at all (dev, 2026-10-24).
-     */
+    /** XP each villager earned during a warp, granted once when the warp ends. Shared across state copies. */
     private final HashMap<UUID, Integer> recordedExperience;
 
     public MCTownState(
@@ -85,8 +71,6 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
             ImmutableMap<UUID, Boolean> blocksOfProgress,
             long worldTimeAtSleep
     ) {
-        // The recorded-LOOT list is shared by reference so a warper record made
-        // on an earlier step still reaches the final state the settle point reads.
         return new MCTownState(
                 villagers,
                 containers,
@@ -102,26 +86,20 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
         );
     }
 
-    /** Records a non-empty extraction during warp, for the settle point to apply. */
     public void recordLootExtract(MCHeldItem item) {
         recordedLootExtractions.add(item);
     }
 
-    /** All extractions recorded during this warp (a copy; the list itself is mutable). */
     public ImmutableList<MCHeldItem> recordedLootExtractions() {
         return ImmutableList.copyOf(recordedLootExtractions);
     }
 
-    /**
-     * Consumes the recorded extractions exactly once. Returns this so the
-     * settle point can thread it into the store/send order.
-     */
+    /** Clears the recorded extractions once they have been applied. */
     public MCTownState clearRecordedLootExtractions() {
         recordedLootExtractions.clear();
         return this;
     }
 
-    /** Adds {@code xp} to what {@code villager} earned during this warp, for the settle point. */
     public void recordExperience(UUID villager, int xp) {
         if (xp <= 0) {
             return;
@@ -129,12 +107,11 @@ public class MCTownState extends TownState<MCContainer, MCTownItem, MCHeldItem, 
         recordedExperience.merge(villager, xp, Integer::sum);
     }
 
-    /** XP earned per townie during this warp (a copy; the map itself is mutable). */
     public ImmutableMap<UUID, Integer> recordedExperience() {
         return ImmutableMap.copyOf(recordedExperience);
     }
 
-    /** Consumes the recorded XP exactly once, like {@link #clearRecordedLootExtractions}. */
+    /** Clears the recorded XP once it has been granted. */
     public MCTownState clearRecordedExperience() {
         recordedExperience.clear();
         return this;

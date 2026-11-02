@@ -8,17 +8,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The need line that names what a townie is blocked on: the missing room, the room it cannot get
- * into, or the missing item. Shared by the on-look hint ({@code NeedBubbleFocus}) and the status
- * tooltip ({@code ServerJobsRegistry.getStatusText}), so both surfaces say the same thing.
- */
+/** The line that names what a villager is blocked on, for both the on-look hint and the status tooltip. */
 public final class TownieNeedDetail {
 
     private TownieNeedDetail() {
     }
 
-    /** The named need line, or null when the need has no key (callers fall back to their own text). */
+    /** The line, or null when the need has no key. */
     public static @Nullable Component of(VisitorMobEntity townie) {
         ResourceLocation missingRoom = townie.getMissingRoom();
         if (missingRoom != null) {

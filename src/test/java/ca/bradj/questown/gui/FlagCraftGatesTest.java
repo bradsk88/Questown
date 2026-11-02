@@ -6,11 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/**
- * r17 #1 (dev 2026-10-25): "the mineshaft and fishing station crafting recipes should be hidden
- * until the relevant quests have been opened." A recipe with an unlocking quest shows once that
- * quest has been posted (open or completed); the others always show.
- */
+/** A recipe with an unlocking quest shows once that quest is posted; the others always show. */
 class FlagCraftGatesTest {
 
     private static final ResourceLocation MINESHAFT = new ResourceLocation("questown", "block_room/block.questown.mineshaft");

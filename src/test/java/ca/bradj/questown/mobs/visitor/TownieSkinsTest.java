@@ -12,11 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * use-1.20-villager-skins.md: the townie skin pool now carries the vanilla
- * 1.20.6 character skins (added in 1.20.5 alongside Steve/Alex) on top of
- * the mod's custom skins, and the per-UUID pick is deterministic.
- */
+/** The skin pool holds the vanilla character skins and the mod's own, and a UUID always picks the same one. */
 class TownieSkinsTest {
 
     @Test
@@ -49,22 +45,19 @@ class TownieSkinsTest {
         UUID b = UUID.randomUUID();
         assertEquals(TownieSkins.pick(a), TownieSkins.pick(a), "same UUID -> same skin");
         assertTrue(TownieSkins.pool().contains(TownieSkins.pick(a)));
-        // Different UUIDs should not all map to one skin (sanity, not exhaustiveness).
         assertTrue(TownieSkins.pool().size() > 1);
     }
 
     @Test
     void pick_handles_a_min_value_hash() {
-        // A UUID whose hashCode is Integer.MIN_VALUE must not mis-pick (floorMod, not abs).
+        // A UUID hashing to Integer.MIN_VALUE still picks a valid skin.
         UUID min = UUID.randomUUID();
-        // Floor-mod by construction: index is the pool position of |hash| wrapped.
         int expected = Math.floorMod(min.hashCode(), TownieSkins.pool().size());
         assertEquals(TownieSkins.pool().get(expected), TownieSkins.pick(min));
     }
 
     @Test
     void vanilla_and_custom_pick_differently() {
-        // A single UUID must not be able to select two different pool entries.
         UUID u = UUID.fromString("00000000-0000-0000-0000-000000000000");
         ResourceLocation p1 = TownieSkins.pick(u);
         ResourceLocation p2 = TownieSkins.pick(u);

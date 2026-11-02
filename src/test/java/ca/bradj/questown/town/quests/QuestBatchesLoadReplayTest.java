@@ -13,27 +13,13 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Load-time replay of a completed batch must re-mark the quests complete WITHOUT re-claiming
- * the already-applied batch reward. The pre-fix replay went through
- * {@link QuestBatch#markRecipeAsComplete(Object, Object)}, which claims the reward when the
- * batch closes - on every load of a post-onboarding world that tripped the once-guard
- * ("Refusing to apply reward more than once" x3) plus a stale "instant-type reward loaded
- * from disk" WARN. Ticket:
- * .scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md (option B).
- * <p>
- * The restored-batch construction mirrors the production deserializer exactly
- * ({@code new MCQuestBatch()} + {@code initialize(batchUUID, allQuests, reward)},
- * {@code MCQuestBatch.SERIALIZER.deserializeNBT}); the NBT byte layer is irrelevant to the
- * claim path, so the test builds the restored objects directly.
- */
+/** Loading a completed batch marks its quests complete without claiming its reward again. */
 class QuestBatchesLoadReplayTest {
 
     @Test
     void loadReplay_completedBatch_remarksQuest_withoutReclaimingReward() {
         RecordingReward reward = new RecordingReward();
 
-        // On-disk state: one CAMPFIRE quest, complete; its batch reward claimed exactly once.
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch onDisk = new MCQuestBatch();
         onDisk.initialize(batchUUID, List.of(), reward);
@@ -45,8 +31,7 @@ class QuestBatchesLoadReplayTest {
         Assertions.assertTrue(reward.isApplied());
         Assertions.assertEquals(1, reward.claimAttempts);
 
-        // The deserializer's view of the same save: a fresh batch holding the completed quest
-        // and the same (already-applied) reward, then the rebuild through initialize().
+        // The same save, as the loader builds it.
         MCQuestBatch restored = new MCQuestBatch();
         restored.initialize(batchUUID, onDisk.getAll(), reward);
         MCQuestBatches reloaded = new MCQuestBatches(MCQuestBatch::new);
@@ -60,7 +45,7 @@ class QuestBatchesLoadReplayTest {
         Assertions.assertTrue(reloaded.getAll().get(0).isComplete());
     }
 
-    /** Load the batch the way the flag does: deserialize, then the replay in initialize(). */
+    /** Loads a batch as the flag does. */
     private static MCQuest reloadOne(MCQuest saved) {
         RecordingReward reward = new RecordingReward();
         MCQuestBatch restored = new MCQuestBatch();
@@ -71,7 +56,6 @@ class QuestBatchesLoadReplayTest {
         return reloaded.getAll().get(0);
     }
 
-    // 2026-10-27: a curated path's "Train a Crafter to level 3" survives a reload.
     @Test
     void loadReplay_keepsAVillagerLevelQuest() {
         MCQuest saved = MCQuest.villagerLevel(UUID.randomUUID(), null, "crafter", 3);
@@ -82,7 +66,6 @@ class QuestBatchesLoadReplayTest {
         Assertions.assertEquals(saved.getWantedId(), loaded.getWantedId());
     }
 
-    // Before 2026-10-27 the typed rebuild made "Unlock Wooden Shovel" an any-crafter-skill quest.
     @Test
     void loadReplay_keepsANamedSkillQuestsSkill() {
         ca.bradj.questown.jobs.JobID shovel = new ca.bradj.questown.jobs.JobID("crafter", "wooden_shovel");
@@ -93,8 +76,7 @@ class QuestBatchesLoadReplayTest {
         Assertions.assertEquals(java.util.Optional.of(shovel), MCQuest.namedSkill(loaded.getWantedId()));
     }
 
-    // village/day1 2026-10-17: after a real flag reload every quest read onboarding=false, the
-    // arrival gate (TownQuests.isArrivalGateOpen) opened, and villager 2 arrived before Raw Food.
+    // The onboarding flag survives a reload.
     @Test
     void loadReplay_keepsTheOnboardingMarker() {
         MCQuest saved = MCQuest.standalone(UUID.randomUUID(), null, SpecialQuests.TOWN_GATE);

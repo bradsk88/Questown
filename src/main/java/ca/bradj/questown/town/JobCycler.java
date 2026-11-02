@@ -38,12 +38,7 @@ public class JobCycler {
         return nextValid(availableJobs, canAlwaysStart, canFitInDay, requestedResults, td, tripLength, j -> 0);
     }
 
-    /**
-     * {@code tripLength} ranks the valid jobs: the longest trip that fits the day wins (dev playtest
-     * 2026-10-29: "Longest that fits the day"). Then {@code level}: the job needing the highest
-     * villager level wins (dev playtest 2026-10-30: "Crafter should prefer building the highest
-     * level thing", for every villager). Remaining ties keep the shuffled rotation.
-     */
+    /** The longest trip that fits the day wins, then the job needing the highest level; other ties keep the rotation. */
     public @Nullable JobID nextValid(
             Iterable<JobID> availableJobs,
             Predicate<JobID> canAlwaysStart,

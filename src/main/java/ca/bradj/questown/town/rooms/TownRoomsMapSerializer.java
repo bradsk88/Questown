@@ -60,13 +60,7 @@ public class TownRoomsMapSerializer {
         roomsMap.initialize(owner, doorsB.build(), gatesB.build(), doorsWithRecipes.build());
     }
 
-    /**
-     * Re-anchor registered doors and fence gates to a flag at a new Y, preserving their absolute
-     * world Y (ADR-0009 flag relocation, #199). The stored {@code position_y} is a flag-relative
-     * {@code scanLevel}; rewrite it so {@code oldFlagY + scanLevel} (the absolute Y) is unchanged
-     * under {@code newFlagY}. X/Z are absolute and untouched. Doors-with-active-recipes are stored
-     * as absolute {@link BlockPos} and so need no rebase.
-     */
+    /** Re-anchors registered doors and fence gates to a flag at a new height, keeping their world Y. */
     public void rebaseFixtureY(
             CompoundTag roomsTag,
             int oldFlagY,
@@ -93,14 +87,7 @@ public class TownRoomsMapSerializer {
         }
     }
 
-    /**
-     * Drop registered doors and fence gates whose absolute world position satisfies {@code dropIf}
-     * (ADR-0009 "leave it behind", #199 Phase 4): when a town moves so far that some fixtures fall
-     * outside the new flag's tick radius, the player can choose to leave them. The fixtures' stored
-     * {@code position_y} is the flag-relative {@code scanLevel}, so it is rebased to absolute via
-     * {@code flagY} before the predicate sees it — pass the NEW flag Y, after {@link #rebaseFixtureY}.
-     * The geometric decision lives in the caller; this only edits NBT.
-     */
+    /** Drops registered doors and fence gates whose world position matches {@code dropIf}. Call after {@link #rebaseFixtureY}, with the new flag Y. */
     public void dropFixtures(
             CompoundTag roomsTag,
             int flagY,

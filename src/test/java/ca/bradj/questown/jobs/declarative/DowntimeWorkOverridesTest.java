@@ -6,11 +6,7 @@ import ca.bradj.questown.jobs.production.ProductionStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * A townie on downtime spends most of it in the job's work states (state:0..8) and its
- * extraction. Those states had no art or text, so the villagers tab showed the error
- * checkerboard and "Gatherer is busy with their work." (agent playtest 2026-10-22 r4).
- */
+/** Every downtime work state and extraction has its own art and text. */
 class DowntimeWorkOverridesTest {
 
     @Test
@@ -27,11 +23,7 @@ class DowntimeWorkOverridesTest {
         Assertions.assertNotNull(o.statusTextOverrides().get(ProductionStatus.EXTRACTING_PRODUCT));
     }
 
-    /**
-     * Dev playtest 2026-10-28: "Relaxing for a moment is showing the \"night\" status icon. it should
-     * be using idle." e8a63f0e picked the RELAXING status art for the word "relaxing", but RELAXING
-     * is the end-of-day status and its art is the night scene.
-     */
+    /** Relaxing for a moment shows the idle art, not the night scene. */
     @Test
     void everyDowntimeStatus_showsTheIdleArt() {
         Overrides o = DowntimeWork.overrides();
@@ -48,8 +40,7 @@ class DowntimeWorkOverridesTest {
 
     @Test
     void noSupplies_readsAsRelaxing() {
-        // r22: downtime needs no supplies; the status circuit falls back to NO_SUPPLIES when no
-        // wander spot is found, and the tab said "is looking for supplies".
+        // The fallback with no wander spot reads as relaxing too.
         Overrides o = DowntimeWork.overrides();
 
         Assertions.assertEquals(

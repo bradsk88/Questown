@@ -10,10 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * The inserted item goes on the display at the work spot, in the slot it fits (a display job,
- * dev 2026-10-28: the villager puts armor on a stand, or a weapon in a frame).
- */
+/** Puts the inserted item on the display at the work spot, in the slot it fits. */
 public class DressDisplaySpecialRule extends JobPhaseModifier implements QTNativeRule {
 
     @Override
@@ -27,8 +24,7 @@ public class DressDisplaySpecialRule extends JobPhaseModifier implements QTNativ
         List<ItemStack> slots = event.world().getDisplaySlots(ws);
         int slot = DisplayFit.slotFor(slots, item);
         if (slot == DisplayFit.NO_SLOT || !event.world().setDisplaySlot(ws, slot, item.copyWithCount(1))) {
-            // The item was already taken from the villager: drop it here rather than destroy it
-            // (dev playtest 2026-10-30: a full frame ate a sword every ~25 s).
+            // The villager no longer has the item: drop it rather than lose it.
             event.world().dropItem(ws, item.copyWithCount(1));
             QT.JOB_LOGGER.error("No free display slot for {} @ {} (slots {}): dropped it there", item, ws, slots);
             return ctxOut;

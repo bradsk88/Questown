@@ -21,11 +21,7 @@ class BroadcastPacerTest {
         Assertions.assertEquals(List.of("a", "b"), sent);
     }
 
-    /**
-     * Agent playtest 2026-10-22 r6: removing a bedroom door printed "Bedroom destroyed at
-     * location [-44, -35]" twice. The same line fired three times in one tick: the first was
-     * sent, the second was queued (the queue held nothing to compare with), the third dropped.
-     */
+    /** The same line three times in one tick goes out once. */
     @Test
     void aDuplicateOfTheLineJustSent_isDropped() {
         List<String> sent = new ArrayList<>();

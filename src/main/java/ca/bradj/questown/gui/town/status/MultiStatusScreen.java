@@ -32,10 +32,8 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     private final FlagTabs tabs;
 
     /**
-     * @param pendingJobChange villagers whose job (root) changes next morning: their job title
-     *                         shows an asterisk and a hover tooltip (dev, 2026-10-19 playtest)
-     * @param switchAfterTrip  the job each villager becomes after its trip ("Switch after this
-     *                         trip"): the job title names it, with a hover tooltip (dev 2026-10-30)
+     * @param pendingJobChange villagers whose job changes next morning
+     * @param switchAfterTrip  the job each villager switches to after its trip
      */
     public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
                              Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items,
@@ -91,15 +89,11 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int mouseY
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
-            // With no townies yet the "...and one more" continuation has nothing to continue
-            // from - the day-1 playtest flagged it as copy that only works after the first
-            // arrival. Name the arrival directly instead.
+            // With no villagers yet, name the arrival on its own.
             String key = syncedData.villagerStatuses.isEmpty()
                     ? "gui.status.villager_arriving_morning.first"
                     : "gui.status.villager_arriving_morning";
             CardCoordinates cc = card.coords();
-            // Wrap to the card's padded inner width - a single un-wrapped ctx.text ran
-            // "A new villager arrives in the morning" off the card's right edge.
             ctx.textWrap(new Coordinate(cc.leftXPadded(), cc.topYPadded()),
                     cc.rightXPadded() - cc.leftXPadded(), Compat.translatable(key), 0xFF808080);
             return null;
@@ -137,7 +131,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         ctx.darkText(Compat.literal(fitTitle(uuid, getStatusX(coords) - nameX - 2)), nameX, destY);
     }
 
-    /** The card title, or the short after-trip form when the full one would run under the status art. */
+    /** The card title, or the short form when the full one would run under the status art. */
     private String fitTitle(UUID uuid, int width) {
         String title = cardTitle(uuid);
         JobID becomes = syncedData.switchAfterTrip().get(uuid);
@@ -147,7 +141,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         return PendingJobChangeMark.afterTripTitleShort(becomesName(uuid, becomes).getString());
     }
 
-    /** The job title, marked for a morning change or naming the job a switch after the trip brings. */
+    /** The job title, marked for a morning change, or naming the job after a trip. */
     private static String cardTitle(UUID uuid) {
         String job = jobTitle(uuid);
         JobID becomes = syncedData.switchAfterTrip().get(uuid);
@@ -157,7 +151,6 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         return PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid));
     }
 
-    /** The other root's name ("Cook"), or the variant's within the same root ("Sword"). */
     private static Component becomesName(UUID uuid, JobID becomes) {
         JobID now = syncedData.getJob(uuid);
         if (now != null && now.sameRoot(becomes)) {
@@ -166,7 +159,6 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         return Jobs.getRootNameComponent(becomes);
     }
 
-    /** The root job's name ("Gatherer"). The bare root id is no lang key, so it showed "gatherer". */
     private static String jobTitle(UUID uuid) {
         return Compat.translatable("jobs." + syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
     }
@@ -196,15 +188,13 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destX = getStatusX(coords);
         int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
-        // 32x32 status art: pass the draw size as the sheet (the 8-arg Util.blit normalises
-        // against the 256 sheet and would sample only the leftmost 4 px - the "flat grey box" bug).
+        // 32x32 art: give the art's own size, or only a sliver is drawn.
         Util.blit(ctx.gui(), status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
         if (!renderLeaverReturnBar(ctx, status, destX, destY)) {
             renderWorkBar(ctx, status, destX, destY);
         }
     }
 
-    /** The current step's work done, for in-town work (dev playtest 2026-10-30). */
     private static void renderWorkBar(RenderContext ctx, StatusPacket status, int x, int y) {
         if (status.workProgress() < 0) {
             return;
@@ -224,14 +214,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         }
     }
 
-    /**
-     * G3: progress bar for a leaver away on a timed trip. The payload carries
-     * the absolute server return tick; the fraction is re-derived every frame
-     * from the client's own clock (container screens re-render continuously),
-     * so the bar ticks down live while the menu is open and fills as the
-     * leaver's timer expires - the re-sync on status change then drops it.
-     */
-    /** @return whether a leaver bar was drawn */
+    /** Draws the bar for a villager away on a trip, counting down from the client's clock. @return whether it drew */
     private boolean renderLeaverReturnBar(
             RenderContext ctx,
             StatusPacket status,
@@ -288,8 +271,6 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         for (Card<UUID> v : cards()) {
             CardCoordinates coords = v.coords();
             if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) {
-                // Says why a villager is coming (dev playtest 2026-10-29). The first-arrival card
-                // stays unexplained: it does not telegraph villagers (gui/COMPLEX.md).
                 if (!syncedData.villagerStatuses.isEmpty() && isOverCard(coords, mouseX, mouseY)) {
                     this.showTooltip(Compat.translatable("gui.status.villager_arriving_morning.tooltip"));
                     return;
@@ -341,10 +322,7 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             }
         };
 
-        // Full-card click opens that villager's UI in management-only mode (same whole-card
-        // hit-test the quest tab uses in openTabForClickedCard; user reference, 2026-10-14
-        // playtest): the menu hides the inventory tab and lands on the stats pane, not the
-        // inventory pane.
+        // A click opens that villager's menu without the inventory tab.
         for (Card<UUID> v : cards()) {
             if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates c = v.coords();

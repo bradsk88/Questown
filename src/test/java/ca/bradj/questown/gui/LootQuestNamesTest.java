@@ -4,12 +4,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * A LOOT (produced) quest's card name. Every LOOT quest that was not the raw-food tag read "Food":
- * the miner's "Coal x3" (r16 #7) showed "Food (n/3)". r17 (dev 2026-10-25) also moved the cook's
- * food quest to a cooked-food tag ("otherwise the food quest can technically be completed by lucky
- * hunters and gatherers").
- */
+/** A LOOT quest's card name: the miner's coal quest says coal. The cook's food quest wants cooked food only. */
 class LootQuestNamesTest {
 
     @Test

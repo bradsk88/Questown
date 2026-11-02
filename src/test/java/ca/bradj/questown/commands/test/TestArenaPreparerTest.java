@@ -9,27 +9,9 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit coverage for {@link TestArenaPreparer}.
- *
- * <p>Per CLAUDE.md "Do not 'simulate' core questown logic" — we don't stand up
- * a fake {@code ServerLevel}. Full end-to-end coverage of
- * {@link TestArenaPreparer#destroyNearbyFlags} and
- * {@link TestArenaPreparer#flatten} requires a real {@code ServerLevel}, which
- * is reachable only from an in-game autotest run.
- *
- * <p>What this file covers at the pure-function level:
- * <ul>
- *   <li>{@link TestArenaPreparer.PreparerOptions} construction and defaults.</li>
- *   <li>The jobs-track default is zero-change vs the previous inline
- *       TestExecutor behavior (halfWidth=7, all opt-ins false).</li>
- *   <li>The {@code clearRotationDetectorRetryCounters} plumbing into
- *       {@link HelperChickenRotationDetector#clearRetryCounters()} is reachable.</li>
- * </ul>
- *
- * <p>Tests below that would require a live ServerLevel fail with a clear note per
- * CLAUDE.md's testability rule ("Add a failing assertion to the test so it is
- * possible to understand what tests are failing due to the code not being
- * testable"). See the {@code @Test} methods marked with {@code _requiresServerLevel}.
+ * Unit coverage for {@link TestArenaPreparer}'s options and the retry-counter plumbing.
+ * {@link TestArenaPreparer#destroyNearbyFlags} and {@link TestArenaPreparer#flatten} need a
+ * real {@code ServerLevel}; the {@code _requiresServerLevel} tests mark that gap.
  */
 class TestArenaPreparerTest {
 
@@ -98,10 +80,7 @@ class TestArenaPreparerTest {
     }
 
     /**
-     * Kill-sweep behavior requires a ServerLevel to stand up HelperChickenEntity
-     * instances. Disabled + failing to document the gap per CLAUDE.md rule on
-     * "insufficient interfaces on the real code" — we make a note, keep the
-     * shape of the test so future work can pick it up, and don't simulate.
+     * Kill-sweep behavior requires a ServerLevel to stand up HelperChickenEntity instances.
      */
     @Test
     @Disabled("Testability gap: requires a real ServerLevel to spawn HelperChickenEntity "

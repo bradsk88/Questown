@@ -330,13 +330,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
     }
 
-    /**
-     * Mirrors the shape output of {@code qt debug doors_all}: logs the ASCII art of a
-     * room's shape. Only fires for a scan level whose shape changed since the last logged
-     * scan, so a newly registered door (a bare "D") or a room that forms/changes walls
-     * logs once, while a stable town stays quiet. Always on while we diagnose the
-     * room-crash/lag issue; to disable, pass false to the detector and drop the art sink.
-     */
+    /** Logs a room's shape as text when it changed since the last scan. */
     private void logRoomShapes(
             int scanLevel,
             ImmutableMap<Position, String> shapes
@@ -448,10 +442,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         return this.activeRecipes.size();
     }
 
-    /**
-     * True once a full room-detection pass has finished in this session. Room recipe
-     * matches (and so the beds the town provides) are rebuilt by that pass after a load.
-     */
+    /** True once a full room scan has finished since the last load. */
     public boolean hasScannedSinceLoad() {
         return scannedSinceLoad;
     }
@@ -488,14 +479,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         recomputeDeadDoors();
     }
 
-    /**
-     * Recomputes which registered doors have no room, and why, then pushes the set to the flag
-     * so clients can bubble it (ADR-0011). A door with no room at all is
-     * {@link DoorTrouble#NOT_ENCLOSED}; a door with a room that matches no recipe is
-     * {@link DoorTrouble#NO_RECIPE}. A half-built room is a normal state, so a freshly
-     * registered door is expected to appear here until its scan attaches it — the bubble is
-     * diagnosis, never deregistration (zombie cleanup is the block-gone check in tick, ADR-0013).
-     */
+    /** Works out which registered doors have no room and why, and sends the set to clients for the bubble. */
     private void recomputeDeadDoors() {
         Set<MCRoom> matchedRooms = getAllMatches(m -> true).stream()
                                                              .map(RoomRecipeMatch::getRoom)
@@ -576,9 +560,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
         }
         Collection<RoomRecipeMatch<MCRoom>> out = b.build();
-        // DEV-DIAG (2026-10-06, cook-soft-lock): for the kitchen recipe, break down WHY 0 (or few)
-        // match the (door-registered /& room-with-that-doorPos /& recipe) join. Gated + sampled (log
-        // always when empty, otherwise every 300th). Remove with the rest of the cook-soft-lock probes.
+        // Dev diagnostics: why few kitchens match. Sampled.
         if (System.getenv("ENABLE_DEV_COMMANDS") != null && recipeId.toString().contains("kitchen")) {
             if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
                 int doors = registeredDoors.size() + registeredFenceGates.size();

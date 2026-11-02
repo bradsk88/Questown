@@ -14,12 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Dev playtest 2026-10-28: "an armory IS a smithy" (both rooms were built around the blacksmith's
- * table), and nothing told a player how to get the table. The armory now uses its own armorer's
- * table, and both tables are crafted from a crafting table and 4 Blocks of Progress (dev's
- * shapes: plus for the blacksmith's, corners for the armorer's).
- */
+/** The armory has its own armorer's table; both tables are made from a crafting table and 4 Blocks of Progress. */
 class WorkTableRecipesTest {
 
     private static final Path RECIPES = Path.of("src/main/resources/data/questown/recipes");
@@ -33,11 +28,7 @@ class WorkTableRecipesTest {
         Assertions.assertFalse(armory.contains("questown:blacksmiths_table"), armory.toString());
     }
 
-    /**
-     * Dev 2026-10-28: "Armorers Table --> [AT, Chest] --> [AT, Chest, Stand] --> [AT, Chest, four
-     * stands]". A room is every recipe it contains and its identity is the heaviest, so each tier
-     * must contain the one before.
-     */
+    /** Armory tiers: the table, then a chest, then a stand, then four stands. Each tier contains the one before. */
     @Test
     void armoryTiers_eachContainTheTierBefore() throws IOException {
         List<List<String>> tiers = List.of(
@@ -53,7 +44,6 @@ class WorkTableRecipesTest {
         assertNested(tiers);
     }
 
-    /** Dev 2026-10-28: "the blacksmith probably has a similar setup, but with item frames". */
     @Test
     void smithyTiers_eachContainTheTierBefore() throws IOException {
         List<List<String>> tiers = List.of(
@@ -93,7 +83,7 @@ class WorkTableRecipesTest {
             for (Path f : files.filter(p -> p.getFileName().toString().startsWith("armorer_")).toList()) {
                 JsonObject job = new Gson().fromJson(Files.readString(f, StandardCharsets.UTF_8), JsonObject.class);
                 Assertions.assertEquals("questown:armorers_table", job.get("block").getAsString(), f.getFileName().toString());
-                // The lowest tier, so the jobs work in every armory tier.
+                // The lowest tier, so the jobs work in every armory.
                 Assertions.assertEquals("questown:armorers_corner", job.get("room").getAsString(), f.getFileName().toString());
             }
         }

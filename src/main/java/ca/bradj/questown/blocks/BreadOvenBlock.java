@@ -32,17 +32,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * A furnace-shaped processing block for the baker job family: the oven bakes
- * 1 wheat + 1 coal into 1 bread over {@link BreadOvenBake#BAKE_TICKS} ticks,
- * with the items stored in the block entity's slots (0 wheat, 1 coal,
- * 2 bread) so the cook-shaped job slot rules
- * ({@code insert_into_slot_0/1}, {@code take_from_slot_2}) can drive it.
- *
- * <p>The {@code bake_state} property is the visual (unchanged art) and is kept
- * in sync with the slot contents by {@link BreadOvenBlockEntity}, not by the
- * townie's work-state index.
- */
+/** The baker's oven. Slots: 0 wheat, 1 coal, 2 bread. */
 public class BreadOvenBlock extends BaseEntityBlock {
 
     public static final MapCodec<BreadOvenBlock> CODEC = MapCodec.unit(BreadOvenBlock::new);

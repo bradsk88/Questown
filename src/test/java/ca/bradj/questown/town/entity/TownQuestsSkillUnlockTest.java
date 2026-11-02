@@ -18,12 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The cook batch's SKILL_UNLOCK quest (dev, 2026-10-25): "unlock any skill on the cook's skill
- * tree", beside the cooked-food quest it helps fill. It completes when the player spends a Block of
- * Progress on a skill-tree node of that root ({@code UnlockJobMessage}), which teaches skill
- * unlocking.
- */
+/** The cook batch's skill-unlock quest completes when a Block of Progress is spent on any node of the cook's tree. */
 class TownQuestsSkillUnlockTest {
 
     private static final String COOK_TREE = "cook";
@@ -44,7 +39,7 @@ class TownQuestsSkillUnlockTest {
 
     private static TownQuests townWithCookSkillQuest() {
         TownQuests quests = new TownQuests();
-        // The real listener (TownQuests) broadcasts through the town, which a unit test lacks.
+        // A no-op listener: the real one needs a town.
         quests.questBatches.addChangeListener(NO_OP_LISTENER);
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(batchUUID, null);
@@ -101,10 +96,7 @@ class TownQuestsSkillUnlockTest {
         assertEquals(COOK_TREE, MCQuest.skillTreeRoot(skillQuest(town).getWantedId()));
     }
 
-    /**
-     * Batch completion matches by wanted id alone. The first build used the cook JOB_CHANGE quest's
-     * id (cook/extract), so in the cook batch completing the job change could close the skill quest.
-     */
+    /** The skill quest's id differs from the job-change quest's, so completing one doesn't close the other. */
     @Test
     void completingTheCookJobChange_leavesTheSkillQuestOpen() {
         TownQuests quests = new TownQuests();
@@ -120,10 +112,6 @@ class TownQuestsSkillUnlockTest {
         assertFalse(skillQuest(quests).isComplete());
     }
 
-    /**
-     * A curated path's skill quest names one skill (dev, 2026-10-26: "Unlock Wooden Shovel, then
-     * Wooden Sword"): only that node completes it.
-     */
     @Test
     void namedSkillQuest_completesOnlyForItsSkill() {
         TownQuests quests = new TownQuests();

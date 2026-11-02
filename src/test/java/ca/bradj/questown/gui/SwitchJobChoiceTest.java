@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/** Dev playtest 2026-10-29: switching mid-trip offers "after this trip" or "now (trip is lost)". */
 class SwitchJobChoiceTest {
 
     @Test

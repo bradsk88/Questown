@@ -30,11 +30,7 @@ public class CampfireSleepHandler {
     private static final Map<UUID, BlockPos> tempBedPositions = new ConcurrentHashMap<>();
     private static final Map<UUID, Direction> tempBedFacings = new ConcurrentHashMap<>();
     private static final Map<UUID, BlockPos> campfirePositions = new ConcurrentHashMap<>();
-    /**
-     * Flag BE position the campfire-sleeper was bound to at sleep start. Used by
-     * {@link #onWake} to advance the helper-chicken arc's
-     * {@code chickenObservedSleepSinceSunset} bit on the right flag.
-     */
+    // The flag each sleeper's campfire belongs to, so waking counts for that flag's helper chicken.
     private static final Map<UUID, BlockPos> sleepingFlagPositions = new ConcurrentHashMap<>();
 
     public static void beginCampfireSleep(
@@ -43,9 +39,7 @@ public class CampfireSleepHandler {
             BlockPos campfirePos,
             TownFlagBlockEntity parent
     ) {
-        // A second use while asleep (a double-click lands before the sleep screen opens) would
-        // overwrite this sleeper's records, then its failed sleep clears them: the first temp
-        // bed stays in the world and the wake no longer counts as a campfire sleep.
+        // A double-click lands a second use before the sleep starts; ignore it.
         if (player.isSleeping()) {
             return;
         }
@@ -54,11 +48,6 @@ public class CampfireSleepHandler {
             Util.onScreenText(() -> player, "message.wand.campfire.not_lit");
             return;
         }
-
-        // Registration was already validated up front in TownWand.handleCampfireClick
-        // (radius/Y check). Re-validating here with the strict findCampfire equality
-        // breaks worlds that legitimately have more than one campfire within the
-        // flag's search radius.
 
         BlockPos headPos = findSafeSleepPosition(level, campfirePos, player.position());
         if (headPos == null) {
@@ -90,10 +79,6 @@ public class CampfireSleepHandler {
                     "[campfire-sleep] startSleepInBed returned LEFT for player={} problem={}",
                     player.getGameProfile().getName(), problem
             );
-            // 1.20.6 BedSleepingProblem.getMessage() is null for OTHER_PROBLEM,
-            // NOT_POSSIBLE_NOW, TOO_FAR_AWAY and NOT_SAFE; displayClientMessage(null)
-            // sends a system_chat packet with a null component and NPEs the
-            // connection on encode (kicks every connected client).
             if (problem != null && problem.getMessage() != null) {
                 player.displayClientMessage(problem.getMessage(), true);
             }
@@ -110,22 +95,10 @@ public class CampfireSleepHandler {
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
-        // No-player overload (test seams): the campfire centre is equidistant from every
-        // candidate head, so strict-< keeps the first safe direction in iteration order -
-        // the pre-player-aware behavior.
         return findSafeSleepPosition(level, campfirePos, Vec3.atCenterOf(campfirePos));
     }
 
-    /**
-     * Pick the safe bed spot CLOSEST to the player (campfire-sleep-feels-close-enough.md).
-     * Vanilla's startSleepInBed rejects the bed with TOO_FAR_AWAY when the head/foot blocks
-     * are more than 3 blocks (x/z) / 2 (y) from the player (ServerPlayer.isReachableBedBlock);
-     * with the bed on the far side of the campfire that distance grows to 4-6 and every
-     * sleep attempt fails even though the player is standing right next to the fire. Scoring
-     * candidates by distance to the player puts the bed on the player's side of the fire,
-     * which is reachable from any position the player could have right-clicked the
-     * campfire from (4.5-block interact reach).
-     */
+    /** The safe bed spot closest to the player, so the bed is close enough to sleep in. */
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos, Vec3 playerPos) {
         BlockPos best = null;
         double bestDistSq = Double.MAX_VALUE;
@@ -154,9 +127,7 @@ public class CampfireSleepHandler {
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        // The temp bed is placed with an unconditional setBlock, so the spot must be air or an
-        // otherwise-replaceable block. Without this guard a solid block (e.g. the town flag) counted
-        // as "clear" and the bed overwrote it — destroying the block and, on teardown, leaving air.
+        // The bed replaces whatever is there, so a solid block (the flag) is not a free spot.
         if (state.isSolid()) {
             return false;
         }
@@ -193,15 +164,7 @@ public class CampfireSleepHandler {
         level.setBlock(footPos, Blocks.AIR.defaultBlockState(), 3);
     }
 
-    /**
-     * Autotest seam: runs the real bed-spot selection and placement that
-     * {@link #beginCampfireSleep} performs — the part that can overwrite the block
-     * at the chosen head position — without the player sleep state machine (which
-     * needs a {@code ServerPlayer} the headless autotest cannot supply). Returns the
-     * chosen bed-head position, or {@code null} if no safe spot was found. Drives the
-     * production {@link #findSafeSleepPosition}/{@link #placeTempBed}, so it catches a
-     * regression where the temp bed is placed on top of a real block (e.g. the flag).
-     */
+    /** For autotests: picks and places the temp bed as {@link #beginCampfireSleep} does, without sleeping. Returns the bed head, or null. */
     public static @Nullable BlockPos placeTempBedForTest(Level level, BlockPos campfirePos) {
         BlockPos headPos = findSafeSleepPosition(level, campfirePos);
         if (headPos == null) {
@@ -236,9 +199,7 @@ public class CampfireSleepHandler {
         if (headPos != null && facing != null) {
             removeTempBed(player.level(), headPos, facing);
         }
-        // The campfire stays lit after the night (r17, dev 2026-10-25: it guides the player back
-        // to the village). It used to be put out on wake (0eb1191c, 2026-04-08), which only made
-        // the player relight it before every sleep; sleeping still needs it lit.
+        // The campfire stays lit: it guides the player back, and sleeping needs it lit.
         campfirePositions.remove(uuid);
         BlockPos flagPos = sleepingFlagPositions.remove(uuid);
         if (flagPos != null

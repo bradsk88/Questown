@@ -18,20 +18,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-14 playtest ruling (`.scratch/playtest-10-14/onboarding-miner-after-cook.md`):
- * onboarding gets a fixed post-cook miner beat - same pattern as the hunter and cook
- * beats: the room the miner needs (mineshaft) + the pickaxes it holds + N of its initial
- * item (coal), and a JOB_CHANGE that the BOP-spend onboarding guarantee routes to
- * miner/coal (the guarantee mechanism covers all three via markOnboarding).
- */
+/** The miner lesson after the cook: the mineshaft, pickaxes, some coal, and a job change to miner. */
 class TownQuestsMinerOnboardingTest {
 
     private static final ResourceLocation MINE_ROOM = new ResourceLocation("block_room/block.questown.mineshaft");
 
     @BeforeAll
     static void bootstrap() {
-        // addMiner touches Items.WOODEN_PICKAXE / Items.COAL via Compat.getItemId.
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }
@@ -60,21 +53,17 @@ class TownQuestsMinerOnboardingTest {
 
         MCQuestBatch batch = quests.questBatches.getAllBatches().iterator().next();
 
-        // the room the miner needs
         MCQuest roomQuest = batch.getAll().stream()
                 .filter(q -> q.getType() == Quest.QuestType.ROOM)
                 .findFirst()
                 .orElseThrow();
         assertEquals(MINE_ROOM, roomQuest.getWantedId());
 
-        // the pickaxes each miner carries (held tool, not the product)
         assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.ITEM
                 && Compat.getItemId(Items.WOODEN_PICKAXE).equals(q.getWantedId())
                 && q.getCountNeeded() == 4));
 
-        // N of the miner's initial item (coal), counted as the miner extracts it: a LOOT quest
-        // (r16 #7, dev 2026-10-24). As a stock (ITEM) quest the cook burned each coal before the
-        // count rose, so the player had to deliver it.
+        // A LOOT quest for coal, counted as the miner brings it back.
         assertTrue(batch.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT
                 && Compat.getItemId(Items.COAL).equals(q.getWantedId())
                 && q.getCountNeeded() == 3));

@@ -15,7 +15,6 @@ class PendingJobSwitchesTest {
 
     @Test
     void aPeek_showsTheSwitchWithoutTakingIt() {
-        // Dev 2026-10-30: the villager card notes a pending switch until it happens.
         PendingJobSwitches<String, String> p = new PendingJobSwitches<>();
         p.request("hunter", "sword_full_day");
         Assertions.assertEquals("sword_full_day", p.peek("hunter"));

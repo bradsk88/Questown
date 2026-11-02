@@ -15,14 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * A job that takes its product out of a block slot ({@code take_from_slot_N}, e.g. cook/extract,
- * baker/extract) produces whatever that slot holds, so its {@code initial_request} must be the
- * slot's item: the work picker only takes a job whose request-or-result satisfies a board
- * request. 2026-10-20 playtest: cook/extract requested {@code minecraft:cooked_cod} while its slot
- * held {@code #questown:villager_food}, so with a cooked-mutton request on the board the cook
- * never extracted ("[Product not requested]") and the furnace output piled up.
- */
+/** A job that takes its product out of a slot must request that slot's item, or the work picker never takes it. */
 class SlotExtractJobRequestTest {
 
     private static final Path JOBS = Path.of("src/main/resources/data/questown/questown_jobs");

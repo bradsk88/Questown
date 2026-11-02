@@ -58,8 +58,6 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
     protected void init() {
         super.init();
         ClientAccess.dismissTutorialToast();
-        // No "Quests" button: it did nothing (an empty handler), and the dev removed quests from
-        // the villager UI (r17 #20).
     }
 
     @Override

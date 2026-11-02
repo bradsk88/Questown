@@ -14,11 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JobTooltips {
-    /**
-     * Last-resort tooltip lines: any category × status key that has no authored entry in
-     * en_us.json would otherwise surface to the player as the raw i18n key
-     * (2026-10-14 playtest: the diner's tooltip). The specific key wins when present.
-     */
+    /** Shown when a job's status has no tooltip of its own. */
     static final String FALLBACK_LINE_1 = "%s is busy with their work.";
     static final String FALLBACK_LINE_2 = "";
 

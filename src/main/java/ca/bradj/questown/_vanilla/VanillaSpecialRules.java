@@ -19,7 +19,6 @@ public class VanillaSpecialRules {
                 Vanilla.ResourceLocation("chop_down_tree"),
                 new ChopDownTree()
         );
-        // Warp-interleaved hook: grows planted saplings into real trees during time warp.
         SpecialRulesRegistry.registerSpecialRule(
                 Vanilla.ResourceLocation("grow_trees_warp"),
                 new GrowTreesWarpRule()

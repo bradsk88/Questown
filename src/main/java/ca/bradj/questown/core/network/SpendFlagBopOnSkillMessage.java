@@ -16,12 +16,7 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.UUID;
 
-/**
- * Unlock a skill with one of the flag's Blocks of Progress, from the skill details opened through the
- * flag (dev playtest 2026-10-29: "they should be able to just spend directly from the flag instead
- * of having to withdraw first"). The owner call is {@link TownFlagBlockEntity#spendBopToUnlockSkill},
- * which applies the skills tab's level gate and tree membership.
- */
+/** Unlock a skill with one of the flag's Blocks of Progress. */
 public record SpendFlagBopOnSkillMessage(BlockPos flagPos, UUID villagerUUID, JobID id) {
 
     public static void encode(

@@ -22,10 +22,6 @@ class ChickenArcBlueprintTest {
         Bootstrap.bootStrap();
     }
 
-    // -------------------------------------------------------------------------
-    // ChickenArcBlueprint
-    // -------------------------------------------------------------------------
-
     @Test
     void builder_producesMinimalViableBlueprint() {
         ChickenArcBlueprint bp = ChickenArcBlueprint.builder("stub").build();
@@ -111,10 +107,6 @@ class ChickenArcBlueprintTest {
         Assertions.assertTrue(bp.scriptedActions().isEmpty());
     }
 
-    // -------------------------------------------------------------------------
-    // ChickenArcExpectation
-    // -------------------------------------------------------------------------
-
     @Test
     void expectationBuilder_producesDefaults() {
         ChickenArcExpectation e = ChickenArcExpectation.builder().build();
@@ -174,10 +166,6 @@ class ChickenArcBlueprintTest {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // ChickenArcScriptedAction — sealed exhaustiveness + postActionWaitTicks
-    // -------------------------------------------------------------------------
-
     @Test
     void advanceTicks_postActionWaitEqualsTickCount() {
         ChickenArcScriptedAction.AdvanceTicks a = new ChickenArcScriptedAction.AdvanceTicks(42);
@@ -192,13 +180,7 @@ class ChickenArcBlueprintTest {
         );
     }
 
-    /**
-     * Every subtype must satisfy the {@code postActionWaitTicks()} contract. This is a
-     * runtime proxy for "the executor has a handler for each subtype" — if someone adds
-     * a new subtype without handling it, the executor's switch will fail exhaustiveness
-     * at compile time, and any call that exercises the action here documents which
-     * subtypes exist.
-     */
+    /** Every action type has a wait. */
     @Test
     void scriptedAction_allKnownSubtypesExposeWaitTicks() {
         List<ChickenArcScriptedAction> all = List.of(

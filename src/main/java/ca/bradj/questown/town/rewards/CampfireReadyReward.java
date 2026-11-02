@@ -9,14 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/**
- * The day-one campfire-quest reward: the "your camp is ready" tutorial toast, shown at
- * the first evening ({@link TownFlagBlockEntity#showCampReadyToastIfDue}).
- * The {@code first_campfire_sleep} advancement already fires when the player
- * actually sleeps on the campfire that night, so this reward carries no
- * advancement of its own (.scratch/mat-gated-arrival, decision 2: the reward
- * communicates "this campfire is your camp" via the toast).
- */
+/** The campfire quest's reward: the "your camp is ready" toast, in the first evening. */
 public class CampfireReadyReward extends MCReward {
 
     public static final String ID = "campfire_ready";
@@ -42,8 +35,7 @@ public class CampfireReadyReward extends MCReward {
 
     @Override
     protected @NotNull RewardApplier getApplier() {
-        // Not an immediate broadcast: the toast belongs to the first evening (the flag's
-        // evening tick shows it then); this only covers a quest completed after dusk.
+        // The toast belongs to the evening; this covers a quest finished after dusk.
         return () -> ((TownFlagBlockEntity) town).showCampReadyToastIfDue();
     }
 

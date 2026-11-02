@@ -20,7 +20,7 @@ import java.util.UUID;
 
 public record ChangeVillagerJobMessage(
         int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce,
-        /** The skill-tree confirm's "after this trip" (dev playtest 2026-10-29); false = now. */
+        /** Switch after the current trip; false switches now. */
         boolean afterTrip
 ) {
 
@@ -54,16 +54,14 @@ public record ChangeVillagerJobMessage(
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);
                 return;
             }
-            // The UUID wire field predates VillagerUUID; from() is the conversion the board cascade uses too.
             flag.getVillagerHandle().switchJob(VillagerUUID.from(villagerUUID), newJob, afterTrip);
             if (afterTrip) {
-                // Dev 2026-10-30: the choice gave no feedback; the villager card notes it too.
                 ImmutableList<Component> jc = Jobs.getComponentsForTooltip(newJob);
                 Compat.sendMessage(sender, Compat.translatable("message.questown.switch_after_trip",
                         flag.getVillagerHandle().labelFor(villagerUUID),

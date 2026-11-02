@@ -10,10 +10,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
 
-/**
- * The flag's Settings tab: town-level actions that are not crafting (dev playtest 2026-10-30: the
- * "move flag" interaction "should be on a 'settings' tab instead of crafting tab").
- */
+/** The flag's Settings tab: moving the town. */
 public class FlagSettingsMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.SETTINGS);
     private final FlagInfo flagInfo;

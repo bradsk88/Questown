@@ -89,8 +89,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         CompoundTag t = new CompoundTag();
         ListTag stacks = new ListTag();
         for (ItemStack bop : flag.bopStacks) {
-            // 1.20.6 save() throws on an empty stack (1.19.2 tolerated it); legacy saves or
-            // a pre-fix deposit could have left an AIR entry, so skip rather than corrupt.
+            // Skip empty entries from older saves.
             if (!bop.isEmpty()) {
                 stacks.add(ca.bradj.questown.mc.Compat.saveItem(flag.getLevel(), bop));
             }
@@ -110,8 +109,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
                 flag.bopStacks.add(ca.bradj.questown.mc.Compat.loadItem(flag.getLevel(), (CompoundTag) s));
             }
         } else if (tag.contains("count")) {
-            // Legacy saves stored a bare count (bless NBT did not survive the flag yet):
-            // migrate to that many plain BOPs.
+            // Older saves stored a count: load that many plain Blocks of Progress.
             int count = tag.getInt("count");
             for (int i = 0; i < count; i++) {
                 flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
@@ -123,9 +121,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
         }
-        // The BOP_FULL blockstate persists in the block state and can be stale against the
-        // freshly-loaded count; reconcile it here so the red-BOP render and the menu warning
-        // track the loaded count.
+        // The full-flag block state can be stale against the loaded count.
         flag.syncBopFull();
     }
 

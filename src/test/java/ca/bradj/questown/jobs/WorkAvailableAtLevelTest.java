@@ -11,12 +11,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * The JSON {@code available_at_level} gate (skills-tab ruling, 2026-10-13): a job is only
- * visible/unlockable in the skills tab once the townie's level reaches the value. The field
- * lives on {@link Work} with a default of {@link Work#DEFAULT_AVAILABLE_AT_LEVEL} (2 - the
- * first level at which the tab appears; townies start at level 1).
- */
+/** A job shows in the skills tab once the villager reaches its {@code available_at_level}; the default is 2. */
 class WorkAvailableAtLevelTest {
 
     @BeforeAll

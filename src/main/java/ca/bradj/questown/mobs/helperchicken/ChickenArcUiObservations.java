@@ -4,16 +4,7 @@ import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
-/**
- * Server-side fan-in for UI-open events that drive the helper-chicken arc
- * (U6). Called from the villager and flag UI open paths — each invocation
- * sets a transient observation flag on the matching flag BE; the
- * {@link ChickenArcController} tick consumes and clears it.
- *
- * <p>UI open paths don't fire often enough to warrant per-player tracking;
- * the chicken arc only cares that the current player encountered the menu
- * at all. Multiplayer co-op accepts either player's action.
- */
+/** Records that a villager or flag menu was opened, for the helper chicken's lessons. Either player counts. */
 public final class ChickenArcUiObservations {
 
     private ChickenArcUiObservations() {

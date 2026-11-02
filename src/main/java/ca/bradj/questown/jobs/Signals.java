@@ -18,7 +18,6 @@ public enum Signals {
         }
     }
 
-    /** Whether work of this length, started now, ends in the same morning or noon. */
     public static boolean fitsInWorkday(DayTime start, long duration) {
         Signals end = fromDayTime(new DayTime(start.dayTime() + duration));
         if (end.compareTo(fromDayTime(start)) < 0) {
@@ -70,27 +69,13 @@ public enum Signals {
         return Math.max(0, productiveEnd - startTick);
     }
 
-    /**
-     * Maps the <em>productive</em> warp timeline (the labour budget) back onto the
-     * <em>wall-clock</em> warp timeline (the passive-world-process budget) for a single warp
-     * window {@code [windowEndDayTime - wallClockTicks, windowEndDayTime]}.
-     * <p>
-     * Productive ticks accrue only during {@code [0, PRODUCTIVE_DAY_END_TICK)} of each day;
-     * wall-clock ticks accrue every tick. Nights sit at their <em>true</em> clock position (precise,
-     * not smeared), so a sapling planted at dusk is credited the whole night before the next
-     * work cycle. The window is capped at {@code Config.TIME_WARP_MAX_TICKS}, so the segment
-     * list is O(days) — tiny.
-     */
+    /** Maps a warp's working time (the day until evening) onto its full clock time, nights included, so night-time processes get the whole night. */
     public record ProductiveWallClockTimeline(
             List<Segment> segments,
             long productiveTotal,
             long wallClockTotal
     ) {
-        /**
-         * A maximal run of same-productiveness within the window. {@code productiveStart} is the
-         * cumulative productive offset at the segment's start (only meaningful for productive
-         * segments); {@code wallClockStart} is the cumulative wall-clock offset at the segment's start.
-         */
+        /** A run of all-working or all-idle time within the window, with its start on both clocks. */
         public record Segment(
                 long wallClockStart,
                 long wallClockLength,
@@ -98,12 +83,7 @@ public enum Signals {
                 boolean productive
         ) {}
 
-        /**
-         * Maps a productive offset ({@code 0..productiveTotal}) to its wall-clock offset within the
-         * window. A productive offset that lands on the start of a productive segment returns the
-         * wall-clock position <em>after</em> any preceding night (precise night placement). Offsets at
-         * or beyond {@code productiveTotal} map to {@code wallClockTotal}.
-         */
+        /** The clock offset for a working-time offset. A working offset at the start of a working segment lands after the night before it. */
         public long wallClockOffsetAt(long productiveOffset) {
             for (Segment s : segments) {
                 if (!s.productive()) {

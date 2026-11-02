@@ -14,21 +14,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * The bread oven's item store: slot 0 = wheat (input), slot 1 = coal (fuel),
- * slot 2 = bread (output). Bakes 1 wheat + 1 coal into 1 bread over
- * {@link BreadOvenBake#BAKE_TICKS} ticks, mirroring the cook's furnace slot
- * idiom — the cook-shaped job family inserts one item per job cycle into a
- * slot the job gate requires to be empty, and the extract job takes the
- * product from the output slot.
- *
- * <p>All bake arithmetic lives in {@link BreadOvenBake}, which this entity
- * and the warp lane ({@code WarpWorldAccess.advanceBreadOven}) share, so the
- * warp can never drift from real time. This entity owns the container
- * surface, NBT, and the {@code bake_state} visual property (kept in sync
- * with the slot contents by {@link #syncVisualState()}, not by the
- * townie's work-state index).
- */
+/** The bread oven's slots (0 wheat, 1 coal, 2 bread) and its bake progress. */
 public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
 
     public static final String ID = "bread_oven_block";
@@ -41,7 +27,6 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         super(TilesInit.BREAD_OVEN.get(), pos, state);
     }
 
-    /** Static ticker entry point wired via {@code BreadOvenBlock.getTicker}. */
     public static void tick(
             Level level,
             BlockPos pos,
@@ -54,18 +39,13 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         e.advanceBakeOneTick();
     }
 
-    /** One bake step; runs each server tick. */
     public void advanceBakeOneTick() {
         bake.advanceOneTick();
         setChanged();
         syncVisualState();
     }
 
-    /**
-     * Advance the bake by up to {@code ticks} ticks (warp lane). Mirrors the
-     * furnace loop shape: one bake step per tick, stop once no further bake
-     * is possible.
-     */
+    /** Bakes for up to {@code ticks} ticks at once. */
     public void advanceBake(int ticks) {
         bake.advance(ticks);
         setChanged();
@@ -82,7 +62,6 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         return taken;
     }
 
-    /** Keep the {@code bake_state} visual property in sync with the slot contents. */
     private void syncVisualState() {
         Level level = getLevel();
         if (level == null || level.isClientSide()) {
@@ -117,8 +96,6 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         return BreadOvenBlock.BAKE_STATE_EMPTY;
     }
 
-    // --- Container ---
-
     @Override
     public int getContainerSize() {
         return 3;
@@ -142,8 +119,7 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
             int containerId,
             @NotNull net.minecraft.world.entity.player.Inventory playerInventory
     ) {
-        // The oven has no GUI; the job slot rules and the player right-click
-        // are the only access paths.
+        // The oven has no screen.
         return null;
     }
 

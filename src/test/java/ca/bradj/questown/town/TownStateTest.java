@@ -231,7 +231,7 @@ class TownStateTest {
 
     @Test
     void withItemRelocatedTo_returnsNullWhenNoOtherChestHoldsTheIngredient() {
-        // Only the target chest holds the ingredient — a relocation would be target->target (no-op).
+        // Only the target holds the item, so there's nothing to move.
         Container targetC = new Container(false);
         targetC.setItem(0, new TestItem("emerald"));
         ContainerTarget<Container, TestItem> target = containerAt(new Position(0, 0), targetC);

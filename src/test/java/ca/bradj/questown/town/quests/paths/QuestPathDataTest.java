@@ -18,12 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-/**
- * Every shipped path file parses, passes {@link QuestPathValidator}, and names jobs and rooms that
- * exist in the data: job ids from {@code questown_jobs/*.json} plus the armorer template's
- * {@code crafter/<material>_<piece>} expansion (`ResourceJobLoader.makeArmorerJobs`), room ids from
- * {@code recipes/<path>.json}.
- */
+/** Every shipped path file parses, passes {@link QuestPathValidator}, and names jobs and rooms that exist. */
 class QuestPathDataTest {
 
     private static final Path DATA = Path.of("src", "main", "resources", "data", "questown");
@@ -53,20 +48,13 @@ class QuestPathDataTest {
     void outfitterShipsTheFirstCut() throws IOException {
         QuestPath p = QuestPathParser.parse(read(DATA.resolve("questown_paths").resolve("outfitter.json")));
 
-        // showcase (dev 2026-10-28): the crescendo, a Grand Armory the crafter dresses.
-        // train_crafter_2 (dev playtest 2026-10-29: "Maybe two quests? One for level 2 and one for
-        // level 3?"): crafter skills open at level 2, the path's skills at 3.
         Assertions.assertEquals(List.of("start", "train_crafter_2", "train_crafter_3", "armor", "weapons_1", "train_crafter_5", "weapons_2", "showcase"),
                 p.batches().stream().map(QuestPath.Batch::id).toList());
         Assertions.assertEquals(List.of(true, false, false, false, false, false, true, false),
                 p.batches().stream().map(QuestPath.Batch::arrival).toList(), "plan ruling 19");
     }
 
-    /**
-     * Dev 2026-10-27: a batch that names a skill opens only once a villager can learn it, so a
-     * level quest for the skill's root, in the batch's opens_after chain, reaches the skill's
-     * available_at_level. Otherwise the card sits blank and the batch can't be finished.
-     */
+    /** A batch that names a skill opens only after a level quest reaches the skill's level. */
     @Test
     void everyNamedSkill_isLearnableWhenItsBatchOpens() throws IOException {
         Map<String, Integer> gates = skillLevelGates();
@@ -93,12 +81,7 @@ class QuestPathDataTest {
         Assertions.assertEquals(List.of(), problems);
     }
 
-    /**
-     * Dev playtest 2026-10-29: "the level up your crafter quest asks for level 3, but skills can be
-     * unlocked at level 2" -> "Maybe two quests? One for level 2 and one for level 3?". The level
-     * quest a skill batch opens directly after asks for the level its skills need, not a higher one.
-     * (A batch may still follow a higher level transitively for content order, as the showcase does.)
-     */
+    /** That level quest asks for exactly the level the skills need. */
     @Test
     void everySkillBatch_waitsOnlyForTheLevelItNeeds() throws IOException {
         Map<String, Integer> gates = skillLevelGates();
@@ -126,7 +109,6 @@ class QuestPathDataTest {
         Assertions.assertEquals(List.of(), problems);
     }
 
-    /** The highest LEVEL quest for {@code root} in the batches {@code b} opens directly after. */
     private static int directLevelGate(String root, QuestPath.Batch b, Map<String, QuestPath.Batch> byId) {
         int best = 1;
         for (String after : b.opensAfter()) {
@@ -143,7 +125,6 @@ class QuestPathDataTest {
         return best;
     }
 
-    /** The highest LEVEL quest for {@code root} among the batches {@code b} opens after (transitively). */
     private static int trainedLevel(String root, QuestPath.Batch b, Map<String, QuestPath.Batch> byId, Set<String> seen) {
         int best = 1;
         for (String after : b.opensAfter()) {
@@ -161,7 +142,7 @@ class QuestPathDataTest {
         return best;
     }
 
-    /** Mirrors Work.DEFAULT_AVAILABLE_AT_LEVEL (Work is registry-bound in a unit JVM). */
+    /** Work.DEFAULT_AVAILABLE_AT_LEVEL; Work can't load in a unit test. */
     private static final int DEFAULT_LEVEL = 2;
 
     private static Map<String, Integer> skillLevelGates() throws IOException {

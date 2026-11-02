@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 
 public class WorkScreen extends CompatContainerScreen<TownWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
-    // 166 + a 16 px bottom band for the auto-request toggle, which sat on the border (r3 #4).
+    // The bottom band holds the auto-request toggle.
     private static final int backgroundHeight = 182;
     private static final int borderPadding = 6;
 
@@ -38,8 +38,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
     private static final int CARD_HEIGHT = 42;
 
-    // Cards start below the page header (two paddings + the first card's padding) and stop above
-    // the toggle band (checkbox + border padding + a gap). 13 px keeps 3 cards per page.
+    // Cards sit between the page header and the toggle band, three per page.
     private static final int CARDS_TOP = PAGE_PADDING * 3;
     private static final int CHECKBOX_SIZE = 13;
     private static final int TOGGLE_BAND = CHECKBOX_SIZE + borderPadding + 4;
@@ -56,15 +55,11 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     private final AddWorkScreen addWorkScreen;
 
     private int currentPage = 0;
-    // A - / + click re-opens the board to show the new limit; the new screen starts on the page
-    // the click was on (dev playtest 2026-10-30: it "jumps back to page 1").
+    // A - / + click re-opens the board on the same page.
     private static int pageAfterReopen = -1;
     private Map<Position, Runnable> removes = new HashMap<>();
 
-    // Wide (position + pixel width) hover/click regions for bottom-band toggles:
-    // the auto-request glyph is 9px and the old 16x17 hit box made it nearly
-    // impossible to hit - "no tooltip / checkbox doesn't toggle" (2026-10-15
-    // playtest). The map key dedupes per frame, same as `removes`.
+    // Wider hit boxes for the bottom-band toggles; the glyph alone is too small.
     private record WideRegion(int width, Runnable fn) {}
 
     private Map<Position, WideRegion> wideRegions = new HashMap<>();
@@ -176,28 +171,20 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         y = y + PAGE_PADDING;
 
         if (work.isEmpty()) {
-            // Day-1 playtest: an empty board gave no hint at what requests are or how to add
-            // one. Reopened 2026-10-12: when the town has a top unmet need, the empty state
-            // points at posting it instead of the vague teaser (job-board-empty-state.md).
+            // An empty board explains requests, and points at the town's top missing item if it has one.
             Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
             int headlineHeight = ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
                     Compat.translatable("job_board.empty.1"));
-            // The top_need line no longer names the item (user copy, 2026-10-14) - the
-            // name only picks WHICH second line: the production hint when the town has
-            // an unmet need, the vague teaser when it doesn't.
             String topNeed = menu.getTopUnmetNeedName();
             Component second = topNeed == null || topNeed.isEmpty()
                     ? Compat.translatable("job_board.empty.2")
                     : Compat.translatable("job_board.empty.top_need");
-            // A blank line between the headline and the hint (playtest 2026-10-17: the hint
-            // sat 2px under "No work requests yet."). The gap is one wrapped line's step.
             int hintY = emptyTop.y() + headlineHeight + (int) (font.lineHeight * 1.5);
             ctx.darkTextWrap(emptyTop.withY(hintY), backgroundWidth - (PAGE_PADDING * 2),
                     second);
         }
 
-        // The page header leaves a non-white shader colour behind, which tinted card 1 only
-        // (r22: 174 vs 198 grey); reset before the first card, as PagedCardScreen does.
+        // Reset the colour the page header leaves behind, or the first card is tinted.
         Compat.resetShaderColor();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
@@ -217,14 +204,11 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            // Name the request ("Raw Food", "Wheat Seeds") instead of "An item was requested".
-            // A paused request (storage holds enough) is greyed; its icon tooltip says why.
+            // A paused request (storage holds enough) is greyed.
             int nameColor = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
             ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, nameColor, false);
 
-            // x in the card's top-right corner, level with the name; - and + in the bottom-right
-            // corner, level with the icon (dev playtest 2026-10-30: "x should be in top right
-            // corner, -+ should be in bottom right corner").
+            // x top right, - and + bottom right.
             int rightX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
             int removeY = idY - borderPadding + 1;
             ctx.lightText(
@@ -250,14 +234,12 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
         // Render the page buttons
         ctx.renderWidget(this.addMoreBtn, mouseX, mouseY, partialTicks);
 
-        // F2: the board's auto-request toggle, pinned to the bottom band.
         int panelTop = (this.height - backgroundHeight) / 2;
         int tgX = x + PAGE_PADDING;
         int tgY = panelTop + backgroundHeight - borderPadding - CHECKBOX_SIZE;
         boolean on = menu.isBoardAutoRequest();
         Component toggleLabel = Compat.translatable("job_board.auto_request");
-        // Hover + click span box AND label - a glyph-only hit box made the tooltip effectively
-        // unreachable (2026-10-15 playtest: "It also doesn't appear to have a tooltip").
+        // The box and the label both take the hover and the click.
         int toggleWidth = CHECKBOX_SIZE + 4 + this.font.width(toggleLabel);
         boolean hovered = mouseX >= tgX && mouseY >= tgY && mouseX < tgX + toggleWidth
                 && mouseY < tgY + CHECKBOX_SIZE;
@@ -275,11 +257,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
     private List<Slot> slots = new ArrayList<>();
 
-    /**
-     * "6/8" (storage holds / pauses at) with - and + to lower or raise the limit, + at
-     * {@code rightX} (dev playtest 2026-10-29: "see 'we've hit the limit' and see and adjust the
-     * limit"). Clicks ride the same per-frame position map as remove.
-     */
+    /** "6/8": storage holds 6, the request pauses at 8. - and + change the limit. */
     private void renderStockAndLimit(RenderContext ctx, UIWork jobPosting, int rightX, int iconY, int mouseX, int mouseY) {
         int plusX = rightX;
         int minusX = plusX - buttonWidth - 2;
@@ -323,7 +301,6 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
             ctx.renderItemAndDecorations(itemStack, iconX, y);
             Component name = itemStack.getItem().getName(itemStack);
             Component tooltip = recipe.isStocked()
-                    // The card's own name: a tag request's icon cycles items ("Food", not "Cooked Mutton").
                     ? Compat.translatable("job_board.request_stocked", Ingredients.getName(ing), recipe.getLimit())
                     : name;
             highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, tooltip);
@@ -422,8 +399,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
     }
 
     private void toggleAutoRequest() {
-        // Flip locally first so the checkbox is instant; the server applies it and re-opens
-        // the board, which resyncs the flag state (and this checkbox) from the server.
+        // Flip at once; the server re-opens the board with the real state.
         boolean next = !menu.isBoardAutoRequest();
         menu.setBoardAutoRequest(next);
         menu.sendToggleBoardAutoRequest();

@@ -14,10 +14,7 @@ class TripVisibilityTest {
         return vis;
     }
 
-    /**
-     * The status sequence a hunter logged leaving town (autotest hunter/sword, 2026-10-29):
-     * state:1 (hidden), DROPPING_LOOT for one tick (allowed), WAITING_FOR_TIMED_STATE (hidden).
-     */
+    /** A leaving hunter's statuses: hidden, one tick shown, hidden. It stays hidden. */
     @Test
     void oneAllowedTickBetweenHiddenStates_staysHidden() {
         TripVisibility tv = new TripVisibility();
@@ -29,7 +26,6 @@ class TripVisibilityTest {
         Assertions.assertFalse(vis);
     }
 
-    /** The same one-tick gap while the leaving villager is still drawn: no flicker, it hides once. */
     @Test
     void oneAllowedTickWhileLeaving_neverFlickers() {
         TripVisibility tv = new TripVisibility();
@@ -53,7 +49,7 @@ class TripVisibilityTest {
         Assertions.assertTrue(vis);
     }
 
-    /** Dev playtest 2026-10-30: villagers vanished before reaching the work spot; hide ~1 s later. */
+    /** A leaving villager hides about a second after asking, so it reaches its work spot first. */
     @Test
     void hidingWaitsASecond() {
         TripVisibility tv = new TripVisibility();

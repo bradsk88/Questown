@@ -44,13 +44,7 @@ public class ProductionStatuses {
         return nullIfUnchanged(currentStatus, newStatus);
     }
 
-    /**
-     * The evening/night branch, generic over the status type so it can be
-     * unit-tested with a lightweight fake status. {@code waitingFactory} is
-     * the source of {@code waitingForTimedState()} (an {@link
-     * IProductionStatusFactory} when the concrete type supports it); {@code
-     * factory} supplies the recall statuses (droppingLoot / relaxing).
-     */
+    /** The evening and night statuses. */
     public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> @Nullable STATUS getEveningStatus(
             STATUS currentStatus,
             EntityInvStateProvider<Integer> inventory,
@@ -58,11 +52,7 @@ public class ProductionStatuses {
             IProductionStatusFactory<STATUS> waitingFactory,
             IStatusFactory<STATUS> factory
     ) {
-        // Mirror the morning path (JobStatuses.productionRoutine): a villager
-        // waiting on a timed work state whose timer is still running must not
-        // be recalled to town. Without this, evening/night yanks a town-leaver
-        // home mid-trip (empty-handed), cutting the trip short. Returning null
-        // leaves the status unchanged, so he stays out until the timer ends.
+        // A villager on a timed trip stays out until its timer ends.
         if (waitingFactory.waitingForTimedState().equals(currentStatus) && town.isUnfinishedTimeWorkPresent()) {
             return null;
         }

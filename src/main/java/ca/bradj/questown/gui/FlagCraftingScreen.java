@@ -30,22 +30,19 @@ import static ca.bradj.questown.gui.PagedCardScreen.buttonWidth;
 public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> {
     private static final int backgroundWidth = 176;
     private static final int MARGIN = 12;
-    private static final int TEXT_WIDTH = backgroundWidth - 2 * MARGIN; // full row width for descriptions
-    private static final int BLOCK_PAD = 6;                             // vertical gap between blocks
-    private static final int ICON_ROW_HEIGHT = 24;                      // icon/[Craft] row footprint
+    private static final int TEXT_WIDTH = backgroundWidth - 2 * MARGIN;
+    private static final int BLOCK_PAD = 6;
+    private static final int ICON_ROW_HEIGHT = 24;
     private static final int TOOLTIP_WIDTH = 200;
     private static final int CRAFT_BTN_X = 100;
     private static final int CRAFT_BTN_W = 60;
     private static final int BTN_HEIGHT = 20;
-    // Rows per page (dev playtest 2026-10-30: "add pagination to the crafting screen"); five rows
-    // already filled a 240-px-tall GUI (r17).
     static final int ROWS_PER_PAGE = 5;
 
     private final FlagTabs tabs;
     private final JEI.NineNine background;
     private final BlockPos flagPos;
-    // One button and one row per visible FlagCraftRecipes.ALL entry; visibleRecipes maps the row
-    // to its index in ALL (what FlagCraftMessage sends). Gated rows wait for their quest (r17 #1).
+    // One button per visible recipe; visibleRecipes maps a row to its recipe index.
     private final List<Button> craftButtons = new ArrayList<>();
     private List<Integer> visibleRecipes = new ArrayList<>();
     private int page = 0;
@@ -55,12 +52,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
             0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> turnPage(-1));
     private final GuiIconButtonSmall nextPage = JEI.guiIconButtonSmall(
             0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> turnPage(1));
-    // A BOP recipe's first click arms it ("Spend 4 Blocks of Progress?"), the second crafts.
+    // A Block of Progress recipe asks for a second click to confirm.
     private int armedRecipe = -1;
 
-    // Flow layout, recomputed each init() from the actual wrapped-text heights so blocks can never
-    // overlap regardless of string length / translation. All values are offsets from the panel's
-    // top-left; the panel is centred using panelHeight.
+    // Laid out from the real wrapped-text heights, so rows never overlap.
     private int panelHeight = 166;
     private int titleY;
     private int[] rowY = new int[0];
@@ -73,9 +68,6 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         super(menu, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
-        // The crafting tab shares the flag UI's border treatment (the lighter recipe-GUI
-        // nine-nine the quests tab uses); the darker recipe-background variant read as a
-        // faded border mismatch (flag-crafting-ui-tooltips-and-border.md).
         this.background = JEI.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.crafting");
         this.flagPos = menu.getFlagInfo().flagPos();
@@ -93,7 +85,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         return Compat.splitText(font, text, TEXT_WIDTH).size() * lineHeight();
     }
 
-    /** Stack the blocks top-to-bottom, advancing past each block's real height. Sets panelHeight. */
+    /** Stacks the rows top to bottom by their real heights. */
     private void computeLayout() {
         int y = 8;
         titleY = y;
@@ -119,7 +111,6 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
             y += ICON_ROW_HEIGHT + BLOCK_PAD;
         }
 
-        // "Begin moving" lives on the Settings tab since 2026-10-30 (FlagSettingsScreen).
         panelHeight = y;
     }
 
@@ -157,19 +148,12 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         return Compat.button(
                 Compat.translatable("menu.flag_crafting.craft"),
                 btn -> {
-                    // Dev playtest 2026-10-30: clicking craft on a BOP recipe should say what it
-                    // costs. The first click arms it, as "Begin moving" does (docs/ui-principles.md 10).
                     if (recipe.costsBops() && armedRecipe != recipeIndex) {
                         armedRecipe = recipeIndex;
                         btn.setMessage(Compat.translatable("menu.flag_crafting.craft_bops_confirm", recipe.bopCost()));
                         return;
                     }
-                    // A fast double-click can fire the second send before the onClose from the
-                    // first click lands (2026-10-12 playtest: "Created X" printed twice for one
-                    // click - the server consumes input and grants the item per message, so the
-                    // guard has to be here). The screen closes immediately; deactivate so a
-                    // second press in the same frame is a no-op.
-                    // 1.20.6: AbstractWidget lost setActive(); the active flag is a public field.
+                    // Off after one click, so a double-click does not craft twice.
                     btn.active = false;
                     QuestownNetwork.sendToServer(new FlagCraftMessage(flagPos, recipeIndex));
                     this.onClose();
@@ -186,8 +170,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.showTooltip(lines);
     }
 
-    // Recipes consume their input from the player's inventory server-side (FlagCraftMessage), so
-    // grey the button out when the local player has none — clicking it would be a no-op.
+    // Greyed out when the player has none of the input.
     private void updateCraftButtonStates() {
         for (int i = 0; i < craftButtons.size(); i++) {
             FlagCraftRecipes r = FlagCraftRecipes.ALL.get(visibleRecipes.get(i));
@@ -197,7 +180,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         }
     }
 
-    // A BOP recipe's tooltip counts the flag's Blocks of Progress, not the player's inventory.
+    // Counts the flag's Blocks of Progress, not the player's.
     private void renderBopCraftTooltip(Component desc, int cost, int mouseX, int mouseY) {
         int have = menu.getFlagBops();
         List<FormattedCharSequence> lines = new ArrayList<>(Compat.splitText(font, desc, TOOLTIP_WIDTH));
@@ -267,9 +250,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         ctx.renderItemAndDecorations(input, x + MARGIN, iconY + 2);
         ctx.darkText("→", x + 36, iconY + 6);
         ctx.renderItemAndDecorations(output, x + 50, iconY + 2);
-        // 1.20.6: item tooltips come free only for container slots - the rendered icons
-        // need their own (flag-crafting-ui-tooltips-and-border.md): what the input is, what
-        // you get.
+        // The icons are not slots, so they need their own tooltips.
         if (mouseInside(mouseX, mouseY, x + MARGIN, iconY + 2)) {
             showTooltip(Compat.getHoverName(input));
         } else if (mouseInside(mouseX, mouseY, x + 50, iconY + 2)) {
@@ -277,7 +258,6 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         }
     }
 
-    /** The 16x16 icon box at (x, y). */
     private static boolean mouseInside(int mouseX, int mouseY, int x, int y) {
         return mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16;
     }

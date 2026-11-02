@@ -50,7 +50,6 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.batchUUID = batchUUID;
     }
 
-    /** The quest added most recently (the load replay's just-rebuilt quest). */
     QUEST newestQuest() {
         return this.quests.get(this.quests.size() - 1);
     }
@@ -127,15 +126,11 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
     }
 
-    /**
-     * The day-2 "post your first work request" quest. Rebuild paths must use this -
-     * {@link #addNewQuest} would produce a ROOM-typed recipe quest with the raw id.
-     */
+    /** Day 2's first-work-request quest. Use this, not {@link #addNewQuest}. */
     public void addFirstWorkRequestQuest(@Nullable VillagerUUID ownerId) {
         this.quests.add(this.questFactory.newFirstWorkRequestQuest(dep(ownerId)));
     }
 
-    /** A CONCURRENT_JOBS quest; the job list rides on the quest, not the wanted id. */
     public void addConcurrentJobsQuest(@Nullable VillagerUUID ownerId, Collection<KEY> jobIds) {
         this.quests.add(this.questFactory.newConcurrentJobsQuest(dep(ownerId), jobIds));
     }
@@ -164,7 +159,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return markRecipeAsComplete(room, recipe, v -> true);
     }
 
-    /** As {@link #markRecipeAsComplete(Object, Object)}, completing only a quest {@code which} accepts. */
+    /** As above, completing only a quest {@code which} accepts. */
     public boolean markRecipeAsComplete(
             ROOM room,
             KEY recipe,
@@ -189,17 +184,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return true;
     }
 
-    /**
-     * Load-time replay only. Re-mark a persisted completed quest complete without claiming the
-     * batch's reward. Completion and reward application are synchronous, so a completed quest
-     * read back from disk implies the reward is already applied (it is restored with its
-     * applied flag) - re-claiming through {@link #markRecipeAsComplete(ROOM, KEY)} would trip
-     * the once-guard on every load of a post-onboarding world (the 2026-10-13 "Refusing to
-     * apply reward more than once" load noise; ticket
-     * .scratch/day1-playtest-2026-10-11/load-time-reward-reclaim-error-noise.md). No
-     * listener events fire either: the rebuild is pure state re-establishment, not a new
-     * completion (no chat broadcast, no batch-completion side effects on load).
-     */
+    /** On load only: marks a saved completed quest complete again without claiming its reward or firing events. */
     public boolean markRecipeAsCompleteForReplay(@Nullable ROOM room, @Nullable KEY recipe) {
         Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
@@ -302,10 +287,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     ) {
         QUEST foundQuest = null;
         for (QUEST q : quests) {
-            // A complete quest is perma-done (campfire semantics): re-typing its
-            // room (e.g. the empty room gains a chest and becomes a store room)
-            // must not lose it. 2026-10-14 playtest: the empty-room quest lost
-            // and re-completed in one tick, double-firing the batch reward.
+            // A completed quest stays done when its room changes type.
             if (oldRoom.equals(q.completedOn)
                     && recipeID.equals(q.getWantedId())
                     && !q.isComplete()) {
@@ -324,13 +306,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return false;
     }
 
-    /**
-     * Withdraw a quest outright (no placeholder) and notify the listener. The JOB_UNLOCK
-     * path uses this when its stuck root stops mapping to a viable producer: the
-     * lost()-placeholder path re-typed the quest as an open room quest that no gate,
-     * UI or completion path ever cleared (the handle-accumulation half of the
-     * JOB_UNLOCK ping-pong, .scratch/mat-gated-arrival/job-unlock-quest-spam.md).
-     */
+    /** Removes a quest outright and notifies the listener. */
     public boolean withdrawQuest(QUEST quest) {
         if (!this.quests.remove(quest)) {
             return false;

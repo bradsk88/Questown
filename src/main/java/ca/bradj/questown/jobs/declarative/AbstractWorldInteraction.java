@@ -290,12 +290,7 @@ public abstract class AbstractWorldInteraction<
         return reset.apply(ts);
     }
 
-    /**
-     * Pushes {@code newItemsSource}'s items onto {@code push}, bounded by
-     * {@code Config.BASE_MAX_LOOP} via {@link Util#iterate}. The shared lane for both the
-     * realtime and warp implementations (previously spelled out identically in each);
-     * the JUnit double overrides with an unbounded {@code forEach}.
-     */
+    /** Pushes the items onto {@code push}, at most {@code Config.BASE_MAX_LOOP} of them. */
     protected void iterate(
             Iterable<HELD_ITEM> newItemsSource,
             Function<HELD_ITEM, HELD_ITEM> push
@@ -319,17 +314,7 @@ public abstract class AbstractWorldInteraction<
         return jobId;
     }
 
-    /**
-     * Completed work actions of proficiency-bearing jobs since the last reset, counted where the
-     * realtime and warp paths both funnel through. The proficiency-parity autotest (ADR-0010) needs
-     * a measure of "how much work happened" that is independent of the proficiency code under test:
-     * produced items can't serve, since a townie's held stack and a chest stack don't count alike.
-     * Jobs declaring no proficiency-id (the work seeker, every shipped job today) are excluded, or
-     * their actions would inflate the divisor and understate the per-action gain.
-     * <p>
-     * Process-global and never reset outside tests: every town and every villager increments the
-     * same counter, so only a single-worker scenario can read it as "the work under test".
-     */
+    /** For autotests: completed work actions of jobs with a proficiency, counted on both paths. Global, so only a one-worker test can read it. */
     private static long proficiencyBearingActionsForTest = 0;
 
     private static void countProficiencyBearingActionForTest(@Nullable String proficiencyId) {
@@ -339,24 +324,12 @@ public abstract class AbstractWorldInteraction<
         proficiencyBearingActionsForTest++;
     }
 
-    /**
-     * The proficiency-id of this interaction's job, or null when it declares none. Resolved by the
-     * two real paths through {@code ServerJobsRegistry}; the default keeps JUnit's world-interaction
-     * doubles away from the server registry, which they never initialize. Real paths must
-     * override — the null default means a new subclass is silently inert, with no failure.
-     */
+    /** The job's proficiency id, or null. Both real paths must override this; the null default makes a new subclass level nothing. */
     protected @Nullable String getProficiencyId() {
         return null;
     }
 
-    /**
-     * Scale an of-10 work speed by a proficiency multiplier, keeping the result inside the 1–10
-     * band {@link State#decrWork} accepts. Without the ceiling a
-     * townie who is both well-fed (base 10) and better than break-even at their job (multiplier
-     * above 1) computes a speed of 11+ and throws, taking down the whole work loop — the warp
-     * loop's exception handler turns that into a silently lost visit. Shared by both lanes
-     * (ADR-0010).
-     */
+    /** Scales a work speed (out of 10) by a proficiency multiplier, kept within 1 to 10. */
     static int applyProficiencyToWorkSpeed(
             int baseOf10,
             float multiplier
@@ -364,11 +337,7 @@ public abstract class AbstractWorldInteraction<
         return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
     }
 
-    /**
-     * The work-speed multiplier for the current job's proficiency-id (1× if the job declares none).
-     * Both paths fold this into their {@code of-10} speed at {@code getWorkSpeedOf10} so effective
-     * production rate stays warp/realtime-symmetric (ADR-0010).
-     */
+    /** The work-speed multiplier for the job's proficiency (1 when it has none), the same in real time and during a warp. */
     static float proficiencyMultiplier(
             @Nullable String proficiencyId,
             Function<String, Float> levelForId
@@ -383,12 +352,7 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
-    /**
-     * One completed work action on the townie's proficiency map, with the mod-config gain/decay
-     * (the lane-facing entry point both {@code onWorkActionCompleted} lanes call — ADR-0010,
-     * identical inputs). The write-back stays on the lane: realtime mutates the villager
-     * handle, warp returns a new {@code MCTownState}.
-     */
+    /** One completed work action on the villager's proficiencies, with the configured gain and decay. */
     protected Map<String, Float> levelProficiencies(
             Map<String, Float> current,
             @Nullable String proficiencyId
@@ -401,11 +365,7 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
-    /**
-     * The pure seam of {@link #levelProficiencies(Map, String)}: same gain/decay/interval math
-     * with the values supplied by the caller, so JUnit (where the mod config is never loaded)
-     * can drive it directly.
-     */
+    /** As above, with the gain, decay and interval passed in. */
     protected Map<String, Float> levelProficiencies(
             Map<String, Float> current,
             @Nullable String proficiencyId,
@@ -426,10 +386,7 @@ public abstract class AbstractWorldInteraction<
         proficiencyBearingActionsForTest = 0;
     }
 
-    /**
-     * Called once per completed work action (see {@link AbstractWorkWI#onWorkActionCompleted}).
-     * The proficiency-leveling seam; default passes {@code town} through unchanged.
-     */
+    /** Called once per completed work action; the default leaves {@code town} unchanged. */
     protected TOWN onWorkActionCompleted(
             EXTRA extra,
             TOWN town
@@ -494,19 +451,12 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
-    /**
-     * The live server level backing this lane's {@code extra}, or null when the lane has none
-     * (the JUnit double). The realtime lane reads it off the town; the warp lane carries it in
-     * its {@code Inputs}.
-     */
+    /** The server level behind {@code extra}, or null when there is none. */
     protected @Nullable ServerLevel getServerLevel(EXTRA extra) {
         return null;
     }
 
-    /**
-     * The order a villager tries its work spots in. Random by default; a lane may rank them (the
-     * realtime lane puts the fullest display first for a display job).
-     */
+    /** The order a villager tries its work spots in: random, unless a path ranks them (fullest display first). */
     protected ArrayList<WorkPosition<POS>> orderSpots(
             EXTRA extra,
             Collection<WorkPosition<POS>> workSpots
@@ -514,7 +464,6 @@ public abstract class AbstractWorldInteraction<
         return shuffle(extra, workSpots);
     }
 
-    /** Whether this job dresses displays (the {@code dress_display} rule on any stage). */
     protected boolean dressesDisplays() {
         return specialRules.values().stream()
                 .anyMatch(rules -> rules.stream().anyMatch(r -> r.endsWith(SpecialRules.DRESS_DISPLAY)));
@@ -527,11 +476,6 @@ public abstract class AbstractWorldInteraction<
         return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), getServerLevel(extra)));
     }
 
-    /**
-     * BlockPos-specialized (vanilla {@link Util#workWithSurfaceInteractionPos}), so it stays a
-     * lane seam rather than moving to the {@code POS}-generic base; both lanes pass their
-     * {@link #getServerLevel} through unchanged.
-     */
     protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(
             EXTRA extra,
             WorkOutput<TOWN, WorkPosition<POS>> v
@@ -662,11 +606,7 @@ public abstract class AbstractWorldInteraction<
         return checks.getQuantityForStep(state, 0);
     }
 
-    /**
-     * Called once per completed job cycle, after the reset. Realtime pays XP through a job
-     * completion listener on the townie's own job, so the default changes nothing; the warp lane
-     * records the XP on its state instead ({@code TimeWarpWorldInteraction}).
-     */
+    /** Called once per completed job cycle. The warp records XP here; real time pays it elsewhere. */
     protected TOWN onJobCompleted(
             EXTRA extra,
             TOWN town
@@ -764,11 +704,7 @@ public abstract class AbstractWorldInteraction<
             TOWN currentState,
             @Nullable HELD_ITEM item
     ) {
-        // Always notify a non-empty extraction on the unconditional extract path.
-        // The live engine (RealtimeWorldInteraction) overrides this to close a
-        // matching LOOT quest. Deliberately NOT gated by the
-        // EXTRACTING_PRODUCT special-rule check below — the quest check is
-        // independent of the job's post-extract rule (see LootExtractGuard).
+        // Every non-empty extraction is reported, whatever the job's own extraction rules.
         onLootExtracted(inputs, item);
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
@@ -777,31 +713,15 @@ public abstract class AbstractWorldInteraction<
         return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
     }
 
-    /**
-     * Fired on every extraction (including the null/empty placeholder). Forge-
-     * free no-op by default; the live engine overrides it to close matching LOOT
-     * quests. Kept separate from the rule-gated 5-arg hook so a job that has no
-     * EXTRACTING_PRODUCT rule (e.g. the sword hunter) still closes its quest.
-     */
+    /** Called on every extraction. The live game closes matching LOOT quests here. */
     protected void onLootExtracted(EXTRA inputs, @Nullable HELD_ITEM item) {}
 
-    /**
-     * Whether this job registered any special rule under
-     * {@link ProductionStatus#EXTRACTING_PRODUCT}. Passed to
-     * {@link LootExtractGuard#questCheckFires} for its contract documentation;
-     * the guard itself does not consult it.
-     */
     protected boolean hasExtractingProductRule() {
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         return rules != null && !rules.isEmpty();
     }
 
-    /**
-     * Runs generated results through the once-per-town loot guarantees (the chicken-arc
-     * worldly-seeds and the first-hunter raw-food). The lane-shared half of {@code getResults};
-     * the lanes differ only in how they resolve the town flag that holds the guarantee bits
-     * (ADR-0014).
-     */
+    /** Applies the once-per-town loot guarantees: the helper chicken's Worldly Seeds, and the first hunter's raw food. */
     protected Iterable<MCHeldItem> withLootGuarantees(
             @Nullable TownFlagBlockEntity flag,
             Iterable<MCHeldItem> results
@@ -811,14 +731,10 @@ public abstract class AbstractWorldInteraction<
         return results;
     }
 
-    /** A leaver's inventory: a trip brings back at most this many items (unstacked). */
+    /** A trip brings back at most this many items. */
     private static final int LEAVER_CAPACITY = 6;
 
-    /**
-     * A full-day leaver trip (`prefer_requested`) rolls a second time and keeps that roll's
-     * board-requested items over the first roll's others ({@link RequestedLootPreference}). Other
-     * jobs, and a town with nothing on its board, keep the first roll.
-     */
+    /** A full-day trip ({@code prefer_requested}) rolls twice and keeps the second roll's requested items. Other trips keep the first roll. */
     protected Iterable<MCHeldItem> withRequestedLootPreference(
             @Nullable TownFlagBlockEntity flag,
             ServerLevel level,
@@ -855,10 +771,7 @@ public abstract class AbstractWorldInteraction<
         return requests.stream().anyMatch(r -> r.asIngredient().test(item.get().toMCItemStack()));
     }
 
-    /**
-     * The town-flag block entity at {@code pos}, or null when the level or block entity is
-     * missing. The lookup both lanes share when resolving the loot-guarantee flag.
-     */
+    /** The town flag at {@code pos}, or null. */
     protected static @Nullable TownFlagBlockEntity flagBlockEntityAt(
             @Nullable ServerLevel level,
             @Nullable BlockPos pos

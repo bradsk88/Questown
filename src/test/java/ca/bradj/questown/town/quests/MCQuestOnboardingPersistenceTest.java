@@ -9,11 +9,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The onboarding marker gates villager arrivals (TownQuests.isArrivalGateOpen). village/day1
- * 2026-10-17: after a real flag reload every quest read onboarding=false, so villager 2 arrived
- * before the raw-food quest was complete.
- */
+/** The onboarding flag survives a reload; it holds back arrivals. */
 class MCQuestOnboardingPersistenceTest {
 
     private static final ResourceLocation GATE = new ResourceLocation("questown", "special_quest.town_gate");

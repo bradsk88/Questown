@@ -25,12 +25,7 @@ public class TestWorkStatusHandle extends AbstractWorkStatusStore<Position, Gath
                 (room, pos) -> ImmutableList.of(pos),
                 // airCheck - blocks are never air in tests
                 (tickSource, pos) -> false,
-                // defaultStateFactory - mirror the production TownWorkStatusStore: a
-                // welcome mat is seeded unconditionally (the "whoever-seeds-first" race
-                // was removed there; State.welcomeMatSeedState, 2026-10-07 dev directive).
-                // The test world's job block is IntegrationTestWorld.DEFAULT_WORKSPOT_POS
-                // (the gate mat), so seed exactly that. A null factory here would assert a
-                // world that production never builds.
+                // The welcome mat is always seeded, as in production.
                 (tickSource, pos) -> pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS)
                         ? ca.bradj.questown.town.workstatus.State.welcomeMatSeedState()
                         : null,

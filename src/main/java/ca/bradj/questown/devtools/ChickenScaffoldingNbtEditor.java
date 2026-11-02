@@ -19,34 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * One-shot tool that writes the helper-chicken scaffolding blocks into
- * {@code empty_town.nbt} so players see an unlit campfire, a mostly-built
- * cobblestone room, and two fence gate columns around every newly-generated
- * town flag.
+ * Writes the helper chicken's scaffolding (an unlit campfire, a half-built room, two gate posts)
+ * into {@code empty_town.nbt}, from {@link ChickenScaffoldingLayout}. Running it twice gives the
+ * same structure.
  *
- * <p>Reads {@link ChickenScaffoldingLayout} for the layout itself — that class
- * is also consumed by the in-world {@code ChickenArcTestExecutor}, so the
- * committed structure and the headless test arena stay tag-equivalent.
- *
- * <p>Idempotent by design. Running the editor twice on the same input produces
- * the same tag tree (verified by {@code NbtUtils.compareNbt(a, b, true)};
- * byte-level equality is not guaranteed because gzip output varies across JVMs).
- * Existing blocks at target offsets are removed before inserts, and the palette
- * is only appended to, never rewritten.
- *
- * <h2>Invocation</h2>
- * <p>Run via the Gradle convenience task, which delegates to the JUnit
- * {@code applyToRealStructure} test so the editor inherits the
- * {@code Bootstrap.bootStrap()} classpath it needs:
- *
- * <pre>{@code
- *   ./gradlew editEmptyTownNbt         # writes the file + sibling .bak
- *   ./gradlew editEmptyTownNbt --check # reports diff only, exits non-zero if drift
- * }</pre>
- *
- * <p>{@code main(String[])} also works as a fallback for a manual
- * {@code java -cp ... ChickenScaffoldingNbtEditor} invocation, but the JUnit
- * path is the supported entry point.
+ * <p>Run it with {@code ./gradlew editEmptyTownNbt} (or {@code --check} to report drift only).
  */
 public final class ChickenScaffoldingNbtEditor {
 
@@ -80,18 +57,7 @@ public final class ChickenScaffoldingNbtEditor {
         }
     }
 
-    /**
-     * Core entry point used by both {@link #main} and the JUnit harness.
-     *
-     * @param path       the {@code .nbt} file to read (and write, unless {@code CHECK})
-     * @param mode       {@link Mode#APPLY} writes the file (with a sibling {@code .bak}
-     *                   first); {@link Mode#CHECK} only reports whether the file is up
-     *                   to date, without writing
-     * @param writeBak   when {@code true} in {@code APPLY} mode, copies the original
-     *                   file to {@code <path>.bak} before writing
-     * @return 0 if the file is / becomes tag-equivalent to the target layout; 1 on
-     *         drift in {@code CHECK} mode; other non-zero on error
-     */
+    /** @return 0 when the file matches the layout, 1 on drift in {@code CHECK} mode, other non-zero on error */
     public static int run(Path path, Mode mode, boolean writeBak) throws IOException {
         if (!Files.exists(path)) {
             throw new IOException("structure file not found: " + path.toAbsolutePath());
@@ -103,12 +69,7 @@ public final class ChickenScaffoldingNbtEditor {
         CompoundTag updated = applyScaffolding(tag);
 
         if (mode == Mode.CHECK) {
-            // Compare input's blocks/palette state to the post-scaffolding state.
-            // NbtUtils.compareNbt is subset-matching ("standard ⊆ actual"), which
-            // returns true whenever the input is a subset of the updated tag —
-            // including when the updated tag has many more blocks. We need true
-            // equality on the structurally-relevant fields (palette + blocks +
-            // size), so compare them directly.
+            // compareNbt only checks a subset, so compare the palette, blocks and size directly.
             ListTag inputBlocks = tag.getList(BLOCKS_KEY, Tag.TAG_COMPOUND);
             ListTag updatedBlocks = updated.getList(BLOCKS_KEY, Tag.TAG_COMPOUND);
             boolean matches = inputBlocks.size() == updatedBlocks.size()
@@ -134,13 +95,7 @@ public final class ChickenScaffoldingNbtEditor {
         return 0;
     }
 
-    /**
-     * Pure-function mutation of the root structure tag. Returns a new
-     * {@link CompoundTag} with the scaffolding blocks merged in. The input tag is
-     * not mutated.
-     *
-     * <p>Exposed for testing so synthetic inputs can be fed without disk I/O.
-     */
+    /** The structure with the scaffolding added. The input is not changed. */
     public static CompoundTag applyScaffolding(CompoundTag source) {
         CompoundTag root = source.copy();
         ListTag palette = root.getList(PALETTE_KEY, Tag.TAG_COMPOUND);
@@ -152,10 +107,7 @@ public final class ChickenScaffoldingNbtEditor {
             root.put(BLOCKS_KEY, blocks);
         }
 
-        // ChickenScaffoldingLayout returns offsets RELATIVE TO THE FLAG. The
-        // structure NBT stores positions in structure-local coords (origin at
-        // the structure's bounding-box corner, not the flag). Translate every
-        // layout offset by the flag's structure-local position before writing.
+        // The layout is relative to the flag; the structure is relative to its corner.
         BlockPos flagAnchor = findFlagAnchor(palette, blocks);
         if (flagAnchor == null) {
             throw new IllegalStateException(
@@ -166,12 +118,7 @@ public final class ChickenScaffoldingNbtEditor {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
 
-        // The layout is authoritative for the chicken-arc anchor blocks. If a
-        // prior layout revision placed a campfire at a different offset, leave-
-        // overs would create duplicate anchors and break rotation detection
-        // (and the structure-integrity test). Strip every pre-existing campfire
-        // before placing the canonical one. Same for the gate fences — the
-        // GATE_CENTER_OFFSET could move similarly, leaving orphaned columns.
+        // Remove old campfires and gate posts first, so a moved offset leaves no duplicates.
         removeAllBlocksOfType(blocks, palette, "minecraft:campfire");
 
         for (ChickenScaffoldingLayout.BlockPlacement placement : plan) {
@@ -181,9 +128,7 @@ public final class ChickenScaffoldingNbtEditor {
             blocks.add(newBlockEntry(paletteIdx, structurePos));
         }
 
-        // Evict any stale blocks at the layout's intentional gap positions
-        // (door column, wall-block hole). Without this, moving DOOR_OFFSET
-        // between revisions leaves the previous door cell walled off.
+        // Clear the layout's gaps (door, wall hole), so a moved door leaves no wall behind.
         for (BlockPos gap : ChickenScaffoldingLayout.gapOffsets(Rotation.NONE)) {
             removeBlocksAt(blocks, flagAnchor.offset(gap));
         }
@@ -192,12 +137,7 @@ public final class ChickenScaffoldingNbtEditor {
         return root;
     }
 
-    /**
-     * Locates the town flag block in the structure and returns its
-     * structure-local position. Returns null when no flag is present (which is
-     * a programmer error for empty_town.nbt — the chicken scaffolding has no
-     * meaningful anchor without it).
-     */
+    /** The flag's position in the structure, or null if it has none. */
     private static BlockPos findFlagAnchor(ListTag palette, ListTag blocks) {
         List<Integer> flagPaletteIndices = new ArrayList<>();
         for (int i = 0; i < palette.size(); i++) {
@@ -224,11 +164,6 @@ public final class ChickenScaffoldingNbtEditor {
         return null;
     }
 
-    /**
-     * Strips every block whose palette entry's {@code Name} matches {@code blockName}.
-     * Used to evict pre-existing layout-managed blocks (e.g. campfires) that may
-     * sit at a stale offset before the editor places the canonical one.
-     */
     private static void removeAllBlocksOfType(ListTag blocks, ListTag palette, String blockName) {
         java.util.Set<Integer> matchingPaletteIdx = new java.util.HashSet<>();
         for (int i = 0; i < palette.size(); i++) {

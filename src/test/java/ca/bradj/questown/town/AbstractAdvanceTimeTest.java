@@ -233,17 +233,12 @@ class AbstractAdvanceTimeTest {
         Assertions.assertEquals(1, warper.getTicks(0, 1000).size());
     }
 
-    // ---- Seam tests: actual advanceTime, no simulation of warp logic (ADR-0006) ----
-    //
-    // These exercise the actual AbstractAdvanceTime.advanceTime warp loop with stub town/villager/
-    // warper types, asserting the dual-timeline behaviour: villager labour rides the productive
-    // budget while passive effects ride the wall-clock budget (incl. night).
+    // The real advanceTime loop, with stub types: villagers work on the working budget, world processes on the full clock.
 
-    private static final long DAY = Signals.FULL_DAY_TICKS;            // 24000
-    private static final long PRODUCTIVE_DAY = Signals.PRODUCTIVE_DAY_END_TICK; // 11500
-    private static final long NIGHT = DAY - PRODUCTIVE_DAY;            // 12500
+    private static final long DAY = Signals.FULL_DAY_TICKS;
+    private static final long PRODUCTIVE_DAY = Signals.PRODUCTIVE_DAY_END_TICK;
+    private static final long NIGHT = DAY - PRODUCTIVE_DAY;
 
-    /** Minimal concrete TownState so the actual advanceTime loop has something to iterate. */
     static class SeamTown extends TownState<ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown> {
         SeamTown(List<VillagerData<TestItem>> villagers, long worldTimeAtSleep) {
             super(villagers, List.of(), ImmutableMap.of(), ImmutableMap.of(), List.of(), ImmutableMap.of(), worldTimeAtSleep);
@@ -263,7 +258,7 @@ class AbstractAdvanceTimeTest {
         }
     }
 
-    /** Concrete AbstractAdvanceTime that emits a preset list of labour ticks (no MC, no registries). */
+    /** An AbstractAdvanceTime that emits a fixed list of work ticks. */
     static class SeamAdvanceTime extends AbstractAdvanceTime<
             ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown, Object> {
         private final ImmutableList<Warper.Tick> presetTicks;
@@ -339,7 +334,7 @@ class AbstractAdvanceTimeTest {
 
     @Test
     void advanceTime_passiveDeltaTotalsWallClockTicks_whileLaborStaysOnProductiveBudget() {
-        // Two-day window [0, 35500]: day1 productive + night + day2 productive.
+        // Two days: work, night, work.
         long windowEnd = 35500;
         long wallClockTicks = 35500;
         long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks); // 23000
@@ -347,7 +342,6 @@ class AbstractAdvanceTimeTest {
                 Signals.buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
         LongUnaryOperator productiveToWallClock = timeline::wallClockOffsetAt;
 
-        // Labour ticks span both productive days (offsets are productive-space).
         ImmutableList<Warper.Tick> labor = laborTicksAt(windowEnd, 5000, 11000, 12000, 20000, 23000);
 
         List<Long> passiveDeltas = new ArrayList<>();
@@ -390,12 +384,12 @@ class AbstractAdvanceTimeTest {
                 new TestLogger()
         );
 
-        // Passive effects are credited the FULL wall-clock window (incl. the night), telescoping to wallClockTicks.
+        // World processes get the whole window, night included.
         long totalPassive = passiveDeltas.stream().mapToLong(Long::longValue).sum();
         Assertions.assertEquals(wallClockTicks, totalPassive,
                 "passive tickDelta must total wallClockTicks (night included)");
 
-        // Labour never rides past the productive budget: max labour offset == productiveTicks.
+        // Work never runs past the working budget.
         long maxLaborOffset = laborCurrentTicks.stream().mapToLong(t -> t - windowEnd).max().orElse(-1);
         Assertions.assertEquals(productiveTicks, maxLaborOffset,
                 "labour stays on the productive budget");
@@ -405,15 +399,13 @@ class AbstractAdvanceTimeTest {
 
     @Test
     void advanceTime_creditsNightBetweenLaborSteps_soDependencyChainsMature() {
-        // A sapling "planted" at a day-1 labour step must be mature (>= a night) by the day-2 step,
-        // because advanceTime credits the night between them to the passive currentTick.
+        // A sapling planted on day 1 has had a night by day 2.
         long windowEnd = 35500;
         long wallClockTicks = 35500;
         long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks);
         Signals.ProductiveWallClockTimeline timeline =
                 Signals.buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
 
-        // One labour step just before dusk (offset 11000, day1) and one just after dawn (offset 12000, day2).
         ImmutableList<Warper.Tick> labor = laborTicksAt(windowEnd, 11000, 12000);
 
         List<Long> passiveCurrentTicks = new ArrayList<>();
@@ -451,20 +443,17 @@ class AbstractAdvanceTimeTest {
                 new TestLogger()
         );
 
-        // The first two fires are the two labour steps (a trailing fire may follow, covering
-        // day-2's remaining productive tail — that's expected and irrelevant here).
         Assertions.assertTrue(passiveCurrentTicks.size() >= 2, "both labour steps fired the passive hook");
         long dawnToDuskGap = passiveCurrentTicks.get(1) - passiveCurrentTicks.get(0);
-        // The night (12500) is credited, so the gap far exceeds the 1000-tick productive gap between
-        // the two labour offsets (11000 -> 12000). Under the old productive-only code it was 1000.
+        // The night between the two steps is counted.
         Assertions.assertTrue(dawnToDuskGap >= NIGHT,
                 "night must be credited between day-1 and day-2 labour steps (gap=" + dawnToDuskGap + ")");
     }
 
     @Test
     void advanceTime_allNightWindow_runsPassiveEffectsWithNoLabor() {
-        // Pure-night window: zero productive ticks, but passive effects must still run.
-        long windowEnd = 17000;     // deep night
+        // An all-night window: no work, but world processes still run.
+        long windowEnd = 17000;
         long wallClockTicks = 2000;
         long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks); // 0
         Assertions.assertEquals(0, productiveTicks, "precondition: all-night window");

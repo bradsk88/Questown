@@ -12,12 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-// Dev-only: register a door (a room) for a town flag by block position, so a held
-// run can be driven from the console without a wand right-click. It walks the
-// same path a wand click on a door takes (RoomsHolder.registerDoor), which queues
-// the MultiLevelRoomDetector scan that detects the room and completes its recipe
-// quest. Like the wand's DoorHandler it takes any door (no radius gate). No
-// permission gate, so it runs from the console (FIFO).
+// Dev-only: register a door for a town flag, as a wand click on it does.
 public class RegisterRoomCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
@@ -45,8 +40,7 @@ public class RegisterRoomCommand {
             QT.FLAG_LOGGER.warn("[registerroom] {} is not a door", target);
             return 1;
         }
-        // Any flag at the door's height can claim it (the wand has no radius
-        // gate on door registration); prefer the closest one if there are two.
+        // Any flag at the door's height can claim it; the closest wins.
         TownFlagBlockEntity best = null;
         int bestDist = Integer.MAX_VALUE;
         for (TownFlagBlockEntity flag : ca.bradj.questown.town.entity.TownFlags.all()) {

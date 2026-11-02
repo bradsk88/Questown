@@ -12,30 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Paged-card container base for questown's screen family (quests, economics, town status).
- * Extends {@link CompatContainerScreen}, so the version-bound entry points and the blurred-world
- * background are the compat base's; the paged surface (page-number strip, arrow buttons, cards)
- * plugs in through the neutral hooks:
- *
- * <ul>
- *   <li>{@link #renderBgContent} — the paged NineNine panel (decomposed from the 1.20.6
- *       {@code renderBg} override);</li>
- *   <li>{@link #renderScreenContent} — the paged {@code afterRender} (page buttons + cards, plus
- *       the card's tooltip) and then {@link #renderScreenExtras}, the leaf's extra content
- *       (tabs, the "all done" state). The leaf extras land after the paged content, matching the
- *       former leaf {@code render} overrides that ran after {@code super.render};</li>
- *   <li>{@link #renderCardContent} — the per-card content, over {@link RenderContext}; the
- *       delegate's {@code CardRenderer} interface takes it directly.</li>
- * </ul>
- *
- * The {@link PagedCardScreen} delegate is version-neutral on its public surface
- * (it takes {@link RenderContext} and crosses to the client API through the record);
- * this base stays the hand-off for the vanilla entry points. One vanilla hook stays
- * version-bound here — the per-frame {@code renderTooltip} override, which forwards to the
- * neutral {@link #renderTooltipContent} (the same hand-off {@code CompatContainerScreen} makes
- * for its hooks) — so the base joins the gate's seam family rather than the grandfather list.
- */
+/** Base for the paged-card screens: quests, economics and town status. */
 public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D>
         extends CompatContainerScreen<T> implements ScrollableScreen {
 
@@ -95,16 +72,9 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         renderPagedContent(ctx, mouseX, mouseY, partialTicks);
         this.renderScreenExtras(ctx, mouseX, mouseY, partialTicks);
-        // The per-frame tooltip hook: 1.20.6's AbstractContainerScreen.render no longer calls the
-        // vanilla renderTooltip override at all (slot tooltips moved to getTooltipFromContainerItem +
-        // Screen.renderWithTooltip), so the renderTooltip override was a dead path - the day-1
-        // playtest saw zero status-icon tooltips for exactly this reason. Drive it from the
-        // content pass instead; setTooltipForNextRenderPass output is still drawn by
-        // Screen.renderWithTooltip after this render returns.
         this.renderTooltipContent(ctx, mouseX, mouseY);
     }
 
-    /** The paged surface: page-number strip + arrow buttons + cards (and the hovered card's tooltip). */
     protected void renderPagedContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         @Nullable List<Component> tooltips = this.delegate.afterRender(
                 ctx,
@@ -122,10 +92,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, tooltips);
     }
 
-    /**
-     * The leaf's extra content (tabs, the all-done state), drawn after the paged surface — the
-     * same relative position the leaves' former {@code render} overrides had.
-     */
+    /** Drawn after the cards: tabs, the all-done state. */
     protected void renderScreenExtras(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
 
     protected void renderTooltipContent(RenderContext ctx, int mouseX, int mouseY) { }

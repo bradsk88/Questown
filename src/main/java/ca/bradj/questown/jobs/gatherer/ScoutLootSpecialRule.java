@@ -13,13 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-/**
- * The explorer's "scouting" outcome: when a gatherer map is extracted, learn one
- * loot drop available in that map's biome and record it as town knowledge — without
- * taking the item. Replaces the {@code KnowledgeMetaItem} the explorer used to emit
- * (see ADR-0004). Reads the just-extracted map so the learned loot's biome always
- * matches the map the same trip produced; runs in realtime and warp alike.
- */
+/** Scouting: when a gatherer map is extracted, the town learns one item from that map's biome, without getting it. */
 public class ScoutLootSpecialRule extends JobPhaseModifier implements QTNativeRule {
 
     @Override
@@ -62,7 +56,6 @@ public class ScoutLootSpecialRule extends JobPhaseModifier implements QTNativeRu
         if (rolled.isEmpty()) {
             return null;
         }
-        // Items from a loot table already carry their (prefix, biome) for registerFoundLoots.
         return rolled.get(0);
     }
 }

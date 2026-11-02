@@ -23,8 +23,7 @@ public class BopTransactionSyncer {
     public static @NotNull ItemStack syncConsumedBOP(
             ServerPlayer sender
     ) {
-        // Also clear the BOP slot in the open menu, if present, to prevent it being returned to the player.
-        // Returns the consumed stack so callers can read its NBT before it is voided.
+        // Clear the open menu's BOP slot too, so it is not handed back. Returns what was consumed.
         ItemStack consumed = ItemStack.EMPTY;
         if (sender.containerMenu instanceof JobChangeConfirmMenu menu) {
             consumed = menu.tx.takeBopSlot();
@@ -49,7 +48,6 @@ public class BopTransactionSyncer {
         return getBopSlot().getItem();
     }
 
-    /** Empties the BOP slot and returns what was in it (EMPTY if none). */
     public @NotNull ItemStack takeBopSlot() {
         ItemStack stack = getBopSlotItem();
         getBopSlot().set(ItemStack.EMPTY);

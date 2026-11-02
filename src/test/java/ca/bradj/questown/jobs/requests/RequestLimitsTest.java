@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-/** Dev playtest 2026-10-29: see and adjust each request's limit. */
 class RequestLimitsTest {
 
     @Test
@@ -24,7 +23,7 @@ class RequestLimitsTest {
         Assertions.assertEquals(RequestLimits.MAX, l.set("food", 1000));
     }
 
-    /** Dev playtest 2026-10-30: rapid + clicks each sent "synced limit + 1", so they collapsed to one. */
+    /** Quick + clicks all count: the board sends a step, not a value. */
     @Test
     void steps_accumulate_andClamp() {
         RequestLimits<String> limits = new RequestLimits<>();

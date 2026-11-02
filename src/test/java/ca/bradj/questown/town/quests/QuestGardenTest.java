@@ -103,11 +103,6 @@ class QuestGardenTest {
         );
     }
 
-    // The needed-rooms 0/1/2 paths are covered by the tests below:
-    // ...AndNeededRoomsAreSize0 (falls back to a random recipe),
-    // ...AndNeededRoomsAreSize1 (takes the single needed room),
-    // ...AndNeededRoomsAreSize2 (picks randomly among the needed rooms).
-
     @Test
     public void testShouldAcceptNeededRoom_IfDoNotNeedBed_AndNeededRoomsAreSize1() {
         AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
@@ -363,11 +358,7 @@ class QuestGardenTest {
         );
     }
 
-    /**
-     * Day-1 playtest: the town was under-bedded because the garden posted at most one bed
-     * quest per batch. Now it posts one bed quest per grow tick until the batch covers the
-     * actual shortfall (here 3), then switches to room quests.
-     */
+    /** One bed quest per grow until the batch covers the shortfall, then room quests. */
     @Test
     public void testShouldAcceptMultipleBeds_UntilShortfallCovered() {
         AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
@@ -379,27 +370,19 @@ class QuestGardenTest {
             }
         };
         ImmutableList<String> allRooms = ImmutableList.of("soup_pot");
-        // 3 beds missing: each grow posts a bed until 3 are in the batch...
         Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
         Assertions.assertIterableEquals(ImmutableList.of("bed"), qg.get());
         Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
         Assertions.assertIterableEquals(ImmutableList.of("bed", "bed"), qg.get());
         Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
         Assertions.assertIterableEquals(ImmutableList.of("bed", "bed", "bed"), qg.get());
-        // ...then, with the shortfall covered, the next grow posts a room quest.
         Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
         Assertions.assertIterableEquals(ImmutableList.of("bed", "bed", "bed", "soup_pot"), qg.get());
     }
 
-    // Duplicates were previously rejected by this TODO; the run-16 kitchen x3
-    // batch turned it into a live defect - the three tests below pin the rule.
+    /** A batch doesn't hold the same room request twice; the repeat waits for a later batch. */
 
-    /**
-     * Run-16 shape: the cook's stock jobs keep the kitchen in the room-need
-     * queue (one RoomNeed, timesNeeded > 1), so the needed-room path re-picks
-     * the same recipe every grow tick. A batch carries unique requests - the
-     * repeat waits for a later batch, it does not fill this one.
-     */
+    /** A batch doesn't hold the same room request twice; the repeat waits for a later batch. */
     @Test
     public void testShouldAddNeededRoomOnce_EvenWhenNeededMultipleTimes() {
         AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(

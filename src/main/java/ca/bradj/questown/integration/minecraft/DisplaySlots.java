@@ -15,23 +15,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.stream.IntStream;
 
-/**
- * An armor stand's armor slots, or an item frame's one item, as a vanilla {@link Container}, so a
- * display counts as town storage (dev 2026-10-28: armor on a stand "count[s] as storage").
- * Armor stand slots run feet, legs, chest, head.
- */
+/** An armor stand's armor slots or an item frame's item as a {@link Container}, so a display counts as storage. Armor slots run feet, legs, chest, head. */
 public abstract class DisplaySlots implements Container {
 
     public static final List<EquipmentSlot> ARMOR_STAND_SLOTS = List.of(
             EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD
     );
 
-    /**
-     * The display standing (or hanging) at pos, if any. Two item frames on the walls of a corner
-     * share one block position; the entity order is not stable, so the job's spot check could see
-     * the empty frame while the insert went to the full one and destroyed the item (dev playtest
-     * 2026-10-30). Prefer a display with a free slot, so the check and the insert agree.
-     */
+    /** The display at pos, preferring one with a free slot (two corner frames share a position). */
     public static @Nullable DisplaySlots at(
             Level level,
             BlockPos pos
@@ -43,13 +34,11 @@ public abstract class DisplaySlots implements Container {
         return preferFree(here);
     }
 
-    /** How many of the display's slots at pos hold something (0 when there is no display). */
     public static int filledAt(Level level, BlockPos pos) {
         DisplaySlots d = at(level, pos);
         return d == null ? 0 : (int) d.items().stream().filter(i -> !i.isEmpty()).count();
     }
 
-    /** The first display with an empty slot, else the first one, else null. */
     static @Nullable DisplaySlots preferFree(List<DisplaySlots> here) {
         for (DisplaySlots d : here) {
             if (d.items().stream().anyMatch(ItemStack::isEmpty)) {

@@ -20,10 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
-/**
- * The flag's Settings tab. Holds "Begin moving this town" / "Cancel moving", moved here from the
- * crafting tab (dev playtest 2026-10-30).
- */
+/** The flag's Settings tab: "Begin moving this town" and "Cancel moving". */
 public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> {
     private static final int backgroundWidth = 176;
     private static final int MARGIN = 12;
@@ -55,9 +52,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
         this.background = JEI.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.settings");
         this.flagPos = menu.getFlagInfo().flagPos();
-        // "Begin moving" recalls the townsfolk and relocates the town - meaningless with zero
-        // villagers, so it waits for the first one (same gate as the villagers tab). While the
-        // shutdown ritual runs it offers "Cancel moving" (dev ruling 2026-10-23).
+        // Moving needs at least one villager. While the town is packing, offer to cancel.
         this.shuttingDown = isShuttingDown(flagPos);
         this.showMove = menu.getFlagInfo().showVillagersTab() || shuttingDown;
     }
@@ -117,8 +112,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
         ));
     }
 
-    // Packing the town recalls every townsfolk and has no in-game undo yet: the first click only
-    // arms it (docs/ui-principles.md 10).
+    // Moving the town can't be undone, so the first click only asks.
     private void onBeginMoving(Button btn) {
         if (!moveArmed) {
             moveArmed = true;
@@ -129,8 +123,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
         this.onClose();
     }
 
-    // Cancelling is the safe direction (the townsfolk come back), so one click; deactivated so a
-    // double-click does not send twice.
+    // Cancelling is safe, so one click.
     private void onCancelMoving(Button btn) {
         btn.active = false;
         QuestownNetwork.sendToServer(new CancelTownShutdownMessage(flagPos));

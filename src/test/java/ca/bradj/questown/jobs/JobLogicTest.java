@@ -228,7 +228,6 @@ class JobLogicTest {
             );
         }
 
-        /** Dropping loot with items in hand, as {@code job}. */
         public void tickDropping(JobID job) {
             tick(
                     null,
@@ -246,7 +245,7 @@ class JobLogicTest {
             );
         }
 
-        /** No work spot, not in the job site - the leaver-away shape - under the given rules. */
+        /** No work spot and not at the job site, as when away on a trip. */
         public void tickAway(
                 ProductionStatus status,
                 ExpirationRules expiration
@@ -278,13 +277,7 @@ class JobLogicTest {
         );
     }
 
-    /**
-     * 2026-10-17 playtest: a hunter's job was re-created by the max-ticks watchdog 34 s
-     * before its hunt timer ended ("Reached max ticks for hunter:sword. Falling back to
-     * hunter:sword."), and the fresh job went to COLLECTING_SUPPLIES instead of extracting
-     * the hunt's product. While the job waits on a timer its cycle is in progress (a leaver
-     * is away, so there is no work spot) - the watchdog must not fire.
-     */
+    /** A job waiting on a timer is mid-cycle; the watchdog must not re-create it. */
     @Test
     void tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedState() {
         AtomicBoolean changedJob = new AtomicBoolean();
@@ -303,11 +296,7 @@ class JobLogicTest {
         Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
     }
 
-    /**
-     * r16 #1 (dev ruling 2026-10-24): a starving hunter deposited its catch and went straight back
-     * out for a whole second trip; the board, which sends a starving townie to dine, is asked only
-     * between jobs. A deposit is now a decision point for a starving townie.
-     */
+    /** A deposit is when a starving villager re-decides. */
     @Test
     void tick_starvingTownieAsksTheBoard_afterADeposit() {
         AtomicBoolean handedOff = new AtomicBoolean();
@@ -330,7 +319,6 @@ class JobLogicTest {
         Assertions.assertFalse(handedOff.get(), "a fed townie keeps its job after a deposit");
     }
 
-    /** A starving diner is already going to eat: re-deciding would skip it to the next diner stage. */
     @Test
     void tick_starvingDinerCarriesOn_afterADeposit() {
         AtomicBoolean handedOff = new AtomicBoolean();
@@ -357,12 +345,7 @@ class JobLogicTest {
         };
     }
 
-    /**
-     * r16 #3: a hunter's trip timer completed on the same tick the watchdog's window ran out. The
-     * status was already EXTRACTING_PRODUCT (no longer waiting on the timer), so the watchdog asked
-     * the board, which sent the hunter to downtime; the trip's loot sat unextracted until its next
-     * shift. The extract tick finishes the cycle, so the watchdog must not fire on it.
-     */
+    /** A trip timer finishing on the watchdog's last tick still extracts. */
     @Test
     void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick() {
         AtomicBoolean changedJob = new AtomicBoolean();
@@ -388,11 +371,6 @@ class JobLogicTest {
         Assertions.assertFalse(handedOff.get(), "the watchdog asked the board before the product was extracted");
     }
 
-    /**
-     * r22: a miner's trip outlasted the job's window, so its extract tick came long after a grace
-     * counted from the job's start; the board handed out the level-up BOP and the villager walked
-     * home without the loot, then went back for it. The grace counts from the first extract tick.
-     */
     @Test
     void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick_AfterATripLongerThanTheWindow() {
         AtomicBoolean handedOff = new AtomicBoolean();
@@ -412,7 +390,6 @@ class JobLogicTest {
         Assertions.assertFalse(handedOff.get(), "the watchdog asked the board on the extract tick of a long trip");
     }
 
-    /** The extract grace is a window, not an exemption: a job stuck extracting still hands off. */
     @Test
     void tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace() {
         AtomicBoolean handedOff = new AtomicBoolean();
@@ -431,12 +408,6 @@ class JobLogicTest {
         Assertions.assertTrue(handedOff.get(), "a job stuck extracting must not stall forever");
     }
 
-    /**
-     * 2026-10-22 playtest: a gatherer back from a long trip hit the max-ticks watchdog just
-     * before evening and was re-created as the same job, which skipped the board's day-fit rule;
-     * it left on a 2000-tick trip at nightfall and slept through it. A fallback that won't fit
-     * in the day hands off to the board instead.
-     */
     @Test
     void tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay() {
         AtomicBoolean changedJob = new AtomicBoolean();
@@ -467,12 +438,6 @@ class JobLogicTest {
         Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
     }
 
-    /**
-     * 2026-10-22 r6 playtest: a hunter stuck in NO_SPACE past its max ticks asked the board every
-     * tick ("Reached max ticks for hunter:sword. Fallback ... won't fit in the day; asking the
-     * board."): 28 226 debug lines in 7 minutes, and a board evaluation per tick. The board kept
-     * the job, so the max-ticks counter never reset. Ask once per max-ticks window.
-     */
     @Test
     void tick_maxTicksHandOff_asksTheBoardOncePerWindow_whenTheBoardKeepsTheJob() {
         AtomicInteger handOffs = new AtomicInteger();
@@ -498,8 +463,7 @@ class JobLogicTest {
 
     @Test
     void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
-        // Control: the watchdog still moves a job with no cycle in progress to a declared
-        // fallback that is a different job (e.g. seeking_work -> downtime).
+        // The watchdog still moves a job with no cycle in progress to a different fallback.
         JobID other = new JobID("other_root", "other_job");
         AtomicReference<JobID> changedTo = new AtomicReference<>();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
@@ -517,14 +481,7 @@ class JobLogicTest {
         Assertions.assertEquals(other, changedTo.get());
     }
 
-    /**
-     * 2026-10-23 playtest r12 #8 / r14 #2: the default fallback is the same job ("keep doing it
-     * forever"), and re-creating it went straight to changeJob, skipping the board. A hunter
-     * chaining hunter:sword -> hunter:sword never reached the board's bop-deposit branch (its XP
-     * stayed frozen behind the BOP latch for 15+ minutes) or its starving branch (it hunted on
-     * at -105% fullness). A same-job fallback asks the board, which re-rolls the job when
-     * nothing more urgent applies.
-     */
+    /** Re-creating the same job goes through the board. */
     @Test
     void tick_sameJobMaxTicksFallback_asksTheBoard() {
         AtomicBoolean changedJob = new AtomicBoolean();
@@ -666,11 +623,6 @@ class JobLogicTest {
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
     }
 
-    /**
-     * 2026-10-22 playtest ("Fullness changed from 4990 to 5000" flood): a diner that gave up
-     * waiting for ingredients re-ran its extract hooks - the meal - every tick until its job
-     * changed: ~500 free meals from one cooked mutton.
-     */
     private static int extractsAfterGivingUp(boolean insertedBeforeGivingUp) {
         AtomicInteger extracts = new AtomicInteger();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
@@ -686,7 +638,6 @@ class JobLogicTest {
 
             @Override
             public void changeToNextJob() {
-                // The board has nothing else for this townie: the job stays.
             }
         };
         world.inserted = insertedBeforeGivingUp;
@@ -883,13 +834,6 @@ class JobLogicTest {
         Assertions.assertTrue(changedJob.get());
     }
 
-    /**
-     * 2026-10-19 (cook-diner-carrot-take-burst): a job that finished its cycle (wrapping up)
-     * fetched supplies for another cycle in the same tick it handed off to the next job. The
-     * board cascade then deposited the fetched item straight back into the chest without
-     * changing job, so a diner took and returned raw food ~300 times per meal (and the hunter
-     * its sword). A finished job hands off; it does not fetch.
-     */
     @Test
     void tick_shouldNotGetSupplies_WhileWrappingUp() {
         List<String> events = new ArrayList<>();
@@ -923,12 +867,7 @@ class JobLogicTest {
         Assertions.assertEquals(List.of("next"), events);
     }
 
-    /**
-     * 2026-10-20 playtest: a cook's cooked food reached the storeroom without the cook ever carrying
-     * it. A finished cycle handed off to the board while the villager still held its output, and
-     * the board's carried-output deposit teleported it into the nearest chest. A villager holding
-     * work output must not hand off; its own status carries the output to storage first.
-     */
+    /** A villager holding work output doesn't hand off: it stores the output first. */
     @Test
     void tick_shouldNotHandOff_WhileHoldingWorkOutput() {
         AtomicBoolean handedOff = new AtomicBoolean();

@@ -12,21 +12,7 @@ import java.util.function.Predicate;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Locks in the supply-acceptance contract behind the self-sufficiency soft-lock:
- *
- * <ul>
- *   <li>{@code shouldTakeItem} rejects when the needed-items set is {@code empty}
- *       (the branch the stalled leavers hit - verified on-disk 2026-10-07, worlds
- *       98/99: 100% "REJECT needed-empty").
- *   <li>The pass branch - needed set contains the food predicate, chest has the
- *       food, leaver's held slots empty - accepts.
- *   <li>A held item satisfying the needed predicate stops further carrying
- *       (removeItemsAlreadyHeld empties the needed set).
- * </ul>
- *
- * Pure - no MC classes (Item/HeldItem are the abstractions).
- */
+/** {@code shouldTakeItem}: rejects when nothing is needed; accepts a needed item with empty hands; stops once the needed item is held. */
 class JobsCleanShouldTakeItemTest {
 
     static final class TestItem implements HeldItem<TestItem, TestItem> {
@@ -116,8 +102,7 @@ class JobsCleanShouldTakeItemTest {
 
     @Test
     void neededEmpty_rejectsEvenMatchingFood() {
-        // The stall branch (worlds 98/99): an empty needed-items set rejects
-        // everything, including the item the job actually wants.
+        // Nothing needed: take nothing.
         assertFalse(SupplyItems.shouldTakeItem(5, Collections.emptyList(),
                 List.of(AIR, AIR),
                 MEAT));
@@ -125,7 +110,6 @@ class JobsCleanShouldTakeItemTest {
 
     @Test
     void heldFull_rejectsAnyFood() {
-        // Leaver already holding a non-empty item cannot take more.
         assertFalse(SupplyItems.shouldTakeItem(2,
                 List.of(FOOD),
                 List.of(MEAT),
@@ -134,8 +118,6 @@ class JobsCleanShouldTakeItemTest {
 
     @Test
     void neededMatch_emptyHeld_acceptsFood() {
-        // The pass branch: needed set has the food predicate, chest item matches,
-        // held slots all empty.
         assertTrue(SupplyItems.shouldTakeItem(5,
                 List.of(FOOD),
                 List.of(AIR, AIR),
@@ -144,8 +126,7 @@ class JobsCleanShouldTakeItemTest {
 
     @Test
     void neededAlreadyHeld_stopsFurtherCarrying() {
-        // removeItemsAlreadyHeld: once the leaver holds the needed item, the
-        // needed set empties and further taking is rejected (no double-carry).
+        // Once the needed item is held, nothing more is needed.
         Collection<? extends Predicate<TestItem>> needed = List.of(FOOD);
         assertFalse(SupplyItems.shouldTakeItem(5, needed,
                 List.of(MEAT, AIR),

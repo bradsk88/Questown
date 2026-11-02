@@ -20,7 +20,7 @@ public class UnsafeTown {
         this.town = t;
     }
 
-    /** @return true once {@link #initialize} has run. Callers on optional town-read paths gate on this instead of catching. */
+    /** True once {@link #initialize} has run. */
     public boolean isInitialized() {
         return town != null;
     }

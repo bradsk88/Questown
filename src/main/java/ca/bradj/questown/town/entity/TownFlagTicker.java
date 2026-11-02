@@ -36,7 +36,7 @@ import java.util.function.Function;
 
 public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickData, VisitorMobEntity> {
 
-    // Board requests pause once storage holds enough (BoardRequests); a container scan every 5 s.
+    // Check storage for paused board requests every 5 seconds.
     private static final long STOCK_CHECK_INTERVAL = 100;
 
     @Override
@@ -209,11 +209,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             TickData tickData,
             boolean playersNearbyOnPrevTick
     ) {
-        // Test-only keep-awake: during a held autotest run
-        // (-Dquestown.autotest.hold=true) the flag never sleeps, so its POI scan
-        // runs from server start - before a player joins - letting the seeded
-        // lit campfire be detected and the campfire quest self-complete. Real
-        // game behavior is untouched: the branch is gated on the test property.
+        // Held autotest runs keep the flag awake from server start.
         if ("true".equals(System.getProperty("questown.autotest.hold"))) {
             return false;
         }
@@ -291,14 +287,12 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         }
         FlagPhase phase = phaseOf(state);
         if (phase != FlagPhase.ACTIVE) {
-            // A parked town still owns its boards and mats (ADR-0009: physical blocks stay). Without
-            // this heartbeat the orphan watchdog removed them 20 ticks into the ritual (r8 2026-10-22).
+            // A dormant town still owns its boards and mats; keep them from removing themselves.
             notifySubBlocksOfTick(new TickData(sl, blockEntityPos, state, e));
         }
         if (phase == FlagPhase.SHUTTING_DOWN) {
             if (!e.shutdownController.isRunning()) {
-                // Loaded mid-ritual after a restart: the progress is in memory only. Load the town
-                // first, then resume the recall from the townies still standing (2026-10-22 r8n).
+                // Loaded mid-shutdown: load the town, then carry on recalling the villagers still out.
                 if (runAnyInitializers(new TickData(sl, blockEntityPos, state, e))) {
                     return;
                 }
@@ -309,9 +303,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             return;
         }
         if (phase == FlagPhase.DORMANT) {
-            // A dormant flag loaded after a restart still deserializes its town (the deed re-issue,
-            // wake-in-place and relocation read it); it just doesn't run the town. Returning before
-            // the initializers left it "needs a moment to start up" forever (2026-10-22 r8).
+            // A dormant flag still loads its town; it just doesn't run it.
             runAnyInitializers(new TickData(sl, blockEntityPos, state, e));
             return;
         }
@@ -337,8 +329,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
     }
 
-    // The flag sparkles cyan while it holds Blocks of Progress, so the player can tell at a
-    // glance that there is one to collect (a full flag additionally renders a red BOP cube).
+    // The flag sparkles cyan while it holds Blocks of Progress.
     private static final DustParticleOptions CYAN_SPARKLE =
             new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);
 

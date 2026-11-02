@@ -10,11 +10,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Dev playtest 2026-10-29: "I see that an empty_town spawned inside of a vanilla village. That
- * probably shouldn't happen". The structure set keeps away from village placements the way
- * vanilla's pillager outposts do.
- */
+/** An empty town keeps away from villages. */
 class EmptyTownPlacementTest {
 
     @Test
@@ -23,8 +19,6 @@ class EmptyTownPlacementTest {
         JsonObject zone = placement.getAsJsonObject("exclusion_zone");
         Assertions.assertNotNull(zone, "empty_town placement has an exclusion_zone");
         Assertions.assertEquals("minecraft:villages", zone.get("other_set").getAsString());
-        // Dev 2026-10-30: 4 chunks. 10 (the outposts' value) removed a third of all empty towns on a
-        // measured seed, half of them nowhere near a real village; 4 kept 38 of 39.
         Assertions.assertEquals(4, zone.get("chunk_count").getAsInt(), "exclusion radius in chunks");
     }
 

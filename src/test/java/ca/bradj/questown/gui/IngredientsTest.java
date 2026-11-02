@@ -28,7 +28,6 @@ class IngredientsTest {
         Ingredient ing = Ingredients.asIngredient(Compat.getItemId(Items.MUTTON));
         assertFalse(Ingredients.isTag(ing));
         assertTrue(ing.test(new ItemStack(Items.MUTTON)));
-        // An ITEM quest with an exact item still matches only that item, not siblings.
         assertFalse(ing.test(new ItemStack(Items.PORKCHOP)));
     }
 
@@ -41,14 +40,12 @@ class IngredientsTest {
 
     @Test
     void asIngredient_unknownId_yieldsTagIngredient_thatMatchesNothing() {
-        // A missing id fails safe: it resolves to a tag ingredient with no members,
-        // instead of throwing.
+        // An unknown id matches nothing instead of throwing.
         Ingredient ing = Ingredients.asIngredient(new ResourceLocation("questown", "no_such_tag"));
         assertTrue(Ingredients.isTag(ing));
         assertFalse(ing.test(new ItemStack(Items.MUTTON)));
     }
 
-    // Dev playtest 2026-10-28: the economics tab showed "#minecraft:saplings".
     @Test
     void getName_unnamedTag_fallsBackToItsPathNotTheRawId() {
         Ingredient ing = Ingredient.of(Compat.itemTag(new ResourceLocation("questown", "no_such_tag")));

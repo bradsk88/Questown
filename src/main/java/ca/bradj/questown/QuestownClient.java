@@ -28,12 +28,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
 
-/**
- * Client-only bootstrap: renderers and the menu-screen captures. Loaded only from the
- * {@code questown.client} mod entry (dist=CLIENT), so a dedicated server never loads this
- * class (or the client classes it references) and NeoForge's runtime dist cleaner stays
- * quiet. The common {@link Questown} keeps only loader-neutral code.
- */
+/** Client-only setup: renderers and menu screens. A dedicated server never loads this class. */
 public final class QuestownClient {
 
     private QuestownClient() {
@@ -54,12 +49,6 @@ public final class QuestownClient {
         BlockEntityRenderers.register(TilesInit.CHICKEN_STATUE.get(), ca.bradj.questown.blocks.entity.renderer.ChickenStatueBlockEntityRenderer::new);
     }
 
-    /**
-     * Menu-screen captures, invoked at client init (before client setup). NeoForge fires its
-     * menu-screen registration event at client init, before any mod-bus setup event, so the
-     * captures must exist before then; the client island replays them
-     * (see {@code loader.neo.NeoLoaderClient}).
-     */
     public static void registerScreens() {
         Loader.registerScreen(MenuTypesInit.TOWN_QUESTS.get(), (menu, inv, title) -> QuestsScreen.forTown(menu, inv, title));
         Loader.registerScreen(MenuTypesInit.VILLAGER_QUESTS.get(), (menu, inv, title) -> QuestsScreen.forVillager(menu, inv, title));

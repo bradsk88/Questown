@@ -26,10 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code TestLoader.Lazy}. In a plain JUnit JVM the vanilla registry is already frozen
  * post-{@code Bootstrap.bootStrap()}, so that {@code Block.<init>} throws
  * {@code IllegalStateException: Registry is already frozen}. The live surface is a real server:
- * {@code _qtdev test list} (verified 2026-10-09) or the autotest runner's own
- * {@code reportNoMatchAndShutdown} available-scenerios dump. This class asserts the invariants
- * and then fails by design, exactly like the other registry-bound {@code todo_} markers, so the
- * red is a documented gap, not a silent one.
+ * {@code _qtdev test list}, or the autotest runner's available-scenarios dump.
  */
 class TestScenarioNamesTodoTest {
 

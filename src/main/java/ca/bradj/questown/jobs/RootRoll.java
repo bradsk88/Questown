@@ -5,11 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
 import java.util.Set;
 
-/**
- * The roots a random Block of Progress job change may roll: roots no townie holds yet, or, when
- * every root is held, every root but the townie's own (r16 #14, dev ruling 2026-10-24). Pinned by
- * {@code RootRollTest}.
- */
+/** The jobs a random Block of Progress job change can roll: ones no villager has, or else any but the villager's own. */
 public final class RootRoll {
 
     private RootRoll() {

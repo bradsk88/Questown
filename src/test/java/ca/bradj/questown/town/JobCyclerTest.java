@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Dev playtest 2026-10-29: "hunter is preferring to work shorter jobs" -> longest trip that fits. */
 class JobCyclerTest {
 
     private static final JobID SHORT = new JobID("hunter", "sword");
@@ -49,7 +48,7 @@ class JobCyclerTest {
         Assertions.assertNotEquals(first, second);
     }
 
-    /** Dev playtest 2026-10-30: "Crafter should prefer building the highest level thing" (every villager). */
+    /** Then the job needing the highest villager level wins. */
     @Test
     void amongInTownJobs_theHighestLevelWins_everyTime() {
         JobCycler c = new JobCycler();

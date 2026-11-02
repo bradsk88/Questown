@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-/** Dev playtest 2026-10-29: an "in the last 1000 ticks" economics view. */
 class NoMCEconomicsRecentTest {
 
     private static final UUID A = new UUID(1, 1);

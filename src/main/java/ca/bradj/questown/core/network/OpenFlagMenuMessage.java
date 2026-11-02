@@ -42,7 +42,7 @@ public record OpenFlagMenuMessage(FlagTabsEmbedding.FlagInfo flag, String type) 
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             BlockPos p = flag().flagPos();
             if (!(sender.level().getBlockEntity(p) instanceof TownFlagBlockEntity entity)) {

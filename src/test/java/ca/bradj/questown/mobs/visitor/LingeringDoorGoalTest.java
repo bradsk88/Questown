@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 class LingeringDoorGoalTest {
 
-    /** Standing in the doorway or beside it keeps the door open; 3 blocks away it may close. */
     @Test
     void aNearbyVillager_keepsItsDoorOpen() {
         Assertions.assertTrue(LingeringDoorGoal.keepsOpen(0));

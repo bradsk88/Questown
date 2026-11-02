@@ -7,11 +7,7 @@ import ca.bradj.questown.jobs.special.*;
 
 public final class QuestownSpecialRules {
 
-    /**
-     * The mod's own special-rule set - the neutral registration list other mods
-     * can model theirs on. The loader bus binding that calls it at common setup
-     * lives in {@code loader.neo.NeoSpecialRulesInit} (G6 events slice).
-     */
+    /** The mod's own special rules. */
     public static void registerRules() {
         // This is what other mods should do if they want to implement special rules
 
@@ -173,8 +169,7 @@ public final class QuestownSpecialRules {
                 new SmeltFurnaceWarpRule()
         );
 
-        // Warp-interleaved hook: relocates a requested ingredient into the
-        // stock-request's chest during time warp (organizer/fetch).
+        // Moves a requested item into the stock request's chest during a warp.
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(
                         SpecialRules.RELOCATE_REQUESTED_ITEM_WARP

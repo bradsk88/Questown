@@ -27,11 +27,7 @@ import java.util.UUID;
 public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     protected final Collection<UIQuest> quests;
     protected final FlagTabsEmbedding.FlagInfo flagInfo;
-    /**
-     * villager UUID -&gt; "Villager N" display name, synced with the menu (the 2026-10-14
-     * display-name work; empty for menus that do not carry it, tooltips fall back to the
-     * truncated UUID).
-     */
+    /** "Villager N" names by villager UUID; empty when the menu does not carry them. */
     protected final Map<UUID, String> villagerDisplayNames;
 
     public AbstractQuestsContainer(
@@ -60,10 +56,7 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
         return this.villagerDisplayNames;
     }
 
-    /**
-     * "Villager N" when this sync carries a display name for the owner, otherwise the
-     * truncated UUID (the historical tooltip form).
-     */
+    /** The villager's "Villager N" name, or its shortened UUID. */
     public @NotNull String villagerLabelFor(String villagerUuidString) {
         return villagerLabelFor(this.villagerDisplayNames, villagerUuidString);
     }
@@ -79,7 +72,6 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
                     return name;
                 }
             } catch (IllegalArgumentException ignored) {
-                // not a full UUID string - fall through to the truncated form
             }
         }
         return UtilClean.truncateMiddle(villagerUuidString);
@@ -185,7 +177,7 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
         );
     }
 
-    /** The "jobs that make this item" screen for a quest card's item/tag icon (server answers). */
+    /** Opens the screen listing the jobs that make this item. */
     public void sendOpenItemJobs(Ingredient wanted) {
         QuestownNetwork.sendToServer(new OpenItemJobsMessage(flagInfo.flagPos(), wanted));
     }

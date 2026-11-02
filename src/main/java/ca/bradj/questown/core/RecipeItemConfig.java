@@ -110,8 +110,6 @@ public class RecipeItemConfig {
     );
 
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
-    // The iron recipe; the Block of Progress recipes (dev playtest 2026-10-28) have no resource to
-    // score, and the armorer's table is the same table recoloured.
     private static final int WORK_TABLE = RecipeItemScore.canCraftInFourGrid(
             ImmutableList.of(
                     CraftedResources.IRON_INGOT,
@@ -179,8 +177,6 @@ public class RecipeItemConfig {
                     CraftedResources.FURNACE
             ), false
     );
-    // A crafter makes plates from planks (crafter/plate, dev 2026-10-24); the plate had no source
-    // before, so it carried "never recommend".
     public static final int PLATE = RecipeItemScore.requiresCraftingTable(
             ImmutableList.of(
                     CraftedResources.PLANKS
@@ -229,8 +225,7 @@ public class RecipeItemConfig {
         add(assumePresent(Items.TARGET), TARGET);
         add(assumePresent(Items.CAULDRON), CAULDRON);
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
-        // Namespaced like the small pot: room recipes name it questown:soup_pot, and the bare key
-        // never matched, so the big pot weighed the default 100 (r17 #2).
+        // Room recipes name the big pot questown:soup_pot.
         add(Questown.ResourceLocation(SoupPotBlock.ITEM_ID), BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
         add(ItemsInit.PLATE_BLOCK.id(), PLATE);
@@ -265,10 +260,7 @@ public class RecipeItemConfig {
         defaultItemWeights.add(itemOrTagKey, cost);
     }
 
-    // ForgeConfigSpec cannot round-trip a nightconfig Config value through TOML (a TOML load
-    // yields a SimpleCommentedConfig while the default is a SimpleConfig, so every load is
-    // flagged "not correct" and re-saved, then re-loaded, forever). Store the weights as a
-    // single string instead, which round-trips cleanly. See ItemWeightCodec for details.
+    // Current weights as a map, decoded from the stored config value.
 
     // Current weights as a map, decoded from the stored config value.
     public static Map<String, Integer> getWeights() {

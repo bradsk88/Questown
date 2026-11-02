@@ -83,8 +83,7 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
 
             @Override
             public MCQuest newSkillUnlockQuest(@Nullable UUID ownerId, ResourceLocation treeRootId) {
-                // A named skill keeps its name: rebuilding it as the any-skill form on load let any
-                // crafter skill close "Unlock Wooden Shovel".
+                // A named skill quest keeps its skill on load.
                 return MCQuest.namedSkill(treeRootId)
                               .map(s -> MCQuest.namedSkillUnlock(batchUUID, dep(ownerId), s))
                               .orElseGet(() -> MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId)));

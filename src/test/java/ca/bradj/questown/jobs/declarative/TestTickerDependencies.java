@@ -120,11 +120,7 @@ public class TestTickerDependencies implements
                 return pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
             }
 
-            // Blocker #1 (unseededMat defect map): the stand never exposed the leaver's held
-            // items anywhere the `town has supplies` gate (TownHasSupplies) could see them, so
-            // containers=[] and the gate rejected an IDLE->state:0 start. Expose the entity's
-            // held items as the room's container, mirroring production leavers who arrive
-            // carrying their initial_request items.
+            // The villager's held items count as town storage, as a trip villager arrives carrying its starting request.
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asContainer() {
                 return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
@@ -137,7 +133,6 @@ public class TestTickerDependencies implements
         };
     }
 
-    /** Room block that presents the entity's held items as town storage (live view). */
     public static final Position HELD_ITEMS_STORE_POS = new Position(3, 3);
 
     private ContainerTarget<ContainerTarget.Container<GathererJournalTest.TestItem>, GathererJournalTest.TestItem> heldItemsContainer() {
@@ -312,15 +307,12 @@ public class TestTickerDependencies implements
             Supplier<Position> randomWalkTarget,
             UnsafeVillagerData villagerData
     ) {
-        // Bisection #2 (unseededMat defect map): production's pre-tick hook is the only place the
-        // rooms-needing-input cache gets refreshed; mirror that by serving a FRESH map each tick
-        // instead of letting the first (null-state) computed one stick (drop the cache).
+        // A fresh map each tick, as production refreshes it.
         cachedRoomsNeedingInput = recomputeRoomsNeedingInput();
     }
 
     private RoomsNeedingVillagerInput<Room, String, Position> recomputeRoomsNeedingInput() {
-        // Mirrors DeclarativeJobTicker.computeRoomsNeedingInput (incl. the null->fresh and
-        // terminal-no-timer guards), so the served map matches what the ticker itself computes.
+        // Matches DeclarativeJobTicker.computeRoomsNeedingInput.
         AbstractWorkStatusStore<Position, GathererJournalTest.TestItem, Room, ?> store = workStatusHandle;
         int maxState = getMaxState();
         return RoomsStatusLogic.<String, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room, TestRoomMatch>compute(
@@ -432,8 +424,6 @@ public class TestTickerDependencies implements
     @SuppressWarnings("unchecked")
     @Override
     public <X> RoomsNeedingVillagerInput<Room, X, Position> getCachedRoomsNeedingInput() {
-        // Bisection #2: do NOT serve the stored field (staleness). Recompute per serve so a
-        // world change (mat seeded / block state written) is visible to supply gates immediately.
         return (RoomsNeedingVillagerInput<Room, X, Position>) recomputeRoomsNeedingInput();
     }
 

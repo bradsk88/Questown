@@ -12,11 +12,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Dev 2026-10-31: "Add a recipe for making a flag in survival mode (Upside down T, all
- * cobblestone, sapling at the intersection)". The recipe book unlocks it with the first
- * cobblestone.
- */
+/** The flag recipe: an upside-down T of cobblestone with a sapling in the middle, unlocked by the first cobblestone. */
 class FlagRecipeTest {
 
     private static final Path DATA = Path.of("src/main/resources/data/questown");

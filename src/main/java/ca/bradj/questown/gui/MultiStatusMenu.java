@@ -27,8 +27,7 @@ public class MultiStatusMenu extends AbstractContainerMenu implements FlagTabsEm
         return menu.villagersMenu;
     }
 
-    // Server side only: re-sends the statuses so work bars move while the tab is open (they move
-    // without a status change). Null on the client.
+    // Server side only: re-sends the statuses so work bars move while the tab is open. Null on the client.
     private final @Nullable Runnable resendStatuses;
     private int ticksSinceResend;
     private static final int RESEND_EVERY_TICKS = 20;

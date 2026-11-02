@@ -10,24 +10,17 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Fast regression net for the pure decisions inside flag relocation (ADR-0009, #199). The
- * world-bound copy/destroy/re-activate path is covered by the {@code flag/relocate_nearby} autotest;
- * here we lock the two genuinely-pure pieces: fixture re-anchoring (B1) and precondition validation
- * (B2).
- */
+/** Relocation's checks: fixtures keep their world position, and the deed must be valid and in the same dimension. */
 class TownRelocationTest {
-
-    // ---- B1: planFixtureRebase — every registered fixture keeps its absolute world position ----
 
     @Test
     void rebaseAllFixturesPreservesAbsolutePositionsWhenFlagMovesUp() {
         int oldFlagY = 64;
-        int newFlagY = 70; // flag moves up 6
+        int newFlagY = 70;
         List<TownPosition> fixtures = List.of(
-                new TownPosition(10, 20, 0),   // door at abs Y 64
-                new TownPosition(-5, 8, 3),    // fence gate at abs Y 67
-                new TownPosition(100, -40, -2) // heal spot at abs Y 62
+                new TownPosition(10, 20, 0),
+                new TownPosition(-5, 8, 3),
+                new TownPosition(100, -40, -2)
         );
 
         List<TownPosition> rebased = TownRelocation.planFixtureRebase(oldFlagY, newFlagY, fixtures);
@@ -63,8 +56,6 @@ class TownRelocationTest {
     void rebaseEmptyFixturesIsEmpty() {
         Assertions.assertTrue(TownRelocation.planFixtureRebase(64, 70, List.of()).isEmpty());
     }
-
-    // ---- B2: validate — the precondition decision (same-dimension, well-formed reference) ----
 
     private static final UUID TOWN = UUID.fromString("00000000-0000-0000-0000-0000000000aa");
     private static final BlockPos FLAG = new BlockPos(0, 64, 0);
@@ -113,23 +104,20 @@ class TownRelocationTest {
 
     @Test
     void validateChecksMalformedBeforeDimensionMismatch() {
-        // A malformed reference can't have a meaningful dimension comparison — malformed wins.
+        // A malformed deed fails as malformed, before the dimension check.
         Assertions.assertEquals(
                 RelocationResult.MALFORMED_REFERENCE,
                 TownRelocation.validate(null, FLAG, null, NETHER)
         );
     }
 
-    // ---- B3: fixturesBeyondRadius — the "too far to come with you" split (Phase 4) ----
-
-    // The squared-distance cutoff the ticker uses (Config default): radius 100 → 100^2.
     private static final long RADIUS_SQ = 100L * 100L;
     private static final int FLAG_Y = 64;
 
     @Test
     void fixturesWithinRadiusAreNotBeyond() {
         BlockPos target = new BlockPos(0, FLAG_Y, 0);
-        TownPosition nearDoor = new TownPosition(40, 30, 0); // dist^2 = 1600+900 = 2500 < 10000
+        TownPosition nearDoor = new TownPosition(40, 30, 0);
         Assertions.assertTrue(
                 TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(nearDoor), RADIUS_SQ).isEmpty()
         );
@@ -138,7 +126,7 @@ class TownRelocationTest {
     @Test
     void fixturesBeyondRadiusAreReturned() {
         BlockPos target = new BlockPos(0, FLAG_Y, 0);
-        TownPosition farDoor = new TownPosition(200, 0, 0); // dist^2 = 40000 > 10000
+        TownPosition farDoor = new TownPosition(200, 0, 0);
         Assertions.assertEquals(
                 List.of(farDoor),
                 TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(farDoor), RADIUS_SQ)
@@ -149,7 +137,7 @@ class TownRelocationTest {
     void fixturesBeyondRadiusSplitsNearFromFar() {
         BlockPos target = new BlockPos(0, FLAG_Y, 0);
         TownPosition near = new TownPosition(10, 10, 0);
-        TownPosition nearVertical = new TownPosition(0, 0, 5); // 5 above flag — still in range
+        TownPosition nearVertical = new TownPosition(0, 0, 5);
         TownPosition farXZ = new TownPosition(150, 0, 0);
         List<TownPosition> beyond = TownRelocation.fixturesBeyondRadius(
                 target, FLAG_Y, List.of(near, nearVertical, farXZ), RADIUS_SQ
@@ -159,9 +147,9 @@ class TownRelocationTest {
 
     @Test
     void verticalDistanceCountsTowardRadius() {
-        // scanLevel feeds the absolute Y, so a fixture far in Y alone is still "beyond".
+        // Far in Y alone is still too far.
         BlockPos target = new BlockPos(0, FLAG_Y, 0);
-        TownPosition highDoor = new TownPosition(0, 0, 150); // scanLevel 150 → abs Y 214, 150 above target
+        TownPosition highDoor = new TownPosition(0, 0, 150);
         Assertions.assertEquals(
                 List.of(highDoor),
                 TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(highDoor), RADIUS_SQ)
@@ -170,9 +158,9 @@ class TownRelocationTest {
 
     @Test
     void radiusBoundaryIsInclusive() {
-        // Exactly at the radius is NOT beyond (matches the ticker's <= cutoff).
+        // Exactly at the radius is within reach.
         BlockPos target = new BlockPos(0, FLAG_Y, 0);
-        TownPosition onRing = new TownPosition(100, 0, 0); // dist^2 == 10000
+        TownPosition onRing = new TownPosition(100, 0, 0);
         Assertions.assertTrue(
                 TownRelocation.fixturesBeyondRadius(target, FLAG_Y, List.of(onRing), RADIUS_SQ).isEmpty()
         );

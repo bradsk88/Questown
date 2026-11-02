@@ -4,34 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Layer 2 of the GUI layout-validation mechanism: a pure, client-free checker for widget
- * layout invariants. It operates on plain {@link Box} rectangles so it is unit-testable
- * without a Minecraft client; a client-side adapter ({@code GuiLayoutCheckClientEvents})
- * extracts the boxes from a real {@code Screen} and feeds real {@code Font} metrics in.
- *
- * <p>Checks, per the found play-test bugs:
- * <ul>
- *   <li><b>off-screen</b> — a widget extends past the screen edges (overflow at small sizes)</li>
- *   <li><b>label-overflow</b> — a button's text is wider than the button can show</li>
- *   <li><b>overlap</b> — two interactive widgets occupy the same pixels</li>
- * </ul>
- * Render-time wrapped-text overflow (e.g. {@code drawDarkTextWrap} descriptions bleeding
- * into the next row) is a separate concern handled by the Layer 1 render-capture hook.
+ * Checks a screen's widget boxes: off screen, a label wider than its button, or two widgets
+ * overlapping. Text drawn outside widgets comes from {@link GuiLayoutCapture}.
  */
 public final class GuiLayoutLinter {
 
-    /** Slack subtracted from a button's width before checking its label fits (vanilla-ish padding). */
     public static final int BUTTON_LABEL_PADDING = 6;
 
     private GuiLayoutLinter() {
     }
 
-    /**
-     * A rectangular element to validate.
-     *
-     * @param contentWidth rendered pixel width of the element's fit-constrained label, or
-     *                     {@code -1} when the element has no such label.
-     */
+    /** A box to check. {@code contentWidth} is its label's width, or -1 for none. */
     public record Box(String id, int x, int y, int width, int height, int contentWidth) {
         public Box(String id, int x, int y, int width, int height) {
             this(id, x, y, width, height, -1);

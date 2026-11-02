@@ -30,34 +30,11 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/**
- * Storeroom-chest goal for the {@link ChickenBeatState#WAITING_FOR_CHEST} beat.
- *
- * <p>Walks the chicken into the registered store shell, waits for the player
- * to be in the room, then drops a chest holding a filled map and a wooden axe.
- * The chest is a contained block of the shell, so the shell matches the
- * {@code store_room} recipe and {@code isChestPlaced} goes true, completing
- * the beat. After the chest is dropped the persisted
- * {@code chickenSunsetChestSpawned} bit flips to true and this goal stops
- * self-selecting. The arrival / stuck-teleport logic is unchanged from the old
- * sunset chest goal; only the target (a cell inside the registered store shell
- * instead of a cell near the player), the "wait for the player to be in the
- * room" gate, and the beat have moved. The player watches a chest placed *in
- * a room* (the worked example), never a chest in the open.
- */
+/** The storeroom lesson: the chicken walks into the room, waits for the player to be inside, then drops a chest with a wooden axe. */
 public class HelperChickenSunsetChestGoal extends Goal {
 
     private static final double ARRIVAL_DISTANCE_SQR = 2.0D;
-    /**
-     * Looser arrival radius applied once the navigation reports done. The path
-     * follower (accuracy 1) stops roughly a block-and-a-half short of the
-     * target's centre — measured ~2.4 sqr in the flat onboarding arena — which
-     * is past {@link #ARRIVAL_DISTANCE_SQR}. Without this, the chicken re-paths
-     * to the same unreachable centre every tick, never pecks, and the chest
-     * never spawns. When the pathfinder has gotten as close as it can, that
-     * counts as arrival; the cap still rejects a fully-failed path that left the
-     * chicken far away (the stuck-teleport handles that case).
-     */
+    /** The path stops about a block and a half short; once it is done, that counts as arrived. */
     private static final double NAV_SETTLE_ARRIVAL_SQR = 9.0D;
     private static final int STUCK_TELEPORT_TICKS = 600;
     private static final int PECK_TICKS = 20;
@@ -176,9 +153,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         );
 
         if (hasArrived(distSqr, this.chicken.getNavigation().isDone())) {
-            // The chicken stands in the room and waits for the player to be in
-            // it before dropping the chest, so the player watches a chest placed
-            // *in a room* (the worked example), not a chest in the open.
+            // Drop the chest only with the player in the room.
             if (playerInStoreShell()) {
                 peckAndSpawn();
             }
@@ -188,15 +163,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         tickPathing();
     }
 
-    /**
-     * Whether the chicken is close enough to the chest target to peck. Within
-     * {@link #ARRIVAL_DISTANCE_SQR} is an unconditional arrival. Otherwise, once
-     * the navigation has finished (the pathfinder can get no closer) a looser
-     * {@link #NAV_SETTLE_ARRIVAL_SQR} radius applies — the follower stops a
-     * block-and-a-half short of the centre, which would otherwise leave the
-     * chicken re-pathing forever and never spawning the chest. Pure so it can
-     * be unit-tested without a live navigation.
-     */
+    /** Close enough to peck: within {@link #ARRIVAL_DISTANCE_SQR}, or within {@link #NAV_SETTLE_ARRIVAL_SQR} once the path is done. */
     static boolean hasArrived(double distSqr, boolean navDone) {
         if (distSqr <= ARRIVAL_DISTANCE_SQR) {
             return true;
@@ -245,8 +212,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         BlockPos chestPos = findChestPlacementPos(sl);
         if (chestPos == null) {
-            // Couldn't place — mark spawned anyway so we don't loop forever; the
-            // beat still completes via sleep/night and the player can advance.
+            // Couldn't place it: count it as done so the lesson doesn't stall.
             this.spawned = true;
             persistChestSpawned(flag);
             QT.JOB_LOGGER.info(
@@ -257,11 +223,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         sl.setBlockAndUpdate(chestPos, Blocks.CHEST.defaultBlockState());
         if (sl.getBlockEntity(chestPos) instanceof ChestBlockEntity chestBe) {
-            // No map here: F1 (2026-10-13 walkthrough) moved the map grant to flag
-            // placement — the placer gets a flag-centered filled map into their
-            // inventory the moment they place the flag, on EVERY path. A map in
-            // this chest would be the chicken path's double-grant. The chest is
-            // the axe drop (chopping the arc's trees) now.
+            // No map: the player already got one when they placed the flag.
             chestBe.setItem(0, new ItemStack(Items.WOODEN_AXE));
         }
         sl.sendParticles(
@@ -283,15 +245,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         flag.setChanged();
     }
 
-    /**
-     * Pick a target cell inside the registered store shell for the chest: the
-     * passable interior cell farthest from the door (see {@link #chestCandidates}), at the
-     * chicken's ground Y. The chicken walks there, waits for the player to be
-     * in the room, then drops the chest on that cell (see {@link #tick}).
-     * Falls back to {@code null} when no registered shell or no passable
-     * interior cell exists, so the goal stands down instead of deadlocking the
-     * beat.
-     */
+    /** The chest's cell: the open cell inside the storeroom farthest from the door, or null. */
     private BlockPos pickStoreShellChestPos(TownFlagBlockEntity flag) {
         if (!(this.chicken.level() instanceof ServerLevel sl)) {
             return null;
@@ -303,10 +257,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         MCRoom shell = largestRoom(rooms);
         int chickenY = this.chicken.blockPosition().getY();
-        // The chest must sit on the room's own floor level (a contained block is
-        // at yCoord or yCoord+1); the chicken's ground Y may not match it (the
-        // chicken is standing near the player, not in the room), so try the
-        // room's floor levels first, then the chicken's Y as a fallback.
+        // Try the room's floor levels first, then the chicken's own.
         int[] levels = { shell.yCoord, shell.yCoord + 1, chickenY };
         QT.JOB_LOGGER.info(
                 "[chicken-arc] storeroom chest: shell yCoord={} spaces={} chickenY={}",
@@ -327,12 +278,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         return null;
     }
 
-    /**
-     * The shell's interior cells, farthest from the door first. The storeroom is a 2x2
-     * interior, so a chest on the cell just inside the door blocks the doorway and
-     * villagers climb over it to get in (r9 findings #13); the far corner leaves the
-     * path through the door open. Ties keep a fixed order so the pick is stable.
-     */
+    /** The room's inside cells, farthest from the door first, so the chest doesn't block the doorway. */
     static List<Position> chestCandidates(Collection<InclusiveSpace> spaces, Position door) {
         List<Position> cells = new ArrayList<>();
         for (InclusiveSpace space : spaces) {
@@ -349,7 +295,6 @@ public class HelperChickenSunsetChestGoal extends Goal {
         return dx * dx + dz * dz;
     }
 
-    /** The registered room with the largest footprint — the store shell. */
     private static MCRoom largestRoom(Collection<MCRoom> rooms) {
         MCRoom best = null;
         double bestArea = -1;
@@ -363,11 +308,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         return best;
     }
 
-    /**
-     * Whether the nearest player is standing inside any registered room's
-     * interior. The chicken holds at the shell until the player enters it, so
-     * the chest drop is witnessed from inside the room (the worked example).
-     */
+    /** Whether the nearest player is inside a registered room. */
     private boolean playerInStoreShell() {
         TownFlagBlockEntity flag = resolveFlag();
         if (flag == null) {
@@ -389,30 +330,17 @@ public class HelperChickenSunsetChestGoal extends Goal {
         return false;
     }
 
-    /**
-     * Whether a block state can be replaced by a freshly-placed block (chest,
-     * snow layer, grass plant, fluid, etc.). Mirrors the vanilla
-     * {@code Material.isReplaceable()} contract — exposed as a static helper
-     * so unit tests can build {@code Blocks.X.defaultBlockState()} directly
-     * without a {@code BlockGetter}.
-     */
+    /** Whether a newly placed block would replace this one (snow, grass, fluid). */
     static boolean isReplaceable(net.minecraft.world.level.block.state.BlockState state) {
         return state.isAir() || state.canBeReplaced();
     }
 
     private static boolean isPassableForChest(ServerLevel sl, BlockPos c) {
-        // Treat replaceable blocks (snow layers, grass plants, tall_grass,
-        // fluids) the same as air — placing a chest into them overwrites them
-        // the way a player's right-click would. The narrower air-only check
-        // deadlocked the chest beat in snowy biomes.
+        // Snow, grass and fluids count as empty.
         return isReplaceable(sl.getBlockState(c)) && isReplaceable(sl.getBlockState(c.above()));
     }
 
-    /**
-     * Find a position at or adjacent to {@code targetPos} where a chest can sit:
-     * an air block with air above. Falls back to a cardinal neighbour if the
-     * target itself is not clear.
-     */
+    /** A spot at or next to the target where a chest fits. */
     private BlockPos findChestPlacementPos(ServerLevel sl) {
         if (isReplaceable(sl.getBlockState(this.targetPos))) {
             return this.targetPos;
@@ -444,14 +372,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         this.chicken.getNavigation().stop();
     }
 
-    /**
-     * Pure search: walks outward from a base horizontal position in distance
-     * order (farthest first), trying all 8 N/E/S/W + diagonals at each
-     * distance. Candidates sit on {@code chickenAt}'s Y — the ground plane the
-     * chicken can actually walk to and stand on. Returns the first passable
-     * cell. If every candidate fails, falls back to {@code chickenAt} when
-     * passable, else empty. Retained as a unit-tested pure helper.
-     */
+    /** The farthest open cell around a position, at the chicken's height, else the chicken's own cell if open. */
     static Optional<BlockPos> pickChestPos(
             BlockPos base,
             BlockPos chickenAt,

@@ -5,10 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-/**
- * How a chat message names a townie. 2026-10-20 playtest: the job-unlock broadcast passed the raw
- * UUID as a translation argument, which 1.20.6 rejects (the unlock message was never sent).
- */
+/** Chat names a villager by its "Villager N" name, or a shortened UUID. */
 class VillagerHolderLabelTest {
 
     @Test

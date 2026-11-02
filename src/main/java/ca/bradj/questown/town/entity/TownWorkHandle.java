@@ -58,11 +58,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     final List<WorkRequest> requestedResults = new ArrayList<>();
 
-    // Not saved: recomputed from storage (TownFlagBlockEntity.refreshStockedRequests).
+    // Not saved: recomputed from storage.
     private ImmutableSet<WorkRequest> stocked = ImmutableSet.of();
-    // Not saved: how much of each request storage holds now, for the board's "6/8".
+    // Not saved: how much of each request storage holds, for the board's "6/8".
     private ImmutableMap<WorkRequest, Integer> stock = ImmutableMap.of();
-    // Saved (TownWorkHandleSerializer "limits"): each request's pause limit.
+    // Saved: each request's pause limit.
     final RequestLimits<WorkRequest> limits = new RequestLimits<>();
 
     private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
@@ -83,17 +83,14 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     public void registerJobBoard(BlockPos matPos) {
         nextTick.add(sl -> {
             if (!sl.isLoaded(matPos)) {
-                // Right after a town reload the flag can tick before the board's chunk is back;
-                // judging it then dropped a live board as "stale" (day1, 2026-10-18).
+                // The board's chunk may not be back yet after a reload.
                 QT.FLAG_LOGGER.info("Job board at {} is in an unloaded chunk; retrying registration", matPos);
                 registerJobBoard(matPos);
                 return;
             }
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
-                // Stale registration (the board was broken and the world was
-                // saved before this dropped out). Log and heal - the entry
-                // falls out of persistence once it fails to re-register.
+                // A registration with no board (it was broken): log it; it drops out at the next save.
                 QT.FLAG_LOGGER.info(
                         "Job board registration at {} no longer matches a board in the world; dropping stale entry",
                         matPos
@@ -115,11 +112,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         });
     }
 
-    /**
-     * Drop a board position when its block is broken. Without this the
-     * persisted registration outlives the block and every world load logs a
-     * (healing) stale-registration entry until the next save.
-     */
+    /** Forgets a broken job board. */
     public void removeJobBoard(BlockPos matPos) {
         jobBoards.remove(matPos);
     }
@@ -144,7 +137,6 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         WorksBehaviour.TownData td = parent.getTownData();
         ImmutableSet<Ingredient> producible = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
         List<ResourceLocation> categories = offeredCategories(producible);
-        // A tag product that is an offered category is drawn by the category's tile (r16 #18).
         ImmutableSet<Ingredient> allOutputs = ImmutableSet.copyOf(RequestCategories.withoutCategories(
                 producible, TownWorkHandle::tagOf, categories));
         Compat.openScreen(
@@ -161,9 +153,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                             @NotNull Player p
                     ) {
                         AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, categories, flagPos);
-                        // Empty-state guidance (job-board-empty-state.md): when the board has no
-                        // pending requests, hand the client the top unmet need so the screen can
-                        // point at posting it instead of a vague teaser.
+                        // With no requests, send the top missing item for the empty board's hint.
                         String topNeed = requestedResults.isEmpty()
                                 ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
                                 : "";
@@ -187,10 +177,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         );
     }
 
-    /**
-     * The request categories ("Food", "Swords") to offer: those some unlocked job makes an item in
-     * (RequestCategories). Requesting one posts a tag request.
-     */
+    /** The tag behind an ingredient, or null. */
     private static @Nullable ResourceLocation tagOf(Ingredient ingredient) {
         String tag = Ingredients.getTag(ingredient);
         return tag == null ? null : new ResourceLocation(tag);
@@ -242,7 +229,6 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         }
         Sets.difference(nowStocked, stocked).forEach(r -> QT.FLAG_LOGGER.info(
                 "Request paused: storage holds {} of {}", limits.get(r), r));
-        // A request that left the board also leaves the set; only one still posted has resumed.
         Sets.difference(stocked, nowStocked).stream()
             .filter(requestedResults::contains)
             .forEach(r -> QT.FLAG_LOGGER.info("Request resumed: {}", r));
@@ -258,20 +244,18 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     @Override
     public void requestWork(WorkRequest e) {
-        // Idempotent (F2): re-requesting an item that already has a pending request does not
-        // stack a duplicate. The board is a set of unfulfilled requests - a fulfilled one
-        // drops off and can be re-requested then. (List.add would NOT dedupe - check first.)
+        // A request already on the board isn't added again.
         if (requestedResults.contains(e)) {
             QT.FLAG_LOGGER.debug("Request already on the board, not duplicated: {}", e);
             return;
         }
-        // New requests go on top, posted or auto-posted (dev playtest 2026-10-30).
+        // New requests go on top.
         requestedResults.add(0, e);
         this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
     }
 
-    /** A saved request, re-added below those already restored (keeps the saved order). */
+    /** A saved request, added below the ones already restored. */
     void restoreRequest(WorkRequest e) {
         if (requestedResults.contains(e)) {
             return;

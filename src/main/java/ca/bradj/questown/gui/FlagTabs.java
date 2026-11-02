@@ -31,8 +31,6 @@ public class FlagTabs extends Tabs implements SubUI {
     }
 
     private static boolean isSelected(String titleKey, @Nullable String activeTabKey) {
-        // The active (open) tab is the one whose title key matches; no tab is highlighted
-        // when activeTabKey is null (e.g. the multi-status overview).
         return activeTabKey != null && activeTabKey.equals(titleKey);
     }
 
@@ -100,7 +98,6 @@ public class FlagTabs extends Tabs implements SubUI {
                 isSelected("tooltips.crafting", activeTabKey),
                 false
         ));
-        // Town-level actions such as moving the town (dev playtest 2026-10-30).
         b.add(new Tab(
                 (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.COMPARATOR.getDefaultInstance(), x + 10, y + 7),
                 setScreen(settingsScreenFn),
@@ -134,11 +131,7 @@ public class FlagTabs extends Tabs implements SubUI {
         return forMenu(menu, null);
     }
 
-    /**
-     * Same as {@link #forMenu(FlagTabsEmbedding)} but marks the tab whose tooltip key equals
-     * {@code activeTabKey} as selected (highlighted). Each flag screen passes its own tab key so
-     * the open tab is visually selected.
-     */
+    /** Like {@link #forMenu(FlagTabsEmbedding)}, with the open tab highlighted. */
     public static FlagTabs forMenu(FlagTabsEmbedding menu, @Nullable String activeTabKey) {
         Collection<String> enabledTabs = menu.getEnabledTabs();
 
@@ -174,9 +167,9 @@ public class FlagTabs extends Tabs implements SubUI {
     }
 
     /**
-     * The tab a flag click opens on. A full flag opens the BOP tab (its warning). Otherwise the
-     * red-dotted tab wins, in the order Villagers > BOPs > Quests > Economics; with no red dot, the
-     * villagers overview.
+     * The tab a flag click opens on. A full flag opens the Blocks of Progress tab. Otherwise the first
+     * tab with a red dot, in the order villagers, Blocks of Progress, quests, economics; with no red
+     * dot, villagers.
      */
     public static String initialFlagTab(
             boolean bopFull,

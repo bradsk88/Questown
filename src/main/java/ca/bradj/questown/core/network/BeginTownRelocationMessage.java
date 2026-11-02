@@ -8,13 +8,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 
-/**
- * Client → server: the flag menu's "Begin moving this town" action (ADR-0009, #199). The
- * deed-independent, in-game entry point that wraps {@link TownFlagBlockEntity#beginTownShutdown()} —
- * the same ritual the {@code /qt flag shutdown <pos>} command triggers. Eligibility (flag must be
- * {@link ca.bradj.questown.blocks.FlagPhase#ACTIVE}) is decided server-side by
- * {@code beginTownShutdown()}; the player gets an action-bar acknowledgement either way.
- */
+/** Client to server: the flag menu's "Begin moving this town". */
 public record BeginTownRelocationMessage(BlockPos flagPos) {
 
     public static void encode(
@@ -38,8 +32,7 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
                 return;
             }
             boolean started = flag.beginTownShutdown();
-            // Send as chat (not an action-bar overlay): the message is long, so the overlay
-            // truncated it off-screen and faded before it could be read.
+            // Chat, not the action bar: the message is too long for it.
             sender.sendSystemMessage(Compat.translatable(startMessageKey(started, flag)));
         });
     }
@@ -48,8 +41,7 @@ public record BeginTownRelocationMessage(BlockPos flagPos) {
         if (!started) {
             return "message.questown.relocation.not_eligible";
         }
-        // With no villagers there is no one to gather/recall — the deed just appears after the
-        // minimum-duration floor, so the "townsfolk are gathering" copy would be nonsense.
+        // With no villagers, nobody gathers; the deed just appears.
         if (flag.getVillagerHandle().size() == 0) {
             return "message.questown.relocation.shutdown_started_no_villagers";
         }

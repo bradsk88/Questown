@@ -16,10 +16,6 @@ class BeatOffsetsRotationTest {
         Bootstrap.bootStrap();
     }
 
-    // -------------------------------------------------------------------------
-    // resolveTarget for beat states WITH a positional target
-    // -------------------------------------------------------------------------
-
     @Test
     void resolveTarget_waitingForWandOnCampfire_rotationNone_equalsCampfireOffset() {
         BlockPos result = HelperChickenBeatOffsets.resolveTarget(
@@ -59,8 +55,7 @@ class BeatOffsetsRotationTest {
 
     @Test
     void resolveTarget_eachRotation_producesDistinctMath() {
-        // Even with current BlockPos.ZERO placeholders, the math should still apply
-        // the rotation on the offset BEFORE adding flagPos. Validate the composition rule.
+        // Rotate the offset, then add the flag position.
         BlockPos flagPos = new BlockPos(10, 80, -20);
         for (Rotation r : Rotation.values()) {
             BlockPos expected = flagPos.offset(HelperChickenBeatOffsets.CAMPFIRE_OFFSET.rotate(r));
@@ -108,10 +103,6 @@ class BeatOffsetsRotationTest {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Null-return for beat states WITHOUT a positional target
-    // -------------------------------------------------------------------------
-
     @Test
     void resolveTarget_complete_returnsNull() {
         Assertions.assertNull(
@@ -156,13 +147,7 @@ class BeatOffsetsRotationTest {
         );
     }
 
-    /**
-     * The CAMPFIRE anchor doubles as the rotation-detection target. Its four
-     * rotated candidate positions must all differ, otherwise the detector
-     * sees multiple matches and force-forfeits the arc. Guards against the
-     * structure author accidentally picking a symmetric offset like
-     * {@code (3, 0, 3)}.
-     */
+    /** The campfire's four rotated positions all differ, or rotation detection would be ambiguous. */
     @Test
     void campfireAnchor_isAsymmetricUnderAllFourRotations() {
         java.util.Set<BlockPos> rotated = new java.util.HashSet<>();

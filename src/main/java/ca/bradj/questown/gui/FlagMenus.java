@@ -104,10 +104,7 @@ public class FlagMenus {
         TownBlockofProgressMenu.write(buf, flagInfo, bopRootJobs);
     }
 
-    /**
-     * Re-sends the villagers tab's statuses. The open menu calls it about once a second, since
-     * work progress moves without a status change (dev playtest 2026-10-30, the work bar).
-     */
+    /** Re-sends the villagers tab's statuses. The open menu does this about once a second, since work progress moves without a status change. */
     public static void resendStatuses(
             ServerPlayer player,
             Iterable<? extends VisitorMobEntity> es,

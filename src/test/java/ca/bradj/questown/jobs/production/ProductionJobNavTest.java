@@ -16,16 +16,9 @@ import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * A container goal must be reached at the room's door level, not wherever the container's own height
- * happens to let the ground pathfinder get there. When a room's roof is reachable (stairs or a run
- * of 1-block jumps), a walk target kept at the container's own height is satisfied by going over the
- * roof instead of entering the room at the door. {@link ProductionJob#navTargetForContainer} pins the
- * target to the room's floor level ({@code yCoord}) so the path is forced through the door.
- */
+/** A container's walk target is at its room's floor level, so the path goes through the door, not over the roof. */
 class ProductionJobNavTest {
 
-    /** A chest at (10, 60, 20) sitting in a room whose floor (yCoord) is 55. */
     private static final MCRoom ROOM = new MCRoom(
             new Position(5, 10),
             ImmutableList.of(InclusiveSpace.from(5, 10).to(5, 10)),
@@ -108,8 +101,7 @@ class ProductionJobNavTest {
 
         BlockPos nav = ProductionJob.navTargetForContainer(t);
 
-        // X/Z are the interaction spot in front of the chest; Y is pinned to the room floor (55),
-        // not the container's own height (60).
+        // In front of the chest, at the room's floor.
         assertEquals(new BlockPos(10, 55, 21), nav);
     }
 

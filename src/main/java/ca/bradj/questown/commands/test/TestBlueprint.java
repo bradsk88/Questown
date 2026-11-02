@@ -79,8 +79,7 @@ public record TestBlueprint(
      * return {@code false} to fail the scenario. Use for outcomes the standard
      * item/fullness/held/knowledge expectations cannot express — e.g. reading
      * {@code level.getBlockState(flagPos)} or counting townies via
-     * {@code town.getVillagerHandle().size()}. (2026-10-04: the warp check used to skip it
-     * entirely, making a warp-only scenario's assertion vacuous.)
+     * {@code town.getVillagerHandle().size()}.
      */
     @FunctionalInterface
     public interface CustomAssertion {

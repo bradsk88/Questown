@@ -16,17 +16,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 
-/**
- * {@code /questown chicken remove <pos>} — admin escape hatch for the helper
- * chicken arc (U7, R23).
- *
- * <p>Forfeits the arc on the flag at {@code pos}, despawns any live helper
- * chicken tied to that flag, and leaves the rest of the town state intact.
- * No statue is placed — the removal is silent, not a completion.
- *
- * <p>Creative-only, matching the existing admin command policy in
- * {@link FlagCommand}.
- */
+/** {@code /questown chicken remove <pos>}: ends the helper chicken's lessons for that flag and removes the chicken. Creative only. */
 public class ChickenRemoveCommand {
 
     private static final double CHICKEN_SEARCH_RANGE = 64.0D;

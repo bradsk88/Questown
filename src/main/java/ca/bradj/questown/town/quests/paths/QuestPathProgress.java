@@ -4,13 +4,7 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.Set;
 
-/**
- * Where a town stands on one path, from the batch ids it has posted and completed. Starters post
- * at the fork; a later batch posts once every batch in its {@code opens_after} is complete. A path
- * is taken once a starter is complete, and finished once nothing is left to post and every posted
- * batch is complete (plan rulings 3 and 4: untaken starters stay open, the garden follows the
- * taken paths).
- */
+/** Where a town is on one path. A path is taken once a starter is done, and finished once everything is posted and done. */
 public final class QuestPathProgress {
 
     private QuestPathProgress() {

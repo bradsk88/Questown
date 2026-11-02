@@ -14,15 +14,14 @@ public interface FlagTabsEmbedding {
             boolean showQuestsTab,
             boolean showEconTab,
             boolean showBlockOfProgressTab,
-            // The quests tab's red dot: open quests the player has not yet seen on the tab (dev
-            // playtest 2026-10-30). Not "any incomplete quest": that is the flag's "!" bubble.
+            // Open quests the player has not seen on the tab yet.
             boolean questsTabAttention,
             boolean bopFull,
             boolean bonusFoodAvailable,
             boolean villagersTabAttention,
             boolean bopTabAttention
     ) {
-        /** The villagers tab wants attention once it is shown and no player has opened it yet. */
+        /** True once the villagers tab is shown and nobody has opened it yet. */
         public static boolean villagersTabAttention(boolean showVillagersTab, boolean villagersTabSeen) {
             return showVillagersTab && !villagersTabSeen;
         }

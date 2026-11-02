@@ -5,10 +5,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
-/**
- * NeoForge impl of the neutral {@link ItemHandler}; 1:1 delegation to the loader
- * {@code IItemHandler}+{@code IItemHandlerModifiable}.
- */
 public final class NeoItemHandler implements ItemHandler {
     private final IItemHandler handler;
     private final IItemHandlerModifiable modifiable;
@@ -58,6 +54,5 @@ public final class NeoItemHandler implements ItemHandler {
 
     @Override
     public void setChanged() {
-        // NeoForge 1.20.6 handlers have no explicit setChanged; changes go through the BlockEntity.
     }
 }

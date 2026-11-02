@@ -20,12 +20,7 @@ import net.minecraft.world.level.pathfinder.PathfindingContext;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Visitor mob pathfinding. In 1.20.6 the per-cell hook is
- * {@link WalkNodeEvaluator#getPathType(PathfindingContext, int, int, int)} — Questown's routing
- * overrides (campfire hard-block, water-with-roof, fence-gate walkability, fence hard-block) are
- * applied on top of the vanilla result.
- */
+/** Villager pathfinding: vanilla's, but lit campfires and fences are blocked, fence gates are walkable, and water under a roof is allowed. */
 @SuppressWarnings("NullableProblems")
 public class VillagerPathNavigation extends GroundPathNavigation {
     public VillagerPathNavigation(
@@ -37,15 +32,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         setCanPassDoors(true);
     }
 
-    /**
-     * A doorway is a target as it stands. Vanilla lifts any target whose block {@code isSolid()}
-     * up to the first non-solid block, and a closed door counts as solid: a chest in a 3x3 store
-     * room is used from its doorway, so the villager aimed at the roof above the door, found no
-     * path, and stood in the next room facing the wall (r20 #4, probe: walkTarget 150 71 48,
-     * pathTarget 150 75 48). A door-opening villager can stand in a door cell, so the lift stops
-     * at a door: the target itself, or a door right above a solid target (r21: a target one block
-     * low, on the floor under the doorway, walkTarget 150 70 48).
-     */
+    /** A target in a doorway stays there, instead of being lifted to the roof over the door. */
     @Override
     public Path createPath(BlockPos pos, int accuracy) {
         BlockPos door = doorAtOrJustAbove(pos);
@@ -59,12 +46,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         return super.createPath(pos, accuracy);
     }
 
-    /**
-     * A target buried under another solid block (a stacked chest, a wall) would be lifted to the
-     * top of the stack, usually the roof: the target is fine, the roof never is (dev, r21). Stand
-     * beside it instead, at its own level: the first door or standable cell next to it. A single
-     * solid block (a bed) keeps vanilla's one-block lift, which sleeping relies on.
-     */
+    /** A target under a stack of blocks: stand beside it, at its level, rather than on top. A single block keeps vanilla's lift. */
     private @Nullable BlockPos besideSolidStack(BlockPos pos) {
         if (!level.getBlockState(pos).isSolid() || !level.getBlockState(pos.above()).isSolid()) {
             return null;
@@ -118,10 +100,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
     }
 
     private PathType overridePathType(PathfindingContext context, BlockPos pos, PathType type) {
-        // The town's campfire is furniture, not a route: vanilla classifies a lit
-        // campfire as walkable, so a townie whose path crosses it takes fire damage
-        // (CampfireBlock.entityInside deals damage per tick with no armor and no burn
-        // time). Hard-block it so no townie path ever routes through a lit campfire.
+        // A lit campfire burns villagers that walk through it, so block it.
         BlockState state = context.getBlockState(pos);
         if (CampfireBlock.isLitCampfire(state)) {
             return PathType.BLOCKED;
@@ -150,7 +129,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
             return PathType.BLOCKED;
         }
 
-        // A fence gate reading as FENCE is actually openable (the old evaluate hook).
+        // A fence gate can be opened.
         if (type == PathType.FENCE && state.getBlock() instanceof FenceGateBlock) {
             return PathType.DOOR_OPEN;
         }

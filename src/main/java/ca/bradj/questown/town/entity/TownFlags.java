@@ -22,22 +22,13 @@ public class TownFlags {
         );
     }
 
-    // Dev-only: dump every known flag's position (used to locate the incident flag).
     public static java.util.Collection<TownFlagBlockEntity> all() {
         return java.util.Collections.unmodifiableCollection(flags.values());
     }
 
-    /**
-     * The morning-wake domain step (the bus binding lives in
-     * {@code loader.neo.NeoTownWakeEvents}, the G6 events slice). {@code newTime} is the wake's
-     * new daytime and is only logged: the morning pass runs on game time
-     * ({@code runSleptMorning}, r16 #6).
-     */
+    /** The morning after a sleep. {@code newTime} is only logged: the morning runs on game time. */
     public static void onSleepFinished(long newTime) {
-        // Diagnostic: this is the definitive "did morning come" signal. In the
-        // 2026-09-03 two-player-sleep soft-lock this never fired, so night
-        // never skipped. If it fires but the server then goes silent, the bug
-        // is in the wake path (onMorning / onWake), not the night-skip itself.
+        // Dev diagnostics: confirms the morning came.
         QT.JOB_LOGGER.info(
                 "[campfire-sleep] SleepFinishedTimeEvent (morning) newTime={}",
                 newTime

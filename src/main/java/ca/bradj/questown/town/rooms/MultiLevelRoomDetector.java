@@ -150,22 +150,7 @@ public class MultiLevelRoomDetector {
         return build;
     }
 
-    /**
-     * Rejects a detected room whose interior a two-block-tall villager cannot stand in.
-     * The 2D wall-walk treats a cell as interior when it is empty at the feet level OR the
-     * head level, so a room roofed only one block above its floor still "detects" — but no
-     * villager can enter it. This requires at least
-     * {@link Config#MIN_ROOM_WALKABLE_FRACTION} of the interior floor cells to be standable
-     * (passable at both feet and head), so a room with a low overhang over only part of its
-     * floor still counts while a fully low-roofed room is rejected (surfaces as no-room).
-     *
-     * <p>A cell <em>filled at the feet level</em> by a block (the chest in a 3x3 storeroom's
-     * single interior cell) is the room's contents, not a floor, so it is excluded from the
-     * denominator rather than counted against it. The low-roof case is air at the feet (so it
-     * still counts and still fails); a fully furnished interior has no open floor cells at all
-     * and is accepted. (day-1 playtest 2026-10-11: the 3x3 storeroom's chest cell read as
-     * unwalkable and the filter destroyed the room the moment it matched.)
-     */
+    /** Rejects a room most of whose open floor a villager can't stand in (a low roof). A cell filled by furniture doesn't count either way. */
     private boolean hasWalkableInterior(
             MCRoom room,
             int scanLevel

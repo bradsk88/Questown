@@ -8,12 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-/**
- * Regression: {@link RoomsWithWorkableStatefulBlocks#describe()} used to NPE when called
- * on a node the state machine never populated (an unevaluated branch of the LZCD chain).
- * The 2026-10-06 cook-soft-lock diagnosis probe hit exactly that and crashed the server
- * (ReportedException: Ticking entity → NullPointerException in describe()).
- */
+/** {@link RoomsWithWorkableStatefulBlocks#describe()} on an unevaluated node doesn't throw. */
 class RoomsWithWorkableStatefulBlocksTest {
 
     private static RoomsWithWorkableStatefulBlocks<Position> dep(

@@ -12,11 +12,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * Dev playtest 2026-10-29: "What do we have to do to get the armorer's table and blacksmith's table
- * to show up in the green book menu on a crafting table?" A recipe shows in the recipe book only
- * once a recipe advancement unlocks it, as vanilla's {@code advancements/recipes/...} do.
- */
+/** The armorer's and blacksmith's tables show in the recipe book, which needs a recipe advancement. */
 class RecipeUnlockAdvancementsTest {
 
     private static final List<String> BOOK_RECIPES = List.of(

@@ -10,17 +10,10 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.animal.Chicken;
 
-/**
- * Renders the helper-chicken onboarding trophy: the vanilla chicken model
- * coloured stone and scaled to sit inside the statue's block, so the
- * finished chicken reads as a pickable stone statue rather than a stone
- * cube. The block's own model is empty; this layer draws over it.
- */public class ChickenStatueBlockEntityRenderer
+/** Draws the stone chicken statue: the chicken model in stone, sized to its block. */
+public class ChickenStatueBlockEntityRenderer
         implements BlockEntityRenderer<ChickenStatueBlockEntity> {
 
-    // The chicken's own texture is not registered as a model layer in 1.19.2, so
-    // bakeLayer(...) fails; bake the geometry straight from the static layer
-    // builder and colour it with our stone texture at render time via renderType.
     private static final ResourceLocation TEXTURE =
             new ResourceLocation("minecraft", "textures/block/stone.png");
     // A chicken is ~1.25 blocks tall; scale it down to sit inside the cube.
@@ -43,8 +36,7 @@ import net.minecraft.world.entity.animal.Chicken;
             int packedOverlay
     ) {
         poseStack.pushPose();
-        // Entity models are authored upside down with their feet at y = 1.501; flip and lift
-        // them as LivingEntityRenderer does, so the chicken stands on the block's floor.
+        // Entity models are upside down; flip and lift so the chicken stands on the block.
         poseStack.translate(0.5D, 1.501D * SCALE, 0.5D);
         poseStack.scale(-SCALE, -SCALE, SCALE);
         RenderType renderType = this.model.renderType(TEXTURE);

@@ -24,10 +24,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     protected void tick(
             TICK_DATA data
     ) {
-        // Profiling wraps every exit path, not just the full-tick one. The heavy work below is
-        // throttled to every FlagTickInterval-th tick, but updateStoredData (and its town-wide
-        // container scan) runs on ALL of them — measuring only the full ticks would hide the
-        // per-tick cost entirely.
+        // Profile every exit: the light ticks still scan containers.
         long start = System.nanoTime();
         try {
             tickInner(data);
@@ -40,8 +37,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             TICK_DATA data
     ) {
         if (runAnyInitializers(data)) {
-            // A flag that is initializing (after a reload) is alive: its sub-blocks self-destruct
-            // when not ticked, so keep them fed while the initializers run.
+            // An initializing flag is alive: keep its sub-blocks from removing themselves.
             notifySubBlocksOfTick(data);
             return;
         }
@@ -164,15 +160,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         }
     }
 
-    /**
-     * Run the morning pass and mark this morning as consumed. The ticker's
-     * own detection (handleIfNewMorning) uses this; the campfire-sleep wake
-     * path (TownFlags.onSleepFinished) must use it too - calling the
-     * abstract onMorning directly leaves isMorning unset, so the ticker's
-     * detection re-runs the whole morning pass in the same window
-     * (duplicate BOP apply / duplicate jobs.changed broadcast, 2026-10-15
-     * playtest).
-     */
+    /** Runs the morning pass and marks this morning done, so it doesn't run twice. Use this, not onMorning. */
     public void runMorning(
             TICK_DATA data,
             long newTime
@@ -181,13 +169,7 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         onMorning(data, newTime);
     }
 
-    /**
-     * The campfire-sleep wake's morning pass. It runs on {@link #getTick} (game time), the same
-     * clock as the ticker's own morning detection, never the wake event's new daytime: the morning
-     * pass stamps SLEEPLESS expiry and last-downtime ticks that are read against game time, and a
-     * sleep skip advances daytime but not game time (r16 #6: SLEEPLESS lasted ~44 500 ticks
-     * instead of 23 000). Pinned by {@code SleepMorningClockTest}.
-     */
+    /** The morning pass after a campfire sleep, on game time: a sleep moves the day time but not the game time. */
     public void runSleptMorning(TICK_DATA data) {
         runMorning(data, getTick(data));
     }

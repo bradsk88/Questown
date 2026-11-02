@@ -13,18 +13,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Runs the closing-beat atomic transition for the helper chicken (U6, F4
- * step 5): hearts particles, a stone statue block where the chicken stood,
- * the chicken entity discarded, and the flag BE's beat state set to
- * {@link ChickenBeatState#COMPLETE}.
- *
- * <p>If the server crashes mid-transform the flag BE's beat state stays at
- * {@code AWAITING_WORLDLY_SEEDS_DELIVERY}; on restart the spawn controller
- * can re-spawn the chicken since {@code chickenEverSpawned} stays true —
- * the player re-hands the seeds and the transform fires again. The seeds
- * are consumed by the caller only after {@link #transform} returns.
- */
+/** The helper chicken's last lesson: hearts, a stone statue where it stood, the chicken removed, and the lessons marked complete. */
 public final class ChickenStatueTransformHandler {
 
     private ChickenStatueTransformHandler() {
@@ -44,11 +33,7 @@ public final class ChickenStatueTransformHandler {
         chicken.discard();
     }
 
-    /**
-     * Where the chicken stood, unless something solid is there. A flower is not "replaceable" in
-     * vanilla, so a chicken standing in one used to leave its statue floating a block up
-     * (2026-10-30 agent playtest: a cornflower at the gate).
-     */
+    /** Where the chicken stood, unless something solid is there. A flower is replaced. */
     static BlockPos statuePos(
             BlockGetter level,
             BlockPos at

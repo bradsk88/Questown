@@ -19,8 +19,7 @@ import java.util.List;
 public class AddWorkContainer extends AbstractContainerMenu {
 
     private final Collection<Ingredient> work;
-    // Request categories ("Food"), as item tag ids: an Ingredient crosses the wire as its item
-    // list, so a tag would arrive as an anonymous list the client cannot name or send back.
+    // Request categories ("Food") as tag ids: an ingredient sent over the network loses its tag.
     private final List<ResourceLocation> categories;
     private final BlockPos flag;
 
@@ -61,7 +60,7 @@ public class AddWorkContainer extends AbstractContainerMenu {
         data.writeCollection(categories, FriendlyByteBuf::writeResourceLocation);
     }
 
-    /** The categories as tag ingredients, rebuilt on this side so they keep their tag. */
+    /** The categories as tag ingredients. */
     public List<Ingredient> getCategories() {
         return categories.stream().map(c -> Ingredient.of(ca.bradj.questown.mc.Compat.itemTag(c))).toList();
     }

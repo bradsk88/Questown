@@ -6,17 +6,7 @@ import ca.bradj.questown.mobs.helperchicken.ChickenArcBubbles.Bubble;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-/**
- * Single source of truth mapping {@code (ChickenBeatState, BeatPhase)} to a
- * {@link Presentation} (bubble icon, hint lang key, plain lang key).
- *
- * <p>Bubble + hint + plain all read from the same row, so drift between them
- * is impossible by construction. {@link #activePhase} decides the phase once
- * from {@link PhaseInputs}; {@link #present} looks up the row.
- *
- * <p>See {@code /CONTEXT.md} for vocabulary and
- * {@code docs/adr/0001-chicken-arc-beat-phase.md} for the design decision.
- */
+/** Each lesson step's bubble icon, hint and plain-language hint, from one table. */
 public final class ChickenArcPresentation {
 
     private static final String HINT_STICK = "message.questown.chicken.hint.stick";
@@ -87,11 +77,7 @@ public final class ChickenArcPresentation {
         };
     }
 
-    /**
-     * The sleep beat. The chest is dropped earlier (the WAITING_FOR_CHEST
-     * beat), so this beat no longer carries a chest-spawn "preparing" phase:
-     * it waits for night, then the chicken wanders to the campfire to sleep.
-     */
+    /** The sleep lesson: wait for night, then the chicken goes to the campfire to sleep. */
     private static BeatPhase sunsetAndMapPhase(PhaseInputs in) {
         if (in.isNight()) {
             return BeatPhase.READY_TO_USE;
@@ -99,17 +85,7 @@ public final class ChickenArcPresentation {
         return BeatPhase.AWAITING_NIGHT;
     }
 
-    /**
-     * Three-phase pressure-plate beat (the welcome-mat craft flow). The phase
-     * is decided by which item the player holds, in priority order:
-     * <ol>
-     *   <li>a welcome mat already in hand ({@code hasItem}) — place it at the
-     *       gate, {@link BeatPhase#READY_TO_PLACE};</li>
-     *   <li>a pressure plate in hand ({@code hasPressurePlate}) — take it to the
-     *       flag base to craft the mat, {@link BeatPhase#READY_TO_USE};</li>
-     *   <li>neither — go get a pressure plate, {@link BeatPhase#NEED_TO_FETCH}.</li>
-     * </ol>
-     */
+    /** The welcome mat lesson, by what the player holds: a mat (place it at the gate), a pressure plate (take it to the flag), or neither (get a plate). */
     private static BeatPhase pressurePlatePhase(PhaseInputs in) {
         if (in.hasItem()) {
             return BeatPhase.READY_TO_PLACE;
@@ -120,22 +96,7 @@ public final class ChickenArcPresentation {
         return BeatPhase.NEED_TO_FETCH;
     }
 
-    /**
-     * Three-phase Worldly-Seeds beat. The phase is decided by whether Worldly
-     * Seeds can currently be delivered, and whether the gatherer has gone out:
-     * <ol>
-     *   <li>seeds in a town container ({@code seedsInContainer}) — the chicken
-     *       pecks that container; {@link BeatPhase#READY_TO_PLACE};</li>
-     *   <li>no seeds yet, gatherer has left ({@code gathererLeft}) — the chicken
-     *       waits at the gate for the gatherer/villager to bring them back;
-     *       {@link BeatPhase#DEFAULT};</li>
-     *   <li>no seeds yet, gatherer has not left — the chicken is at the gate but
-     *       the villager hasn't gone out, so the "waiting for the villager to
-     *       return" hint must not fire; {@link BeatPhase#AWAITING_GATHERER}.
-     *       (The gatherer's phase is a jobs-domain value read into this
-     *       chicken-arc beat — see {@code CONTEXT.md} "phase across contexts".)</li>
-     * </ol>
-     */
+    /** The seeds lesson: seeds in a chest (peck it), the gatherer out (wait at the gate), or the gatherer not out yet (a neutral hint). */
     private static BeatPhase seedsPhase(PhaseInputs in) {
         if (in.seedsInContainer()) {
             return BeatPhase.READY_TO_PLACE;
@@ -225,10 +186,7 @@ public final class ChickenArcPresentation {
     }
 
     private static Presentation roomBuildRow() {
-        // The chicken builds the room itself, so the beat is not waiting on any
-        // held item; the bubble shows the block being laid (cobblestone) and
-        // the hint is a plain narration the player can follow without an
-        // action of their own.
+        // The chicken builds the room itself; the bubble shows the cobblestone it lays.
         Bubble bubble = Bubble.single(new ItemStack(Items.COBBLESTONE));
         return new Presentation(bubble, HINT_ROOM_BUILD, PLAIN_ROOM_BUILD);
     }

@@ -11,21 +11,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * Mod network.
+ * Mod network. The messages are loader-neutral (an encoder/decoder over {@code FriendlyByteBuf}
+ * and a {@code Channel.Context} handler); the active loader supplies the channel.
  *
- * <p>The 33 message classes in this package (plus {@code MultiStatusScreenSyncMessage}) are
- * loader-neutral: POJOs with a wire encoder/decoder over the vanilla {@code FriendlyByteBuf}
- * and a neutral {@code Channel.Context} handler. The channel setup and dispatch are the
- * loader-specific part, adapted by the active loader (NeoForge: one envelope payload + StreamCodec +
- * IPayloadHandler, see {@code loader.neo.NeoChannel}).
- *
- * <p>{@link #init()} fills the neutral message registry; it must run before the loader's payload
- * registration event fires (in NeoForge that is the common-setup phase, see COMPLEX.md).
+ * <p>{@link #init()} must run before the loader registers its channel.
  */
 public final class QuestownNetwork {
 
     public static final String NETWORK_VERSION = "1";
-    /** The per-loader channel id; NeoLoader's send paths use the same literal. */
     public static final String CHANNEL_ID = "questown:network";
 
     @Nullable
@@ -39,7 +32,6 @@ public final class QuestownNetwork {
             return;
         }
         channel = Loader.channel(CHANNEL_ID);
-        // TO_CLIENT — sent by the server, handled on the client.
         register(Channel.Direction.TO_CLIENT, CloseScreensMessage.class, CloseScreensMessage::encode, CloseScreensMessage::decode, CloseScreensMessage::handle);
         register(Channel.Direction.TO_CLIENT, OpenDormantFlagMessage.class, OpenDormantFlagMessage::encode, OpenDormantFlagMessage::decode, OpenDormantFlagMessage::handle);
         register(Channel.Direction.TO_CLIENT, EconomicsUpdate.class, EconomicsUpdate::encode, EconomicsUpdate::decode, EconomicsUpdate::handle);
@@ -57,7 +49,6 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_CLIENT, SyncVillagerAdvancementsMessage.class, SyncVillagerAdvancementsMessage::encode, SyncVillagerAdvancementsMessage::decode, SyncVillagerAdvancementsMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncWorkForCommandsMessage.class, SyncWorkForCommandsMessage::encode, SyncWorkForCommandsMessage::decode, SyncWorkForCommandsMessage::handle);
         register(Channel.Direction.TO_CLIENT, WorkRequestConfirmMessage.class, WorkRequestConfirmMessage::encode, WorkRequestConfirmMessage::decode, WorkRequestConfirmMessage::handle);
-        // TO_SERVER — sent by the client, handled on the server.
         register(Channel.Direction.TO_SERVER, AddWorkFromUIMessage.class, AddWorkFromUIMessage::encode, AddWorkFromUIMessage::decode, AddWorkFromUIMessage::handle);
         register(Channel.Direction.TO_SERVER, BeginTownRelocationMessage.class, BeginTownRelocationMessage::encode, BeginTownRelocationMessage::decode, BeginTownRelocationMessage::handle);
         register(Channel.Direction.TO_SERVER, CancelTownShutdownMessage.class, CancelTownShutdownMessage::encode, CancelTownShutdownMessage::decode, CancelTownShutdownMessage::handle);
@@ -97,12 +88,10 @@ public final class QuestownNetwork {
                 .handler(handler);
     }
 
-    /** The active neutral channel (valid after {@link #init()}). */
     public static Channel channel() {
         return Objects.requireNonNull(channel, "QuestownNetwork.init() has not run yet");
     }
 
-    // Send paths (main code only sees these; the per-loader mechanics live behind them).
     public static <T> void sendToPlayer(Player p, T msg) {
         channel().sendToPlayer(p, msg);
     }

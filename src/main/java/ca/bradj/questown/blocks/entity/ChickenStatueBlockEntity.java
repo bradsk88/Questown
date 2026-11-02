@@ -5,12 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Holder block entity for the helper-chicken onboarding trophy. The block's
- * own model is empty; {@code ChickenStatueBlockEntityRenderer} draws the
- * stone-colored chicken model over the block, so a completed chicken reads
- * as a pickable stone statue rather than a stone cube.
- */
+/** Block entity for the stone chicken statue, drawn by {@code ChickenStatueBlockEntityRenderer}. */
 public class ChickenStatueBlockEntity extends BlockEntity {
     public ChickenStatueBlockEntity(
             BlockPos blockPos,

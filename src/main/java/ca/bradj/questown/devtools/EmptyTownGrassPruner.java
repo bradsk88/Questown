@@ -14,22 +14,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * One-shot tool that strips grass plants ({@code minecraft:grass} and
- * {@code minecraft:tall_grass}) from {@code empty_town.nbt} except in a
- * 1-block ring around the helper-chicken room footprint and the flag.
- *
- * <p>Keep zone, in flag-relative XZ coordinates:
- * <ul>
- *   <li>Chebyshev distance &le; 1 from the flag at (0,0) — i.e. the 3&times;3
- *       cells centered on the flag.</li>
- *   <li>Chebyshev distance &le; 1 from the 5&times;5 room footprint at
- *       x&isin;[2..6], z&isin;[2..6] — i.e. the 7&times;7 envelope at
- *       x&isin;[1..7], z&isin;[1..7].</li>
- * </ul>
- *
- * <p>Sibling to {@link EmptyTownGrassThinner} and
- * {@link ChickenScaffoldingNbtEditor} — same devtool pattern (run the
- * disabled JUnit entry point, commit the NBT change, restore {@code @Disabled}).
+ * Removes grass from {@code empty_town.nbt} except within a block of the flag and of the helper
+ * chicken's room. Run the disabled test entry point, commit the NBT, and disable it again.
  */
 public final class EmptyTownGrassPruner {
 
@@ -43,7 +29,7 @@ public final class EmptyTownGrassPruner {
 
     private static final String GRASS = "minecraft:grass";
     private static final String TALL_GRASS = "minecraft:tall_grass";
-    // 1.20.6 grass plants: minecraft:grass was renamed away; the short plant is short_grass.
+    // The short grass plant is short_grass.
     private static final String SHORT_GRASS = "minecraft:short_grass";
 
     private EmptyTownGrassPruner() {
@@ -70,12 +56,7 @@ public final class EmptyTownGrassPruner {
         return 0;
     }
 
-    /**
-     * Pure mutation: removes every {@code minecraft:grass} and
-     * {@code minecraft:tall_grass} block whose XZ position is outside the
-     * keep zone (1-block ring around flag and room footprint). Input tag is
-     * not mutated.
-     */
+    /** The structure without grass outside the keep zone. The input is not changed. */
     public static CompoundTag pruneDistantGrass(CompoundTag source) {
         CompoundTag root = source.copy();
         ListTag palette = root.getList(PALETTE_KEY, Tag.TAG_COMPOUND);
@@ -109,11 +90,7 @@ public final class EmptyTownGrassPruner {
         return root;
     }
 
-    /**
-     * Flag-relative XZ keep predicate. {@code true} when the cell sits within
-     * 1 Chebyshev step of either the flag origin or any cell of the room
-     * footprint at x&isin;[2..6], z&isin;[2..6].
-     */
+    /** Whether a flag-relative cell is within a block of the flag or the room. */
     static boolean isInKeepZone(int dx, int dz) {
         boolean nearFlag = Math.abs(dx) <= 1 && Math.abs(dz) <= 1;
         boolean nearRoom = dx >= 1 && dx <= 7 && dz >= 1 && dz <= 7;

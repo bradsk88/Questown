@@ -28,7 +28,7 @@ public class Works {
         return works.keySet();
     }
 
-    /** Whether the job data has been loaded; before {@link #staticInitialize} the registry is empty. */
+    /** Whether the job data has loaded. */
     public static boolean isInitialized() {
         return initialized;
     }
@@ -49,13 +49,7 @@ public class Works {
         ServerJobsRegistry.forgetWhichBlocksJobsCareAbout();
     }
 
-    /**
-     * Datapack jobs are built once at load and handed out as shared instances. The hardcoded jobs
-     * below were method references, so every {@code values().get()} rebuilt a whole Work — and
-     * {@link ServerJobsRegistry#shouldInitializeWithState} walks all of them per block position,
-     * per work-status store, on every flag tick. A Work is an immutable description of a job, so
-     * it is built once per datapack load like the rest.
-     */
+    /** Builds a job's Work once per data load and shares it. A Work never changes, and it is looked up for every block on every flag tick. */
     private static Supplier<Work> builtOnce(Supplier<Work> factory) {
         return Suppliers.memoize(factory::get)::get;
     }

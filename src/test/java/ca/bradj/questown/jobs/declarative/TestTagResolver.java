@@ -15,34 +15,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Resolves the {@code #ns:name} tag keys that job tool/ingredient declarations may carry
- * into concrete item ids, reading the same data files production uses:
+ * Resolves {@code #ns:name} tags from the data files production uses: the mod's own tags, and
+ * vendored vanilla tags under {@code src/test/resources}. Nested tags expand. An unknown tag throws,
+ * so an unsatisfiable gate can't let an equivalence test pass with both sides stalled.
  *
- * <ul>
- *   <li>{@code #questown:...} -&gt; classpath {@code data/questown/tags/items/<name>.json}
- *       (the mod's own tag files, on the test classpath)</li>
- *   <li>{@code #minecraft:...} -&gt; classpath {@code data/minecraft/tags/item/<name>.json}
- *       (vanilla tag data vendored under {@code src/test/resources} - only {@code coals} is
- *       vendored as of 2026-10-09; add the file when a test needs another)</li>
- * </ul>
- *
- * Nested {@code #...} entries inside a tag file are expanded recursively (object-valued
- * entries, e.g. NeoForge's weighted form {@code {"id": "#forge:mushrooms", "required":
- * false}}, are read by their {@code id} field). A tag that cannot be resolved throws
- * {@link IllegalStateException}: a gate left unsatisfiable by an unresolvable tag makes
- * both sides of an equivalence simulation stall identically, and "equivalence" then
- * passes vacuously (the hollow-equivalence trap, 2026-10-09).
- * <p>
- * {@link #matches} serves the *gate* side (a job's tool/ingredient key) and can
- * meet test inventories whose items are either literal item ids or tag references
- * ({@code new TestItem("#minecraft:coals")} stands for "some member of that tag" — the
- * "tag-as-item" convention the pre-existing declarative tests use). Rules:
- * <ul>
- *   <li>literal gate matches the literal item id (fast path, no tag loading)</li>
- *   <li>tag gate matches a literal item iff the item is a member of the gate's tag</li>
- *   <li>tag gate matches a tag item iff the two tags are equal or their memberships intersect</li>
- *   <li>literal gate matches a tag item iff the literal is a member of the item's tag</li>
- * </ul>
+ * <p>Test items can be item ids or tags ({@code new TestItem("#minecraft:coals")} means some member).
+ * A gate matches an item when the ids are equal, one is a member of the other's tag, or two tags share
+ * a member.
  */
 public final class TestTagResolver {
 
@@ -51,11 +30,7 @@ public final class TestTagResolver {
     private TestTagResolver() {
     }
 
-    /**
-     * True if the item satisfies the gate key — see the class javadoc for the four rules
-     * (literal vs literal, tag gate vs literal item, tag gate vs tag item, literal gate
-     * vs tag item). An unresolvable tag on the gate side throws.
-     */
+    /** Whether the item satisfies the gate key, by the rules above. */
     public static boolean matches(GathererJournalTest.TestItem item, String itemOrTagKey) {
         String itemValue = item.value;
         if (item.isEmpty() || itemValue.isEmpty()) {
@@ -82,7 +57,6 @@ public final class TestTagResolver {
         return gate.contains(itemValue);
     }
 
-    /** The concrete item ids a tag key names. Throws if the tag cannot be resolved. */
     public static Set<String> members(String tagKey) {
         if (!tagKey.startsWith("#")) {
             throw new IllegalArgumentException("not a tag key: " + tagKey);
@@ -110,7 +84,6 @@ public final class TestTagResolver {
         int nsSep = body.indexOf(':');
         String namespace = body.substring(0, nsSep);
         String name = body.substring(nsSep + 1);
-        // vanilla tag data lives under tags/item (singular); modpack-style data under tags/items
         String path = "data/" + namespace + "/tags/" + ("minecraft".equals(namespace) ? "item" : "items")
                 + "/" + name + ".json";
         try (InputStream is = TestTagResolver.class.getClassLoader().getResourceAsStream(path)) {
@@ -132,7 +105,7 @@ public final class TestTagResolver {
                 if (e.isJsonPrimitive()) {
                     result.add(e.getAsString());
                 } else if (e.isJsonObject() && e.getAsJsonObject().has("id")) {
-                    // weighted/optional entry form (NeoForge); optional entries may be absent
+                    // The weighted form; optional entries may be missing.
                     JsonObject entry = e.getAsJsonObject();
                     if (entry.has("required") && !entry.get("required").getAsBoolean()) {
                         continue;

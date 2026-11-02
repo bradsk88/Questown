@@ -8,8 +8,8 @@ package ca.bradj.questown.commands.test;
  * [autotest] &lt;track&gt;:&lt;name&gt; [PASS|FAIL] &lt;expectation&gt;: &lt;details&gt;
  * </pre>
  *
- * <p>Both the existing jobs track and the chicken-arc track funnel through this
- * helper so the agent's log-parser regex is a single shape. The {@code [autotest]}
+ * <p>The jobs track and the chicken-arc track both funnel through this helper, so the log has
+ * one shape to parse. The {@code [autotest]}
  * prefix itself is owned by {@link LogTestOutput} — this helper only produces the
  * part after the prefix.
  */

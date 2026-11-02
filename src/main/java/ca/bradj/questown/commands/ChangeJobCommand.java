@@ -10,13 +10,7 @@ import net.minecraft.commands.arguments.UuidArgument;
 
 import java.util.UUID;
 
-// Dev-only: the job change a player requests on a villager's change job tab by
-// spending a Block of Progress (the change takes effect overnight). Thin wrapper
-// over TownFlagBlockEntity.spendBopToRequestJobChange, which makes the same
-// handle call the tab's network message makes; this command only resolves the
-// villager and reports the result. The villager's UUID is read from the game
-// surface (`_qtdev inspect villagers`). No permission gate, so it runs from the
-// console (FIFO).
+// Dev-only: request a villager's job change with a Block of Progress, as the change-job tab does.
 public class ChangeJobCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> src) {

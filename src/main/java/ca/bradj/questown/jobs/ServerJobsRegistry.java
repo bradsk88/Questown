@@ -68,10 +68,7 @@ public class ServerJobsRegistry {
         return w.get().getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP);
     }
 
-    /**
-     * The job's block slot precondition (job JSON {@code block.has_item_in_slot_initially}, e.g.
-     * cook/fuel: an empty fuel slot), or null.
-     */
+    /** The job's block slot precondition ({@code block.has_item_in_slot_initially}), or null. */
     public static @Nullable SlotPrecondition slotPrecondition(JobID jobID) {
         Supplier<Work> w = Works.get(jobID);
         return w == null ? null : w.get().getSlotPrecondition();
@@ -106,11 +103,7 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    /**
-     * {@link #getStatusText(JobID, IStatus)} for a specific townie: while it is not working, the
-     * item it is blocked on replaces the generic second line ({@code StatusNeedLine}), or "All my
-     * requests are done" when its fillable requests are all stocked (dev ruling 2026-10-30).
-     */
+    /** The status text for a villager: while it is not working, the item it is blocked on replaces the second line. */
     public static @NotNull ImmutableList<Component> getStatusText(
             JobID job,
             IStatus<?> status,
@@ -239,10 +232,7 @@ public class ServerJobsRegistry {
             @Nullable Ingredient apply
     ) {
         if (apply == null) {
-            // A job whose initial_request is null (e.g. organizer/fetch) yields a non-null
-            // Function<ServerLevel, Ingredient> that returns null; without this guard, satisfaction
-            // checks for any board request would NPE the flag tick. Such a job satisfies no request
-            // by its initial request.
+            // A job with no initial request answers no request.
             return false;
         }
         for (ItemStack item : apply.getItems()) {
@@ -253,11 +243,9 @@ public class ServerJobsRegistry {
         return false;
     }
 
-    /** A job and the item it makes, or {@code null} if it makes none. */
     public record ProducerDeclaration(JobID job, @Nullable Ingredient product) {
     }
 
-    /** The job roots that can make the item, whether or not the town has discovered how yet. */
     public static Set<String> rootsThatCanMake(
             @Nullable ServerLevel sl,
             Ingredient wanted
@@ -290,7 +278,6 @@ public class ServerJobsRegistry {
         return roots;
     }
 
-    /** The job's skill-tree parent, or null for a root job or a job with no Work. */
     public static @Nullable JobID getParentOf(JobID child) {
         Work work = getWork(child, false);
         return work == null ? null : work.parentID;
@@ -309,12 +296,7 @@ public class ServerJobsRegistry {
         return parentID.equals(parent);
     }
 
-    /**
-     * The level at which the job becomes available for skill-tab unlocking (JSON
-     * {@code available_at_level}, {@link Work#DEFAULT_AVAILABLE_AT_LEVEL} when absent).
-     * Pre-startup (job data not loaded) answers the default, so callers degrade to
-     * "available" rather than an NPE.
-     */
+    /** The villager level at which the job can be unlocked; the default before job data has loaded. */
     public static int getAvailableAtLevel(JobID job) {
         if (!Works.isInitialized()) {
             return Work.DEFAULT_AVAILABLE_AT_LEVEL;
@@ -325,8 +307,7 @@ public class ServerJobsRegistry {
 
     public static ImmutableSet<JobID> getAllRootJobs() {
         if (!Works.isInitialized()) {
-            // Job data not loaded (headless unit test, or pre-startup): no candidate roots,
-            // not an NPE - callers treat "no candidates" as "re-roll / nothing to pick".
+            // Job data not loaded yet: no candidates.
             return ImmutableSet.of();
         }
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
@@ -447,16 +428,7 @@ public class ServerJobsRegistry {
     }
 
 
-    /**
-     * Answers "does any job care about this block?" — asked for every position of a room, by every
-     * work-status store, on every flag tick. Answering it from scratch walks every registered job
-     * (there is one cook job per cookable item), so the answer is cached.
-     *
-     * <p>The cache key is the block state plus whether the block above is air, because those are
-     * the only two things every registered {@code shouldInitializeWorkState} predicate looks at
-     * (the block state, and {@code p.above()} for {@code REQUIRE_AIR_ABOVE}). A predicate that
-     * inspects any other neighbour would need this key widened.
-     */
+    /** Whether any job cares about this block. Asked for every room cell on every flag tick, so the answer is cached by block state and whether the block above is air. */
     public static boolean shouldInitializeWithState(
             WorkLocation.BlockInfo info,
             BlockPos pos
@@ -480,7 +452,7 @@ public class ServerJobsRegistry {
 
     private static final Map<JobInterestKey, Boolean> jobInterestByBlock = new ConcurrentHashMap<>();
 
-    /** Called when the job registry is (re)built, since the answers depend on the registered jobs. */
+    /** Clears the cache, for when the job registry is rebuilt. */
     public static void forgetWhichBlocksJobsCareAbout() {
         jobInterestByBlock.clear();
     }
@@ -520,7 +492,7 @@ public class ServerJobsRegistry {
     ) {
         BlockState state = ctx.blockInfo().state(ctx.blockPos());
         if (state.isAir()) {
-            // A display (armor stand, item frame) stands in air; only the display jobs claim it.
+            // Only display jobs claim the air a display stands in.
             return ctx.world() != null
                     && !ctx.world().getDisplaySlots(ctx.blockPos()).isEmpty()
                     && Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(ctx));
@@ -550,15 +522,7 @@ public class ServerJobsRegistry {
         return ImmutableSet.copyOf(Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet()));
     }
 
-    /**
-     * The proficiency-id declared by the job {@code jobID}, or null if it declares none (flat 1×
-     * work speed, no leveling). Resolved from the same job definition on both the realtime and
-     * warp paths so effective speed stays symmetric. See ADR-0010.
-     */
-    /**
-     * XP for one completion of {@code jobID}: its declared `experience` when the job JSON has one,
-     * else {@code formula} ({@link Work#experienceEarned}).
-     */
+    /** XP for one completion: the job's declared {@code experience}, else {@code formula}. */
     public static int getExperienceEarned(JobID jobID, int formula) {
         Work work = getWork(jobID, true);
         if (work == null) {
@@ -579,12 +543,7 @@ public class ServerJobsRegistry {
         return work.getProficiencyId();
     }
 
-    /**
-     * Test seam: make {@code jobID} behave as if its definition declared {@code proficiencyId}.
-     * Shipped job JSON declares none yet, so this is how an autotest reaches the leveling and
-     * multiplier code at all. Deliberately not fed into {@link #getAllDeclaredProficiencyIds()} —
-     * spawn-seeding draws random levels, and a test asserting exact levels must set them itself.
-     */
+    /** For autotests: makes the job use {@code proficiencyId}. Not added to {@link #getAllDeclaredProficiencyIds()}. */
     public static void overrideProficiencyIdForTest(
             JobID jobID,
             String proficiencyId
@@ -592,15 +551,12 @@ public class ServerJobsRegistry {
         proficiencyIdOverrides.put(jobID, proficiencyId);
     }
 
-    /** Undoes {@link #overrideProficiencyIdForTest}; every scenario that sets one must clear it. */
+    /** Undoes {@link #overrideProficiencyIdForTest}. */
     public static void clearProficiencyIdOverridesForTest() {
         proficiencyIdOverrides.clear();
     }
 
-    /**
-     * The union of proficiency-ids declared by any registered job — the finite pool a townie's
-     * proficiency map is drawn from and bounded by. See ADR-0010.
-     */
+    /** Every proficiency id any job declares. */
     public static ImmutableSet<String> getAllDeclaredProficiencyIds() {
         ImmutableSet.Builder<String> b = ImmutableSet.builder();
         for (Supplier<Work> value : Works.values()) {
@@ -709,7 +665,6 @@ public class ServerJobsRegistry {
         );
     }
 
-    /** Whether the job's work block is at {@code pos}, whatever the block currently holds. */
     public static boolean jobBlockAt(JobID jobID, WorkLocation.BlockInfo blockInfo, BlockPos pos) {
         Supplier<Work> w = Works.get(jobID);
         if (w == null) {
@@ -726,10 +681,7 @@ public class ServerJobsRegistry {
         return jobBlockAt(jobID, levelBlockInfo(level), pos);
     }
 
-    /**
-     * A pos-aware {@link WorkLocation.BlockInfo} over a live level — reads the block state
-     * (and its above-cell, for the air-above check) at the queried position.
-     */
+    /** Block info read from a live level. */
     public static WorkLocation.BlockInfo levelBlockInfo(ServerLevel level) {
         return new WorkLocation.BlockInfo() {
             @Override
@@ -744,11 +696,7 @@ public class ServerJobsRegistry {
         };
     }
 
-    /**
-     * A {@link WorkLocation.BlockInfo} over a single captured position — the state is
-     * returned for ANY queried position (position-agnostic). For the pos-sensitive checks
-     * (air-above) use {@link #levelBlockInfo} instead.
-     */
+    /** Block info that answers {@code state} for every position. Use {@link #levelBlockInfo} when the block above matters. */
     public static WorkLocation.BlockInfo blockInfo(BlockState state, @Nullable BlockEntity entity) {
         return new WorkLocation.BlockInfo() {
             @Override
@@ -763,10 +711,7 @@ public class ServerJobsRegistry {
         };
     }
 
-    /**
-     * True when the job's cycle makes nothing ({@link Work#hasNoOutput}: a fuel, stock or display
-     * job). A paused board request still counts for it ({@code BoardRequests.toWorkFor}).
-     */
+    /** True when the job's cycle makes nothing (fuel, stock, display jobs). A paused request still counts for it. */
     public static boolean makesNothing(JobID p) {
         if (isSeekingWork(p) || specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
             return false;
@@ -775,10 +720,7 @@ public class ServerJobsRegistry {
         return w != null && w.get().hasNoOutput();
     }
 
-    /**
-     * The first board request job p can answer. A pause stops makers only (dev 2026-10-28), so a
-     * job that makes nothing still answers a paused request.
-     */
+    /** The first board request the job can answer. A paused request still counts for a job that makes nothing. */
     public static Optional<WorkRequest> firstAnswerable(
             WorksBehaviour.TownData town,
             JobID p,
@@ -789,7 +731,6 @@ public class ServerJobsRegistry {
                        .findFirst();
     }
 
-    /** Whether the job would answer one of the unpaused requests ({@link BoardRequests#toWork}). */
     public static boolean answersUnpaused(
             WorksBehaviour.TownData town,
             JobID p,
@@ -798,7 +739,6 @@ public class ServerJobsRegistry {
         return requests.toWork().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
     }
 
-    /** Whether the job would answer one of the paused (stocked) requests ({@link BoardRequests#paused}). */
     public static boolean answersPaused(
             WorksBehaviour.TownData town,
             JobID p,
@@ -815,10 +755,7 @@ public class ServerJobsRegistry {
         if (isSeekingWork(p)) {
             return false;
         }
-        // Meta-states (downtime / rest / diner / BOP, ...) are not production jobs and are
-        // not registered in `Works`; looking them up fell into getWorkSupplier's same-root
-        // fallback (wrong job + ERROR spam — observed 2026-10-06 via
-        // updateWorkersAfterRequestChange passing a townie's downtime job id).
+        // Upkeep jobs (downtime, rest, eating, deposit) are not registered work.
         if (specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
             return false;
         }
@@ -868,11 +805,8 @@ public class ServerJobsRegistry {
     private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
-            // With the caller's stack: the 2026-10-17 hunter:seeking_work hits came from a path no
-            // autotest reproduces.
             QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p, new Throwable("caller"));
-            // Prefer a job unlocked with the root: the first-listed one could be e.g.
-            // cook/stock_ingredients, which needs a stocked kitchen (2026-10-17 playtest).
+            // Prefer a job unlocked with the root; the first one listed may need a stocked room.
             List<Supplier<Work>> sameRoot = Works.entrySet(p.rootId()).stream()
                                                  .filter(v -> v.getKey().sameRoot(p))
                                                  .map(Map.Entry::getValue)
@@ -891,10 +825,7 @@ public class ServerJobsRegistry {
         return workSupplier;
     }
 
-    /**
-     * The work's declared {@code initial_request} as declared (a tag stays a tag), or null when it
-     * has none. A new worker's starter board requests come from this.
-     */
+    /** The job's {@code initial_request} as declared (a tag stays a tag), or null. A new worker's first board requests come from it. */
     public static @Nullable Ingredient getInitialRequest(
             ServerLevel sl,
             JobID v
@@ -910,23 +841,7 @@ public class ServerJobsRegistry {
         return w.get().initialRequest.apply(sl);
     }
 
-    /**
-     * Outputs the player can request on the job board / stock-request screen.
-     * Only includes the products of jobs that are currently unlocked in town:
-     * a job's outputs appear iff {@code jobIsUnlocked} accepts its {@link JobID}.
-     * <p>
-     * This is the same predicate the work-seeker uses to decide which jobs a
-     * villager will actually perform ({@code WorkSeekerJob} gates on
-     * {@code VillagerHolder::isUnlocked}), so the request screen only offers
-     * products that some villager can fulfil — never a permanently
-     * un-fulfillable request for a job no one has unlocked.
-     * <p>
-     * Gatherer-style {@code results} are additionally narrowed to discovered
-     * loot upstream, via {@code t}'s known-gather-results function (the job's
-     * fixed {@code initialRequest} item is not loot and is not narrowed).
-     * <p>
-     * A tag {@code initialRequest} stays one tag ingredient ({@link RequestOutputs}, r16 #18).
-     */
+    /** What the player can request on the job board: the products of jobs unlocked in town, with gathered results narrowed to what the town has found. */
     public static ImmutableSet<Ingredient> getAllOutputs(
             WorksBehaviour.TownData t,
             Predicate<JobID> jobIsUnlocked
@@ -948,12 +863,7 @@ public class ServerJobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID) || DinerRawFoodWork.isDining(jobID);
     }
 
-    /**
-     * The job board's day rule for a job started outside the board (the max-ticks fallback): it
-     * can always start, or it finishes before evening. A meta-job (seeking work, downtime) is not
-     * registered work and has no duration, so it always fits; asking {@link #canFit} about one
-     * timed an unrelated same-root job instead and bounced the townie between board and fallback.
-     */
+    /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Upkeep jobs always fit. */
     public static boolean fitsInDay(
             UUID villagerID,
             JobID p,
@@ -965,7 +875,7 @@ public class ServerJobsRegistry {
         return canAlwaysStart(villagerID, p) || canFit(villagerID, p, currentTick);
     }
 
-    /** A trip's total duration (the longest-trip preference, JobCycler), or 0 for a job that stays in town. */
+    /** A trip's total duration, or 0 for a job that stays in town. */
     public static long tripLength(UUID villagerID, JobID p) {
         Supplier<Work> w = getWorkSupplier(p);
         if (w == null) {

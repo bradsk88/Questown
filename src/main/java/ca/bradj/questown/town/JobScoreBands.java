@@ -5,16 +5,12 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.function.ToDoubleFunction;
 
-/**
- * Forge-free half of {@link TownPossibleWork}'s job selection: which scored jobs a
- * villager may pick from, given the two acceptance thresholds from config.
- */
+/** Which scored jobs a villager may pick from, given the two acceptance thresholds. */
 final class JobScoreBands {
 
     private JobScoreBands() {
     }
 
-    /** The preferred band if any job reaches it, else the minimum band. */
     static <J> ImmutableList<J> band(
             List<J> jobs,
             ToDoubleFunction<J> score,
@@ -28,11 +24,7 @@ final class JobScoreBands {
         return jobs.stream().filter(v -> score.applyAsDouble(v) > min).collect(ImmutableList.toImmutableList());
     }
 
-    /**
-     * An {@code always_consider} job skips the supply gate, so it has no real score. It sits
-     * midway between the bands: always a candidate when nothing better is ready, never tied
-     * with a job that can actually be done (dev ruling 2026-10-23, the stock-job coin flip).
-     */
+    /** An {@code always_consider} job skips the supply check, so it scores between the bands: picked when nothing better is ready. */
     static double alwaysConsiderScore(double preferred, double min) {
         return (preferred + min) / 2;
     }

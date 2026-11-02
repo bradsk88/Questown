@@ -85,17 +85,7 @@ public class TownWand extends Item {
         Util.onScreenText(player, "message.wand.clicked_away", bp.getX(), bp.getY(), bp.getZ());
     }
 
-    /**
-     * Wand-on-campfire has two branches sharing one flag-radius gate:
-     * <ul>
-     *   <li>unlit + registered → light it (R14 addition; no sleep).</li>
-     *   <li>lit + registered   → fall through to the existing sleep path.</li>
-     * </ul>
-     * Outside a town's registered campfire the wand is inert on campfires —
-     * this is a behavior change from prior builds, which previously let any
-     * campfire anywhere trigger the sleep attempt and rejected it inside the
-     * handler. Now both paths gate up front and share the same rejection.
-     */
+    /** A wand on a town's campfire lights it, or starts the campfire sleep once lit. Other campfires ignore the wand. */
     private void handleCampfireClick(
             Supplier<ServerPlayer> player,
             ServerLevel level,
@@ -103,10 +93,7 @@ public class TownWand extends Item {
             BlockState clickedState,
             TownFlagBlockEntity parent
     ) {
-        // Registered = the clicked campfire is within the flag's campfire-search
-        // radius. We don't require it to be the SAME one findCampfire happens to
-        // return first (worlds generated across multiple structure revisions can
-        // legitimately have more than one campfire near a flag).
+        // Any campfire near the flag counts.
         BlockPos flagPos = parent.getBlockPos();
         int radius = ca.bradj.questown.mc.Compat.configGet(
                 ca.bradj.questown.core.Config.CAMPFIRE_SEARCH_RADIUS

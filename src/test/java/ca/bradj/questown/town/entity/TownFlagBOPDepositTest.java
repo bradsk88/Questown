@@ -13,15 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The flag's BOP deposit step ({@link TownFlagBOPItemHandler#depositOne}). A villager
- * carries one BOP, so the deposit consumes the whole stack. Agent playtest 2026-10-22 r3:
- * the hunter deposited three blessed BOPs and the flag kept none of them (its save showed
- * one plain tutorial BOP, the menu said 2).
- *
- * <p>The item is a vanilla stand-in: {@code questown:block_of_progress} is registry-bound,
- * and the step is item-agnostic.
- */
+/** {@link TownFlagBOPItemHandler#depositOne} keeps the deposited item, even when it empties the villager's stack. */
 class TownFlagBOPDepositTest {
 
     @BeforeAll

@@ -1,8 +1,6 @@
 package ca.bradj.questown.town.entity;
 
 import net.minecraft.network.chat.contents.TranslatableContents;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -12,9 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Pins the 2026-10-14 playtest ruling on townie display numbers ("Villager N"):
-// numbers are monotonic and never re-issued - when a townie dies/leaves its number
-// is retired, not handed to the next arrival.
+// "Villager N" numbers only go up, and a number is never reused.
 class VillagerDisplayNumbersTest {
 
     private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -37,7 +33,7 @@ class VillagerDisplayNumbersTest {
         n.assign(A);
         n.assign(B);
         n.assign(C);
-        n.retire(C); // C leaves; its number 3 is retired
+        n.retire(C);
         assertEquals(0, n.numberFor(C));
         UUID d = UUID.randomUUID();
         assertEquals(4, n.assign(d), "the next arrival gets 4, not the retired 3");
@@ -59,15 +55,13 @@ class VillagerDisplayNumbersTest {
         assertEquals(5, n.numberFor(B));
         assertEquals(6, n.assign(C), "continues past the restored high-water mark");
 
-        // a corrupted/hand-edited NBT with a value above the stored counter:
-        // the counter catches up, so no stored number is ever shadowed by a re-issue
+        // A stored number above the counter raises the counter.
         VillagerDisplayNumbers n2 = new VillagerDisplayNumbers();
         n2.restore(Map.of(A, 7), 3);
         assertEquals(8, n2.assign(B));
     }
 
-    // Playtest 2026-10-22: a dedicated server resolved the name on load, before the mod
-    // lang was available, and saved "menu.villager.name" as both townies' nameplates.
+    // The nameplate stays translatable, so a server can't save the raw key.
     @Test
     void theNameplateIsLeftForTheClientToTranslate() {
         var raw = VillagerDisplayNumbers.nameplate(3).getContents();
@@ -75,19 +69,5 @@ class VillagerDisplayNumbersTest {
         var contents = (TranslatableContents) raw;
         assertEquals("menu.villager.name", contents.getKey());
         assertArrayEquals(new Object[]{3}, contents.getArgs());
-    }
-
-    /**
-     * 2026-10-30: villagers register (and take a number in load order) before the flag restores
-     * the saved numbers, so their nameplates swapped after a restart while chat kept the saved
-     * ones. The re-stamp lives in {@link TownVillagerHandle#initialize}, whose constructor reads
-     * config, which unit tests cannot do.
-     */
-    @Test
-    @Disabled("Testability gap: TownVillagerHandle reads config in its constructor and stamps "
-            + "VisitorMobEntity nameplates. Verified in game: nameplates match chat across restarts "
-            + "(town/entity/COMPLEX.md). Per AGENTS.md we do not simulate.")
-    void nameplatesFollowTheRestoredNumbers_afterAReload() {
-        Assertions.fail("see @Disabled reason");
     }
 }

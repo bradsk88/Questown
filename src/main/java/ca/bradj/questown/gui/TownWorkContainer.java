@@ -26,12 +26,9 @@ public class TownWorkContainer extends AbstractContainerMenu {
     public final ca.bradj.questown.gui.AddWorkContainer addWorkContainer;
     private final BlockPos flag;
     private boolean skipToAdd;
-    // F2: the flag's "auto-request" toggle, mirrored client-side so the board screen can
-    // render it. Optimistically flipped on click; the server re-opens the menu afterwards
-    // so any drift resyncs.
+    // The flag's auto-request setting, shown on the board. The server re-opens the menu after a click.
     private boolean boardAutoRequest;
-    // The flag's top unmet-need display name (or empty when there is none), so the board's
-    // empty state can point at posting it instead of a vague teaser (job-board-empty-state.md).
+    // The town's top missing item, or empty, for the empty board's hint.
     private final String topUnmetNeedName;
 
     public static TownWorkContainer ForClientSide(
@@ -155,7 +152,6 @@ public class TownWorkContainer extends AbstractContainerMenu {
         return boardAutoRequest;
     }
 
-    /** The flag's top unmet-need display name; empty string when there is none. */
     public String getTopUnmetNeedName() {
         return topUnmetNeedName;
     }

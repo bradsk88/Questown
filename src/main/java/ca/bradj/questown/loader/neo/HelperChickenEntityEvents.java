@@ -22,13 +22,7 @@ public class HelperChickenEntityEvents {
         }
     }
 
-    /**
-     * Forge-bus handler that prevents predators (foxes, wolves, ocelots, etc.)
-     * from acquiring the helper chicken as a target. The chicken is invulnerable
-     * via {@link HelperChickenEntity#hurt}, but vanilla still drives the predator
-     * toward it and plays the eat animation, which is jarring during onboarding.
-     * Cancel-on-target nips that off at the source.
-     */
+    /** Stops predators from targeting the helper chicken. */
     @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME)
     public static class ForgeBus {
         @SubscribeEvent

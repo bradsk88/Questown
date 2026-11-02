@@ -65,7 +65,6 @@ public class WorkRequest {
         return Ingredient.of();
     }
 
-    /** True when this is a tag request whose tag holds {@code other}'s item. */
     public boolean covers(WorkRequest other) {
         if (tag == null || other.item == null) {
             return false;

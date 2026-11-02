@@ -8,27 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * How a villager's unmet item reaches its status tooltip and needs row (r9 findings #4, dev
- * ruling 2026-10-23). While the villager is not working (seeking work, downtime, looking for
- * supplies), the item the town knows it is blocked on replaces the generic second status line
- * and the needs row; while working or eating ({@link #keepsOwnLines}), both stay as the job
- * describes them. Generic so the rule is
- * unit-testable without Minecraft text types.
+ * How a villager's missing item reaches its status tooltip and needs row: shown while the villager is
+ * not working, left out while it works or eats.
  */
 public final class StatusNeedLine {
 
     private StatusNeedLine() {
     }
 
-    /**
-     * True when the status keeps its own lines and needs row: while working, and while eating. A
-     * diner's job blocker read as one thought with the diner line ("Cook is looking for food. /
-     * They need Coal to work.", agent playtest r10 #8, dev 2026-10-23).
-     */
-    /**
-     * Working on production, walking to the job site, or away on a timed trip: a hunter out for the
-     * day read "They need Food to work." (dev playtest 2026-10-29).
-     */
+    /** True while working (at the job, walking to it, or away on a trip) or eating. */
     public static boolean isWorking(@Nullable IStatus<?> status) {
         return status instanceof ProductionStatus ps && (ps.isWorkingOnProduction() || ps.isGoingToJobsite()
                 || ProductionStatus.WAITING_FOR_TIMED_STATE.equals(ps));

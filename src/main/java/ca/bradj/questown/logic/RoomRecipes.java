@@ -29,10 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
 
-    /**
-     * A bed is two blocks and room recipes count both, so a recipe lists two {@code #minecraft:beds}
-     * per bed. The cards show one icon per bed by dropping the ingredient after each bed.
-     */
+    /** A recipe lists two bed entries per bed; the cards show one icon per bed. */
     public static Collection<Ingredient> filterSpecialBlocks(
             Iterable<Ingredient> ingredients
     ) {
@@ -55,14 +52,10 @@ public class RoomRecipes {
             Level level,
             ResourceLocation id
     ) {
-        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
         return RecipeRef.recipeById(level.getRecipeManager(), RecipesInit.ROOM, id);
     }
 
-    /**
-     * {@link #getById}, or the built-in recipe of a special room (the town gate, the flag, the
-     * campfire), which lives in {@link SpecialQuests} rather than the recipe manager.
-     */
+    /** {@link #getById}, or the built-in recipe of a special room (town gate, flag, campfire). */
     public static Optional<RoomRecipe> getByIdOrSpecial(
             Level level,
             ResourceLocation id
@@ -81,9 +74,7 @@ public class RoomRecipes {
 
     public static Component getName(ResourceLocation id) {
         String path = id.getPath();
-        // A block room is registered as "block_room/block.<ns>.<block>" (RoomBlock.getRoomId);
-        // there is no "room.*" lang key for it, so its display name is the block's own
-        // lang entry (e.g. "Job Board") - not a raw key.
+        // A block room's name is its block's name ("Job Board").
         if (path.startsWith("block_room/block.")) {
             return Compat.translatable(path.substring("block_room/".length()));
         }
@@ -105,7 +96,6 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
         recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.id(), h.value()));
         return rMapB.build();
     }
@@ -149,12 +139,7 @@ public class RoomRecipes {
         return weight;
     }
 
-    /**
-     * A missing weight entry is a config-tuning hint, not a fault: the default is applied
-     * deterministically, so warn once per id per JVM instead of erroring on every recipe that
-     * carries the id (`#c:chests` appears in most stocked rooms — a startup burst of ERRORs
-     * read as a broken server).
-     */
+    /** A missing weight falls back to the default; warned once per id. */
     private static final Set<String> reportedUnweighted =
             ConcurrentHashMap.newKeySet();
 
@@ -199,21 +184,7 @@ public class RoomRecipes {
         return found;
     }
 
-    /**
-     * Pure core of the room-upgrade candidate selection (extracted from
-     * {@code TownQuests.getUpgradeRecipe}; unit-testable, so it receives the
-     * recipe ids as data — the caller owns them, via the recipe holder keys
-     * (the 1.20.2 migration put the canonical id on the
-     * recipe holder, not the codec-constructed {@code RoomRecipe}
-     * object, whose {@code getId()} is null for every data-driven recipe)).
-     *
-     * <p>Selection semantics (the pre-fix glue's, unchanged): a candidate is a
-     * recipe whose ingredient groups cover every group of the from-recipe (each
-     * from-group must contain some candidate group — the upgrade refines or
-     * extends the recipe's inputs); a perfect overlap is the recipe itself,
-     * not an upgrade, and is skipped. Every non-overlapping candidate is
-     * returned; the caller picks one (the glue picks at random).
-     */
+    /** The recipes that upgrade the given one: they cover every ingredient group of it, and are not the recipe itself. The caller picks one. */
     public static <K> List<K> upgradeCandidates(
             Collection<List<String>> fromIng,
             Map<K, ? extends Collection<List<String>>> allRecipes

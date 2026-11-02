@@ -16,13 +16,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Ticker-vs-advancer equivalence for the cook-shaped baker job family
- * (baker/extract + baker/bread + baker/fuel). Same shape as
- * {@link CookEquivalenceTest}: the world is a 3-slot container (the bread
- * oven) with a wheat->bread smelt recipe, so insert/extract slot rules run
- * against real slot state on both lanes.
- */
+/** The baker jobs give the same result in real time and during a warp. */
 class BakerEquivalenceTest {
 
     private static final String JOBS_PATH = "data/questown/questown_jobs/";
@@ -82,8 +76,7 @@ class BakerEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-        // Equivalence alone is hollow: both sides stalling together still "equivalents".
-        // Assert the job actually completed on BOTH sides.
+        // Both sides must actually finish, not just agree.
         Assertions.assertTrue(
                 tickerResult.productExtracted() && advancerResult.productExtracted(),
                 "both sides must actually complete the bread cycle, not just agree to idle");
@@ -128,11 +121,7 @@ class BakerEquivalenceTest {
                 "both sides must actually complete the fuel insertion, not just agree to idle");
     }
 
-    /**
-     * Work-only start-gate regression (mirror of cook_extract's): a state 0 that
-     * declares ONLY work (0.1 floors to int 0, no ingredients, no tools) must
-     * still start on a bread-ready oven and extract with an EMPTY inventory.
-     */
+    /** A state 0 that only needs work starts on a ready oven with empty hands. */
     @Test
     void baker_extract_workOnly_state0_emptyInventory_shouldExtractProduct() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_extract.json");
@@ -146,7 +135,6 @@ class BakerEquivalenceTest {
 
         EquivalenceTestFramework.TickerSetup tickerSetup =
                 EquivalenceTestFramework.createTickerSetup(definition, world);
-        // inventory stays EMPTY - no tool, no ingredient
 
         EquivalenceTestFramework.runTicker(tickerSetup, 100);
         EquivalenceTestFramework.SimulationResult tickerResult =

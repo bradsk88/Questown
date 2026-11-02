@@ -17,17 +17,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-/**
- * Pins the item-quest deposit progress (the "(3/8)" on the "Create N items"
- * card, 2026-10-14 playtest 04:26:16): the {@code deposited} field must
- * survive the UIQuest network round-trip (-1 == null) and must be appended
- * to the card name, capped at the target.
- *
- * Registry note: constructing Ingredients / resolving the item name needs
- * the vanilla bootstrap (SharedConstants + Bootstrap.bootStrap) before any
- * registry-bound class loads; the serializer itself is pure byte-buffer
- * math.
- */
+/** The "(3/8)" on an item quest card survives the network and is capped at the target. */
 public class UIQuestItemProgressTest {
 
     @BeforeAll
@@ -74,13 +64,9 @@ public class UIQuestItemProgressTest {
 
     @Test
     public void card_name_appends_progress_capped_at_target() {
-        // The progress suffix carries a leading space (" (n/m)") - the 2026-10-15
-        // playtest fix; the assertions here pin that shape.
         assertEquals("menu.common.quantity (3/8)", itemQuest(3).getName().getString());
         assertEquals("menu.common.quantity (8/8)", itemQuest(8).getName().getString());
-        // 12 deposited but the quest wants 8 - never show "(12/8)".
         assertEquals("menu.common.quantity (8/8)", itemQuest(12).getName().getString());
-        // No progress data (non-item quest or no scan) - plain name.
         assertEquals("menu.common.quantity", itemQuest(null).getName().getString());
     }
 }

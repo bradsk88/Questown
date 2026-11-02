@@ -11,11 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-21 agent playtest: the onboarding "Town Gate" card (even once completed) offered a
- * "Remove request" x. Only procedurally generated batches are discardable (the player trades one
- * for another, TownQuests.playerDiscardedLastBatch); designed and tutorial batches are not.
- */
+/** Only procedural batches can be discarded; designed and tutorial ones can't. */
 class MCQuestDiscardableTest {
 
     private static final ResourceLocation GATE = new ResourceLocation("questown", "special_quest.town_gate");

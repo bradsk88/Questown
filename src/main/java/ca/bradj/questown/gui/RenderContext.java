@@ -18,10 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * Version-neutral handle over the render argument. The strangler keeps the version-specific
- * render API (a {@code GuiGraphics} in 1.20.6, a {@code PoseStack} in 1.19.2) inside the seam
- * family; screens and widget helpers name only this handle and its methods. Each method is a
- * faithful pass-through, so rendering is preserved by construction.
+ * Version-neutral handle over the render argument (a {@code GuiGraphics} in 1.20.6, a
+ * {@code PoseStack} in 1.19.2): screens and widget helpers name only this.
  */
 public record RenderContext(
         Font font,

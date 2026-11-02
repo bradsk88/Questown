@@ -10,7 +10,6 @@ import ca.bradj.questown.loader.ItemHandler;
 import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.loader.MenuFactory;
 import ca.bradj.questown.loader.LoaderApi;
-// ConfigType is Loader.ConfigType (defined in the neutral facade).
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -44,20 +43,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * The NeoForge 1.20.6 impl of the neutral loader seam. Only this class (plus the per-loader {@code @Mod} entry)
- * may name loader types; main code only talks to the neutral {@code Loader}.
- *
- * <p>Implemented against the confirmed 1.20.6 API: config via {@code ModConfigSpec} + {@code ModLoadingContext},
- * registries via {@code DeferredRegister}/{@code DeferredHolder} bound to the mod bus, distribution via
- * {@code FMLEnvironment.dist}/{@code Dist}, open screen via vanilla {@code ServerPlayer.openMenu}, common
- * events via {@code NeoForge.EVENT_BUS}.
- *
- * <p>The Neo Payload network stack ({@link #channel}/{@link #sendToPlayer}/{@link #sendToServer},
- * via {@link NeoChannel}) and the item-handler capability lookup
- * ({@link #handlerOfEntity}/{@link #handlerOfBlockEntity}, via 1.20.4+
- * {@code Capabilities}) are implemented.
- */
+/** The NeoForge 1.20.6 {@link LoaderApi}: config, registries, distribution, screens, networking and item-handler capabilities. Only this package names NeoForge types. */
 public final class NeoLoader implements LoaderApi {
 
     static final Logger LOGGER = LoggerFactory.getLogger(NeoLoader.class);
@@ -66,10 +52,9 @@ public final class NeoLoader implements LoaderApi {
     private final List<NeoHolderRegistry<?>> createdRegistries = new CopyOnWriteArrayList<>();
     private boolean registriesBound = false;
 
-    /** Menu-screen registrations captured client-side; the client island (NeoLoaderClient) replays them. */
+    /** Menu screens to register on the client. */
     private final List<PendingScreen> pendingScreens = new CopyOnWriteArrayList<>();
 
-    /** Neutral capture of a menu-screen factory (client classes stay out of this common class). */
     public record PendingScreen<T extends net.minecraft.world.inventory.AbstractContainerMenu>(
             net.minecraft.world.inventory.MenuType<T> menuType, LoaderApi.ScreenFactory<T> factory) {
     }
@@ -81,7 +66,6 @@ public final class NeoLoader implements LoaderApi {
 
     private static final String MODID = "questown";
 
-    // ---- Distribution -----------------------------------------------------
     @Override
     public boolean isClient() {
         return FMLEnvironment.dist == Dist.CLIENT;
@@ -101,7 +85,6 @@ public final class NeoLoader implements LoaderApi {
         }
     }
 
-    // ---- Config -----------------------------------------------------------
     @Override
     public ConfigBuilder configBuilder() {
         return new NeoConfigBuilder();
@@ -119,7 +102,6 @@ public final class NeoLoader implements LoaderApi {
         ModLoadingContext.get().registerConfig(mapped, neoSpec.modSpec(), filename);
     }
 
-    // ---- Registries -------------------------------------------------------
     @Override
     public HolderRegistry<net.minecraft.world.item.Item> items() {
         return track(DeferredRegister.createItems(MODID));
@@ -187,7 +169,6 @@ public final class NeoLoader implements LoaderApi {
 
     @Override
     public net.minecraft.world.item.@Nullable Item itemFromId(ResourceLocation id) {
-        // The item registry is defaulted: .get() returns AIR for a missing key, not null.
         return BuiltInRegistries.ITEM.containsKey(id) ? BuiltInRegistries.ITEM.get(id) : null;
     }
 
@@ -216,7 +197,6 @@ public final class NeoLoader implements LoaderApi {
         return biome.unwrapKey().map(net.minecraft.resources.ResourceKey::location).orElse(null);
     }
 
-    // ---- Item handlers ----------------------------------------------------
     @Override
     public Optional<ItemHandler> handlerOfEntity(Entity e) {
         return Optional.ofNullable(handler(e)).map(NeoItemHandler::new);
@@ -237,8 +217,7 @@ public final class NeoLoader implements LoaderApi {
         if (o instanceof IItemHandler ih) {
             return ih;
         }
-        // NeoForge 1.20.4+ caps: vanilla container BEs (chests, barrels, hoppers) and entity
-        // inventories register Capabilities.ItemHandler; a null direction/ctx means "default side".
+        // Containers and entity inventories register an item-handler capability; null means the default side.
         IItemHandler h = null;
         if (o instanceof BlockEntity be) {
             h = net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK
@@ -253,7 +232,6 @@ public final class NeoLoader implements LoaderApi {
         return h;
     }
 
-    // ---- Open screen ------------------------------------------------------
     @Override
     public void openScreen(ServerPlayer p, MenuProvider provider, @Nullable Consumer<net.minecraft.network.FriendlyByteBuf> extra) {
         p.openMenu(provider, buf -> {
@@ -263,7 +241,6 @@ public final class NeoLoader implements LoaderApi {
         });
     }
 
-    // ---- Networking (NeoForge 1.20.6 payload/stream-codec stack) ----------
     private NeoChannel neoChannel;
     private static final String CHANNEL_ID = "questown:network";
 
@@ -275,7 +252,6 @@ public final class NeoLoader implements LoaderApi {
         return neoChannel;
     }
 
-    /** The concrete channel (client island installs the local-player send hook). */
     public synchronized NeoChannel channelObj() {
         if (neoChannel == null) {
             neoChannel = new NeoChannel(CHANNEL_ID);
@@ -298,14 +274,12 @@ public final class NeoLoader implements LoaderApi {
         channel(CHANNEL_ID).sendToServer(msg);
     }
 
-    /** Fired from the {@code @Mod} entry at {@link RegisterPayloadHandlersEvent}; the neutral message registry must already be filled. */
     void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
         if (neoChannel != null) {
             neoChannel.onRegisterPayloadHandlers(event);
         }
     }
 
-    // ---- Lifecycle --------------------------------------------------------
     @Override
     public void enqueueWork(Runnable work) {
         work.run();

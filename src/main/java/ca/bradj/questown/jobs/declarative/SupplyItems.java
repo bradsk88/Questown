@@ -16,13 +16,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/**
- * Supply-take logic: which container items a townie should pick up as *supplies*
- * (work inputs), as opposed to extracting a finished result (see {@code ResultGenerator}).
- *
- * <p>Migrated verbatim from {@code ca.bradj.questown.jobs.JobsClean} (2026-10-09,
- * declarative-jobs consolidation plan C4).</p>
- */
+/** Which container items a villager picks up as supplies (work inputs). */
 public class SupplyItems {
 
     public static <HELD extends HeldItem<HELD, TOWN_ITEM>, TOWN_ITEM extends Item<TOWN_ITEM>> boolean hasNonSupplyItems(
@@ -64,7 +58,6 @@ public class SupplyItems {
                 return false;
             }
         }
-        // Item is not a tool
         return true;
     }
 
@@ -81,7 +74,6 @@ public class SupplyItems {
             return false;
         }
 
-        // Check if all items in the inventory are empty
         if (currentHeldItems.stream().noneMatch(Item::isEmpty)) {
             return false;
         }

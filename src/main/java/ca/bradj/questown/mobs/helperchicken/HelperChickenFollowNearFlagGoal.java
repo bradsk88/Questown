@@ -10,15 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import java.util.EnumSet;
 import java.util.function.Supplier;
 
-/**
- * Adapted from vanilla {@code net.minecraft.world.entity.ai.goal.TemptGoal}.
- * Copies the vanilla structure and swaps the "player holding temptation items"
- * predicate for "player is within radius of this chicken's flag AND the
- * chicken's arc is still active (NOT complete, NOT forfeit)".
- *
- * <p>The chicken is not tempted by items; it follows the nearest player while
- * the player is hanging out near the flag during the onboarding arc.
- */
+/** The helper chicken follows the nearest player near its flag while its lessons are running. Based on vanilla's {@code TemptGoal}. */
 public class HelperChickenFollowNearFlagGoal extends Goal {
 
     private static final double FLAG_FOLLOW_RADIUS_SQR = 16.0D * 16.0D;
@@ -119,9 +111,7 @@ public class HelperChickenFollowNearFlagGoal extends Goal {
         if (state == ChickenBeatState.COMPLETE || state == ChickenBeatState.FORFEIT) {
             return false;
         }
-        // Phase 2 of SUNSET_AND_MAP (post-chest-spawn): the chicken should
-        // wander near the flag while the player goes off to use the map / sleep,
-        // not trail them around. The wander-near-flag goal takes over.
+        // After the chest drop the chicken wanders near the flag instead of following.
         return !(state == ChickenBeatState.SUNSET_AND_MAP && flag.getChickenSunsetChestSpawned());
     }
 

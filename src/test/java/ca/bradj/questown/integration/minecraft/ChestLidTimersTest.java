@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/** Dev playtest 2026-10-29: chests should open and close like a player's when villagers use them. */
 class ChestLidTimersTest {
 
     @Test

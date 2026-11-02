@@ -7,12 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
-/**
- * The one-time free-food claim on the economics tab's food card
- * (.scratch/day1-playtest-2026-10-11/free-food-economics-card.md). Replaces
- * the old "right-click the flag with a block of dirt" trigger: the owner of
- * the action is {@link TownFlagBlockEntity#claimBonusFood}.
- */
 public record ClaimFreeFoodMessage(BlockPos flagPos) {
 
     public static void encode(

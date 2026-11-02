@@ -169,16 +169,7 @@ public class EquivalenceTestFramework {
         }
     }
 
-    /**
-     * Faithful tick loop for jobs whose terminal work-state is a `time:` wait (all leavers:
-     * gatherer/hunter/miner/fisher). Production ticks BOTH the job ticker and the work-status store
-     * every flag tick (TownFlagTicker: jobHandle/jobHandles(...).tick(sl, allRooms, FLAG_TICK_INTERVAL));
-     * only the store tick decays a `time:` countdown and advances a completed work-state.
-     *
-     * The plain {@link #runTicker} above does NOT tick the store — the ticker-vs-advancer equivalence
-     * tests are written against that (deliberate) shape, so we keep them separate rather than change
-     * the shared loop. Use this for a "does the job actually finish and extract" assertion.
-     */
+    /** Ticks the job and the work-status store together, as the flag does, for jobs that end in a timed wait. Use it to check that a job actually finishes and extracts. */
     public static void runTickerWithStore(TickerSetup setup, int ticks) {
         for (int i = 0; i < ticks; i++) {
             setup.deps.syncJournalWithInventory();
@@ -187,7 +178,7 @@ public class EquivalenceTestFramework {
         }
     }
 
-    // FlagTickIntervalV2 default (Config.FLAG_TICK_INTERVAL): game ticks that pass per flag tick.
+    // Game ticks per flag tick, the config default.
     private static final long FLAG_TICK_INTERVAL_GAME_TICKS = 10L;
 
     /**

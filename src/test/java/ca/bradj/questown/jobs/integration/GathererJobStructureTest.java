@@ -359,8 +359,7 @@ class GathererJobStructureTest {
 
     @Test
     void lootAttempts_shouldScaleWithDuration() {
-        // Short = 1-2 attempts, Half/Med = 5, Full = 6 plus a requested-item second roll (dev
-        // ruling 2026-10-26, Outfitter #25: a longer trip yields more, net of its ration)
+        // Short trips 1-2 attempts, half and medium 5, full 6 plus a second roll for requested items.
         Map<String, Integer> shortJobs = Map.of(
                 "gatherer_unmapped_axe_short.json", 1,
                 "gatherer_unmapped_notool_short.json", 2,

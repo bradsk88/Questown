@@ -8,11 +8,7 @@ import java.util.Collection;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// Management-only flag click-through (2026-10-14 playtest): the villager menu reached
-// from the flag's villager cards hides the inventory tab. The tab strip is built from
-// each menu's getEnabledTabs(), which drops INVENTORY when showInventoryTab is false.
-// The drop is the pure VillagerTabs.hideInventory helper (mirroring hideSkills), pinned
-// here; the payload flag round-trip is pinned in VillagerMenusPayloadTest.
+// Opened from the flag, the villager menu has no inventory tab.
 class VillagerTabsHideInventoryTest {
 
     private static Collection<String> allTabs() {
@@ -23,7 +19,6 @@ class VillagerTabsHideInventoryTest {
     void hideInventory_drops_the_inventory_tab_only() {
         Collection<String> out = VillagerTabs.hideInventory(allTabs());
         assertFalse(out.contains(OpenVillagerMenuMessage.INVENTORY));
-        // every sibling tab survives
         assertTrue(out.contains(OpenVillagerMenuMessage.QUESTS));
         assertTrue(out.contains(OpenVillagerMenuMessage.STATS));
         assertTrue(out.contains(OpenVillagerMenuMessage.SKILLS));

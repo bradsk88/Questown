@@ -17,18 +17,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
-// Dev-only: put the nearest player inside a registered room's interior, the way the
-// player would walk in, but driven from the console (FIFO). The chicken's chest beat
-// (HelperChickenSunsetChestGoal) drops its chest only once playerInStoreShell is true
-// -- the player is inside an interior cell of a registered room -- so a held run that
-// cannot move the player by hand needs this to satisfy the witness gate. Vanilla
-// `tp <x> <y> <z>` teleports the command executor (the console), which has no player,
-// so it no-ops; this teleports the actual player the witness gate checks
-// (ChickenArcConditions.findNearestPlayerForFlag).
-//
-// It reuses the same interior-cell logic the chicken uses to pick its chest target
-// (InclusiveSpaces ... INTERIOR_ONLY), then lands the player on a passable interior
-// cell. No permission gate, so it runs from the console (FIFO).
+// Dev-only: put the nearest player inside a registered room. A console `tp` moves the console,
+// not a player.
 public class FlagPlacePlayerCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         // @formatter:off
@@ -73,12 +63,7 @@ public class FlagPlacePlayerCommand {
         return 0;
     }
 
-    /**
-     * A passable interior cell of the flag's largest registered room, at the room's
-     * floor level. Mirrors the chicken's own chest-target search (largestRoom +
-     * INTERIOR_ONLY positions), so the player lands in the same room the chicken is
-     * working. Returns null when no registered room has a passable interior cell.
-     */
+    /** An empty floor cell inside the flag's largest room, or null if there is none. */
     private static @Nullable BlockPos interiorCell(TownFlagBlockEntity flag) {
         Collection<MCRoom> rooms = flag.getRoomHandle().getRegisteredRooms().getAllRooms();
         if (rooms.isEmpty()) {
@@ -88,8 +73,6 @@ public class FlagPlacePlayerCommand {
         for (InclusiveSpace space : shell.getSpaces()) {
             for (Position p : InclusiveSpaces.getPositions(
                     space, InclusiveSpaces.PositionType.INTERIOR_ONLY)) {
-                // A contained block sits at the room's floor level or one above; try
-                // both, and skip a cell that is already walled (a door, terrain).
                 for (int y : new int[]{shell.yCoord, shell.yCoord + 1}) {
                     BlockPos c = new BlockPos(p.x, y, p.z);
                     BlockState state = flag.getServerLevel().getBlockState(c);

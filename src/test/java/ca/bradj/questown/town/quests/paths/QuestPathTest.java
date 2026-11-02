@@ -8,10 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-/**
- * The curated-path format and progress rules (plan rulings 3, 4, 18): starters post at the fork,
- * a batch posts once its opens_after batches are complete, a path is taken once a starter is done.
- */
+/** The path format and progress rules. */
 class QuestPathTest {
 
     private static final String OUTFITTER_SHAPE = """

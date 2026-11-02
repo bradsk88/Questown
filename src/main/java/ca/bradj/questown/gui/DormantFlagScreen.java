@@ -13,17 +13,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
-/**
- * Shown when a player right-clicks a dormant town flag with no deed waiting (ADR-0009 loss
- * protection, dev ruling 2026-10-23). Before this, waking a packed town or replacing a lost deed
- * needed {@code /qt flag <pos> shutdown wake|reissue}. Three choices:
- * <ul>
- *   <li><b>Wake the town</b>: the town unpacks here ({@code wakeInPlace}).</li>
- *   <li><b>Get the deed back</b>: a new deed appears above the flag ({@code reissueDeed}).</li>
- *   <li><b>Cancel</b>: close, nothing sent.</li>
- * </ul>
- * Flow layout: the message wraps to the panel width and the buttons sit below its real height.
- */
+/** Shown when a player right-clicks a dormant flag with no deed waiting: wake the town, get the deed back, or cancel. */
 public class DormantFlagScreen extends CompatScreen {
 
     private static final int backgroundWidth = 176;
@@ -58,7 +48,6 @@ public class DormantFlagScreen extends CompatScreen {
 
     @Override
     protected void init() {
-        // darkTextWrap spaces wrapped lines at 1.5x the font height (Compat.drawTextWrap).
         int messageHeight = Compat.splitText(font, message(), textWidth()).size() * (int) (font.lineHeight * 1.5);
         int buttonsHeight = 3 * (buttonHeight() + BUTTON_GAP);
         this.panelHeight = PAGE_PADDING + (2 * font.lineHeight) + messageHeight + PAGE_PADDING + buttonsHeight + PAGE_PADDING;
@@ -81,7 +70,6 @@ public class DormantFlagScreen extends CompatScreen {
     }
 
     private void choose(Button b, boolean wake) {
-        // A fast double-click must not send twice (docs/ui-principles.md 10).
         b.active = false;
         QuestownNetwork.sendToServer(new DormantFlagChoiceMessage(flagPos, wake));
         this.onClose();

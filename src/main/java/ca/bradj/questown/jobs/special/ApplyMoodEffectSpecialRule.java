@@ -8,12 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;
 
-/**
- * Applies a mood effect to the working villager when a product is extracted —
- * e.g. the comfortable/uncomfortable eating moods. Replaces the former
- * {@code EffectMetaItem} result that the eating jobs used to emit (see ADR-0003).
- * Duration is read lazily from config at apply time.
- */
+/** Gives the working villager a mood effect when a product is extracted (the eating moods). */
 public class ApplyMoodEffectSpecialRule extends
         JobPhaseModifier implements QTNativeRule {
 

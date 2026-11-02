@@ -4,10 +4,7 @@ import net.minecraft.core.BlockPos;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * Playtest r12 #2: a lit campfire one block up a slope from the flag never completed the
- * Campfire quest, because the scan and the wand both required the flag's exact Y.
- */
+/** A lit campfire a block above the flag completes the Campfire quest. */
 class CampfireRangeTest {
 
     private static final BlockPos FLAG = new BlockPos(0, 74, 0);

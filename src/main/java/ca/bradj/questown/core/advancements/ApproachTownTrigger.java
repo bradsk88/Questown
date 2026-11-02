@@ -63,9 +63,7 @@ public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrig
             ServerPlayer player,
             Triggers trickID
     ) {
-        // A non-player command source (server console, command block, /execute … as)
-        // passes a null player. Vanilla SimpleCriterionTrigger.trigger would NPE on
-        // player.getAdvancements() and crash the server, so skip the null player.
+        // A console or command block passes no player.
         if (player == null) {
             return;
         }

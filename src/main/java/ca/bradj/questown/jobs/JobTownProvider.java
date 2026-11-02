@@ -21,7 +21,6 @@ public interface JobTownProvider<ROOM> extends TownProvider {
 
     Signals.DayTime getDayTime();
 
-    /** See {@link JobStatuses.Job#finishedProductNeedsStorage()}. Default: true. */
     default boolean finishedProductNeedsStorage() {
         return true;
     }

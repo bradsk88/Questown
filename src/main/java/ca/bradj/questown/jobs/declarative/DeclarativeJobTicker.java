@@ -161,8 +161,6 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     private final ImmutableMap<?, Collection<String>> specialRules;
     private final LOCATION location;
     private boolean isFirstTick = true;
-    // Dev-only stall instrumentation (see logCompletedProductView); wall clock of
-    // the last dump, per ticker instance.
     private long lastCompletedProductViewLogMs;
 
     public DeclarativeJobTicker(
@@ -275,14 +273,8 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         return matches;
     }
 
-    // Dev-only stall instrumentation (2026-10-15 playtest COLLECTING_SUPPLIES root
-    // cause): the gate dump sees a terminal mat but this circuit's view comes up
-    // empty, so leavers park in COLLECTING_SUPPLIES. When the two DISAGREE - view
-    // empty while some job block IS in the terminal state - dump this view's two
-    // inputs (the room matches and each job block's per-owner state) so the
-    // desync between them is readable in one line. A view that is empty because
-    // no block is terminal yet is legitimate and stays quiet. Throttled: this
-    // path runs on every leaver status decision tick.
+    // Dev diagnostics: when no product shows as finished but a job block is in its final state, log
+    // what the view was built from. Throttled.
     private <RECIPE> void logCompletedProductView(
             Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, ?> work
@@ -321,16 +313,11 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     ) {
         Function<POS, State> getJobBlockState = pos -> {
             State s = work.getJobBlockState((POS) pos);
-            // A block with no work-state record yet is unstarted work, not "no state": the
-            // bsFn provider path (this file) already reads it as State.fresh(). Keeping the
-            // rooms-needing-input chain raw-excluding null states deadlocked leavers whose
-            // per-owner store had not yet seeded the gate mat (whoever-seeds-first race).
+            // A block with no work state yet is fresh.
             if (s == null) {
                 return State.fresh();
             }
-            // A terminal state with no live timer (a foreign job's bare write, or an expired
-            // timer that overflowed past this job's maxState) will never advance itself: it
-            // matches no bucket for this job and starves the supply loop. Read it as fresh.
+            // A final state with no timer will never move on for this job; read it as fresh.
             if (s.processingState() > maxState
                     || (s.processingState() == maxState && !s.hasWorkLeft() && work.getTimeToNextState((POS) pos) == null)) {
                 return State.fresh();
@@ -457,10 +444,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             ProductionJournal journal = deps.getJournal();
             ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
-                // Propagate the override into the journal: DeclarativeJob.tryGetSupplies (and the
-                // supply getter's isCollectingSupplies() gate) reads journal.getStatus(), so an
-                // override that only flowed to the state-computer's return value would never reach
-                // the supply pipeline (the fetcher would never actually collect).
+                // The supply pipeline reads the journal's status, so put the override there.
                 if (!s.equals(journal.getStatus())) {
                     journal.changeStatus(s);
                 }
@@ -468,9 +452,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             }
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
             ProductionStatus now = journal.getStatus();
-            // DEV-DIAG (2026-10-06, cook-soft-lock): for COOK jobs sitting at NO_JOBSITE, log which
-            // branch it is — town-has-supplies (Branch A: supply-pickup stall) vs town-no-supplies
-            // (Branch B: no supplies/workable) — plus the workable state and inventory. Gated + sampled.
+            // Dev diagnostics: a cook stuck at NO_JOBSITE logs why. Sampled.
             if (System.getenv("ENABLE_DEV_COMMANDS") != null
                     && deps.getJobId().rootId().contains("cook")
                     && now == ProductionStatus.NO_JOBSITE
@@ -488,11 +470,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         };
     }
 
-    /**
-     * Whether the villager holds an item that no state of this job uses as an ingredient or tool:
-     * the output of its work, which it carries to storage before starting a new cycle
-     * (JobStatuses "drop loot before starting a new cycle"; JobLogic's wrap-up carry-on).
-     */
+    /** Whether the villager holds an item no state of this job uses: its work output. */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private boolean holdsWorkOutput(Dependencies<POS, ?, HELD_ITEM, ?, ROOM, MATCH, EXTRA, ?> deps) {
         IntFunction ingredientsAt = deps::item;

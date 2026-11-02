@@ -130,10 +130,7 @@ public class ResourceJobLoader {
 
         private ImmutableMap<JobID, Work> makeCookJobs(JsonObject obj) {
             ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
-            // Per-item starter selection: only the listed expanded jobs join the
-            // root's initial unlock set (a blanket `unlocked_with_root_job` on this
-            // template would bulk-grant every food recipe, which the skill-unlock
-            // ruling rejects).
+            // Only the listed recipes join the root's starting unlocks.
             ImmutableSet<String> starterRecipes = starterRecipes(obj);
             Ingredient ing = Ingredient.of(TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW);
             for (ItemStack item : ing.getItems()) {
@@ -176,9 +173,7 @@ public class ResourceJobLoader {
                             special,
                             loadSoundV1(obj)
                     ).withPriority(requiredInt(obj, "priority"))
-                     // Every expanded recipe shares the template's status art (e.g. the furnace
-                     // front while working); the expansion used to drop the template's overrides.
-                     // Before withSlotPrecondition: withOverrides does not copy the precondition.
+                     // Every expanded recipe gets the template's status art. Before withSlotPrecondition, which withOverrides does not copy.
                      .withOverrides(overridesFromJsonV2(obj));
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
@@ -402,7 +397,6 @@ public class ResourceJobLoader {
             return new Overrides(textureOverrides, statusTextOverrides, workingTextureV2(object));
         }
 
-        /** {@code {"type": "working", "new_texture": ...}}: one image for every work state and extraction. */
         private static @Nullable ResourceLocation workingTextureV2(JsonObject object) {
             if (!object.has("status_texture_overrides")) {
                 return null;
@@ -494,8 +488,7 @@ public class ResourceJobLoader {
                 int cooldownTicks = requiredInt(obj, "cooldown_ticks");
                 WorkWorldInteractions wwi = worldWorkInt(obj, cooldownTicks);
                 JobID id = JobID.fromJSON(Util.getOrDefault(obj, "id", JsonElement::getAsString, null));
-                // A display stands in air, so no block state answers "does a job care"; the work
-                // status store seeds displays itself (TownWorkStatusStore).
+                // A display stands in air, so the work status store seeds it itself.
                 BiPredicate<WorkLocation.BlockInfo, BlockPos> shouldInitWS = display
                         ? (i, p) -> false
                         : shouldInitWS(block, special);
@@ -511,8 +504,7 @@ public class ResourceJobLoader {
                         special,
                         loadSoundV1(obj)
                 ).withPriority(requiredInt(obj, "priority"))
-                 // status_texture_overrides were only ever applied by the V1 loader. Before
-                 // withSlotPrecondition: withOverrides does not copy the precondition.
+                 // Before withSlotPrecondition, which withOverrides does not copy.
                  .withOverrides(overridesFromJsonV2(obj));
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
@@ -941,19 +933,14 @@ public class ResourceJobLoader {
     }
 
     /**
-     * {@code "block": {"display": "armor_stand" | "item_frame", "accepts": "<item or #tag>"}}: the
-     * work spot is a display standing there (dev 2026-10-28: the villager "works" at the stand).
-     * Carrying an accepted item, only a display it fits counts, so boots never go to a stand whose
-     * only gap is the head. Empty-handed, a display fits if a stored accepted item fits it, or, when
-     * the caller passes no town items (the job's own checks), if it has any empty slot: whether the
-     * town has the item is the scorer's tool check. No "already used" shortcut: that would send a
-     * villager holding boots to any stand.
+     * {@code "block": {"display": "armor_stand" | "item_frame", "accepts": "<item or #tag>"}}: the work
+     * spot is a display. Carrying an item, only a display it fits counts; empty-handed, any display with
+     * room for a stored item counts.
      */
     private static Predicate<JobBlockTestContext> isDisplayJobBlock(JsonObject block) {
         boolean armorStand = "armor_stand".equals(required(block, "display", JsonElement::getAsString));
         Ingredient accepts = getIngredient(required(block, "accepts", JsonElement::getAsString));
         return ctx -> {
-            // A display stands in air; skip the entity lookup everywhere else.
             if (ctx.world() == null || !ctx.blockInfo().state(ctx.blockPos()).isAir()) {
                 return false;
             }
@@ -1033,9 +1020,6 @@ public class ResourceJobLoader {
     ) {
         // Gather all global and per-status rules
         ImmutableList<String> allRules = ImmutableList.<String>builder().addAll(special.specialGlobalRules()).build();
-        // Query all registered JobPhaseModifier appliers, evaluating each exactly once (short-circuited
-        // on a failing rule, same as before), delegating the pass/fail decision to the Forge-free
-        // UtilClean.specialRulesAllPass so it is unit-testable.
         java.util.List<Boolean> ruleResults = new java.util.ArrayList<>();
         for (JobPhaseModifier rule : ca.bradj.questown.integration.SpecialRulesRegistry.getRuleAppliers(allRules)) {
             boolean passed = rule.postJobBlockCheckPassed(ctx);
@@ -1139,23 +1123,17 @@ public class ResourceJobLoader {
         return optional(object, "proficiency_id", JsonElement::getAsString);
     }
 
-    /**
-     * The `unlocked_with_root_job` flag: a job in a non-starter position that
-     * still belongs in its root's initial unlock set at staff (e.g.
-     * `cook/fuel` next to the `cook/extract` root). Absent = false.
-     * See `.scratch/cook-skill-unlock/cook-skill-unlock.md`.
-     */
+    /** {@code unlocked_with_root_job}: a job that joins its root's starting unlocks. Absent means false. */
     private static boolean unlockedWithRootJob(JsonObject object) {
         Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
         return Boolean.TRUE.equals(flag);
     }
 
-    /** The optional `experience` value: XP per completion, replacing the formula. */
+    /** {@code experience}: XP per completion, replacing the formula. */
     private static @Nullable Integer experience(JsonObject object) {
         return optional(object, "experience", JsonElement::getAsInt);
     }
 
-    /** The `biome_loot` result's `default` table path; null for any other result type. */
     private static @Nullable String lootTableDefault(JsonObject object) {
         JsonElement result = object.get("result");
         if (result == null || !result.isJsonObject()) {
@@ -1168,7 +1146,7 @@ public class ResourceJobLoader {
         return optional(r, "default", JsonElement::getAsString);
     }
 
-    /** The `biome_loot` result's `prefer_requested` flag (full-day leaver trips); absent = false. */
+    /** {@code prefer_requested}: the trip favours requested items. Absent means false. */
     private static boolean prefersRequestedLoot(JsonObject object) {
         JsonElement result = object.get("result");
         if (result == null || !result.isJsonObject()) {
@@ -1178,24 +1156,13 @@ public class ResourceJobLoader {
         return prefer != null && prefer;
     }
 
-    /**
-     * The `available_at_level` value: the townie level at which the job becomes available for
-     * skill-tab unlocking. Absent = {@link Work#DEFAULT_AVAILABLE_AT_LEVEL}.
-     */
+    /** {@code available_at_level}: the villager level at which the job can be unlocked. */
     private static int availableAtLevel(JsonObject object) {
         Integer level = optional(object, "available_at_level", JsonElement::getAsInt);
         return level != null ? level : Work.DEFAULT_AVAILABLE_AT_LEVEL;
     }
 
-    /**
-     * The `starter_recipes` list (expanded-template jobs only): the item paths
-     * whose expanded jobs join their root's initial unlock set at staff, on top
-     * of the blanket `unlocked_with_root_job` flag. E.g. the cook
-     * simple-furnace template lists `mutton`, so every freshly staffed cook
-     * (spawn or job-change) can actually cook the first hunter's guaranteed
-     * simple-furnace food while the remaining recipes stay progression-gated.
-     * Absent/empty = no starter.
-     */
+    /** {@code starter_recipes}: the recipes of an expanded template that join the root's starting unlocks. */
     private static ImmutableSet<String> starterRecipes(JsonObject object) {
         JsonElement el = object.get("starter_recipes");
         if (el == null || !el.isJsonArray()) {

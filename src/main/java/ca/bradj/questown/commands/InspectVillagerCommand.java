@@ -13,12 +13,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.crafting.Ingredient;
 
-// Dev-only: inspect a town's villagers (visitors) the way a player would — by
-// looking at the villager, not by opening the flag's quest tab. Surfaces each
-// villager's need (the world-space bubble: what the townie cannot do and, for an
-// UNMET_ITEM need, the item it lacks), the quests that belong to that villager,
-// and the red-dot cue (questsTabAttention) that draws a human player's eye to
-// the quests tab. No permission gate, so it runs from the console (FIFO).
+// Dev-only, read-only: each villager's need, its quests, and whether the quests tab has a red dot.
 public class InspectVillagerCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(
@@ -66,10 +61,7 @@ public class InspectVillagerCommand {
         return 0;
     }
 
-    /**
-     * Resolve an unmet-item key (a concrete item or a tag such as questown:villager_food)
-     * to the name a player reads in the need bubble. Null when not resolvable.
-     */
+    /** The name a player sees for an item or tag key, or null. */
     private static String resolveItemName(String itemKey) {
         if (itemKey == null || itemKey.isEmpty()) {
             return null;
@@ -78,7 +70,6 @@ public class InspectVillagerCommand {
             Ingredient ing = Ingredients.fromString(itemKey);
             return Ingredients.getName(ing).getString();
         } catch (Exception ignored) {
-            // not an item or tag; fall through
         }
         return null;
     }

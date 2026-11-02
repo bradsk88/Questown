@@ -14,12 +14,7 @@ import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Resolves a sapling item to the vanilla {@link TreeFeature} + {@link TreeConfiguration}
- * that grows it. Shared by both {@code QTWorldAccess} implementations so plantability
- * ({@code canTreeGrowAt}) and growth ({@code growTreeAt}) run identical worldgen on the
- * realtime and warp paths — they differ only in the {@code WorldGenLevel} adapter.
- */
+/** Finds the tree a sapling grows, so real-time and warp growth produce the same tree. */
 public final class TreeFeatureResolver {
 
     private TreeFeatureResolver() {
@@ -28,24 +23,12 @@ public final class TreeFeatureResolver {
     public record Resolved(TreeFeature feature, TreeConfiguration config) {
     }
 
-    /**
-     * Deterministic per-position RNG for tree growth. {@code TreeFeature.place} consumes randomness
-     * for trunk height and foliage shape; feeding it {@code level.random} makes warp growth
-     * non-deterministic, which both violates the project's warp-determinism principle (cf. the
-     * bone-meal +3 choice) and makes the grown trunk's log count vary run-to-run. Seeding by
-     * {@code pos.asLong()} fixes a grown tree's shape for a given sapling position on both the
-     * realtime and warp paths. See ADR-0005.
-     */
+    /** The same random source for a position every time, so a sapling always grows the same tree. */
     public static RandomSource seededFor(BlockPos pos) {
         return RandomSource.create(pos.asLong());
     }
 
-    /**
-     * Maps a sapling item id (e.g. {@code minecraft:oak_sapling}) to its configured tree
-     * feature, resolved from the live {@code registryAccess} (the runtime registry has fully
-     * bound holders; {@code BuiltinRegistries} may not). Returns {@code null} (logging why) when
-     * the id is unconventional or the resolved feature isn't a tree.
-     */
+    /** The tree a sapling grows, or null if it is not a known tree. */
     public static @Nullable Resolved resolve(ItemStack sapling, RegistryAccess registryAccess) {
         ResourceLocation saplingId = Compat.getItemId(sapling.getItem());
         String[] idParts = saplingId.getPath().split("_sapling");

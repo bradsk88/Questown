@@ -19,12 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The stock check for ITEM quests (stock in town chests) must not close a LOOT quest for the same
- * item (production only, plan ruling 16). 2026-10-26 held paths/outfitter: the hunter onboarding's
- * finished "Stone Sword" ITEM quest plus stone swords in stock closed the Outfitter's "make a Stone
- * Sword" LOOT card the moment Weapons II posted.
- */
+/** The stock check for ITEM quests never closes a LOOT quest for the same item. */
 class TownQuestsItemQuestScopeTest {
 
     private static final ResourceLocation STONE_SWORD = new ResourceLocation("minecraft", "stone_sword");

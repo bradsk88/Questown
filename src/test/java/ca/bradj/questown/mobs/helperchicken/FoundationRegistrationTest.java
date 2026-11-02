@@ -6,7 +6,6 @@ import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Rotation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class FoundationRegistrationTest {
@@ -16,10 +15,6 @@ class FoundationRegistrationTest {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }
-
-    // -------------------------------------------------------------------------
-    // ChickenBeatState — safe parsing from persisted NBT
-    // -------------------------------------------------------------------------
 
     @Test
     void chickenBeatState_fromNameSafe_validName_returnsEnum() {
@@ -63,15 +58,12 @@ class FoundationRegistrationTest {
 
     @Test
     void chickenBeatState_hasExactly16Values() {
-        // Canonical — U6 state-machine table depends on these names and ordering.
         Assertions.assertEquals(16, ChickenBeatState.values().length);
     }
 
     @Test
     void chickenBeatState_canonicalOrdering() {
-        // Ordering is the state-machine progression. Must not drift.
-        // Mat-gated arrival (.scratch/mat-gated-arrival): the welcome-mat beat and
-        // the flag-UI intro sit between the campfire beat and the first sleep.
+        // The lesson order.
         ChickenBeatState[] expected = {
                 ChickenBeatState.WAITING_FOR_STICK,
                 ChickenBeatState.WAITING_FOR_WALL_BLOCK,
@@ -92,10 +84,6 @@ class FoundationRegistrationTest {
         };
         Assertions.assertArrayEquals(expected, ChickenBeatState.values());
     }
-
-    // -------------------------------------------------------------------------
-    // TownFlagTileData.safeRotation — safe parsing from persisted NBT
-    // -------------------------------------------------------------------------
 
     @Test
     void safeRotation_validName_returnsEnum() {
@@ -118,13 +106,8 @@ class FoundationRegistrationTest {
         Assertions.assertEquals(Rotation.NONE, TownFlagTileData.safeRotation(null));
     }
 
-    // -------------------------------------------------------------------------
-    // ChickenBubbleIcon — closed-enum surface verification
-    // -------------------------------------------------------------------------
-
     @Test
     void chickenBubbleIcon_hasExactly14Values() {
-        // One bubble icon per stage of the arc (plus welcome_mat + flag_ui + villager_ui variants).
         Assertions.assertEquals(14, ChickenBubbleIcon.values().length);
     }
 
@@ -146,14 +129,9 @@ class FoundationRegistrationTest {
         Assertions.assertNotNull(ChickenBubbleIcon.valueOf("FLAG_UI"));
     }
 
-    // -------------------------------------------------------------------------
-    // Registration smoke test — force class initialization, verify no throws
-    // -------------------------------------------------------------------------
-
     @Test
     void registrationClasses_loadWithoutExceptions() {
-        // If any DeferredRegister.register(...) call in these <clinit> blocks throws,
-        // the mod cannot start. Loading them here catches class-init-time bugs.
+        // Loading these classes runs their registrations.
         Assertions.assertDoesNotThrow(() -> Class.forName("ca.bradj.questown.core.init.EntitiesInit"));
         Assertions.assertDoesNotThrow(() -> Class.forName("ca.bradj.questown.core.init.BlocksInit"));
         Assertions.assertDoesNotThrow(() -> Class.forName("ca.bradj.questown.core.init.items.ItemsInit"));
@@ -171,26 +149,4 @@ class FoundationRegistrationTest {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Round-trip persistence for the 6 new chicken flag-BE fields.
-    //
-    // NOT TESTABLE AT UNIT LEVEL: TownFlagBlockEntity's constructor requires
-    // TilesInit.TOWN_FLAG.get() (a Forge RegistryObject that is populated only
-    // during the Forge mod-loading lifecycle). We cannot construct a real
-    // instance in a unit test without booting Forge itself.
-    //
-    // Per CLAUDE.md: when the real code is not testable in isolation, add a
-    // failing assertion so the gap is visible. An integration / in-game test
-    // (see U1 "Verification" in the plan) covers the round-trip end-to-end.
-    // -------------------------------------------------------------------------
-
-    @Test
-    @Disabled("Covered by chicken-arc scenarios — every scenario writes then reads the 6 chicken flag-BE fields. See docs/conventions/agent-chicken-verification-loop.md.")
-    void flagBE_persistsAllSixChickenFieldsAcrossWriteRead() {
-    }
-
-    @Test
-    @Disabled("Default initialization is exercised by every chicken-arc scenario's RESET_ARENA → PLACE_FLAG phase, which starts from a fresh flag BE.")
-    void flagBE_loadedWithMissingChickenKeysUsesDefaults() {
-    }
 }

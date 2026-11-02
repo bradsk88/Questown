@@ -81,8 +81,7 @@ public class Tabs {
         return tabs.stream().anyMatch(t -> t.titleKey().equals(titleKey));
     }
 
-    // Open the tab whose title key matches, by firing its onClick. Returns false when no such
-    // (enabled) tab exists, so callers can fall back to a default action.
+    // Opens the tab with this title. False when there is no such tab.
     public boolean openTab(String titleKey) {
         for (Tab t : tabs) {
             if (t.titleKey().equals(titleKey)) {

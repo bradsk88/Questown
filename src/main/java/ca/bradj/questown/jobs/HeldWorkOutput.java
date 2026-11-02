@@ -8,13 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
 
-/**
- * A job's work output: a held item that no state of the job uses as an ingredient or tool. The
- * status circuit's "drop loot before more work" branch fires on it ({@code holdsWorkOutput}), and
- * the loot drop takes only it, so a townie keeps its own supplies (a hunter's sword, a BOP
- * depositor's Block of Progress) while it stores the rest (r16 #9: the drop emptied every item and
- * stranded deposited BOPs in the storeroom). Pinned by {@code HeldWorkOutputTest}.
- */
+/** A job's work output: held items no state of the job uses. A loot drop stores only these, so a villager keeps its own tools and supplies. */
 public final class HeldWorkOutput<H extends HeldItem<H, I>, I extends Item<I>> {
 
     private final List<IPredicateCollection<H>> ingredients;
@@ -71,11 +65,7 @@ public final class HeldWorkOutput<H extends HeldItem<H, I>, I extends Item<I>> {
         return false;
     }
 
-    /**
-     * The items a loot drop should store: the work output, or, with none in hand, every non-empty
-     * item. The fallback keeps the drop branches that fire without output ("drop loot when no work
-     * possible" returns unused supplies) from stalling in DROPPING_LOOT with full hands.
-     */
+    /** What a loot drop stores: the work output, or every held item when there is none. */
     public List<H> itemsToDrop(Iterable<H> held) {
         ImmutableList.Builder<H> output = ImmutableList.builder();
         ImmutableList.Builder<H> all = ImmutableList.builder();

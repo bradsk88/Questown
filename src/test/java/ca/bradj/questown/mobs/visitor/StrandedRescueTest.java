@@ -8,7 +8,6 @@ import java.util.List;
 
 class StrandedRescueTest {
 
-    // r20 playtest: flag at 147 71 44, gate spot near 143 71 30.
     private static final List<BlockPos> TOWN = List.of(
             new BlockPos(147, 71, 44),
             new BlockPos(143, 71, 30)
@@ -31,7 +30,7 @@ class StrandedRescueTest {
 
     @Test
     void aVillagerThatFellBelowTheTownIsOutside_evenRightBesideIt() {
-        // The r20 case: floating at 154 63 40, 7 blocks from the flag but 8 below the town.
+        // Seven blocks from the flag but eight below the town.
         Assertions.assertTrue(StrandedRescue.isOutsideTown(new BlockPos(154, 63, 40), TOWN));
     }
 

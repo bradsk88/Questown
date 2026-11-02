@@ -74,12 +74,6 @@ class RoomsStatusLogicTest {
         assertEquals(1, foundRooms.getMatches().size());
     }
 
-    // Locks in the contract behind the 2026-10-07 gate soft-lock diagnosis
-    // (worlds 98/99 stall vs 96 pass): the rooms-needing-input map is EMPTY when
-    // the job sees zero sites (stall branch), and NON-EMPTY when the gate mat room
-    // is present with a pending state-0 block (pass branch). The stall fix must
-    // therefore make the mat room visible to the site reader, not change the
-    // needed-input semantics here.
     @Test
     void compute_emptyJobSites_yieldsEmptyNeededInput() {
         RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
@@ -156,13 +150,7 @@ class RoomsStatusLogicTest {
                 "gate mat room at state 0 must be a needed-input site");
     }
 
-    // ── Lock-ins (2026-10-07): the leaver ACCEPT path — cleanFns on the object the
-    // leaver reads (roomsNeedingIngredientsOrTools) — verified live 2026-10-07:
-    // stall world 401: cleanRooms read {0=[]} (60×) while fresh compute inner=[0=1]
-    // (4×); pass world 400: inner=[0=1] (12×) and a non-empty read at the win moment.
-    // These pin the object contract: a receptive state-0 bucket must survive copying
-    // (which the cache path does: `new RoomsNeedingVillagerInput<>(rniot.get().get())`)
-    // and flooring, and must yield a non-empty needed-item set that accepts the food.
+    // A mat at state 0 waiting for food.
 
     private static RoomsNeedingVillagerInput<String, String, Position> receptiveMat() {
         return matAt(0);
@@ -247,9 +235,7 @@ class RoomsStatusLogicTest {
 
     @Test
     void copyConstructor_preservesReceptiveState0Bucket() {
-        // The cache path copies via `new RoomsNeedingVillagerInput<>(rniot.get().get())`.
-        // A receptive state-0 bucket must survive that copy (stall signature was a
-        // {0=[]} read while the fresh compute carried the mat in bucket 0).
+        // A state-0 bucket survives the cache's copy.
         RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
         RoomsNeedingVillagerInput<String, String, Position> copy = new RoomsNeedingVillagerInput<>(rni.get());
 
@@ -271,17 +257,12 @@ class RoomsStatusLogicTest {
 
     @Test
     void matAtWorkState1_notFoodReceptive() {
-        // Locks the receptive-window semantics: during the mat's work phase
-        // (state 1) it does NOT need the leaver's food, so a leaver reading this
-        // state correctly REJECTS. The churn (leavers reject during work/time
-        // phases) is therefore legitimate; the flake is failing to catch the
-        // state-0 window - a timing/contention property, not a logic bug.
+        // At state 1 the mat needs work, not food, so a villager rightly refuses to bring food.
         RoomsNeedingVillagerInput<String, String, Position> rni = matAt(1);
         var fns = rni.cleanFns(
                 s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
                 s -> null,
                 x -> x);
-        // state 1 requires work, not the state-0 food ingredient
         boolean needsFood = false;
         for (var pc : fns) {
             if (pc != null && pc.test("villager_food")) {
@@ -294,8 +275,7 @@ class RoomsStatusLogicTest {
 
     @Test
     void cleanFns_allBucketsEmpty_yieldsEmptyNeededSet() {
-        // The stalled read path: all buckets empty -> cleanFns empty -> shouldTakeItem
-        // REJECTs (verified branch on-disk 2026-10-07, worlds 98/99/401).
+        // All buckets empty: nothing is taken.
         RoomsNeedingVillagerInput<String, String, Position> empty = new RoomsNeedingVillagerInput<>(ImmutableMap.of());
 
         assertTrue(empty.cleanFns(
@@ -305,18 +285,14 @@ class RoomsStatusLogicTest {
                 "empty rni must yield an empty needed set (REJECT branch)");
     }
 
-    // ── Lock-in (2026-10-07): the stall is EXCLUSION of the gate mat, not the ACCEPT
-    // logic. compute() (verified source) only fills a state-s bucket when isJobBlock(mat)
-    // AND canClaim(mat) are both true alongside the declared state-s ingredient. Pin both
-    // exclusion paths so a fix (whichever predicate the stall trips) is validated here:
-    // an excluded mat must yield an empty needed set = the leaver's 'needed-empty' REJECT.
+    // A state's bucket fills only when the mat is a job block and claimable.
 
     @Test
     void matExcludedByIsJobBlock_yieldsEmptyNeededSet_neededEmptyReject() {
         RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
                 0,
                 p -> true,   // canClaim: fine
-                p -> false);  // isJobBlock: dropped
+                p -> false);
 
         assertTrue(rni.cleanFns(
                 s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
@@ -354,11 +330,7 @@ class RoomsStatusLogicTest {
         assertFalse(fns.isEmpty(), "a fully-available receptive mat must yield a non-empty needed set (ACCEPT)");
     }
 
-    // ── Lock-in (work-only start-gate, cook/stick stall): a job whose state 0 declares ONLY
-    // work (cook_extract: work 0.1 → int 0, no tools, no ingredients) must see a FRESH block
-    // (workLeft 0) in the state-0 work bucket. Before the fix the per-state filter was
-    // State::hasWorkLeft, so a fresh zero-work block produced an empty map and the cook idled
-    // in NO_JOBSITE.
+    // A state 0 that only needs work sees a fresh block.
     @Test
     void compute_workOnlyState0_freshBlock_yieldsWorkOnlyBucket() {
         Position furnacePos = new Position(0, 0);
@@ -384,7 +356,7 @@ class RoomsStatusLogicTest {
         });
 
         Map<Position, State> jobStates = ImmutableMap.of(
-                furnacePos, State.freshAtState(0) // fresh: workLeft 0
+                furnacePos, State.freshAtState(0)
         );
 
         RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
@@ -396,13 +368,13 @@ class RoomsStatusLogicTest {
                         ImmutableMap.of(),      // no ingredients
                         ImmutableMap.of(),       // no quantities
                         ImmutableMap.of(),       // no tools
-                        ImmutableMap.of(0, 0),   // work-only state 0 (0, like cook_extract's floored 0.1)
+                        ImmutableMap.of(0, 0),
                         ImmutableMap.of(),       // no time
                         room -> true,
                         furnacePos::equals
                 ),
                 m -> m.getRoom().equals("kitchen_small") ? ImmutableList.of(furnacePos) : ImmutableList.of(),
-                1 // maxState: state 0 is the last state
+                1
         );
 
         java.util.Collection<RoomsNeedingVillagerInput.NVIRoom<String, String, Position>> rooms0 = foundRooms.get(0);

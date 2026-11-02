@@ -110,8 +110,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
         BlockState trunkState = level.getBlockState(trunkPos);
-        // Only chop logs: ChopDownTree scans every room position. A RotatedPillarBlock stand-in
-        // also took deepslate, basalt and hay bales (2026-10-20: the warp arborist banked deepslate).
+        // Only logs.
         if (!trunkState.is(BlockTags.LOGS)) {
             return List.of();
         }
@@ -122,9 +121,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     private void chopTreeRecursive(BlockPos center, Block matchBlock, List<ItemStack> drops) {
-        // Iterative flood fill: one stack frame per block (the recursive form) overflows the JVM
-        // stack on a large connected log region, so the work list lives on the heap instead.
-        // A block is only ever re-examined while it still matches: cutting it makes it AIR.
+        // Iterative, so a large log region doesn't overflow the stack.
         Deque<BlockPos> work = new ArrayDeque<>();
         work.push(center);
         while (!work.isEmpty()) {
@@ -150,7 +147,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (r == null) {
             return false;
         }
-        // Dry run: VoidLevel discards the placement writes; we only want the plantability verdict.
+        // A dry run: only whether it would grow.
         return r.feature().place(
                 r.config(), new VoidLevel(level),
                 level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
@@ -163,8 +160,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (r == null) {
             return false;
         }
-        // Clear the sapling first (as vanilla SaplingBlock.advanceTree does) so the trunk base is
-        // free, then write the live level directly (ServerLevel is a WorldGenLevel). Restore on fail.
+        // Clear the sapling first, as vanilla does; restore it if growth fails.
         BlockState previous = level.getBlockState(pos);
         level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         boolean placed = r.feature().place(
@@ -179,13 +175,12 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public Collection<PlantedSapling> getPlantedSaplings() {
-        // Realtime has no warp carrier — vanilla random ticks grow planted saplings.
+        // In real time, vanilla grows saplings.
         return List.of();
     }
 
     @Override
     public void clearPlantedSapling(BlockPos pos) {
-        // No-op in realtime.
     }
 
     @Override
@@ -361,7 +356,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (handler == null) {
             return false;
         }
-        // Target size 1: villagers cannot stack, by design (CONTEXT.md "Unstacked deposit").
+        // One per slot: villager items never stack.
         return Compat.insertInNextOpenSlot(handler, item, 1);
     }
 
@@ -379,7 +374,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
                     pos.toShortString(), ticks,
                     oven.getItem(0), oven.getItem(1), oven.getItem(2)
             );
-            oven.advanceBake(ticks); // the shared BreadOvenBake caps its own loop
+            oven.advanceBake(ticks);
             return;
         }
         if (!(be instanceof AbstractFurnaceBlockEntity furnace)) {

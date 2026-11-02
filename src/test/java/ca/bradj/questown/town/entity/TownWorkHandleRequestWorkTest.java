@@ -20,20 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-/**
- * F2 board behaviour, unit-level:
- *
- * <ul>
- *   <li>{@link TownWorkHandle#requestWork(WorkRequest)} is idempotent - re-requesting an item
- *       that already has a pending request does not stack a duplicate (the 2026-10-12 playtest:
- *       "I don't want to make that many; I only want to request X").</li>
- *   <li>The day-2 "first work request" quest shape ({@link MCQuest#firstWorkRequest}): type,
- *       wanted id, not complete at creation.</li>
- * </ul>
- *
- * Bootstraps vanilla so a real {@code Item} can back the request (registry-bound data; see
- * PostDowntimeWarperNoOpGuardTest for the pattern).
- */
+/** {@link TownWorkHandle#requestWork(WorkRequest)} doesn't add a request twice, and {@link MCQuest#firstWorkRequest} has the right shape. */
 class TownWorkHandleRequestWorkTest {
 
     @BeforeAll
@@ -59,7 +46,6 @@ class TownWorkHandleRequestWorkTest {
         assertEquals(null, changes.get(0).removed());
     }
 
-    /** Dev playtest 2026-10-30: "New job requests should go to the top of the list". */
     @Test
     void requestWork_putsTheNewRequestOnTop() {
         TownWorkHandle h = newHandle();
@@ -119,7 +105,6 @@ class TownWorkHandleRequestWorkTest {
         assertNotNull(q.getFlavorText(), "the quest must carry player-facing guidance");
     }
 
-    /** Dev playtest 2026-10-29: a request's limit is adjustable, kept across saves, dropped with the request. */
     @Test
     void requestLimit_isSaved_andForgottenWithTheRequest() {
         TownWorkHandle h = newHandle();

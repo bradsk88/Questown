@@ -57,7 +57,7 @@ class ProficiencyTest {
     void levelUpGainsWorkedAndDecaysOthers() {
         Map<String, Float> before = Map.of("farming", 0.5f, "smithing", 0.5f);
         Map<String, Float> after = Proficiency.levelUp(before, "farming", 0.001f, 0.0001f, 100);
-        Assertions.assertEquals(0.6f, after.get("farming"), EPS);   // +0.001*100
+        Assertions.assertEquals(0.6f, after.get("farming"), EPS);
         Assertions.assertEquals(0.49f, after.get("smithing"), EPS); // -0.0001*100
     }
 
@@ -79,7 +79,7 @@ class ProficiencyTest {
 
     @Test
     void repeatedLevelUpDecaysNeglectedToZero() {
-        // The "decay-to-zero-over-neglect" invariant: working only farming floors smithing at 0.
+        // Working only farming lowers smithing to 0, no further.
         Map<String, Float> m = new java.util.HashMap<>(Map.of("farming", 0.2f, "smithing", 0.5f));
         for (int i = 0; i < 200; i++) {
             m = Proficiency.levelUp(m, "farming", 0.001f, 0.0001f, 100);
@@ -109,7 +109,6 @@ class ProficiencyTest {
 
     @Test
     void breakEvenLevelYieldsOneTimes() {
-        // With 0.5..2.0, level 1/3 is the break-even (1x) point.
         float breakEven = 1f / 3f;
         Assertions.assertEquals(1.0f, Proficiency.multiplierFor(breakEven, MIN, MAX), 1e-4f);
     }

@@ -47,11 +47,7 @@ public class BOPDepositorWork {
             Items.AIR.getDefaultInstance()
     );
     public static final int PAUSE_FOR_ACTION = 1;
-    /**
-     * The deposit walks to a storeroom (dropping trip loot) and then to the flag, so it gets the
-     * production jobs' limit ({@code WorksBehaviour.productionExpiration}), not the 200-tick
-     * dining-table timeout it once borrowed (r16 #9: long walks timed out and looped).
-     */
+    /** The deposit walks to storage and then to the flag, so it gets the production jobs' time limit. */
     public static final long MAX_TICKS = 3000L;
 
     public static Work asWork(

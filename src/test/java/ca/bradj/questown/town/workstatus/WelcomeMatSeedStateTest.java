@@ -7,15 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Locks the welcome-mat invariant behind the NO_FORWARD_PROGRESS soft-lock fix (2026-10-07):
- * a leaver's per-owner work-status ledger must always be able to say "for me, the welcome mat
- * is state 0 (needs my supplies)". The mat's state-0 must be seeded unconditionally — it must
- * not be left stateless because some registered job has not (yet) claimed an interest in the
- * block. See {@code .scratch/cook-soft-lock/STATE.md} Round 4.
- *
- * <p>Pure (State is Forge-free): no MC classes, no bootStrap.
- */
+/** A welcome mat's state 0 is always seeded for a trip villager. */
 class WelcomeMatSeedStateTest {
 
     @Test

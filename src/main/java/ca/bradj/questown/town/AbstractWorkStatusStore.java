@@ -45,23 +45,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     int curIdx = 0;
 
-    /**
-     * A job block that sits in a non-fresh processing state with no active
-     * timer for this many ticks is dead: no timer will advance it and no
-     * villager has written to it in the window. Reseed it to fresh so the
-     * next cycle can restart instead of the whole town idling behind the
-     * frozen block.
-     *
-     * <p>20000 ticks (~16.7 in-game minutes) sits well above the longest
-     * declared time state (6000) and any legitimate leaver round-trip; the
-     * counter resets on every state write, so an actively progressing block
-     * never accumulates.
-     *
-     * <p>Self-heal for the 2026-10-15 playtest stall: a welcome mat stuck at
-     * its terminal state with no timer (the leaver's extraction circuit did
-     * not see it) froze every leaver behind it for the rest of the run.
-     * See .scratch/playtest-2026-10-15/collecting-supplies-stall.md.
-     */
+    /** A job block left in a non-fresh state, with no timer, for this many ticks is stuck and is reset to fresh. Any write restarts the count. */
     public static final long STUCK_RESET_TICKS = 20_000L;
 
     public AbstractWorkStatusStore(
@@ -107,12 +91,9 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     ) {
         State newV = jobStatuses.compute(pos, mutator);
         if (newV != null) {
-            // Any write to a block's state restarts its stuck window (a live
-            // block is by definition not stuck).
             this.stuckTicks.remove(pos);
         }
         if (newV != null && newV.processingState() > 0) {
-            // p2/p3 writes are the state-advance steps ! capture every one; throttle only the p1 work writes.
             boolean capAll = newV.processingState() >= 2;
         }
         debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
@@ -133,10 +114,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         Long cur = this.timeJobStatuses.get(bp);
         if (cur != null && cur > 0) {
             if (cur == ticksToNextState) {
-                // Re-adding the in-progress timer with the same remaining value
-                // is a no-op re-add (the work-progress path re-invokes the
-                // state-with-timer write); demote from ERROR so it stops reading
-                // as a fault (the 2026-10-15 playtest logged 11 of these).
                 this.debugLogger.log("Timer re-added with same value at {} ({})", bp, ticksToNextState);
             } else {
                 QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
@@ -195,7 +172,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return;
         }
 
-        // Store-global timers decay once per tick, no matter how many rooms were scanned.
         advanceBlocksWithExpiredTimers(decayTimersAndCollectExpired(ticksSinceLast));
 
         reseedStuckBlocks(tickSource, ticksSinceLast);
@@ -209,10 +185,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         scanRoom(tickSource, roomToScan);
     }
 
-    /**
-     * True when a block in this state is at rest, not stuck: nothing is meant to advance it,
-     * so the stuck-block self-heal must leave it alone. Default: no block rests outside state 0.
-     */
+    /** True when a block in this state is meant to stay there, so the stuck reset leaves it alone. */
     protected boolean isRestingState(
             TICK_SOURCE tickSource,
             POS pos,
@@ -238,8 +211,6 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                         "Work block at {} stuck in state {} for {} ticks with no timer; reseeding to fresh",
                         pos, state.toShortString(), accumulated
                 );
-                // setJobBlockState also clears the stuck counter via
-                // modifyJobBlockState.
                 this.setJobBlockState(pos, State.fresh());
             } else {
                 this.stuckTicks.put(pos, accumulated);
@@ -288,16 +259,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         return expired == null ? ImmutableList.of() : expired;
     }
 
-    /**
-     * Advance every claim by the elapsed game-tick delta and drop the ones that run out. A claim
-     * is the catch-all release for a work spot: nothing clears it when its owner dies, unloads,
-     * changes jobs, or gets stuck (only the work-cycle reset and the morning plate reset do), so
-     * without a TTL an orphaned claim would block the spot from every other townie for the rest
-     * of the world's life — and these servers rarely restart. Active townies refresh the claim
-     * on every item insert, so in practice only abandoned claims expire. The delta is the same
-     * {@code ticksSinceLast} the timers use, so {@code BLOCK_CLAIMS_TICK_LIMIT} means game ticks,
-     * not flag ticks.
-     */
+    /** Ages every work-spot claim and drops the expired ones, so a claim whose owner is gone frees up. Active villagers renew theirs. */
     private void decayClaims(long ticksSinceLast) {
         Iterator<Map.Entry<POS, Claim>> it = claims.entrySet().iterator();
         while (it.hasNext()) {
@@ -362,10 +324,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
     }
 
-    /**
-     * The positions a room covers never change, so they are computed once and reused. This
-     * avoids re-walking (and re-allocating) every enclosed position on every scan.
-     */
+    /** A room's positions, computed once. */
     private Collection<POS> scannablePositionsOf(ROOM room) {
         return scannablePositions.computeIfAbsent(room, this::computeScannablePositions);
     }
@@ -426,8 +385,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         }
         Claim newClaim = makeClaim.get();
         if (newClaim == null) {
-            // A job that claims no spots (the diners) is never blocked by a claim, the same rule
-            // AbstractItemWI applies on insert.
+            // A job that claims no spots is never blocked by a claim.
             return true;
         }
         return prevClaim.owner().equals(newClaim.owner());

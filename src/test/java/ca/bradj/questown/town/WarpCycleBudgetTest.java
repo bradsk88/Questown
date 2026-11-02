@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 class WarpCycleBudgetTest {
 
-    /** Drives the budget the way PostDowntimeWarper does: credit each step, start when allowed. */
     private static int cyclesIn(long totalTicks, long stepTicks, long cycleDuration) {
         WarpCycleBudget b = new WarpCycleBudget();
         int cycles = 0;
@@ -21,14 +20,12 @@ class WarpCycleBudgetTest {
 
     @Test
     void oneProductiveDay_ofTwoThousandTickHunts_allowsSix() {
-        // hunter/sword: 2000-tick timed state, 5 sub-steps per window (400-tick spacing).
         Assertions.assertEquals(6, cyclesIn(12_000, 400, 2_000));
     }
 
     @Test
     void longerCycle_spendsMoreOfTheDay() {
-        // hunter/sword_full_day: 6000 ticks; stepping on the shorter tier's spacing must not
-        // let it run more often.
+        // A longer job stepped on a shorter job's spacing doesn't run more often.
         Assertions.assertEquals(2, cyclesIn(12_000, 400, 6_000));
     }
 

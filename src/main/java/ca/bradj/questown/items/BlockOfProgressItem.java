@@ -9,23 +9,13 @@ import ca.bradj.questown.core.init.BlocksInit;
 import net.minecraft.world.item.BlockItem;
 
 
-/**
- * The Block of Progress item. ADR-0015's "gold" BOPs (a guaranteed root job) were retired on
- * 2026-10-30: every BOP is plain, and a job change takes an open job-change quest's job or a
- * random root.
- */
 public class BlockOfProgressItem extends BlockItem {
 
     public BlockOfProgressItem(Properties props) {
         super(BlocksInit.BLOCK_OF_PROGRESS.get(), props);
     }
 
-    /**
-     * A Block of Progress is not a building block: used on the flag it goes back into it (a sneak
-     * skips the flag's own click handler), and anywhere else it does nothing. Dev playtest
-     * 2026-10-30: "shift-rightclick with BOP in hand placed it on the ground. Breaking it destroyed
-     * it permanently."
-     */
+    // Used on the flag it goes back in; anywhere else it does nothing, so it is never placed.
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
         Level level = ctx.getLevel();

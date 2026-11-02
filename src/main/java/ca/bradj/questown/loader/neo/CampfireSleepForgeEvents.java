@@ -37,15 +37,7 @@ public final class CampfireSleepForgeEvents {
         AdvancementsInit.TUTORIAL_TRIGGER.trigger(sp, TutorialTrigger.Triggers.FirstCampfireSleep);
     }
 
-    // Diagnostic heartbeat for the "two players sleeping, morning never comes"
-    // class of bug. Every 60 ticks while anyone is campfire-sleeping, log the
-    // sleeper count, how many vanilla still counts as sleeping, and the day
-    // time. This tells us which of the three failure modes we are in:
-    //   - heartbeat stops  -> the server thread hung (a true deadlock)
-    //   - heartbeat keeps running and dayTime advances but no SleepFinishedTimeEvent
-    //     fires -> the night is simply not skipping (deep-sleep condition unmet)
-    //   - SleepFinishedTimeEvent fires but the server then goes silent
-    //     -> the wake path (onMorning / onWake) is the stall
+    // Dev diagnostics: while anyone is campfire-sleeping, log the sleepers and the time every 60 ticks.
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         if (CampfireSleepHandler.getCampfireSleeperCount() == 0) {
@@ -81,8 +73,7 @@ public final class CampfireSleepForgeEvents {
     private static void applyGrogginess(ServerPlayer player) {
         player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 6000, 0, false, false));
         player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 6000, 0, false, false));
-        // The effects are created invisible (no particles, no icon), so without this line the
-        // player is weaker and slower with no idea why (r17, dev 2026-10-25).
+        // The effects have no icon, so say why the player feels weak.
         player.displayClientMessage(Compat.translatable("message.questown.campfire_sleep.groggy"), false);
     }
 }

@@ -38,12 +38,12 @@ public class TownVillagerMoods {
     private final Map<UUID, Integer> mood = new HashMap<>();
     private long moodTick;
 
-    /** Production wiring: the assessment interval comes from the NeoForge config. */
+    /** The assessment interval comes from the config. */
     public TownVillagerMoods() {
         this.moodTick = Config.MOOD_TICK_INTERVAL.get();
     }
 
-    /** Test seam: a fixed interval, no config read (the config-split pattern). */
+    /** For tests: a fixed interval. */
     TownVillagerMoods(long moodTickInterval) {
         this.moodTick = moodTickInterval;
     }
@@ -52,7 +52,7 @@ public class TownVillagerMoods {
         return compute(Config.NEUTRAL_MOOD.get(), effects);
     }
 
-    /** Pure mood math: the neutral value is a parameter, so no config read — unit-testable. */
+    /** The mood from a neutral value and the active effects. */
     static int compute(int neutral, Collection<Effect> effects) {
         Integer computed = effects.stream()
                 .map(Effect::effect)
@@ -88,7 +88,6 @@ public class TownVillagerMoods {
         return mood.getOrDefault(uuid, Config.NEUTRAL_MOOD.get()) / 100f;
     }
 
-    /** True when the given effect is currently active on the given townie. */
     public boolean hasEffect(UUID uuid, ResourceLocation effect) {
         return moodEffects.getOrDefault(uuid, ImmutableList.of())
                 .stream().anyMatch(e -> e.effect().equals(effect));

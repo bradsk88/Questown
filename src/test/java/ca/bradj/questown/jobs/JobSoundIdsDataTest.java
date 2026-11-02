@@ -20,12 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * Every job JSON's {@code sound.id} is a registered sound event (the loader seam's lookup, the one
- * {@code RealtimeWorldInteraction.playSound} uses). A missing one played as a null
- * sound and crashed the server the first time a villager worked the job (2026-10-26: the wooden
- * sword's {@code minecraft:item.sword.hit}, all three paths/outfitter runs).
- */
+/** Every job's {@code sound.id} is a registered sound; a missing one crashes the server when the job is worked. */
 class JobSoundIdsDataTest {
 
     private static final Path JOBS_DIR = Path.of("src", "main", "resources", "data", "questown", "questown_jobs");

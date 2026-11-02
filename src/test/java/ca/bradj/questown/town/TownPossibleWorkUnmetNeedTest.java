@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 class TownPossibleWorkUnmetNeedTest {
 
-    /** Dev playtest 2026-10-29: "Relaxing villager shouldn't show a need bubble". */
     @Test
     void relaxingVillager_showsNoUnmetNeed() {
         Assertions.assertFalse(TownPossibleWork.showsUnmetNeed(DowntimeWork.getIdFor(new JobID("cook", "mutton")), ProductionStatus.NO_SUPPLIES));
@@ -19,13 +18,12 @@ class TownPossibleWorkUnmetNeedTest {
         Assertions.assertTrue(TownPossibleWork.showsUnmetNeed(new JobID("cook", "seeking_work"), ProductionStatus.IDLE));
     }
 
-    /** Dev playtest 2026-10-30: "They need mutton to work" over a cook carrying pork to the kitchen. */
     @Test
     void workingVillager_showsNoUnmetNeed() {
         Assertions.assertFalse(TownPossibleWork.showsUnmetNeed(new JobID("cook", "porkchop"), ProductionStatus.GOING_TO_JOB));
     }
 
-    /** autotest farmer/harvest_wheat [no_supplies]: a farmer stuck in its job for supplies says so. */
+    /** A farmer stuck for supplies says so. */
     @Test
     void villagerStuckForSupplies_showsItsUnmetNeed() {
         Assertions.assertTrue(TownPossibleWork.showsUnmetNeed(new JobID("farmer", "harvest_wheat"), ProductionStatus.NO_SUPPLIES));

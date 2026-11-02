@@ -5,11 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
-/**
- * The lang key naming a LOOT (produced) quest's wanted tag, or null for an item, which uses the
- * item's own name. Every LOOT quest that was not the raw-food tag used to read "Food", the miner's
- * Coal quest included. Pinned by {@code LootQuestNamesTest}.
- */
+/** The name of a LOOT quest's wanted tag, or null for an item, which uses its own name. */
 public final class LootQuestNames {
 
     private static final Map<ResourceLocation, String> TAG_KEYS = Map.of(

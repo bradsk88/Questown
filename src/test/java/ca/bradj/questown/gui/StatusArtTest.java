@@ -10,12 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/**
- * r9 findings #14: a working villager's status icon was the missing-texture checkerboard,
- * because {@link StatusArt} had no art for work states ({@code state:N}),
- * WAITING_FOR_TIMED_STATE or EXTRACTING_PRODUCT. Every status a production job reports must
- * map to a texture file that ships with the mod.
- */
+/** Every status a production job reports has a texture that ships with the mod. */
 class StatusArtTest {
 
     private static final JobID GATHERER = new JobID("gatherer", "axe");

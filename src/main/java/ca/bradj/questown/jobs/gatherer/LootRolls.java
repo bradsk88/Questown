@@ -5,11 +5,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/**
- * Rolls a table until it has {@code count} non-empty items (dev ruling 2026-10-26: a leaver
- * attempt always brings back an item), giving up after {@code maxRolls}. Registry-free so the
- * counting is unit-testable; {@link Loots#loadFromTables} supplies the vanilla table roll.
- */
+/** Rolls a table until it has {@code count} items, giving up after {@code maxRolls}. */
 public final class LootRolls {
 
     private LootRolls() {

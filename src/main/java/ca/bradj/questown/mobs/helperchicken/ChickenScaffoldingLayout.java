@@ -11,48 +11,16 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Source of truth for the helper-chicken arc's authored scaffolding layout.
- *
- * <p>Consumed by both the one-shot {@code ChickenScaffoldingNbtEditor} (which writes
- * these blocks into {@code empty_town.nbt}) and the in-world
- * {@code ChickenArcTestExecutor} PLACE_SCAFFOLDING phase. Keeping one source for both
- * call sites guarantees the committed structure and the headless test arena are
- * tag-equivalent.
- *
- * <p>The base layout is authored for {@link Rotation#NONE}. Other rotations are
- * derived by rotating the offset via {@link BlockPos#rotate(Rotation)} and rotating
- * any directional block properties.
- *
- * <p>Layout contract:
- * <ul>
- *   <li>One unlit campfire at {@link HelperChickenBeatOffsets#CAMPFIRE_OFFSET}.</li>
- *   <li>Cobblestone room perimeter around a 5&times;5 footprint
- *       (x &isin; [2..6], z &isin; [2..6], y = 0), minus:
- *       <ul>
- *           <li>{@link HelperChickenBeatOffsets#WALL_BLOCK_OFFSET} (the "missing wall"
- *               gap the player completes during F3).</li>
- *           <li>{@link HelperChickenBeatOffsets#DOOR_OFFSET} (the door gap the player
- *               fills with an oak door during F3).</li>
- *       </ul>
- *   </li>
- *   <li>Two oak fence posts flanking {@link HelperChickenBeatOffsets#GATE_CENTER_OFFSET}
- *       at {@code (1, 0, 9)} and {@code (3, 0, 9)}, leaving the center position open as
- *       the gate passage.</li>
- * </ul>
+ * The helper chicken's scaffolding, for {@code empty_town.nbt} and the autotest arena alike: an unlit
+ * campfire, a cobblestone room missing one wall block and its door, and two gate posts. Authored
+ * for {@link Rotation#NONE}; other rotations are derived.
  */
 public final class ChickenScaffoldingLayout {
 
     private ChickenScaffoldingLayout() {
     }
 
-    /**
-     * Returns the scaffolding plan in the given rotation, as a list of
-     * {@link BlockPlacement} entries. Positions are relative to the flag origin.
-     *
-     * <p>Calling with {@link Rotation#NONE} returns the authored base layout;
-     * other rotations return the same block set with positions and directional
-     * block properties rotated accordingly.
-     */
+    /** The scaffolding in the given rotation, relative to the flag. */
     public static List<BlockPlacement> forRotation(Rotation rotation) {
         List<BlockPlacement> base = baseLayout();
         if (rotation == Rotation.NONE) {
@@ -76,13 +44,7 @@ public final class ChickenScaffoldingLayout {
         return out;
     }
 
-    /**
-     * Flag-relative offsets that must remain EMPTY in the rendered structure
-     * (the missing wall and the open door column). The NBT editor uses this
-     * to evict stale cobblestone left behind when a previous layout revision
-     * placed a wall here. Without this, moving {@code DOOR_OFFSET} between
-     * revisions leaves the old door cell walled off.
-     */
+    /** The cells that must stay empty: the missing wall block and the door column. */
     public static List<BlockPos> gapOffsets(Rotation rotation) {
         List<BlockPos> gaps = new ArrayList<>();
         gaps.add(HelperChickenBeatOffsets.WALL_BLOCK_OFFSET);
@@ -110,10 +72,7 @@ public final class ChickenScaffoldingLayout {
         BlockPos wallGap = HelperChickenBeatOffsets.WALL_BLOCK_OFFSET;
         BlockPos doorGap = HelperChickenBeatOffsets.DOOR_OFFSET;
 
-        // Walls are 2-high so the RoomRecipes detector can register the room
-        // once the player places the last wall block and a door. Gaps:
-        //   - WALL_BLOCK_OFFSET (y=0 only) — the player's "missing wall"
-        //   - DOOR_OFFSET (y=0 AND y=1)   — where the 2-high oak door goes
+        // Two-high walls, leaving the missing wall block and the door column open.
         for (int x = 2; x <= 6; x++) {
             for (int z = 2; z <= 6; z++) {
                 boolean onPerimeter = (x == 2 || x == 6 || z == 2 || z == 6);
@@ -126,7 +85,6 @@ public final class ChickenScaffoldingLayout {
                         continue;
                     }
                     if (pos.getX() == doorGap.getX() && pos.getZ() == doorGap.getZ()) {
-                        // Both halves of the door column stay open.
                         continue;
                     }
                     out.add(new BlockPlacement(pos, cobble));
@@ -142,12 +100,7 @@ public final class ChickenScaffoldingLayout {
         out.add(new BlockPlacement(new BlockPos(center.getX() + 1, center.getY(), center.getZ()), fence));
     }
 
-    /**
-     * A single scaffolding block at a structure-local offset.
-     *
-     * <p>Field names mirror {@code TestBlueprint.BlockPlacement} for easy
-     * interop at call sites that bridge the two types.
-     */
+    /** One scaffolding block, relative to the flag. */
     public record BlockPlacement(BlockPos offset, BlockState blockState) {
     }
 }

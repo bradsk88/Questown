@@ -15,57 +15,23 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * World-space speech-bubble renderer shared across the helper chicken, the
- * townie need-bubbles of ADR-0011, and the dead doors.
- *
- * <p>Driven from
- * {@link ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer#render}
- * after {@code super.render}
- * returns — at that point the pose stack is in OUTER (world-space, camera-
- * relative) state with the chicken's body-yaw rotation popped, so applying
- * {@link EntityRenderDispatcher#cameraOrientation()} alone gives a true
- * billboard. Drawing from inside a {@code RenderLayer} would happen INSIDE the
- * entity's body-yaw rotation and the icon would rotate with the chicken's
- * facing direction; that is why this class is no longer a {@code RenderLayer}.
- *
- * <p>Behaviour:
- * <ul>
- *   <li>Distance gate: when through-walls mode is OFF, the bubble is hidden
- *       beyond 16 blocks.</li>
- *   <li>Alternation: with two non-empty icons, hard-cuts every 20 ticks (1s).
- *       Icon A displays first. With a single icon, never switches.</li>
- *   <li>Through-walls: when the entity's {@code through-walls} synced flag is
- *       {@code true}, both the bubble background and the item icon render
- *       without depth test (icon via {@link WrappingBufferSource}, background
- *       via {@link BubbleRenderType#solidWhite(boolean)}).</li>
- *   <li>Fullbright: bubbles use {@code packedLight = 0xF000F0} so they stay
- *       legible in dark scenes.</li>
- * </ul>
- */public final class BubbleRenderer {
+ * Draws the speech bubbles over the helper chicken, villagers and dead doors, facing the camera.
+ * Hidden beyond 16 blocks unless drawn through walls; two icons alternate each second; always fully lit.
+ */
+public final class BubbleRenderer {
 
     private static final int FULLBRIGHT = 0xF000F0;
     private static final double VISIBILITY_RANGE_SQR = 16.0 * 16.0;
     private static final int ALTERNATION_TICKS = 20;
 
-    /** Additional lift in world-Y above the chicken's head. */
     private static final float HEAD_LIFT_BLOCKS = 0.5f;
 
-    /**
-     * Extra lift when the entity shows a nameplate: the bubble otherwise sits on the name
-     * ("Villag[!]2", 2026-10-22 playtest). Roughly one nameplate line (9 px at 0.025).
-     */
+    /** Extra lift above a nameplate. */
     private static final float NAMEPLATE_CLEARANCE_BLOCKS = 0.3f;
 
-    /** Outer scale applied before drawing bubble + icon. */
     private static final float ASSEMBLY_SCALE = 0.5f;
 
-    /**
-     * Y in inner pose-local space where both bubble background and icon are
-     * centred. Picked to sit a bit above the chicken (matching the
-     * head-lifted assembly origin) — the icon translates to this Y under a
-     * GUI transform so the bubble's centre rectangle and the item centre
-     * coincide regardless of whether the icon is a 2D item or a block.
-     */
+    /** Where the bubble and its icon are centred, so items and blocks both sit inside it. */
     private static final float ICON_CENTRE_Y_INNER = 13.0f / 16.0f;
 
     private BubbleRenderer() {
@@ -79,16 +45,7 @@ import net.minecraft.world.item.ItemStack;
         return lift;
     }
 
-    /**
-     * Render the chicken's currently-synced bubble icon at its head.
-     *
-     * <p>Must be called with {@code poseStack} in OUTER (camera-relative)
-     * state — i.e. after {@code super.render} returns from
-     * {@link ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer#render}.
-     * Pose origin must be at the
-     * entity's feet position; +Y must point world-up (no entity-yaw or
-     * Y-flip applied).
-     */
+    /** Draws the chicken's bubble at its head. Call after {@code super.render}, with the pose at the entity's feet and +Y up. */
     public static void renderBubbleFor(
             HelperChickenEntity helper,
             PoseStack poseStack,
@@ -120,18 +77,7 @@ import net.minecraft.world.item.ItemStack;
         renderBubble(poseStack, bufferSource, helper, shown, throughWalls, dispatcher);
     }
 
-    /**
-     * Draws the same comic bubble over any entity, for callers that already know which icon to
-     * show — the townie need-bubbles of ADR-0011, which pick their icon from a synched need rather
-     * than from the chicken's alternating pair.
-     *
-     * <p>Same pose contract as {@link #renderBubbleFor}: call it after {@code super.render}, with
-     * the pose still camera-relative and the origin at the entity's feet.
-     */
-    /**
-     * Same as {@link #renderIconBubbleFor} with an authored texture instead of an item model - for
-     * needs whose icon is questown art (the NO_STORAGE "no space" status icon), drawn face-on.
-     */
+    /** Draws a bubble with a given icon over any entity. Same pose rules as {@link #renderBubbleFor}. */
     public static void renderTextureBubbleFor(
             Entity entity,
             net.minecraft.resources.ResourceLocation texture,
@@ -158,12 +104,7 @@ import net.minecraft.world.item.ItemStack;
         renderBubble(poseStack, bufferSource, entity, icon, false, dispatcher);
     }
 
-    /**
-     * Texture-mode renderer. Same outer pose / billboard as the item path,
-     * but the icon is a UV-mapped quad sampling the synced texture instead of
-     * an item model. Quad spans roughly the bubble's inner area so the icon
-     * sits inside the comic outline.
-     */
+    /** Draws a bubble whose icon is a texture rather than an item. */
     private static void renderTextureBubble(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
@@ -182,13 +123,11 @@ import net.minecraft.world.item.ItemStack;
         renderBubbleBackground(poseStack, bufferSource, throughWalls);
         poseStack.popPose();
 
-        // Icon quad — sized to fit inside the bubble centre rectangle.
         VertexConsumer consumer = bufferSource.getBuffer(
                 BubbleRenderType.texturedIcon(texture, throughWalls)
         );
         Matrix4f matrix = poseStack.last().pose();
-        // Slight forward offset so the quad sits in front of the bubble bg
-        // and never z-fights with it.
+        // A little in front of the bubble, so they don't z-fight.
         float z = 0.001f;
         float r = 0.5f; // half-extent of the icon quad in pose-local units
         float yc = ICON_CENTRE_Y_INNER;
@@ -207,8 +146,6 @@ import net.minecraft.world.item.ItemStack;
             float x4, float y4,
             float z
     ) {
-        // NEW_ENTITY format: position, color, uv, overlay, lightmap, normal.
-        // u/v: bottom-left=(0,1), bottom-right=(1,1), top-right=(1,0), top-left=(0,0)
         emitTexVertex(c, m, x1, y1, z, 0f, 1f);
         emitTexVertex(c, m, x2, y2, z, 1f, 1f);
         emitTexVertex(c, m, x3, y3, z, 1f, 0f);
@@ -230,14 +167,7 @@ import net.minecraft.world.item.ItemStack;
                 .endVertex();
     }
 
-    /**
-     * Draws the same comic bubble over a block position — the dead-door bubble of ADR-0011,
-     * which has no entity to hang the render off.
-     *
-     * <p>Pose contract: {@code poseStack} must be in camera-relative world space (as handed
-     * to a {@code RenderLevelStageEvent} subscriber), and {@code cameraPos} is the active
-     * camera's world position. The bubble floats just above the top of the two-block door.
-     */
+    /** Draws a bubble over a block (a dead door). The pose is camera-relative world space; the bubble floats above the two-block door. */
     public static void renderIconBubbleAtBlock(
             net.minecraft.core.BlockPos pos,
             ItemStack icon,
@@ -249,8 +179,7 @@ import net.minecraft.world.item.ItemStack;
                 || cameraPos.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > VISIBILITY_RANGE_SQR) {
             return;
         }
-        // AFTER_TRANSLUCENT runs after entity rendering, so the dispatcher's camera
-        // orientation is still valid for billboarding.
+        // After the translucent pass, the camera orientation is still valid.
         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         poseStack.pushPose();
         poseStack.translate(
@@ -262,12 +191,7 @@ import net.minecraft.world.item.ItemStack;
         poseStack.popPose();
     }
 
-    /**
-     * Draws the comic bubble over a block position with an authored texture icon instead of
-     * an item — the "!" attention bubbles (flag with incomplete quests, job board with no
-     * work requests). Same pose contract, 16-block gate and billboard as
-     * {@link #renderIconBubbleAtBlock}.
-     */
+    /** Draws a bubble with a texture icon over a block: the "!" bubbles over the flag and the job board. */
     public static void renderTextureBubbleAtBlock(
             net.minecraft.core.BlockPos pos,
             net.minecraft.resources.ResourceLocation texture,
@@ -281,8 +205,7 @@ import net.minecraft.world.item.ItemStack;
         }
         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         poseStack.pushPose();
-        // The "!" targets are one-block-tall (flag, job board): anchor 1.0 above the block,
-        // unlike the dead-door item path which floats over a two-block door.
+        // One block above: the flag and the board are one block tall.
         poseStack.translate(
                 pos.getX() + 0.5 - cameraPos.x,
                 pos.getY() + 1.0 + HEAD_LIFT_BLOCKS - cameraPos.y,
@@ -300,8 +223,7 @@ import net.minecraft.world.item.ItemStack;
                 BubbleRenderType.texturedIcon(texture, false)
         );
         Matrix4f matrix = poseStack.last().pose();
-        // Slight forward offset so the quad sits in front of the bubble bg, same as the
-        // entity texture path.
+        // A little in front of the bubble, so they don't z-fight.
         float z = 0.001f;
         float r = 0.5f;
         float yc = ICON_CENTRE_Y_INNER;
@@ -318,21 +240,13 @@ import net.minecraft.world.item.ItemStack;
             boolean throughWalls,
             EntityRenderDispatcher dispatcher
     ) {
-        // Outer pose: +Y is world-up. Translate up to chicken's head + lift.
         poseStack.pushPose();
         poseStack.translate(0.0, bubbleLift(entity), 0.0);
         renderBubbleAssembly(poseStack, bufferSource, shown, throughWalls, dispatcher);
         poseStack.popPose();
     }
 
-    /**
-     * Scale + billboard + bubble background + icon, shared by the entity path (origin at the
-     * entity's feet, pre-lifted) and the block path (origin at the bubble's world anchor).
-     * After {@code cameraOrientation()} local +Z points away from the camera, but the GUI
-     * display transform expects the viewer at +Z, so the icon turns 180° about Y first.
-     * Without it a block showed its underside (dev playtest 2026-10-30: the "needs a Smithy"
-     * bubble's blacksmith table) and a flat item was mirrored.
-     */
+    /** Scales, faces the camera, and draws the bubble and its icon. The icon turns 180 degrees first, or blocks show their underside. */
     private static void renderBubbleAssembly(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
@@ -344,9 +258,7 @@ import net.minecraft.world.item.ItemStack;
         poseStack.scale(ASSEMBLY_SCALE, ASSEMBLY_SCALE, ASSEMBLY_SCALE);
         poseStack.mulPose(dispatcher.cameraOrientation());
 
-        // Bubble drawn FIRST (icon overlays it). Lifted to share vertical
-        // space with the icon (icon's HEAD-transform centre is at +Y =
-        // ICON_CENTRE_Y_INNER in inner pose-local).
+        // The bubble first; the icon goes over it.
         poseStack.pushPose();
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
         renderBubbleBackground(poseStack, bufferSource, throughWalls);
@@ -377,22 +289,7 @@ import net.minecraft.world.item.ItemStack;
         poseStack.popPose();
     }
 
-    /**
-     * Comic-style speech bubble drawn as solid-white quads with vertex
-     * emission (no texture). Octagonal body decomposed into 3 quads
-     * (top trapezoid, centre rectangle, bottom trapezoid) plus a
-     * downward-pointing tail (degenerate quad acting as a triangle).
-     *
-     * <p>Sized 1.4 × 1.4 in pose-local units — at the assembly's 0.5×
-     * scale this matches roughly 1.4× the icon's footprint. Tail tip
-     * offset slightly left of centre for comic-style asymmetry.
-     *
-     * <p>Coordinate convention: this method runs in inner pose-local
-     * with cameraOrientation already applied, so +Y is screen-up,
-     * +X is screen-right. The bubble's TOP edge sits at +Y, BOTTOM at
-     * -Y, and the tail extends further into -Y to point down toward
-     * the chicken below.
-     */
+    /** A comic speech bubble from white quads: an octagon with a tail pointing down. +Y is screen-up. */
     private static void renderBubbleBackground(
             PoseStack poseStack,
             MultiBufferSource bufferSource,
@@ -403,13 +300,9 @@ import net.minecraft.world.item.ItemStack;
         );
         Matrix4f matrix = poseStack.last().pose();
 
-        // Top trapezoid (visually screen-up, at +Y)
         whiteQuad(consumer, matrix, -0.4f, +0.7f, +0.4f, +0.7f, +0.7f, +0.4f, -0.7f, +0.4f);
-        // Centre rectangle
         whiteQuad(consumer, matrix, -0.7f, +0.4f, +0.7f, +0.4f, +0.7f, -0.4f, -0.7f, -0.4f);
-        // Bottom trapezoid (visually screen-down, at -Y)
         whiteQuad(consumer, matrix, -0.7f, -0.4f, +0.7f, -0.4f, +0.4f, -0.7f, -0.4f, -0.7f);
-        // Tail: degenerate quad pointing further screen-down toward chicken
         whiteQuad(consumer, matrix, -0.2f, -0.7f, +0.1f, -0.7f, -0.1f, -1.1f, -0.1f, -1.1f);
     }
 
@@ -427,12 +320,7 @@ import net.minecraft.world.item.ItemStack;
         c.vertex(m, x4, y4, 0.0f).color(255, 255, 255, 255).endVertex();
     }
 
-    /**
-     * Static helper extracted so it can be unit-tested without rendering.
-     *
-     * <p>With a single icon (B empty), returns A regardless of tick. With two
-     * icons, alternates on 20-tick (1s) boundaries, showing A first.
-     */
+    /** The icon to show: A alone, or A and B alternating each second, A first. */
     public static ItemStack chooseDisplayedIcon(
             int tickCount,
             ItemStack iconA,
@@ -448,14 +336,7 @@ import net.minecraft.world.item.ItemStack;
         return showA ? iconA : iconB;
     }
 
-    /**
-     * Delegates to an underlying {@link MultiBufferSource} but rewrites any
-     * requested {@link RenderType} (usually the item-atlas entity-translucent
-     * type) to a through-walls variant bound to the same texture.
-     *
-     * <p>The through-walls render type shares the shader and format with the
-     * item atlas, so buffers line up byte-for-byte.
-     */
+    /** Swaps every requested render type for its through-walls version with the same texture. */
     private static final class WrappingBufferSource implements MultiBufferSource {
         private final MultiBufferSource delegate;
 

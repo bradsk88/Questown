@@ -14,10 +14,7 @@ public final class RoomDoors {
     private RoomDoors() {
     }
 
-    /**
-     * The doorway of the room whose floor plan holds {@code pos} on the room's own level (the
-     * door's bottom Y, where beds and furniture stand).
-     */
+    /** The doorway of the room whose floor holds {@code pos}. */
     public static Optional<BlockPos> doorOfRoomContaining(
             Collection<MCRoom> rooms,
             BlockPos pos
@@ -30,12 +27,7 @@ public final class RoomDoors {
                     .map(r -> Positions.ToBlock(r.doorPos, r.yCoord));
     }
 
-    /**
-     * The room whose floor plan holds {@code pos}, from its floor up to head height (a walk target
-     * is a furniture block or the cell a villager stands in, the doorway included: a cook can work
-     * from it), so a villager that cannot reach the
-     * spot can say which room it cannot get into.
-     */
+    /** The room holding {@code pos}, from floor to head height, doorway included. */
     public static Optional<MCRoom> roomHolding(
             Collection<MCRoom> rooms,
             BlockPos pos

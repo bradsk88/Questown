@@ -114,8 +114,7 @@ public class Compat {
      * A translatable that renders {@code fallback} (a format pattern taking the same
      * {@code args}) when {@code key} is missing from the client's lang file, instead of the
      * raw key. Use for status tooltips, where any unauthored category × status pair would
-     * otherwise surface as the raw i18n key to the player (2026-10-14 playtest: the diner's
-     * tooltip).
+     * otherwise surface as the raw i18n key to the player.
      */
     public static MutableComponent translatableWithFallback(
             String key,
@@ -374,8 +373,7 @@ public class Compat {
 
     /**
      * The plain name of a stack, as an item tooltip shows it. {@link #getItemName(ItemStack)} is
-     * the chat form, wrapped in square brackets; a tooltip built from it read "[Oak Pressure
-     * Plate]" (2026-10-22 playtest).
+     * the chat form, wrapped in square brackets.
      */
     public static Component getHoverName(ItemStack stack) {
         return stack.getHoverName();
@@ -498,11 +496,7 @@ public class Compat {
         return TagKey.create(Registries.ITEM, tag);
     }
 
-    /**
-     * Per-item NBT mutation (the 1.20.4+ data-components custom-data slot; 1.19.2: item NBT).
-     * Helper names dodge the gate's {@code CustomData} / {@code DataComponents} markers; the
-     * leaf never names the component type or the component key.
-     */
+    /** Per-item NBT mutation (1.19.2: item NBT; 1.20.4+: the custom-data component). */
     public static void updateItemDataTag(
             net.minecraft.world.item.ItemStack stack,
             java.util.function.Consumer<net.minecraft.nbt.CompoundTag> mutate
@@ -524,11 +518,7 @@ public class Compat {
         gui.renderItemDecorations(Minecraft.getInstance().font, stack, x, y);
     }
 
-    /**
-     * Static-render an item in the GUI display context (1.20.6 {@code ItemDisplayContext.GUI};
-     * 1.19.2 would use {@code DisplayType.GUI}), so item renderers name only this helper and the
-     * version-bound display-context enum stays inside the seam.
-     */
+    /** Static-render an item in the GUI display context. */
     public static void renderItemStaticGui(
             ItemRenderer renderer,
             ItemStack stack,
@@ -551,11 +541,6 @@ public class Compat {
         return font.split(text, width);
     }
 
-    /**
-     * The 1.20.6 button construction (a protected ctor, built via the builder). A leaf calls this
-     * with the version-bound {@code net.minecraft.client.gui.components.Button} type, so it appears
-     * nowhere outside the seam.
-     */
     public static net.minecraft.client.gui.components.Button button(
             Component text,
             net.minecraft.client.gui.components.Button.OnPress onPress,
@@ -567,19 +552,10 @@ public class Compat {
         return net.minecraft.client.gui.components.Button.builder(text, onPress).bounds(x, y, width, height).build();
     }
 
-    /**
-     * The 1.20.6 way to turn a {@link Component} into its display order text (1.19.2: a {@code
-     * FormattedCharSequence} cast). The version-bound {@code getVisualOrderText()} call stays here.
-     */
     public static FormattedCharSequence componentText(Component component) {
         return component.getVisualOrderText();
     }
 
-    /**
-     * The vanilla per-frame state setters the SAFE-tier card screens used to name directly
-     * ({@code RenderSystem.setShaderColor(r, g, b, a)} before/after a tinted card). The version-bound
-     * static stays here; leaves call this.
-     */
     public static void setShaderColor(float r, float g, float b, float a) {
         com.mojang.blaze3d.systems.RenderSystem.setShaderColor(r, g, b, a);
     }
@@ -617,11 +593,6 @@ public class Compat {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
     }
 
-    /**
-     * The Forge {@link ToolAction} a neutral {@link QTToolAction} maps to, so a leaf names
-     * neither marker type (used by {@link #toolModifiedState}; private because no leaf
-     * needs the raw Forge type).
-     */
     private static ToolAction forgeToolAction(QTToolAction toolAction) {
         return switch (toolAction) {
             case HOE_TILL -> ToolActions.HOE_TILL;
@@ -633,9 +604,7 @@ public class Compat {
 
     /**
      * The tool-modified state a block takes under a neutral {@code QTToolAction}, or {@code null}
-     * when it is not tool-transformable. Wraps
-     * {@code BlockState#getToolModifiedState(state, forgeToolAction, false)} - the exact call the
-     * world-access leaves made privately - so their only tool-surface name is the enum.
+     * when it is not tool-transformable.
      */
     public static net.minecraft.world.level.block.state.BlockState toolModifiedState(
             net.minecraft.world.level.block.state.BlockState state,
@@ -681,10 +650,7 @@ public class Compat {
     }
 
     /**
-     * The loot table with the given id, looked up on the server's reloadable registries.
-     * The 1.20.2+ {@code ResourceKey} + {@code Reloader} registry lookup stays here so no leaf
-     * outside the seam names the registries package; 1.19.2 would read the registry accessor
-     * straight from the server.
+     * The loot table with the given id.
      */
     public static net.minecraft.world.level.storage.loot.LootTable lootTable(
             ServerLevel level,
@@ -730,7 +696,7 @@ public class Compat {
             return this;
         }
 
-        /** A per-state map colour (1.20.x {@code Properties#mapColor(Function<BlockState, MapColor>)}). */
+        /** A per-state map colour. */
         public P mapColor(
                 java.util.function.Function<
                     net.minecraft.world.level.block.state.BlockState,

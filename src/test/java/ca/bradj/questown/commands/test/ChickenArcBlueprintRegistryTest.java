@@ -44,8 +44,7 @@ class ChickenArcBlueprintRegistryTest {
 
     @Test
     void all_scenarioNamesMatchPlanExactly() {
-        // Agent runbook greps these names verbatim — any rename must also update
-        // the runbook. Intentional: makes renames loud.
+        // Scenarios are selected by name, so a rename must fail here.
         List<String> expected = List.of(
                 "stick_peck_and_follow_spawn",
                 "F1_stick_to_campfire",
@@ -137,10 +136,7 @@ class ChickenArcBlueprintRegistryTest {
 
     @Test
     void skipChickenCommand_runCommandUsesPosBeforeLiteral() {
-        // Brigadier tree is `qt flag <pos> place_above [skip-chicken]`. The
-        // original blueprint put place_above before the pos and regressed to a
-        // runtime parse failure. Pin the corrected order so a future edit can
-        // not silently break it again.
+        // The command is `qt flag <pos> place_above [skip-chicken]`: the position comes first.
         ChickenArcBlueprint bp = findByName("skip_chicken_command");
         ChickenArcScriptedAction.RunCommand cmd = bp.scriptedActions().stream()
                 .filter(a -> a instanceof ChickenArcScriptedAction.RunCommand)
@@ -157,9 +153,7 @@ class ChickenArcBlueprintRegistryTest {
 
     @Test
     void firstGatherWorldlySeeds_realtimeAndWarpDifferInWarpAmount() {
-        // Scenario 11 asserts seed-guarantee via realtime ticks; scenario 12
-        // asserts warp-parity under a day of warp. If both carry the same
-        // warpAmount the parity claim is vacuous.
+        // The two must differ in warp, or the parity check means nothing.
         ChickenArcBlueprint realtime = findByName("first_gather_worldly_seeds_realtime");
         ChickenArcBlueprint warp = findByName("first_gather_worldly_seeds_warp");
         Assertions.assertEquals(
@@ -190,12 +184,7 @@ class ChickenArcBlueprintRegistryTest {
         }
     }
 
-    /**
-     * Every {@link ChickenArcScriptedAction} subtype must be exercised by at
-     * least one registered scenario. If a subtype is reachable only in tests
-     * but never from the registry, we're not actually verifying the executor's
-     * handler for it at runtime.
-     */
+    /** Every scripted action type is used by at least one scenario. */
     @Test
     void everyScriptedActionSubtype_isReachableInRegistry() {
         Set<Class<?>> used = new HashSet<>();

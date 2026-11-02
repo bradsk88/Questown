@@ -10,28 +10,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Dev-only: give an agent driving a held run the same onboarding awareness the
- * helper chicken gives a human player, but as text it can read from the server
- * log and act on without a mouse.
- *
- * <p>The helper chicken points a player at the current beat with a bubble icon
- * and a right-click hint; an agent can't see the world and can't right-click or
- * place blocks, so this command restates the current beat as a {@code need}, a
- * {@code how}, and a {@code teaches} (the legibility gap the beat exposes - see
- * {@link AgentBeatGuidance}) plus a compact map of the whole arc, so the agent
- * knows where it is and how to get the next beat done without holding its hands
- * too much.
- *
- * <p>The agent is an observer, not the one holding a wand, so it reads the
- * flag's persisted {@link ChickenBeatState} (the same state the chicken's
- * controller advances) rather than any live chicken entity. A {@code status}
- * line reports whether the arc is even running ({@code chickenEverSpawned}/
- * forfeited) and whether the current beat's condition is met, so a stale beat
- * does not read as progress. No permission gate, so it runs from the console
- * (FIFO). Registered like the other {@code _qtdev} commands, targeting the first
- * flag with a position.
- */
+/** Dev-only: the helper chicken's current lesson as text, with the whole arc and whether the lesson is met. */
 public class QtDevHelpCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         // @formatter:off
@@ -78,15 +57,7 @@ public class QtDevHelpCommand {
         return 0;
     }
 
-    /**
-     * Why the current beat is stuck, read from the flag's live state so a stale
-     * beat is not mistaken for progress. The chicken's controller only advances
-     * the beat when the arc is running ({@code chickenEverSpawned} and not
-     * forfeited); otherwise the persisted beat is frozen no matter what the
-     * player does. When the arc is running, reports whether the beat's condition
-     * is met via the same {@link ChickenArcTransitions#isSatisfied} the
-     * controller uses, so the agent knows the beat is inert, not just incomplete.
-     */
+    /** Why the current lesson is not moving: the arc is not running, or its condition is not met. */
     private static String statusLine(TownFlagBlockEntity flag, ChickenBeatState state) {
         if (!flag.getChickenEverSpawned()) {
             return "not running - the helper chicken has never spawned (this flag was not placed in an "

@@ -10,14 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/**
- * Posts the day-2 "post your first work request" quest (F2:
- * .scratch/day1-playtest-2026-10-11/job-board-organic-introduction). Applied when the
- * basics batch (job board + store room) completes. The board exists by then, but the
- * first villager may still be a morning away (playtests 2026-10-15 + 2026-10-17: "should
- * not get added until the villager has arrived"), so with no villager the reward re-queues
- * itself as a morning reward (persisted, unlike the asap stack) and posts once one is here.
- */
+/** Posts day 2's first-work-request quest. With no villager yet, it waits for the morning. */
 public class PostFirstWorkRequestQuestReward extends MCReward {
 
     public static final String ID = "post_first_work_request_quest";
@@ -43,7 +36,6 @@ public class PostFirstWorkRequestQuestReward extends MCReward {
         return () -> {
             if (!((TownFlagBlockEntity) town).hasVillagers()) {
                 QT.QUESTS_LOGGER.info("First-work-request quest deferred to the next morning: no villager yet");
-                // A fresh instance: claim() ignores a reward already marked applied.
                 town.addMorningReward(new PostFirstWorkRequestQuestReward(town));
                 return;
             }

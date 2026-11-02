@@ -2,25 +2,18 @@ package ca.bradj.questown.town.needs;
 
 import java.util.Collection;
 
-/**
- * Whether an idle villager has done all its job-board requests (dev ruling 2026-10-30): every
- * request its jobs answer is stocked. Then it says "All my requests are done" and shows no need
- * bubble. An open request keeps it from being done even when its job can't run (dev ruling
- * 2026-10-31): a cook with a porkchop request and no raw pork shows the raw-pork bubble, and with
- * pork but no coal it shows coal. Only jobs that make something decide it: a support job (fuel,
- * extract, stock) answers whatever its makers answer.
- */
+/** Whether an idle villager's requests are all stocked, so it says so and shows no bubble. An open request it can't fill keeps it from being done. Support jobs don't count. */
 public final class RequestsDone {
 
     private RequestsDone() {
     }
 
     /**
-     * One of the villager's unlocked jobs, as the board sees it.
+     * One of the villager's unlocked jobs.
      *
-     * @param answersOpenRequest    the job makes something an open (unpaused) request wants
-     * @param answersStockedRequest the job makes something only a paused (stocked) request wants
-     * @param makesNothing          a support job (fuel, extract, stock, display), skipped
+     * @param answersOpenRequest    it makes something an unpaused request wants
+     * @param answersStockedRequest it makes something only a paused request wants
+     * @param makesNothing          a support job (fuel, extract, stock, display)
      */
     public record JobView(
             boolean answersOpenRequest,

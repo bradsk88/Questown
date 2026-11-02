@@ -22,13 +22,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class TownMessages {
-    // E2 (.scratch/day1-playtest-2026-10-11/quest-complete-chat-blast-pacing.md):
-    // day-1 events fire in bursts (mat completion posts the basics batch, board
-    // placement completes it, each broadcasts), and the player sees a wall of
-    // chat within a second. Every broadcast goes through this flag-wide queue:
-    // the first line sends immediately, the rest space out at this interval,
-    // consecutive duplicates are dropped (masks - does not fix - the
-    // double-firing in messages-print-twice.md).
+    // Every chat line from the flag goes through one queue, an interval apart, so a burst of events isn't a wall of chat.
     private static final int BROADCAST_SPACING_TICKS = 100;
     private final BroadcastPacer<Component> pacer = new BroadcastPacer<>(BROADCAST_SPACING_TICKS);
 
@@ -55,10 +49,7 @@ public class TownMessages {
         }
     }
 
-    /**
-     * Release one queued broadcast once the spacing interval is free. Ticked
-     * every flag tick by {@link TownFlagTicker}.
-     */
+    /** Sends one queued line once the interval allows. Called every flag tick. */
     public void flushBroadcasts() {
         if (pacer.isEmpty()) {
             return;
@@ -102,7 +93,7 @@ public class TownMessages {
         roomRecipeCreated(roomDoorPos.getDoorPos(), match);
     }
 
-    /** "Created X at location [x, z]" naming {@code where} (a block room names its own block). */
+    /** "Created X at location [x, z]". */
     public void roomRecipeCreated(
             Position where,
             Optional<ResourceLocation> match
@@ -147,11 +138,7 @@ public class TownMessages {
         );
     }
 
-    /**
-     * The quest's name for chat, worded like its quest card ({@code UIQuest.getName}). Job quests
-     * name the job by its translated root ({@code jobs.<root>}); before this a job-change quest fell
-     * through to the room lookup and read as a raw key ("room.hunter_qt_sword").
-     */
+    /** The quest's name for chat, worded like its card. */
     static Component questName(
             Quest.QuestType type,
             ResourceLocation wantedId,
@@ -189,12 +176,10 @@ public class TownMessages {
         jobChanged(jobID, UtilClean.truncateMiddle(visitorUUID));
     }
 
-    /** Same broadcast, with an explicit display label ("Villager N"). */
     public void jobChanged(
             JobID jobID,
             String villagerLabel
     ) {
-        // The profession's name, not the raw id ("cook:simple_furnace_food", 2026-10-17 playtest).
         broadcastMessage("messages.jobs.changed", ca.bradj.questown.jobs.Jobs.getRootNameComponent(jobID), villagerLabel);
     }
 

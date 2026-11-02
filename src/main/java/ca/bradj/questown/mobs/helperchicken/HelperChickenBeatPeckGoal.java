@@ -21,31 +21,14 @@ import java.util.EnumSet;
 import java.util.function.Supplier;
 
 /**
- * Walks the helper chicken to the current beat target (computed from
- * {@link HelperChickenBeatOffsets#resolveTarget(ChickenBeatState, BlockPos, Rotation)})
- * and pecks on arrival.
- *
- * <p>Two-exit rule for pathing failures:
- * <ol>
- *   <li>If pathing fails for {@value #STUCK_TELEPORT_TICKS} ticks while the target
- *   block is still valid: teleport to the target with a poof particle. The beat
- *   stays open — the player may still need to interact.</li>
- *   <li>If the target block is permanently invalid (lava, empty air where a block
- *   is required, or a solid replacement where empty is required): force-complete
- *   the beat (set beat state to {@link ChickenBeatState#COMPLETE}). The chicken
- *   moves on.</li>
- * </ol>
- * The two cases are NOT collapsed — an obstructed-but-valid target gives the
- * player a chance to clear the path, not a silent skip.
- *
- * <p>This goal READS {@code flag.getChickenBeatState()} but never writes it
- * (except for the force-complete-on-invalid-target escape hatch). Normal state
- * transitions are U4's job.
+ * Walks the helper chicken to the current lesson's target and pecks. Stuck for
+ * {@value #STUCK_TELEPORT_TICKS} ticks, it teleports there; if the target can never work (lava, or a
+ * block in the way of a placement), the lessons are marked complete.
  */
 public class HelperChickenBeatPeckGoal extends Goal {
 
     private static final double ARRIVAL_DISTANCE_SQR = 2.0D;
-    private static final int STUCK_TELEPORT_TICKS = 600; // 30 seconds at 20 TPS
+    private static final int STUCK_TELEPORT_TICKS = 600;
     private static final int PECK_TICKS = 20;
     private static final double SPEED_MODIFIER = 1.0D;
 
@@ -90,19 +73,12 @@ public class HelperChickenBeatPeckGoal extends Goal {
             return false;
         }
         if (!current.equals(this.targetPos)) {
-            // Beat state changed; next canUse will latch the new target.
             return false;
         }
         return true;
     }
 
-    /**
-     * Item-in-hand gate. For "take item to location" beats the player must be
-     * holding the matching item (any door for the door beat, any sign for the
-     * sign beat, etc.) before the chicken commits to walking to the target;
-     * for UI/seeds-delivery beats there is no required item and this returns
-     * true so the chicken pecks the location regardless.
-     */
+    /** For lessons that need an item, the player must hold it before the chicken goes; other lessons always go. */
     private boolean playerReadyForPeck() {
         TownFlagBlockEntity flag = resolveFlag();
         if (flag == null) {
@@ -226,11 +202,6 @@ public class HelperChickenBeatPeckGoal extends Goal {
         return HelperChickenBeatOffsets.resolveTarget(state, flag.getTownFlagBasePos(), rotation);
     }
 
-    /**
-     * Where the chicken should walk to and stand. Diverges from
-     * {@link #resolveTarget} for beats whose focal block is non-walkable
-     * (campfire) — see {@link HelperChickenBeatOffsets#resolveStandTarget}.
-     */
     private BlockPos resolveStandTarget() {
         TownFlagBlockEntity flag = resolveFlag();
         if (flag == null) {
@@ -250,14 +221,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
         return HelperChickenBeatOffsets.resolveStandTarget(state, flag.getTownFlagBasePos(), rotation);
     }
 
-    /**
-     * Phase-3 SUNSET_AND_MAP target: the chicken walks to the campfire when
-     * the chest has dropped AND it's night, demonstrating the "use wand on
-     * lit campfire to sleep" action. Phases 1 (drop chest) and 2 (wait for
-     * dusk) return null so the SunsetChestGoal and WanderNearFlagGoal pick
-     * up at their priorities. Reuses the wand-on-campfire offsets so
-     * stand/look positions match the earlier "light the campfire" beat.
-     */
+    /** The sleep lesson's target: the campfire, once it is night. */
     @org.jetbrains.annotations.Nullable
     private BlockPos resolveSunsetCampfireTarget(TownFlagBlockEntity flag, boolean stand) {
         if (!flag.getChickenSunsetChestSpawned()) {
@@ -276,21 +240,12 @@ public class HelperChickenBeatPeckGoal extends Goal {
                         ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE, flagPos, rotation);
     }
 
-    /**
-     * Pressure-plate beat target: the chicken pecks a different location
-     * depending on which item the player is carrying. With a welcome mat in
-     * hand it pecks the gate where the mat will be placed; with a pressure
-     * plate in hand it pecks the flag base where the plate is crafted into a
-     * mat. The same gate the peck runs on
-     * ({@link ChickenArcConditions#shouldPeckRun}) drives which offset is
-     * returned, so the chicken never pecks the gate before a mat exists.
-     */
+    /** The welcome mat lesson's target: the gate with a mat in hand, the flag with a pressure plate. */
     @org.jetbrains.annotations.Nullable
     private BlockPos resolvePressurePlateTarget(TownFlagBlockEntity flag, boolean stand) {
         Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
         Rotation rotation = flag.getChickenStructureRotation();
         BlockPos flagPos = flag.getTownFlagBasePos();
-        // Welcome mat in hand → the gate, where it is placed.
         if (ChickenArcConditions.playerHoldsRequiredItem(player, ChickenBeatState.WAITING_FOR_PRESSURE_PLATE)) {
             return stand
                     ? HelperChickenBeatOffsets.resolveStandTarget(
@@ -298,9 +253,6 @@ public class HelperChickenBeatPeckGoal extends Goal {
                     : HelperChickenBeatOffsets.resolveTarget(
                             ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation);
         }
-        // Pressure plate in hand → the flag base, where it is crafted into a
-        // mat. Both stand and look resolve to the flag base (FLAG_OFFSET),
-        // shared with the WAITING_FOR_STICK beat.
         return stand
                 ? HelperChickenBeatOffsets.resolveStandTarget(
                         ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation)
@@ -308,13 +260,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
                         ChickenBeatState.WAITING_FOR_STICK, flagPos, rotation);
     }
 
-    /**
-     * Worldly-Seeds beat target. With Worldly Seeds in a town container the
-     * chicken pecks that container; with none yet it walks to the gate, where
-     * the gatherer/villager returns with them. The gate reuses the
-     * pressure-plate beat's offset (both point at
-     * {@link HelperChickenBeatOffsets#GATE_CENTER_OFFSET}).
-     */
+    /** The seeds lesson's target: the chest holding the seeds, or the gate before there are any. */
     @org.jetbrains.annotations.Nullable
     private BlockPos seedsDeliveryTarget(TownFlagBlockEntity flag, boolean stand) {
         BlockPos container = findSeedsContainerPos(flag);
@@ -330,11 +276,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
                         ChickenBeatState.WAITING_FOR_PRESSURE_PLATE, flagPos, rotation);
     }
 
-    /**
-     * F4 step 4: walk to whichever registered town container is currently
-     * holding Worldly Seeds. Returns null until a container has them, which
-     * happens when the first gatherer deposits (U7).
-     */
+    /** The town container holding Worldly Seeds, or null. */
     private BlockPos findSeedsContainerPos(TownFlagBlockEntity flag) {
         ServerLevel level = flag.getServerLevel();
         if (level == null) {
@@ -357,11 +299,6 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (fluid.is(net.minecraft.tags.FluidTags.LAVA)) {
             return true;
         }
-        // Placement beats (wall/door/sign/chest/plate) need the target to be empty.
-        // If a player-placed solid occupies the slot and this beat expects empty space,
-        // the beat is effectively complete-from-the-wrong-direction. U4 still controls
-        // actual state transitions — we only force-complete for hard physical blocks
-        // that the chicken cannot traverse OR lava.
         ChickenBeatState beatState = currentBeatState();
         if (beatState == null) {
             return false;
@@ -378,9 +315,7 @@ public class HelperChickenBeatPeckGoal extends Goal {
             BlockState bs,
             ChickenBeatState beatState
     ) {
-        // Beats that expect EMPTY space at the target (so the player can place a block).
-        // If that space is occupied by a solid block, the beat's physical precondition
-        // is satisfied in-effect — force-complete to avoid deadlock.
+        // A solid block where a placement lesson needs space counts as done.
         return switch (beatState) {
             case WAITING_FOR_WALL_BLOCK, WAITING_FOR_DOOR, WAITING_FOR_SIGN, WAITING_FOR_CHEST ->
                     bs.isSolidRender(this.chicken.level(), this.targetPos);
@@ -409,7 +344,6 @@ public class HelperChickenBeatPeckGoal extends Goal {
         if (!(this.chicken.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
             return;
         }
-        // Escape hatch for permanently-invalid targets only. Normal transitions are U4's job.
         flag.setChickenBeatState(ChickenBeatState.COMPLETE);
         flag.setChanged();
     }

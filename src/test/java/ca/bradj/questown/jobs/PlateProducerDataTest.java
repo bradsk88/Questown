@@ -15,12 +15,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * The Dinner Plate had no source: no crafting recipe and no job made it, so a dining room could
- * only be furnished in creative (r16 built one from creative plates). Dev ruling 2026-10-24: a
- * crafter makes plates. That is what lets the plate carry a real room-recipe weight
- * ({@code RecipeItemConfig}) instead of "never recommend".
- */
+/** A crafter makes the Dinner Plate, so it can have a real room-recipe weight. */
 class PlateProducerDataTest {
 
     private static final Gson GSON = new Gson();

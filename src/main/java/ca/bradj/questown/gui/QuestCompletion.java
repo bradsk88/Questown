@@ -4,11 +4,7 @@ import ca.bradj.questown.town.quests.Quest;
 
 import java.util.Collection;
 
-/**
- * Pure completion predicate for the town quests screen. Operates on plain
- * {@link Quest.QuestStatus} values (no MC registry deps) so the empty-state
- * trigger can be unit-tested without Bootstrap/Ingredient construction.
- */
+/** Whether every quest on the town quests screen is complete. */
 public class QuestCompletion {
 
     private QuestCompletion() {

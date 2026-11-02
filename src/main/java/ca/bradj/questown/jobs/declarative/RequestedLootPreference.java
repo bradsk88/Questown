@@ -5,21 +5,12 @@ import java.util.List;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
-/**
- * A full-day leaver trip's second pass (dev ruling 2026-10-26, Outfitter playtest #25): after the
- * trip's normal roll, a second roll's requested items (anything the job board asks for) fill the
- * inventory's empty slots, then each replaces a random non-requested item. Non-requested items
- * from the second roll are dropped, and once every slot holds a requested item the rest are too.
- * Registry-free so it can be unit-tested; the world interactions supply the rolls and the board.
- */
+/** A full-day trip's second roll: its requested items fill empty slots, then replace random unrequested ones. */
 public final class RequestedLootPreference {
 
     private RequestedLootPreference() {
     }
 
-    /**
-     * @param randomIndex given a bound n, returns an index in [0, n)
-     */
     public static <T> List<T> prefer(
             List<T> rolled,
             List<T> secondRoll,

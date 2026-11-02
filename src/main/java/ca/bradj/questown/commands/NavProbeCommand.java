@@ -11,10 +11,7 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.UUID;
 
-// Dev-only, read-only: what a villager's navigator is working from right now (walk target, path
-// end, can-reach), so a "villager faces a wall" report reads the target instead of inferring it
-// (r20 #4). Thin wrapper over VisitorMobEntity.describeNav. The UUID comes from
-// `_qtdev inspect villagers`. No permission gate, so it runs from the console (FIFO).
+// Dev-only, read-only: a villager's walk target, path end, and whether it can reach it.
 public class NavProbeCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> src) {
@@ -33,7 +30,6 @@ public class NavProbeCommand {
 
     private static int run(ServerLevel level, UUID villagerUUID) {
         if (level == null) {
-            // A console command queued before the overworld loads has no level yet.
             QT.VILLAGER_LOGGER.warn("[_qtdev nav] no level yet (server still starting)");
             return 1;
         }

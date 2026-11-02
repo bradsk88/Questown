@@ -11,18 +11,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 
-/**
- * Per-flag, per-tick driver for the helper-chicken onboarding arc (U4).
- *
- * <p>Owns the side effects the pure machine ({@link ChickenArcTransitions}) must
- * not: reading observations via {@link ChickenArcConditions}, persisting the
- * advanced state back to the flag BE, and pushing the matching bubble into the
- * chicken's {@link net.minecraft.network.syncher.SynchedEntityData}.
- *
- * <p>The controller also clears ephemeral observation flags after they've
- * driven a transition — the sleep observation fires once and must not
- * re-trigger on subsequent ticks.
- */
+/** Runs the helper chicken's lessons for a flag each tick: reads the world, saves the new lesson, and updates the chicken's bubble. */
 public final class ChickenArcController {
 
     private static final int CHICKEN_SEARCH_RANGE = 64;
@@ -33,8 +22,7 @@ public final class ChickenArcController {
     private static long lastTickDiagTick = -1L;
 
     public static void tick(TownFlagBlockEntity flag) {
-        // Diagnostic for a held/agent run: ungated it would spam JOB_LOGGER in any
-        // world, so only emit it when the held autotest is active.
+        // Only in held autotest runs, or it floods the log.
         if ("true".equals(System.getProperty("questown.autotest.hold"))) {
             ServerLevel diagLevel = flag.getServerLevel();
             long gt = diagLevel == null ? 0L : diagLevel.getGameTime();
@@ -91,18 +79,12 @@ public final class ChickenArcController {
         flag.setChanged();
     }
 
-    /**
-     * Resets ephemeral observation flags that a transition consumed, so they
-     * cannot re-fire on a later beat. For example: {@code sleepSinceSunset}
-     * advances only SUNSET_AND_MAP; after that it should read false again so
-     * the next day's sleep doesn't double-advance a later beat.
-     */
+    /** Clears the one-time observations a lesson change used, so they can't move a later lesson. */
     private static void clearTransitionedObservations(
             TownFlagBlockEntity flag,
             ChickenBeatState from,
             ChickenBeatState to
     ) {
-        // SUNSET_AND_MAP was the only beat consuming the sleep observation.
         if (passedThrough(from, to, ChickenBeatState.SUNSET_AND_MAP)) {
             flag.setChickenObservedSleepSinceSunset(false);
         }
@@ -194,9 +176,7 @@ public final class ChickenArcController {
         if (!matches.isEmpty()) {
             return matches.get(0);
         }
-        // Recovery path: chickens saved before ownerFlagPos was persisted have
-        // a null owner. Adopt any nearby orphan whose owner is unset rather
-        // than spawning a duplicate — this also covers /kill+respawn.
+        // A chicken with no owner flag adopts this one rather than a second chicken spawning.
         List<HelperChickenEntity> orphans = level.getEntitiesOfClass(
                 HelperChickenEntity.class,
                 search,
@@ -214,25 +194,11 @@ public final class ChickenArcController {
         return adopted;
     }
 
-    /**
-     * Sends the lang-key hint text for the current beat to a player. Called
-     * from {@link HelperChickenEntity}'s click-to-interact handler — left- and
-     * right-click both route here.
-     */
-    /**
-     * Per-player click counter for the current beat. Resets implicitly when the
-     * beat changes — a stored counter for state X is invalidated as soon as the
-     * player's first click on state Y arrives. Used to switch monologue hints
-     * over to a fourth-wall plain-text explanation after the third click.
-     */
+    /** The player's clicks on the current lesson; a new lesson starts the count over. */
     private record BeatClicks(ChickenBeatState state, int count) {}
     private static final java.util.Map<java.util.UUID, BeatClicks> clicksByPlayer =
             new java.util.concurrent.ConcurrentHashMap<>();
-    /**
-     * Click cadence at which we break the fourth wall. Every Nth click on the
-     * same beat shows the bracketed plain-text hint instead of the monologue;
-     * the cycle then resets so subsequent clicks return to monologue.
-     */
+    /** Every third click on the same lesson shows the plain-language hint instead of the chicken's line. */
     private static final int PLAIN_TEXT_CYCLE = 3;
 
     public static void onPlayerClickedChicken(

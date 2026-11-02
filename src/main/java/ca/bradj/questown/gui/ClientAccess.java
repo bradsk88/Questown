@@ -93,15 +93,9 @@ public class ClientAccess {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
 
-    /**
-     * Vanilla's TutorialToast stays on screen until something hides it. "Your camp is
-     * ready" is an evening instruction ("use wand on campfire"), so it stays up until the
-     * player is asleep: it lingered past the first campfire sleep (2026-10-15) and a
-     * 20s wall-clock cap made it vanish unseen (2026-10-17).
-     */
+    // Shown until the player sleeps.
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
-    // The active toast is the camp-ready one, which also hides at dawn (CampReadyToast).
     private static boolean activeToastIsCampReady;
 
     public static void showTutorialToast(Component title, Component description) {
@@ -118,7 +112,7 @@ public class ClientAccess {
         mc.getToasts().addToast(toast);
     }
 
-    /** Called from the client tick: the toast's ask is done once the player is asleep. */
+    /** Hides the camp-ready toast once the player is asleep. */
     public static void tickTutorialToasts() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.player.isSleeping()) {

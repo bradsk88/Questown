@@ -10,11 +10,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 
-/**
- * Toggles the board's "auto-request" setting (F2): when on, acquiring a root job
- * auto-posts its initial requests. Client sends the NEW state; the server applies it
- * and re-opens the board menu so the checkbox resyncs.
- */
+/** Turns the board's auto-request on or off. When on, a newly acquired root job posts its starting requests. */
 public record ToggleBoardAutoRequestMessage(
         boolean newState,
         int flagX, int flagY, int flagZ
@@ -55,7 +51,6 @@ public record ToggleBoardAutoRequestMessage(
             flag.get().setBoardAutoRequest(newState);
             flag.get().setChanged();
             QT.FLAG_LOGGER.info("Board auto-request set to {} by {}", newState, sender.getName().getString());
-            // Re-open the board so the client's checkbox resyncs from the server state.
             flag.get().openJobsMenu(sender, false);
         });
     }

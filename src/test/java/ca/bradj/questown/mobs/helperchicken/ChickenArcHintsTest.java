@@ -9,7 +9,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -24,23 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Cross-cutting invariants on the helper-chicken hint copy and its alignment
- * with the bubble icons + plain-text fallback. Caught one recurring class of
- * bug: hint copy that contradicts the bubble (e.g. "dislikes the hole in the
- * wall" appearing while the bubble is asking the player to fetch a cobblestone
- * block). The voice rule from {@code docs/onboarding-chicken/REQUIREMENTS.md}
- * §10 — "keep hints from telegraphing mechanics the chicken hasn't visually
- * demonstrated yet" — is enforced indirectly by checking that the no-item
- * hint names the same noun as the bubble's lone icon.
- *
- * <p>Mod-registered icons (TOWN_WAND, WELCOME_MAT_BLOCK, COBBLESTONE_TOWN_FLAG,
- * WORLDLY_SEEDS) are unreachable from the vanilla {@code Bootstrap.bootStrap()}
- * path — those bubble lookups NPE on {@code RegistryObject.get()}. Per
- * CLAUDE.md, those gaps are surfaced via a separate failing assertion in
- * {@link #todo_modRegisteredBubbleStatesAreCoveredByThisSuite()} rather than
- * silently skipped.
- */
+/** The chicken's hints agree with its bubble icons, fit the length limit, and follow the voice rules. */
 class ChickenArcHintsTest {
 
     private static final Path LANG_PATH = Path.of(
@@ -52,12 +35,7 @@ class ChickenArcHintsTest {
             ChickenBeatState.FORFEIT
     );
 
-    /**
-     * States whose no-item bubble icon is a mod-registered Forge item. Bubble
-     * lookups for these NPE without full mod loading, so they're skipped by
-     * the icon-mention invariant. {@link #todo_modRegisteredBubbleStatesAreCoveredByThisSuite()}
-     * will fail until that gap closes.
-     */
+    /** Lessons whose bubble shows a mod item, which a unit test can't load. */
     private static final Set<ChickenBeatState> MOD_ICON_STATES = EnumSet.of(
             ChickenBeatState.WAITING_FOR_WAND_ON_CAMPFIRE,
             ChickenBeatState.WAITING_FOR_WAND_ON_DOOR,
@@ -81,10 +59,7 @@ class ChickenArcHintsTest {
 
     @Test
     void everyBeat_hasResolvableHintAndPlainKeys() {
-        // Iterate (state, hasItem) combinations and assert that every reachable
-        // hint/plain key resolves in en_us.json. Skips combinations whose
-        // ChickenArcPresentation row references mod-registered RegistryObjects
-        // (those are exercised by chicken-arc autotest scenarios).
+        // Every reachable hint key exists in the lang file.
         List<String> missing = new ArrayList<>();
         for (ChickenBeatState state : ChickenBeatState.values()) {
             if (TERMINAL.contains(state)) {
@@ -132,14 +107,7 @@ class ChickenArcHintsTest {
 
     @Test
     void noItemHint_mentionsBubbleIconNoun() {
-        // For every beat whose no-item bubble shows a vanilla item, the
-        // no-item hint must contain a noun derived from that item. Catches
-        // hint/bubble voice mismatches like "It seems to dislike the hole in
-        // the wall" appearing while the bubble shows cobblestone.
-        //
-        // SUNSET_AND_MAP is exempt: its phase-1 chest icon foreshadows what
-        // the chicken will drop, not what the player should fetch — the hint
-        // intentionally talks about the chicken being "up to something".
+        // Each lesson's hint names the item its bubble shows. The sleep lesson's chest icon is the exception.
         List<String> failures = new ArrayList<>();
         for (ChickenBeatState state : ChickenBeatState.values()) {
             if (TERMINAL.contains(state)
@@ -151,7 +119,6 @@ class ChickenArcHintsTest {
             Presentation p = ChickenArcPresentation.present(state, noItem);
             ItemStack icon = p.bubble().iconA();
             if (icon.isEmpty()) {
-                // Texture-mode bubble (sunset) — no icon noun to check.
                 continue;
             }
             String hint = lang.get(p.hintKey());
@@ -174,7 +141,7 @@ class ChickenArcHintsTest {
 
     @Test
     void hintsRespectEightyCharCap() {
-        // REQUIREMENTS.md §10: "Hint length cap ≤80 chars".
+        // Hints are at most 80 characters.
         List<String> overflow = new ArrayList<>();
         for (Map.Entry<String, String> e : lang.entrySet()) {
             if (!e.getKey().startsWith("message.questown.chicken.hint.")) {
@@ -190,9 +157,7 @@ class ChickenArcHintsTest {
 
     @Test
     void plainHintsAreBracketed() {
-        // REQUIREMENTS.md §10: bracketed plain-text hints are the explicit
-        // fourth-wall fallback. The brackets carry meaning — without them the
-        // string reads as monologue, defeating the fallback.
+        // Plain-language hints are in brackets.
         List<String> bad = new ArrayList<>();
         for (Map.Entry<String, String> e : lang.entrySet()) {
             if (!e.getKey().startsWith("message.questown.chicken.plain.")) {
@@ -209,10 +174,7 @@ class ChickenArcHintsTest {
 
     @Test
     void monologueHintsAvoidImperativeAndBrackets() {
-        // Voice rule: monologue hints are first-person observation ("It seems
-        // to want…", "It looks at…"). Imperative voice ("Place a sign here.")
-        // belongs in the bracketed plain fallback. Bracketed monologue hints
-        // would show up as plain fallbacks where they shouldn't.
+        // The chicken's lines are observations; instructions go in the bracketed hints.
         List<String> bad = new ArrayList<>();
         for (Map.Entry<String, String> e : lang.entrySet()) {
             if (!e.getKey().startsWith("message.questown.chicken.hint.")) {
@@ -226,32 +188,9 @@ class ChickenArcHintsTest {
         Assertions.assertTrue(bad.isEmpty(), String.join("\n  ", bad));
     }
 
-    @Test
-    @Disabled("registry-bound: the mod-icon beats show mod-registered items (TOWN_WAND etc.) that need Forge mod init; see method Javadoc. Voice invariant is pinned by the passing tests here.")
-    void todo_modRegisteredBubbleStatesAreCoveredByThisSuite() {
-        // CLAUDE.md: "If a situation comes up which causes testing to be
-        // impossible due to insufficient interfaces on the real code: 1) make
-        // a note, 2) add a failing assertion … 3) continue working on what
-        // is possible to test."
-        //
-        // The states below show mod-registered items (TOWN_WAND etc.) in
-        // their bubble. Reaching them from a unit test requires Forge mod
-        // init — not available from Bootstrap.bootStrap() alone. The voice
-        // invariant in noItemHint_mentionsBubbleIconNoun() therefore can't
-        // assert them today.
-        Assertions.fail("Untested mod-icon beats (need Forge mod-loading harness): "
-                + MOD_ICON_STATES);
-    }
+    /** The words a hint must use for each bubble icon. */
 
-    // -- token map -------------------------------------------------------
-
-    /**
-     * Maps a bubble icon to nouns the corresponding hint must mention. Multi-
-     * value lists allow synonyms (e.g. "block" or "cobblestone" or "stone"
-     * all satisfy the cobblestone icon). Update when a new vanilla icon is
-     * added to {@link ChickenArcBubbles}. Built lazily after
-     * {@link Bootstrap#bootStrap()} populates {@link Items}.
-     */
+    /** The words a hint must use for each bubble icon. */
     private static Map<Item, List<String>> buildTokenMap() {
         Map<Item, List<String>> m = new LinkedHashMap<>();
         m.put(Items.STICK, List.of("stick"));

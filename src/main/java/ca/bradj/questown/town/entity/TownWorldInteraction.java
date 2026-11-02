@@ -39,11 +39,7 @@ public class TownWorldInteraction {
         town.initialize(t);
     }
 
-    // Called from the flag's recipe-created AND recipe-changed events (not just created):
-    // a sign in a room whose top match is another recipe (e.g. a store room) only joins the
-    // job_board match on a content change, so the conversion must run there too or the sign
-    // never converts. swapJobBoardSign is idempotent - it only swaps sign blocks, never a
-    // board already placed - so running it on both events is safe.
+    // Runs when a room is created and when it changes, so a sign that joins the job board match later still converts.
     void swapBlocks(
             ServerLevel level,
             RoomRecipeMatch<MCRoom> match
@@ -85,8 +81,7 @@ public class TownWorldInteraction {
             );
             @NotNull TownFlagBlockEntity t = town.getUnsafe();
             t.registerJobsBoard(e.getKey());
-            // setBlockAndUpdate bypasses JobBoardBlock.getStateForPlacement,
-            // so register the block-room explicitly.
+            // setBlock skips the board's own registration.
             t.getRoomHandle().registerBlockAsRoom(
                     RoomBlock.getRoomId((JobBoardBlock) BlocksInit.JOB_BOARD_BLOCK.get()), e.getKey()
             );

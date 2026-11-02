@@ -40,12 +40,7 @@ public interface Delegator<ENTITY> {
 
     void invalidateCachedWorkPossibilities();
 
-    /**
-     * Drop the villager's per-owner job-block states. Called on a job ROOT change: the old
-     * job's leftover states would otherwise be read by the new job (2026-10-17 playtest: the
-     * gatherer left the gate mat at its terminal state 3, the new hunter - also maxState 3 -
-     * read it as its own finished hunt and parked in COLLECTING_SUPPLIES).
-     */
+    /** Drops the villager's job-block states, on a job change, so the new job doesn't read the old job's. */
     void resetWorkStatus(UUID villagerUUID);
 
     HealingModule<ENTITY> getHealingModule();
@@ -66,7 +61,6 @@ public interface Delegator<ENTITY> {
 
     void discardEntity(ENTITY visitorMobEntity);
 
-    /** True once the entity has left the world (unloaded with its chunk, or discarded). */
     boolean isRemoved(ENTITY e);
 
     boolean isDining(ENTITY v);
@@ -80,12 +74,11 @@ public interface Delegator<ENTITY> {
 
     float getMood(UUID uuid);
 
-    /** The ids of the townie's active mood effects (for the stats page). */
+    /** The villager's active mood effect ids. */
     default ImmutableList<String> getMoodEffectIds(UUID uuid) {
         return ImmutableList.of();
     }
 
-    /** Apply a mood effect to the townie, expiring at the given game tick. */
     void applyMoodEffect(
             UUID uuid,
             ResourceLocation effect,
@@ -97,28 +90,17 @@ public interface Delegator<ENTITY> {
             JobID newJob
     );
 
-    /**
-     * The jobs a villager starts with when it takes this root (a cook: extract + fuel + the
-     * starter recipe). A root change must unlock all of them, not only the job it switches to.
-     */
+    /** The jobs a villager starts with in this root; a job change unlocks them all. */
     ImmutableList<JobID> getDefaultWork(JobID root);
 
-    /**
-     * Post the root's starter requests on the job board (each default work's initial request), as
-     * a job-change quest reward does. Without them every work of the new root reads "Product not
-     * requested" and the villager idles.
-     */
+    /** Posts the root's starter requests on the job board, so a new worker has something to do. */
     void postStarterRequests(JobID root);
 
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);
 
-    /**
-     * The user-facing display name ("Villager N") for this townie, empty when
-     * none is assigned - callers fall back to a truncated UUID. Towns override
-     * with the display-number assignment; non-town delegators get "".
-     */
+    /** The villager's "Villager N" name; empty when it has none. */
     default String displayNameFor(UUID vuid) {
         return "";
     }

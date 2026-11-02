@@ -4,8 +4,6 @@ import ca.bradj.questown.town.quests.Quest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-// Dev ruling 2026-10-22: a completed quest card shows its progress frozen at completion,
-// not the live storeroom tally ("Coal x8 (7/8)" on a ticked card after the cook burned one).
 class QuestCardProgressTest {
 
     @Test

@@ -3,17 +3,11 @@ package ca.bradj.questown.jobs.declarative;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * The of-10 work speed handed to {@link ca.bradj.questown.town.workstatus.State#decrWork} must stay
- * in 1..10. Proficiency multiplies that number (ADR-0010), so the band is only safe if the product
- * is clamped — the uncapped version crashed the warp loop for a well-fed, better-than-break-even
- * townie.
- */
+/** A work speed times a proficiency multiplier stays within 1 to 10. */
 class ProficiencyWorkSpeedTest {
 
     @Test
     void capsAtTen_forWellFedTownieAboveBreakEven() {
-        // The case that actually threw: max mood (base 10) and a level-0.44 multiplier of ~1.16.
         Assertions.assertEquals(10, AbstractWorldInteraction.applyProficiencyToWorkSpeed(10, 1.16f));
     }
 

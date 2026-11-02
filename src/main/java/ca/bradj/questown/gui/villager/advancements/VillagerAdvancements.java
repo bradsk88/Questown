@@ -72,7 +72,7 @@ public class VillagerAdvancements {
         icons.putAll(in);
     }
 
-    /** The synced icon's item id, or null before the server's sync (or for an unknown job). */
+    /** The icon's item id, or null until the server has sent it. */
     public static @Nullable ResourceLocation getIconId(JobID job) {
         return icons.get(job);
     }

@@ -7,10 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Unit tests for {@link BedlessLedger}: the nightfall-edge capture rule and the
- * once-per-morning drain. Pure, no Forge.
- */
+/** {@link BedlessLedger}: recorded at nightfall, taken once in the morning. */
 class BedlessLedgerTest {
 
     @Test
@@ -37,8 +34,7 @@ class BedlessLedgerTest {
 
     @Test
     public void captureEdge_restartMidNight_waitsForTheNextRealEvening() {
-        // A server restart mid-night: the ledger's first tick is NIGHT (no capture),
-        // and no spurious capture fires at dawn — only the next day's evening edge.
+        // Restarted mid-night: nothing is recorded until the next evening.
         BedlessLedger ledger = new BedlessLedger();
         Assertions.assertFalse(ledger.captureEdge(Signals.NIGHT, true));
         Assertions.assertFalse(ledger.captureEdge(Signals.MORNING, true));
@@ -49,8 +45,7 @@ class BedlessLedgerTest {
 
     @Test
     public void captureEdge_restartMidEvening_capturesOnce() {
-        // A restart mid-evening misses the original edge; once the beds are known the
-        // first observed EVENING tick captures exactly once.
+        // Restarted mid-evening: recorded once the beds are known.
         BedlessLedger ledger = new BedlessLedger();
         Assertions.assertTrue(ledger.captureEdge(Signals.EVENING, true));
         Assertions.assertFalse(ledger.captureEdge(Signals.EVENING, true));
@@ -58,8 +53,7 @@ class BedlessLedgerTest {
 
     @Test
     public void captureEdge_restartMidEvening_waitsUntilTheBedsAreKnown() {
-        // 2026-10-22 playtest: a restart in the evening captured on the first tick, before the
-        // room scan had matched any bedroom, and every bedded townie got SLEEPLESS.
+        // Not before the room scan has found the bedrooms.
         BedlessLedger ledger = new BedlessLedger();
         Assertions.assertFalse(ledger.captureEdge(Signals.EVENING, false), "beds not matched yet");
         Assertions.assertFalse(ledger.captureEdge(Signals.EVENING, false));

@@ -7,13 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
-/**
- * The neutral {@link Channel.Context} over NeoForge's {@link IPayloadContext}.
- * {@link #enqueueWork} is Neo's own main-thread scheduling (a no-op if already on it), and
- * {@link #sender()} is the player the packet was addressed to (or came from). NeoForge has no
- * "mark handled" concept: the registered handler owns the dispatch, so the former
- * {@code setPacketHandled(true)} is simply dropped from the neutral surface.
- */
+/** {@link Channel.Context} over NeoForge's {@link IPayloadContext}. */
 final class NeoPayloadContext implements Channel.Context {
 
     private final IPayloadContext delegate;

@@ -177,11 +177,7 @@ public class RealtimeWorldInteraction extends
         return extra.work();
     }
 
-    /**
-     * A display job tries the fullest display first (dev playtest 2026-10-30: "prefer adding
-     * pieces to the most well-equipped stand"). findJobSite only chose the walk target; the spot
-     * worked on arrival came from this shuffled list, so the piece went to either stand.
-     */
+    /** A display job tries the fullest display first. */
     @Override
     protected ArrayList<WorkPosition<BlockPos>> orderSpots(
             MCExtra extra,
@@ -308,8 +304,7 @@ public class RealtimeWorldInteraction extends
         }
         @Nullable SoundEvent s = Loader.soundFromId(sound.sound());
         if (s == null) {
-            // An unregistered id (data typo, or a sound renamed between MC versions) played as a
-            // null sound and crashed the server (2026-10-26, the sword jobs' item.sword.hit).
+            // An unknown sound id would play as null and crash the server.
             if (MISSING_SOUNDS_WARNED.add(sound.sound())) {
                 QT.JOB_LOGGER.warn("Job sound {} is not a registered sound event; skipping it", sound.sound());
             }
@@ -349,8 +344,6 @@ public class RealtimeWorldInteraction extends
         } else {
             res = tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
         }
-        // TEMP DEBUG (2026-10-06) - throttled: the give-back latch is the suspected
-        // permanent stall (job=COLLECTING_SUPPLIES, no extraction ever).
         return res;
     }
 
@@ -409,10 +402,7 @@ public class RealtimeWorldInteraction extends
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
-                    // A rule-taken product (cook/extract's take_from_slot_2) is an extraction too:
-                    // it gets the LOOT-quest check like a result item (warp routes it through
-                    // tryGiveItems -> postExtractHook already). 2026-10-19: the cook's meals never
-                    // counted toward the "eight pieces of food" quest.
+                    // A product a rule takes is an extraction too.
                     onLootExtracted(inputs, i);
                     return in;
                 },
@@ -471,20 +461,10 @@ public class RealtimeWorldInteraction extends
                     return in;
                 }
         );
-        // The LOOT-quest close runs in onLootExtracted (the abstract 3-arg bridge's
-        // unconditional extract path), so a job that declares no EXTRACTING_PRODUCT
-        // special rule (e.g. the sword hunter) still closes its raw-food quest.
-        // The item itself is not consumed — the deposit / eat path still decides its fate.
         return hooked;
     }
 
-    /**
-     * Close matching LOOT quests on a non-empty extraction. Lives on the
-     * unconditional extract path (the abstract 3-arg {@code postExtractHook}
-     * bridge) rather than the rule-gated 5-arg hook, so a hunt that declares no
-     * {@code EXTRACTING_PRODUCT} special rule (e.g. the sword hunter) still
-     * closes its quest. See {@link LootExtractGuard}.
-     */
+    /** Closes matching LOOT quests on a non-empty extraction. */
     @Override
     protected void onLootExtracted(MCExtra inputs, @Nullable MCHeldItem item) {
         if (LootExtractGuard.questCheckFires(

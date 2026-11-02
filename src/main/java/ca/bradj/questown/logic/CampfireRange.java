@@ -2,20 +2,12 @@ package ca.bradj.questown.logic;
 
 import net.minecraft.core.BlockPos;
 
-/**
- * Where a town's campfire may sit relative to its flag: within the campfire search radius
- * horizontally, and up to {@link #VERTICAL_TOLERANCE} blocks above or below the flag. Exact-Y
- * matching made a campfire one block up a slope invisible to the Campfire quest, with nothing
- * telling the player why (playtest r12 #2; dev 2026-10-23: scan ±2 Y).
- */
+/** Where a town's campfire may be: within the campfire search radius, and up to {@link #VERTICAL_TOLERANCE} blocks above or below the flag. */
 public final class CampfireRange {
 
     public static final int VERTICAL_TOLERANCE = 2;
 
-    /**
-     * Y offsets to scan, nearest the flag's own Y first, so a campfire level with the flag still
-     * wins when there are several.
-     */
+    /** Y offsets to scan, nearest the flag's height first. */
     public static final int[] Y_OFFSETS = {0, 1, -1, 2, -2};
 
     private CampfireRange() {

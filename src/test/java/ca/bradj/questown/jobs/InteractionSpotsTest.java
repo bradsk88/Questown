@@ -11,12 +11,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * 2026-10-17 playtest: the store room at walls x 104..107, z -61..-59 with its door at
- * (106, -61) in the north wall has a 2x1 interior; the chest fills (105, -60). The chest's
- * walk target used to be one step toward the door - (105, -61), inside the wall - and the
- * villager ended up standing on the chest, unable to use it.
- */
+/** A storeroom whose chest's door side is a wall: the chest's walk target must be a standable cell. */
 class InteractionSpotsTest {
 
     private static final int FLOOR_Y = 69;
@@ -30,7 +25,6 @@ class InteractionSpotsTest {
 
     @Test
     void doorDirectionForThePlaytestRoomIsNorth_soTheOldStepLandsInTheWall() {
-        // Pins the failure: the old chest path used CHEST.relative(doorDirection) unchecked.
         assertEquals(Direction.NORTH, InteractionSpots.doorDirectionFromCenter(STORE_ROOM));
         assertEquals(new BlockPos(105, FLOOR_Y, -61), CHEST.relative(Direction.NORTH));
     }
@@ -52,12 +46,7 @@ class InteractionSpotsTest {
         assertEquals(doorSide, InteractionSpots.find(CHEST, STORE_ROOM, standable::contains));
     }
 
-    /**
-     * r17 (2026-10-25): the dev's kitchen, walls x -149..-147, z -155..-151, door (-148, -151),
-     * with the furnace built into the east wall at (-147, -154). Room matching counts wall blocks,
-     * so the kitchen quest completed; the villager must stand inside, not on the outside of the
-     * wall, to use it.
-     */
+    /** A furnace built into a kitchen wall is used from inside the room. */
     @Test
     void jobBlockInAWall_getsTheInteriorNeighbour_notTheOutsideOne() {
         Room kitchen = new Room(new Position(-148, -151), InclusiveSpace.from(-149, -155).to(-147, -151));

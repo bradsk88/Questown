@@ -7,20 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * job-board-empty-state.md: the board's empty state points at the flag's top unmet need. The
- * need name travels from the server's menu-open to the client through the container's
- * serialization. The full ForClientSide round trip needs the work-results write, which pushes
- * Ingredients through Neo's item-registry ID codec - that codec refuses a registry Neo has not
- * marked synced, and vanilla's BuiltInRegistries.ITEM is never marked synced outside a running
- * mod-load (Neo's registry lifecycle), so it cannot be exercised in a plain unit test.
- * What IS testable here: the new writeUtf/readUtf slot the round trip depends on, and the
- * constructor's null-contract.
- *
- * The full server->client path (TownWorkHandle writing and ForClientSide reading the same Utf
- * slot) is covered by the held playtest: open the job board with no requests and a townie with
- * an unmet need, and read the empty-state line.
- */
+/** The board's empty state gets the top missing item from the server. Only the string slot is tested here: the full round trip needs the item registry's network codec, which won't run outside a mod load. */
 class TownWorkContainerTopNeedTest {
 
     @BeforeAll
@@ -31,8 +18,7 @@ class TownWorkContainerTopNeedTest {
 
     @Test
     void topNeedSlotRoundTripsThroughUtf() {
-        // The exact slot TownWorkHandle writes and ForClientSide reads: a trailing Utf after
-        // the two toggle booleans.
+        // The slot the server writes and the client reads, after the two toggles.
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         buf.writeBoolean(false); // skipToAdd
         buf.writeBoolean(true);  // boardAutoRequest

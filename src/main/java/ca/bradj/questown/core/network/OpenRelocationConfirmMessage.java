@@ -6,13 +6,7 @@ import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 
 
-/**
- * Server → client: open the relocation "some of your town is too far away" confirmation screen
- * (ADR-0009, #199 Phase 4). Sent from {@code RelocationDeedItem.useOn} when a deed is placed at a
- * target that would leave some fixtures outside the new flag's tick radius. Carries the chosen target
- * and how many fixtures are out of range; the player's button choice comes back as a
- * {@link RelocationChoiceMessage}.
- */
+/** Server to client: confirm moving a town when some of it would be left too far away. */
 public record OpenRelocationConfirmMessage(
         BlockPos targetPos,
         int farFixtureCount

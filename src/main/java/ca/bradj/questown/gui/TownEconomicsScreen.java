@@ -24,9 +24,7 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMenu, ItemEconomicsData> {
     private final FlagTabs tabs;
 
-    // The unmet-need card the one-time free-food claim rides on (the town's
-    // food need is the near-certain day-1 card - see .scratch/day1-playtest-
-    // 2026-10-11/free-food-economics-card.md).
+    // The free food is claimed from the food card.
     private static final String FOOD_NEED_KEY = "#questown:villager_food";
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
@@ -45,7 +43,6 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         this.tabs = FlagTabs.forMenu(menu, "tooltips.economics");
     }
 
-    // Client-side view toggle (dev playtest 2026-10-29: "in last 1000 ticks" view): all time or recent.
     private static boolean showRecent = false;
 
     @Override
@@ -153,8 +150,6 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 if (bonusFoodAvailable() && isFoodCard(card)) {
                     lines.add(Compat.translatable("questown.menu.free_food_card.tooltip"));
                 }
-                // Wrapped like the other card screens' tooltips (playtest 2026-10-17: the
-                // free-food line ran the full screen width).
                 renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, lines);
             }
         }
@@ -192,8 +187,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         String count = Integer.toString(data.timesNeeded());
         int countX = c.rightXPadded() - font.width(count);
         ctx.darkText(Compat.literal(count), countX, textY);
-        // The one-time free-food claim rides on the food card while available:
-        // a short red affordance on the card, the full sentence in the tooltip.
+        // While the free food is unclaimed, the food card says so.
         if (bonusFoodAvailable() && isFoodCard(card)) {
             int claimY = textY + font.lineHeight + 2;
             ctx.darkText(Compat.translatableStyled("questown.menu.free_food_card",
@@ -249,9 +243,7 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     ) {
         for (Card<ItemEconomicsData> card : cards()) {
             CardCoordinates c = card.coords();
-            // The whole food card is the claim affordance while the one-time
-            // bonus is available (the icon sub-hit still sends the old INQUIRED
-            // work-request ping, same as any card).
+            // While the free food is unclaimed, a click on the food card claims it.
             if (bonusFoodAvailable() && isFoodCard(card)
                     && p_97750_ == 0
                     && UtilClean.isCoordInBox(mouseX, mouseY, c.leftX(), c.topY(), CARD_WIDTH, cardHeight)) {

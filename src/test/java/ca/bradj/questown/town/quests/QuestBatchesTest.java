@@ -165,13 +165,7 @@ class QuestBatchesTest {
 
     @Test
     void markRecipeAsLost_doesNotLoseAnAlreadyCompleteQuest() {
-        // Regression (2026-10-14 playtest, server-18 03:47:37): the empty-room quest
-        // completed, then the user placed a chest in the same room and re-registered it
-        // (the room re-typed from empty_room to store_room). markRecipeAsLost found the
-        // COMPLETED quest via completedOn and lost it - the player saw "Quest lost: Empty
-        // Room" on a perma-done quest, and the lost placeholder re-completed in the same
-        // tick, double-firing the batch reward. Complete quests are perma-done
-        // (campfire semantics); room re-typing must not touch them.
+        // A completed quest stays done when its room changes type.
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
@@ -198,12 +192,7 @@ class QuestBatchesTest {
 
     @Test
     void markRecipeAsComplete_completesOpenQuest_evenWhenSameRoomAndRecipeWereCompletedBefore() {
-        // Regression (2026-10-10, kitchen_stocked wall): the 96a74471 startup
-        // double-fill guard returned whenever ANY quest for this recipe had been
-        // completed on this room. Room objects keep their identity across rescans,
-        // so a re-issued quest for the same recipe (visitor-batch re-issue after the
-        // batch-completion reward) was bounced by the original completion forever
-        // and the chain stalled. The open quest must complete.
+        // A re-issued quest for the same recipe can still complete on the same room.
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
@@ -243,9 +232,7 @@ class QuestBatchesTest {
 
     @Test
     void markRecipeAsComplete_hasNoEffect_whenNoOpenQuestRemainsForRecipe() {
-        // The 96a74471 intent that survives: re-announcing a room recipe (e.g. on
-        // server start) must not re-mark or re-reward when every quest for that
-        // recipe is already complete.
+        // Re-announcing a room doesn't re-complete or re-reward finished quests.
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>

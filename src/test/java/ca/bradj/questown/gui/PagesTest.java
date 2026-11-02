@@ -22,7 +22,6 @@ class PagesTest {
         Assertions.assertEquals(2, Pages.count(6, 3));
     }
 
-    /** r16 #2: the request picker computed a page's range and drew the whole list on every page. */
     @Test
     void slice_returnsOnlyThatPagesItems() {
         List<String> items = List.of("raw_food", "wheat_seeds", "leather", "raw_mutton");

@@ -136,18 +136,8 @@ public class FetcherHack {
     }
 
     /**
-     * Fetcher-aware status override, plugged into {@code getComputeStatusOverrideForSpecialJobs}.
-     * The generic production-status pipeline does not understand {@code stock_request}, so without
-     * this the fetcher sits in {@code NO_SUPPLIES} forever and {@link
-     * ca.bradj.questown.jobs.production.AbstractSupplyGetter} never collects (it only acts on
-     * {@code COLLECTING_SUPPLIES}). Phases:
-     * <ul>
-     *   <li>holding the request AND a fetched item → {@code DROPPING_LOOT} (deliver to the
-     *       request's job block),</li>
-     *   <li>holding the request (need the ingredient) OR a usable request is waiting in a chest
-     *       (need to collect the request itself) → {@code COLLECTING_SUPPLIES},</li>
-     *   <li>otherwise → {@code null} (defer to the default computation).</li>
-     * </ul>
+     * The fetcher's status: holding the request and the item, deliver it; holding the request, or one
+     * waits in a chest, collect supplies; otherwise null for the default.
      */
     public static @Nullable ProductionStatus computeStatusOverride(
             TownInterface town,
@@ -166,17 +156,13 @@ public class FetcherHack {
             }
         }
         if (holdingRequest && holdingOther) {
-            // Carrying the request and the fetched item: deliver to the request's job block.
             return ProductionStatus.DROPPING_LOOT;
         }
         if (!holdingRequest && getTarget(town) != null) {
-            // Bootstrap only: a usable request is waiting in a chest but the villager isn't carrying
-            // one yet. Force COLLECTING_SUPPLIES so the supply getter goes and picks it up — the
-            // generic pipeline can't recognise this (it produced the permanent NO_SUPPLIES deadlock).
+            // A request waits in a chest but the villager has none yet: go and collect it.
             return ProductionStatus.COLLECTING_SUPPLIES;
         }
-        // Carrying the request (working toward / fetching the ingredient): defer to the default
-        // computation, which now has a workspot (from the held request) and drives the state machine.
+        // Carrying the request: the default status takes over.
         return null;
     }
 

@@ -27,14 +27,12 @@ class EmptyTownGrassThinnerTest {
     void thinGrass_lowersTallGrassAndDeletesUpperHalves() {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(tallGrassPaletteEntry("lower"));   // idx 0
-        palette.add(tallGrassPaletteEntry("upper"));   // idx 1
+        palette.add(tallGrassPaletteEntry("lower"));
+        palette.add(tallGrassPaletteEntry("upper"));
         tag.put("palette", palette);
 
         ListTag blocks = new ListTag();
-        // 8 tall_grass plants = 8 lower + 8 upper. Keep RNG sample size healthy
-        // so the post-thin count is far enough from the pass/fail boundary
-        // that the deterministic seed's hits don't make the assertion brittle.
+        // Enough plants that the fixed seed's result sits well clear of the limit.
         for (int i = 0; i < 8; i++) {
             blocks.add(blockEntry(0, i, 64, 0));
             blocks.add(blockEntry(1, i, 65, 0));
@@ -48,7 +46,7 @@ class EmptyTownGrassThinnerTest {
         int grassIdx = -1;
         for (int i = 0; i < finalPalette.size(); i++) {
             CompoundTag p = finalPalette.getCompound(i);
-            // 1.20.6: the short grass plant is minecraft:short_grass (minecraft:grass no longer exists).
+            // The short grass plant is short_grass.
             if ("minecraft:short_grass".equals(p.getString("Name")) && !p.contains("Properties")) {
                 grassIdx = i;
                 break;
@@ -89,12 +87,7 @@ class EmptyTownGrassThinnerTest {
                 "thinGrass must not mutate its input");
     }
 
-    /**
-     * Opt-in: actually rewrite the committed empty_town.nbt. Same pattern as
-     * {@code ChickenScaffoldingNbtEditorTest.applyToRealStructure} — remove
-     * {@code @Disabled}, run this single test, commit the file change,
-     * restore {@code @Disabled}.
-     */
+    /** Applies the thinner to the real {@code empty_town.nbt}. Disabled; enable it, run it, commit the file, disable it again. */
     @Test
     @Disabled("On-demand tool; remove @Disabled to thin grass in the real empty_town.nbt.")
     void applyToRealStructure() throws IOException {
@@ -116,8 +109,6 @@ class EmptyTownGrassThinnerTest {
         );
         Assertions.assertEquals(0, exit);
     }
-
-    // -- helpers ---------------------------------------------------------
 
     private static CompoundTag tallGrassPaletteEntry(String half) {
         CompoundTag e = new CompoundTag();

@@ -19,7 +19,7 @@ public class MCContainer implements MCContainerInterface {
         });
     }
 
-    /** {@code onTouch} runs when an item goes in or out (the chest lid, {@link ChestTouches}). */
+    /** {@code onTouch} runs when an item goes in or out. */
     public MCContainer(@NotNull Container container, Runnable onTouch) {
         this.container = container;
         this.onTouch = onTouch;

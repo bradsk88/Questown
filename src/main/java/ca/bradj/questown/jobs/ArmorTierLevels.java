@@ -2,11 +2,7 @@ package ca.bradj.questown.jobs;
 
 import java.util.Map;
 
-/**
- * The villager level at which each armor material's pieces become unlockable (dev ruling
- * 2026-10-26, Outfitter playtest #11): leather 3, iron 8, gold 11, diamond 14, beside the tool
- * tiers' 3/5/8/11/14. Keyed by the armor item prefix the armorer template expands into.
- */
+/** The villager level at which each armor material unlocks: leather 3, iron 8, gold 11, diamond 14. */
 public final class ArmorTierLevels {
 
     private static final Map<String, Integer> LEVELS = Map.of(
@@ -19,7 +15,7 @@ public final class ArmorTierLevels {
     private ArmorTierLevels() {
     }
 
-    /** The level for an armor prefix ("leather", "iron", "golden", "diamond"); unknown = the default. */
+    /** The level for an armor prefix; an unknown one gets the default. */
     public static int forPrefix(String prefix) {
         return LEVELS.getOrDefault(prefix, Work.DEFAULT_AVAILABLE_AT_LEVEL);
     }

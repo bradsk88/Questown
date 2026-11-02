@@ -10,32 +10,14 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-/**
- * Decision 2 (gannet top-need handoff, 2026-10-09, walked with the dev): the
- * top-need batch WALKS the ranked unmet-need queue to the first need with a
- * producer the town could unlock — a non-actionable #1 (no producer at all, or
- * all of its producers already unlocked) is skipped, not dead-end. Run 14 is
- * the motivating cell: #1 {@code oak_wood} (x4) had no unlockable producer and
- * silenced a lower need that did.
- * <p>
- * Semantics as decided, one for each:
- * <ol>
- *   <li>walk-skip past non-actionable needs;</li>
- *   <li>stop at the first *actionable* need (an in-flight unlock quest for its
- *       producer is checked by the caller and ends the phase — the walk never
- *       reaches past an in-flight one to post for a lower need);</li>
- *   <li>item-queue-only scope — room needs and {@code NoRequest} rows are gated
- *       out of the item store at registration ({@code GateReason.supplyItem()}),
- *       so they never appear here.</li>
- * </ol>
- */
+/** The top-need batch walks the ranked needs to the first one a job not yet unlocked could make; others are skipped. */
 class TownQuestsTopNeedWalkTest {
 
     private static ItemEconomicsData need(String key, int times) {
         return new ItemEconomicsData(key, times);
     }
 
-    /** Which roots declare which products (the omniscient producer map, keyed by need key). */
+    /** Which roots make which items. */
     private static Map<String, Set<String>> producers() {
         return Map.of(
                 "minecraft:oak_wood", Set.of("gatherer"),
@@ -105,9 +87,7 @@ class TownQuestsTopNeedWalkTest {
 
     @Test
     void chooseProducerRootWithNoStuckRootStillExcludesUnlockedRoots() {
-        // The top-need batch has no stuck root (its needs are town-wide), so a
-        // null stuckRoot excludes nothing — but the not-yet-unlocked filter
-        // still applies.
+        // No stuck root to exclude, but unlocked producers still are.
         assertEquals(
                 "miner",
                 TownQuests.chooseProducerRoot(Set.of("miner", "baker"), null, Set.of("baker"))

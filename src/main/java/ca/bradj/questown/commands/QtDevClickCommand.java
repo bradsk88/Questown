@@ -29,14 +29,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-// Dev-only: perform the real right-click a player would, server-side, so a headless
-// held run can drive the chicken-arc interaction beats (get the wand from the flag,
-// open a villager or the flag menu, hand seeds to the chicken) the way a player
-// does, not by flipping a bit. It puts the item in the named player's main hand and
-// invokes the actual block interaction (gameMode.useItemOn), the same real path the
-// game uses, so the agent hits the same walls a player does. No permission gate, so
-// it runs from the console (FIFO). The player is the nearest live player to the
-// target, matching the arc's nearest-player search.
+// Dev-only: a real right-click on a block by the nearest player, with an item in their hand.
 public class QtDevClickCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src, CommandBuildContext itemCtx) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
@@ -45,8 +38,7 @@ public class QtDevClickCommand {
 
         // @formatter:off
         var qtdev = Commands.literal("_qtdev");
-        // openvillager: open a villager's tabbed menu for the nearest player —
-        // the flag right-click path (showUI) without input.
+        // openvillager: open a villager's menu for the nearest player.
         var openvillager = Commands.literal("openvillager")
                 .then(Commands.argument("type", StringArgumentType.word())
                     .suggests((ctx, b) -> SharedSuggestionProvider.suggest(
@@ -56,21 +48,14 @@ public class QtDevClickCommand {
                     .executes(css -> runOpenVillager(css.getSource(), css.getArgument("type", String.class))));
         var openJobs = Commands.literal("open_jobs")
                 .executes(css -> runOpenJobs(css.getSource()));
-        // board_request: post one work request to the job board (the board's cards are
-        // the town's work requests; a board with none renders zero cards). Thin wrapper
-        // over the owner's WorkHandle.requestWork, the same call the AddWork confirm
-        // flow makes - so a headless capture can drive a card-rich board without the
-        // full add-work UI flow.
+        // board_request: post one work request to the job board.
         var boardRequest = Commands.literal("board_request")
                 .then(Commands.argument("item", ItemArgument.item(itemCtx))
                     .executes(css -> runBoardRequest(
                             css.getSource(),
                             ItemArgument.getItem(css, "item").getItem()
                     )));
-        // show_item_jobs: open the ItemJobsScreen for the first townie's job - the
-        // OpenJobMessage.handle owner call (flag -> villager handle -> showJobUI),
-        // which the parent screen's status-icon click sends - so a headless run can
-        // drive the screen without the click.
+        // show_item_jobs: open the item-jobs screen for the first villager's job.
         var showItemJobs = Commands.literal("show_item_jobs")
                 .executes(css -> runShowItemJobs(css.getSource()));
         var clickwand = Commands.literal("clickwand")
@@ -79,20 +64,15 @@ public class QtDevClickCommand {
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        // clickheld: right-click a block with whatever the player ALREADY holds
-        // (e.g. the parent-NBT town wand from clickwand), preserving the stack's NBT
-        // so NBT-gated use-on interactions run. This drives the campfire-sleep beat
-        // (SUNSET_AND_MAP): the sleep is reached from useItemOn, so a held run
-        // starts it by setting the clock to night then clickheld-ing the campfire
-        // (the player must be near the bed head, else startSleepInBed is TOO_FAR_AWAY).
+        // clickheld: right-click a block with whatever the player holds, keeping its NBT. For the
+        // campfire sleep: set night, then clickheld the campfire from near the bed.
         var clickheld = Commands.literal("clickheld")
                 .then(posArg
                     .executes(css -> runHeld(
                             css.getSource(),
                             BlockPosArgument.getLoadedBlockPos(css, "pos")
                     )));
-        // townplace / townspawn: minimal flag + villager fixture for the port-test
-        // GUI captures (no village-arc gameplay required).
+        // townplace / townspawn: a flag and a villager, for screen captures.
         var townplace = Commands.literal("townplace")
                 .then(Commands.argument("pos", BlockPosArgument.blockPos())
                     .executes(css -> runTownPlace(
@@ -110,21 +90,14 @@ public class QtDevClickCommand {
         // @formatter:on
     }
 
-    /**
-     * The wand beat as a player does it: right-click the flag with a stick, which
-     * the flag converts into a town wand. This is the real flag interaction
-     * (gameMode.useItemOn on the flag block's use()), not a bit flip.
-     */
+    /** The wand lesson as a player does it: right-click the flag with a stick. */
     private static int runWand(CommandSourceStack source, BlockPos flagPos) {
         ServerPlayer player = findPlayer(source, flagPos);
         if (player == null) {
             QT.FLAG_LOGGER.warn("[click wand] no player near {}", flagPos);
             return 1;
         }
-        // Give the player a stick in the main hand, then do the real flag click.
-        // The flag converts the stick to a town wand in the player's hand
-        // (TownFlagBlock.use -> convertItemInHand); that conversion must persist,
-        // so we do NOT restore the previous hand item afterwards.
+        // The flag turns the stick into a wand in the player's hand; leave it there.
         player.setItemInHand(InteractionHand.MAIN_HAND, net.minecraft.world.item.Items.STICK.getDefaultInstance());
         InteractionResult result = player.gameMode.useItemOn(
                 player,
@@ -141,18 +114,7 @@ public class QtDevClickCommand {
         return 0;
     }
 
-    /**
-     * Right-click a block with the item the player already holds, preserving its
-     * NBT. This is the real block interaction (gameMode.useItemOn on the held
-     * stack), not a bit flip, and — unlike the removed bare {@code click} — it
-     * keeps the stack's NBT, so an NBT-gated use-on interaction actually runs.
-     * It drives the campfire-sleep beat (SUNSET_AND_MAP): the sleep is reached
-     * from useItemOn, so a held run starts it by setting the clock to night then
-     * clickheld-ing the campfire (the player must be near the bed head, else
-     * startSleepInBed reports TOO_FAR_AWAY). The held stack is used as-is; it is
-     * not restored afterwards (an interaction may legitimately consume or mutate
-     * it).
-     */
+    /** Right-click a block with the held item, keeping its NBT. The hand is not restored. */
     private static int runHeld(CommandSourceStack source, BlockPos pos) {
         ServerPlayer player = findPlayer(source, pos);
         if (player == null) {
@@ -178,11 +140,7 @@ public class QtDevClickCommand {
         return 0;
     }
 
-    /**
-     * Open the assigned villager's menu (flag right-click equivalent) for the
-     * nearest player: "inventory" type = the tabbed parent (multi-status),
-     * anything else a direct tab. No permission gate (console/FIFO drive).
-     */
+    /** Open the assigned villager's menu for the nearest player: "inventory" opens the tabbed menu, anything else that tab. */
     private static int runOpenVillager(CommandSourceStack source, String type) {
         if (TownFlags.all().isEmpty()) {
             QT.FLAG_LOGGER.warn("[openvillager] no flags registered");
@@ -201,20 +159,13 @@ public class QtDevClickCommand {
             return 1;
         }
         UUID villager = holder.entities().iterator().next().getUUID();
-        // All types open the per-villager TABBED menu (VillagerTabsEmbedding),
-        // so the client-side port-test hook can read flag pos + villager UUID
-        // from it and drive `tab` switches. INVENTORY is the tabbed parent.
         holder.showUI(player, type, villager);
         QT.FLAG_LOGGER.info("[openvillager] {} menu for {} (villager {})", type,
                 player.getGameProfile().getName(), villager);
         return 0;
     }
 
-    /**
-     * Open the job board (WorkScreen) for the nearest player: the flag's
-     * {@code openJobsMenu} owner path (AddWork/RemoveWork flows reach the same
-     * call), so no board block or hand item is needed for a console/FIFO drive.
-     */
+    /** Open the job board for the nearest player. */
     private static int runOpenJobs(CommandSourceStack source) {
         if (TownFlags.all().isEmpty()) {
             QT.FLAG_LOGGER.warn("[open_jobs] no flags registered");
@@ -243,8 +194,6 @@ public class QtDevClickCommand {
         return 0;
     }
 
-    // The status-icon click of the parent screen sends OpenJobMessage, whose handle
-    // delegates to exactly this call - this wrapper keeps the domain on the owner.
     private static int runShowItemJobs(CommandSourceStack source) {
         if (TownFlags.all().isEmpty()) {
             QT.FLAG_LOGGER.warn("[show_item_jobs] no flags registered");

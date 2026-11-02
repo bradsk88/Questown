@@ -26,7 +26,7 @@ class JobScoreBandsTest {
 
     @Test
     void readyFoodJob_beatsAStockJob() {
-        // The coin flip: cook/stock_fuel tied a ready food job at 1.0 and the shuffle chose.
+        // An always-considered job used to tie a ready job and win on the shuffle.
         double stock = JobScoreBands.alwaysConsiderScore(PREFERRED, MIN);
         Assertions.assertEquals(List.of("beef"), band(new Job("stock_fuel", stock), new Job("beef", 1.0)));
     }

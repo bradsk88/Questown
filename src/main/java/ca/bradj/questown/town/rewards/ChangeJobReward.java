@@ -49,22 +49,10 @@ public class ChangeJobReward extends MCReward {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
             town.getVillagerHandle().changeJobForVillager(visitorUUID, jobID, false);
             ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
-            // Registering a townie unlocks the specific works for its current job
-            // (TownVillagerHandle.register). A job *change* after registration does not
-            // re-run that, so the new root's works stay locked: the work-seeker finds an
-            // empty set, logs "No jobs found for root ID", and the villager soft-locks in
-            // seeking_work. Unlock the specific works (not the root meta-ID, which
-            // isUnlocked never matches) the same way register does.
+            // A job change must unlock the new root's starting jobs, as registering a villager does.
             for (JobID workID : defaultWork) {
                 town.getVillagerHandle().unlockJob(visitorUUID, workID);
             }
-            // Every cook gets the starter recipe (cook/mutton) through the
-            // default-work unlock loop above: it is listed in the
-            // simple-furnace template's `starter_recipes`, so it is part of the
-            // root's initial set for all cooks (onboarding or not). The
-            // 2026-10-12 day-1 playtest ruled a manually-created cook with only
-            // extract + fuel wrong ("had no cook jobs"); the remaining recipes
-            // stay progression-gated.
             ((TownFlagBlockEntity) town).postStarterRequests(jobID);
         };
     }

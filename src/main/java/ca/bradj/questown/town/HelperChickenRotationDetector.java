@@ -13,41 +13,17 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * First-tick rotation detection for worldgen-placed flags (U3).
- *
- * <p>On the flag BE's first tick (before {@link HelperChickenSpawnController}),
- * scans the four candidate anchor positions — one per {@link Rotation} — for
- * the authored anchor block (unlit or lit campfire at
- * {@link HelperChickenBeatOffsets#CAMPFIRE_OFFSET}). The unique match's rotation
- * is persisted on the flag BE.
- *
- * <p>Retry budget: up to {@value #MAX_RETRY_TICKS} ticks of zero-match scans are
- * allowed (anchor chunk may not be loaded yet). After the budget, the arc is
- * force-forfeited. Multiple matches are a hard forfeit with no retry — anchor
- * ambiguity is never recoverable.
- *
- * <p>Retry counter lives in a static {@link Map} keyed by flag {@link BlockPos}.
- * The counter is transient — it does not survive a server restart, which is
- * fine because a restart re-runs the scan with a fresh budget anyway.
- */
+/** Finds a worldgen flag's rotation on its first tick, from which of four positions holds the campfire. Gives up after {@value #MAX_RETRY_TICKS} ticks with no match; two matches end the lessons at once. */
 public final class HelperChickenRotationDetector {
 
     private static final int MAX_RETRY_TICKS = 20;
 
-    // Transient per-flag retry counter. Cleared implicitly when the flag finalizes detection.
     private static final Map<BlockPos, Integer> RETRY_COUNTERS = new HashMap<>();
 
     private HelperChickenRotationDetector() {
     }
 
-    /**
-     * Clears the per-flag retry counter map. Intended only for test-arena cleanup
-     * between scenarios in {@code TestArenaPreparer} so back-to-back chicken-arc
-     * scenarios cannot pollute one another's retry budget. Not part of the
-     * production-runtime contract — production finalizes naturally on match /
-     * ambiguity / timeout.
-     */
+    /** For autotests: clears the retry counts between scenarios. */
     public static void clearRetryCounters() {
         RETRY_COUNTERS.clear();
     }
@@ -85,7 +61,6 @@ public final class HelperChickenRotationDetector {
             return;
         }
 
-        // Zero matches: retry up to MAX_RETRY_TICKS before forfeiting.
         int attempts = RETRY_COUNTERS.getOrDefault(flagPos, 0) + 1;
         if (attempts >= MAX_RETRY_TICKS) {
             finalizeDetection(flag, Rotation.NONE, true);
@@ -102,13 +77,7 @@ public final class HelperChickenRotationDetector {
         return out;
     }
 
-    /**
-     * One-shot rotation read for callers that bypass {@link #detectIfNeeded}'s
-     * retry/forfeit budget (e.g. {@code HelperChickenSpawnController.forceSpawn}).
-     * Returns the rotation of a candidate position that currently holds a
-     * campfire, or {@link Rotation#NONE} if none do. Unlike {@code detectIfNeeded}
-     * it never forfeits and never persists - it only reads the current world.
-     */
+    /** The rotation of a candidate position that holds a campfire, or NONE. Never ends the lessons or saves anything. */
     public static Rotation detectRotationOnce(TownFlagBlockEntity flag) {
         ServerLevel sl = flag.getServerLevel();
         if (sl == null) {

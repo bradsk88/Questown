@@ -2,12 +2,7 @@ package ca.bradj.questown.town.quests.paths;
 
 import com.google.common.collect.ImmutableList;
 
-/**
- * A curated quest path (plan `docs/plans/2026-10-24-002-feat-curated-quest-paths-plan.md`): batches
- * of quests a player opens after the onboarding trunk. A batch with no {@code opensAfter} is a
- * starter, posted at the fork; any other batch is posted once every batch it names is complete.
- * Loaded from {@code data/<ns>/questown_paths/<path>.json} ({@link QuestPathParser}).
- */
+/** A curated quest path: batches of quests opened after onboarding. A batch with no {@code opensAfter} is a starter; any other posts once the batches it names are done. Loaded from {@code data/<ns>/questown_paths/}. */
 public record QuestPath(String id, ImmutableList<Batch> batches) {
 
     public record Batch(String id, ImmutableList<String> opensAfter, boolean arrival, ImmutableList<Step> quests) {
@@ -20,10 +15,7 @@ public record QuestPath(String id, ImmutableList<Batch> batches) {
         ROOM, JOB_CHANGE, LOOT, SKILL, LEVEL
     }
 
-    /**
-     * One quest: a room recipe id, a job id ({@code root/job}), an item/tag id with a count, or (LEVEL)
-     * a job root with the level a villager working it must reach in {@code count}.
-     */
+    /** One quest: a room recipe, a job ({@code root/job}), an item with a count, or a job root and the level to reach. */
     public record Step(Kind kind, String id, int count) {
     }
 

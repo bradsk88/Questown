@@ -5,10 +5,7 @@ import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 
-/**
- * Upkeep jobs every root carries (eating, downtime, rest, seeking work, BOP deposit) as opposed to
- * the root's own work. Reads only the jobs' compile-time ID constants, so it loads in a unit test.
- */
+/** Upkeep jobs every root has (eating, downtime, rest, seeking work, Block of Progress deposit), as opposed to its own work. */
 public final class MetaJobs {
 
     private MetaJobs() {

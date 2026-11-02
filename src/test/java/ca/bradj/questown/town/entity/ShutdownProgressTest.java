@@ -6,12 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Drives the real shutdown decision core ({@link ShutdownProgress}) — completion requires BOTH the
- * roster absorbed AND the minimum-duration floor, and the force-absorb deadline is the deadlock
- * guard. The end-to-end integration (townies actually walk home and vanish, flag flips dormant) is
- * covered by the {@code flag/town_shutdown} autotest.
- */
+/** {@link ShutdownProgress}: done only when every villager is in and the minimum time has passed; the force deadline catches stragglers. */
 class ShutdownProgressTest {
 
     private static final long START = 1000L;
@@ -29,7 +24,6 @@ class ShutdownProgressTest {
     void notCompleteWhileTowniesRemainUnabsorbed() {
         ShutdownProgress p = twoTownieRitual();
         p.markAbsorbed(a);
-        // b not yet home, and well past the floor: still not complete.
         Assertions.assertFalse(p.isComplete(START + FLOOR + 100));
     }
 
@@ -38,7 +32,7 @@ class ShutdownProgressTest {
         ShutdownProgress p = twoTownieRitual();
         p.markAbsorbed(a);
         p.markAbsorbed(b);
-        // Whole roster home, but the anti-cheat floor hasn't elapsed: not complete.
+        // Everyone home, but the minimum time hasn't passed.
         Assertions.assertFalse(p.isComplete(START + FLOOR - 1));
     }
 

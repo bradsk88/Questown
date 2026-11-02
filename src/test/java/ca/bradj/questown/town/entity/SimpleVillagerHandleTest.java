@@ -13,7 +13,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -22,10 +21,7 @@ import java.util.function.BiConsumer;
 
 class SimpleVillagerHandleTest {
 
-    // The morning root change reaches changeJobForVillager -> DinerRawFoodWork, whose static
-    // init builds an Ingredient (registry-bound). Without this the class only loaded when an
-    // earlier test in the forked JVM had bootstrapped vanilla; run first, it poisoned the
-    // suite (2026-10-18: 259 downstream NoClassDefFoundErrors).
+    // The morning job change loads a diner class that needs vanilla bootstrapped.
     @BeforeAll
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
@@ -36,7 +32,6 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void tick(List<UUID> uuids) {
-
         }
 
         @Override
@@ -44,17 +39,14 @@ class SimpleVillagerHandleTest {
                 UUID vEntity,
                 BiConsumer<TownPosition, Long> listener
         ) {
-
         }
 
         @Override
         public void claimBed(UUID vEntity) {
-
         }
 
         @Override
         public void stopSleeping(UUID uuid) {
-
         }
 
         @Override
@@ -62,7 +54,6 @@ class SimpleVillagerHandleTest {
             return false;
         }
 
-        /** Townies for which hasBed returns true (test seam for the SLEEPLESS capture). */
         Set<UUID> bedded = new HashSet<>();
 
         @Override
@@ -87,12 +78,10 @@ class SimpleVillagerHandleTest {
         JobID overnightOverride = null;
         List<JobID> unlocked = new ArrayList<>();
         List<UUID> discarded = new ArrayList<>();
-        /** Entity objects (by identity) that have left the world. */
         List<UUID> removedEntities = new ArrayList<>();
         ImmutableList<JobID> defaultWork = ImmutableList.of();
         List<JobID> starterRequestsPosted = new ArrayList<>();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
-        /** Mood effects applied via applyMoodEffect: uuid -> (effect -> untilTick). */
         final Map<UUID, Map<net.minecraft.resources.ResourceLocation, Long>> moodEffects = new HashMap<>();
 
         @Override
@@ -145,7 +134,6 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void invalidateCachedWorkPossibilities() {
-
         }
 
         @Override
@@ -158,7 +146,6 @@ class SimpleVillagerHandleTest {
                 UUID vEntity,
                 Runnable runnable
         ) {
-
         }
 
         @Override
@@ -204,7 +191,6 @@ class SimpleVillagerHandleTest {
                 UUID v,
                 int ticks
         ) {
-
         }
 
         @Override
@@ -277,7 +263,6 @@ class SimpleVillagerHandleTest {
         return handle;
     }
 
-    // 2026-10-21 agent playtest: the level-up chat line read "3d51...810 reached level 3".
     @Test
     public void levelUp_chatNamesTheVillager() {
         TestDelegator t = new TestDelegator();
@@ -293,7 +278,6 @@ class SimpleVillagerHandleTest {
         );
     }
 
-    // Dev playtest 2026-10-28: "That message should say \"Villager 4 (cook) reached level 2\"".
     @Test
     public void levelUp_chatNamesTheJob() {
         TestDelegator t = new TestDelegator();
@@ -308,9 +292,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(line.endsWith(", 2]"), line);
     }
 
-    // 2026-10-30 overnight visual check: a hunter carrying its earned BOP across a server restart lost
-    // the latch (never saved), so the board stopped routing it to the flag and the BOP was dropped
-    // into a storage chest as loot. The latch survives a save/load through the handle's own state.
+    // The earned Block of Progress latch survives a save and load.
     @Test
     public void blockOfProgressLatch_survivesSaveAndLoad() {
         TestDelegator t = new TestDelegator();
@@ -325,8 +307,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(after.hasBlockOfProgress(villager));
     }
 
-    // The flag writes its data on its tick only when marked changed (TownFlagTicker), so a level-up
-    // (new level, experience, latch) marks it rather than relying on some other change to save it.
+    // A level-up marks the flag changed, so it saves.
     @Test
     public void levelUp_marksTheTownChanged() {
         TestDelegator t = new TestDelegator();
@@ -350,9 +331,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(ImmutableMap.of(), handle.getBlockOfProgressLatches());
     }
 
-    // 2026-10-22 agent playtest r9: the hunter's stats page read "Lvl 1" while the flag held level 4.
-    // A stats listener heard every townie's hunger tick, so an open page showed whichever townie
-    // changed last (level, hunger, mood). A listener hears only the townie it was added for.
+    // A stats listener hears only its own villager.
     @Test
     public void statsListener_hearsOnlyItsOwnVillager() {
         TestDelegator t = new TestDelegator();
@@ -381,7 +360,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(List.of(4), heardLevels);
     }
 
-    // The flag saves on any townie's stats change, so the town-wide listener still hears them all.
+    // The town-wide listener hears every villager.
     @Test
     public void anyStatsListener_hearsEveryVillager() {
         TestDelegator t = new TestDelegator();
@@ -409,8 +388,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(2, heard[0]);
     }
 
-    // 2026-10-21 agent playtest: a raw-food meal (hunger_fill_half) set fullness to 50% of max, so a
-    // villager at 87% dropped to 50% by eating. A meal adds to fullness; it never lowers it.
+    // A meal never lowers fullness.
     @Test
     public void eat_halfMeal_neverLowersFullness() {
         TestDelegator t = new TestDelegator();
@@ -435,8 +413,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(0.7f, handle.getStats(villager).fullnessPercent(), 0.001f);
     }
 
-    // 2026-10-17 playtest: the gatherer left the gate mat at its terminal state; the new hunter
-    // read it as its own finished hunt. A root change must drop the villager's job-block states.
+    // A job change drops the villager's job-block states.
     @Test
     public void changeJob_toANewRoot_resetsTheVillagersWorkStatus() {
         TestDelegator t = new TestDelegator();
@@ -454,16 +431,12 @@ class SimpleVillagerHandleTest {
         UUID villager = UUID.randomUUID();
         SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
 
-        // TestDelegator reports the current job as tester:tester.
         handle.changeJobForVillager(villager, new JobID("tester", "other"), 0L, false);
 
         Assertions.assertEquals(List.of(), t.workStatusResets);
     }
 
-    // 2026-10-23 agent playtest r10: the starving flag is not saved, and it was only set when the
-    // hunger broadcast caught fullness at exactly 0. A villager reloaded below zero (-27%) was never
-    // starving again, so the board kept bouncing it dining_no_table -> downtime -> dining_no_table
-    // and never sent it to raw food.
+    // A villager reloaded below zero fullness reads as starving again.
     @Test
     public void reloadedBelowZero_becomesStarvingAtTheNextHungerBroadcast() {
         TestDelegator t = new TestDelegator();
@@ -488,11 +461,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertTrue(handle.isStarving(villager));
     }
 
-    /**
-     * Agent playtest r12 #9: in a fresh town (nothing saved) a fed townie that went hungry was never
-     * flagged starving, so the board kept sending it dining_no_table -> downtime via diner-ate.
-     * The hungry listener read the fullness snapshot handed to initialize, not the live fullness.
-     */
+    /** In a new town, a fed villager that goes hungry is flagged starving. */
     @Test
     public void freshTown_fedTownieBecomesStarvingWhenItsLiveFullnessDropsBelowZero() {
         TestDelegator t = new TestDelegator();
@@ -520,9 +489,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void freshlyPlacedFlag_neverInitialized_fedTownieStillBecomesStarving() {
-        // A freshly placed flag never calls initialize(...): only the NBT load path does
-        // (TownVillagerHandlerSerializer). So the starving listener must not live in initialize
-        // (playtest r13 #1: the fresh town's diners churned out via diner-ate).
+        // A newly placed flag never calls initialize, so the listener can't live there.
         TestDelegator t = new TestDelegator();
         UUID villager = UUID.randomUUID();
         SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
@@ -615,14 +582,7 @@ class SimpleVillagerHandleTest {
         Assertions.assertNull(hungryInformed.get());
     }
 
-    // ---- Experience / "frozen" mechanism (Option B, finch handoff) ----
-    //
-    // These characterize the REAL SimpleVillagerHandle.addExperience path (not simulated):
-    // experience climbs while no block-of-progress latch is set, and holds flat ("frozen")
-    // once the latch is set on a level-up and is not cleared. The root cause of "experience
-    // not increasing from work" is UNCONFIRMED, so these are characterization tests, not
-    // reproducing tests; the completion-listener trigger that would call addExperience from a
-    // job completion is untestable without a full Minecraft world (see @Disabled below).
+    // Experience: it climbs until a level-up sets the Block of Progress latch, then holds until the latch clears.
 
     private static SimpleVillagerHandle<String, UUID> newHandle(TestDelegator t) {
         return new SimpleVillagerHandle<>(
@@ -664,12 +624,12 @@ class SimpleVillagerHandleTest {
         SimpleVillagerHandle<String, UUID> handle = newHandle(t);
         UUID v = UUID.randomUUID();
 
-        // 100 >= target(100) -> level up, sets the hasBlockOfProgress latch, exp -> 100 % 100 = 0.
+        // Reaching the target levels up and sets the latch.
         handle.addExperience(v, 100);
         Assertions.assertEquals(1, t.broadcast.size(), "the level-up fired exactly once");
         int frozen = handle.getStats(v).experienceValue();
 
-        // With the latch set, further addExperience calls are no-ops: the value holds flat.
+        // With the latch set, more experience does nothing.
         handle.addExperience(v, 50);
         handle.addExperience(v, 50);
         Assertions.assertEquals(
@@ -681,22 +641,6 @@ class SimpleVillagerHandleTest {
                 "no further level-up while the latch is set"
         );
     }
-
-    @Disabled("Untestable without a full Minecraft world: the completion-listener path that "
-            + "calls SimpleVillagerHandle.addExperience from a job completion lives in "
-            + "AbstractWorldInteraction.tryExtractProduct -> jobCompletedListeners -> "
-            + "VisitorMobEntity.addExperience (VisitorMobEntity ~line 385). The 'frozen' "
-            + "mechanism is characterized above, but the root cause of 'experience not "
-            + "increasing from work' is UNCONFIRMED (candidates: the completion listener "
-            + "not firing; DeclarativeJob.getExperienceEarned returning 0; the "
-            + "hasBlockOfProgress latch stuck because no item is ever inserted to clear "
-            + "it; or starvation blocking work).")
-    @Test
-    public void completionListener_firesAddExperience_onJobCompletion() {
-        // See @Disabled: cannot be reached without a real world interaction.
-    }
-
-    // ---- Blessed ("gold") BOP guarantees ----
 
     @Test
     public void scheduleJobRootChange_withGuarantee_forcesThatRootOnMorning() {
@@ -729,7 +673,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void scheduleJobRootChange_instantWithGuarantee_appliesNowAndReturnsTheRoot() {
-        // r22: an onboarding spend applies at once; the returned root lets the spend close its quest.
+        // An onboarding spend applies at once.
         TestDelegator t = new TestDelegator();
         SimpleVillagerHandle<String, UUID> handle = newHandle(t);
         UUID v = UUID.randomUUID();
@@ -746,8 +690,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void register_replacesACopyThatLeftTheWorld() {
-        // 2026-10-17: a reloaded townie is a new object with the same UUID; the copy that
-        // unloaded with its chunk must not stay listed.
+        // A reloaded villager is a new object with the same UUID; the old copy isn't kept.
         TestDelegator t = new TestDelegator();
         SimpleVillagerHandle<String, UUID> handle = newHandle(t);
         UUID unloaded = UUID.randomUUID();
@@ -757,7 +700,6 @@ class SimpleVillagerHandleTest {
 
         handle.register(reloaded);
 
-        // (ENTITY is UUID here, so membership is checked by identity, not equals.)
         Assertions.assertEquals(1, handle.size(), "one entry per townie");
         Assertions.assertSame(reloaded, handle.entities().iterator().next(), "the reloaded copy is the one listed");
         Assertions.assertTrue(t.discarded.isEmpty(), "nothing live is discarded");
@@ -765,8 +707,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void register_keepsALiveCopyAndDiscardsTheLateDuplicate() {
-        // 2026-10-19: recoverMobs respawned the townie with its warped state; the pre-absence
-        // copy loaded with its chunk afterwards and used to replace it.
+        // A copy loading after the warped one doesn't replace it.
         TestDelegator t = new TestDelegator();
         SimpleVillagerHandle<String, UUID> handle = newHandle(t);
         UUID recovered = UUID.randomUUID();
@@ -783,7 +724,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void morningRootChange_unlocksTheNewRootsDefaultWork() {
-        // 2026-10-18 playtest: a BOP-made cook got cook/extract but not fuel or cook_mutton.
+        // A cook made with a Block of Progress gets its root's starting jobs.
         TestDelegator t = new TestDelegator();
         JobID extract = new JobID("cook", "extract");
         JobID fuel = new JobID("cook", "fuel");
@@ -804,9 +745,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void morningRootChange_postsTheNewRootsStarterRequests() {
-        // 2026-10-19 village/growth: a BOP-made cook got its starter work but no #villager_food
-        // request on the board, so every cook job read "Product not requested" and the cook
-        // idled. A quest-made cook (ChangeJobReward) gets the requests; this path must too.
+        // And the food request on the board.
         TestDelegator t = new TestDelegator();
         JobID extract = new JobID("cook", "extract");
         SimpleVillagerHandle<String, UUID> handle = newHandle(t);
@@ -821,9 +760,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void assignJob_makesTheSameWorkerAsARootChange() {
-        // r15 (2026-10-23): the console `qt jobs set` unlocked only the named job, so its cook had
-        // no cook/fuel, registered no coal need and misled a playtest. Assigning a job now does
-        // what the BOP root change does: the root's default work, the job, the starter requests.
+        // Assigning a job does what a Block of Progress job change does.
         TestDelegator t = new TestDelegator();
         JobID extract = new JobID("cook", "extract");
         JobID fuel = new JobID("cook", "fuel");
@@ -874,9 +811,6 @@ class SimpleVillagerHandleTest {
                 t.overnightOverride, t.jobChanges.get(0),
                 "with no guarantee, the overnight override still applies"
         );
-        // NB: the fully-random path (no guarantee, no override, no stored pre-roll) needs
-        // ServerJobsRegistry.getAllRootJobs, which is empty headless (job data not loaded).
-        // Not reachable in unit tests.
     }
 
     @Test
@@ -895,8 +829,7 @@ class SimpleVillagerHandleTest {
         );
     }
 
-    // ---- Pre-rolled root at the BOP-spend moment (E1: the outcome settles when the quest
-    // ticks, not at the morning application; the morning still wins with a tutorial override) ----
+    // The job is rolled at the spend; the morning applies it.
 
     @Test
     public void scheduleJobRootChange_blessedSpend_returnsGuaranteeAsPendingRoot() {
@@ -941,7 +874,7 @@ class SimpleVillagerHandleTest {
         UUID v = UUID.randomUUID();
         JobID preRoll = new JobID("cook", "cook");
 
-        // Seed the way a saved spend would: pending change + stored pre-roll.
+        // Set up as a saved spend would be.
         handle.initialize(
                 Map.of(v, 10), Map.of(),
                 ImmutableMap.of(), ImmutableMap.of(),
@@ -987,16 +920,7 @@ class SimpleVillagerHandleTest {
         );
     }
 
-    // ---- Downtime "rest is a reward, not a default" state (STATE.md § Mission) ----
-    //
-    // `isReadyForDowntime` gates the "rest now" branch of the job cascade
-    // (TownFlagBlockEntity.changeJobForVisitorFromBoard :834). If it returns true for a
-    // townie that has never actually rested in this lifecycle, a freshly re-rooted
-    // hunter (the run-19 6eeeefa4-at-04:38:59 shape — rootId=hunter, `dt=449`, no
-    // rest record) is parked in DowntimeWork *before* the cycler can hand them a
-    // real job. `markRested(uuid, tick)` is the single entry point for the "a
-    // rest happened" state; both existing call sites (SVH:299 exit-DowntimeWork,
-    // SVH:638 morning) now route through it.
+    // Rest is earned by working.
 
     @Test
     public void isReadyForDowntime_freshTownie_isNotReady() {
@@ -1004,18 +928,12 @@ class SimpleVillagerHandleTest {
         UUID v = UUID.randomUUID();
         handle.register(v);
 
-        // A townie that has never worked in this lifecycle is not ready for a rest —
-        // rest is a reward for work, not a default. The run-19 6eeeefa4-at-04:38:59
-        // shape: just re-rooted to hunter, no work done, no DowntimeState (fresh: worked=false).
-        // The old `getOrDefault(tick, from, -max)` default made `(now - (-max)) >= max` always
-        // true ⇒ rest; the record's worked=false gate removes that false default.
+        // Never worked: not ready to rest.
         Assertions.assertFalse(
                 handle.isReadyForDowntime(v, 10_000L),
                 "a townie that has never worked is not ready for downtime (rest is a reward, not a default)"
         );
 
-        // Even after a rest event, a townie that still has not worked is not ready —
-        // the workDone check is the load-bearing one.
         handle.markRested(v, 0L);
         Assertions.assertFalse(
                 handle.isReadyForDowntime(v, 10_000L),
@@ -1031,9 +949,6 @@ class SimpleVillagerHandleTest {
 
         long maxTicks = 100L; // matches Configs(…, 100 /* maxTicksBeforeDowntime */) in newHandle()
         handle.markRested(v, 0L);
-        // Tired only after working: rest at 0, work at 90 (10 ticks before threshold),
-        // ready at 100 (10 ticks of work since the last rest — but we define this as
-        // "enough ticks since last rest", so at 100 they are exactly at the threshold).
         handle.markWorked(v, 90L);
 
         Assertions.assertFalse(
@@ -1058,8 +973,7 @@ class SimpleVillagerHandleTest {
 
         long maxTicks = 100L;
         long now = 5_000L;
-        // A townie that just rested (at `now`) and then worked is not ready again until
-        // `maxTicks` more ticks have passed.
+        // Just rested: not ready again until maxTicks have passed.
         handle.markRested(v, now);
         handle.markWorked(v, now + 10L);
         Assertions.assertFalse(
@@ -1074,10 +988,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void registerMostRecentDowntime_delegatesToTheSameStateAsMarkRested() {
-        // The legacy name (registerMostRecentDowntime) now routes through markRested;
-        // it must update the same rested state so the two paths are behaviorally
-        // equivalent (both mark the townie ready at the same threshold tick, if they
-        // have worked).
+        // The older name goes through markRested.
         SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
         UUID viaMark = UUID.randomUUID();
         UUID viaLegacy = UUID.randomUUID();
@@ -1102,21 +1013,15 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void isReadyForDowntime_noWorkDoneNeverReady() {
-        // A townie that has a rest record but has **never worked** (the run-19 shape
-        // for 6eeeefa4: re-rooted to hunter, NOON handler marked them rested, they
-        // never produced a single item) is not ready for any amount of time.
+        // Rested but never worked: never ready.
         SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
         UUID v = UUID.randomUUID();
         handle.register(v);
-        // Simulate the NOON handler marking them rested, as it would in production.
         handle.registerMostRecentDowntime(v, 0L);
-        // Even a long time later, with no work, they are not ready for rest —
-        // because they haven't earned one.
         Assertions.assertFalse(
                 handle.isReadyForDowntime(v, 100_000L),
                 "a townie that has a rest record but has never worked is not ready (even after a long time)"
         );
-        // …and once they work, they become ready (the reward-for-work rule).
         handle.markWorked(v, 10L);
         Assertions.assertTrue(
                 handle.isReadyForDowntime(v, 100_000L),
@@ -1126,7 +1031,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void isReadyForDowntimeIfIdle_fresh_isNotReady() {
-        // A townie that never rested has no last-rest anchor — even the idle fallback does not apply.
+        // Never rested: the idle fallback doesn't apply either.
         SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
         UUID v = UUID.randomUUID();
         handle.register(v);
@@ -1138,8 +1043,7 @@ class SimpleVillagerHandleTest {
 
     @Test
     public void isReadyForDowntimeIfIdle_restedButNeverWorked_isReadyAfterThreshold() {
-        // The escape: a townie that has rested but has NOT worked since (so the primary rule never
-        // fires for them) can still rest when there is truly no work, once the rest is old enough.
+        // Rested, not worked since: with no work, it rests once the rest is old enough.
         SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
         UUID v = UUID.randomUUID();
         handle.register(v);
@@ -1156,8 +1060,6 @@ class SimpleVillagerHandleTest {
         );
     }
 
-    // ---- SLEEPLESS: the dawn debuff for townies who had no bed last night ----
-
     @Test
     public void handleMorning_appliesSleeplessToTowniesWithoutBedLastNight() {
         TestDelegator t = new TestDelegator();
@@ -1168,13 +1070,12 @@ class SimpleVillagerHandleTest {
         handle.register(bedless);
         handle.register(bedded);
 
-        // The day passes and the night falls: the EVENING edge captures the bedless set.
+        // Still bedless the second night: a fresh expiry.
         handle.tick(Signals.MORNING);
         handle.tick(Signals.NOON);
         handle.tick(Signals.EVENING);
         handle.tick(Signals.NIGHT);
 
-        // Dawn of the next day.
         handle.handleMorning(24000L);
 
         Assertions.assertEquals(
@@ -1195,7 +1096,7 @@ class SimpleVillagerHandleTest {
         UUID bedless = UUID.randomUUID();
         handle.register(bedless);
 
-        // Night one: capture at the evening edge, apply at the next morning.
+        // Still bedless the second night: a fresh expiry.
         handle.tick(Signals.MORNING);
         handle.tick(Signals.NOON);
         handle.tick(Signals.EVENING);
@@ -1203,8 +1104,7 @@ class SimpleVillagerHandleTest {
         handle.handleMorning(24000L);
         Assertions.assertEquals(47000L, t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS));
 
-        // Night two: the townie is still bedless, so the capture re-arms and the
-        // second dawn overwrites the first application with a fresh expiry.
+        // Still bedless the second night: a fresh expiry.
         handle.tick(Signals.MORNING);
         handle.tick(Signals.NOON);
         handle.tick(Signals.EVENING);

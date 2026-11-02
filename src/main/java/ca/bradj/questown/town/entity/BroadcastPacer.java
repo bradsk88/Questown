@@ -3,10 +3,7 @@ package ca.bradj.questown.town.entity;
 import java.util.ArrayDeque;
 import java.util.function.Consumer;
 
-/**
- * The flag-wide chat pacing of {@link TownMessages}: the first line goes out at once, the rest
- * wait for a free slot one interval apart, and consecutive duplicates are dropped.
- */
+/** Paces the flag's chat lines: the first at once, the rest an interval apart, repeats dropped. */
 final class BroadcastPacer<T> {
 
     enum Outcome {SENT, QUEUED, DROPPED}
@@ -25,8 +22,7 @@ final class BroadcastPacer<T> {
             send(line, now, send);
             return Outcome.SENT;
         }
-        // The line just sent counts too: a room-destroyed event fires three times in one tick,
-        // and comparing only the queue let the second copy through (2026-10-22 r6).
+        // The line just sent counts as a repeat too.
         if (line.equals(lastSent) || pending.contains(line)) {
             return Outcome.DROPPED;
         }

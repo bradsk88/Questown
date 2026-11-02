@@ -7,16 +7,13 @@ import org.junit.jupiter.api.Test;
 import java.util.Set;
 
 /**
- * Pins the fullness-check scoping fix (ticket
- * {@code .scratch/autotest-suite/eating-pair-deterministic-fullness-fail.md}).
- *
- * <p>The check asserts on exactly the townies the scenario assigned its job
+ * The fullness check asserts on exactly the townies the scenario assigned its job
  * to — the flag's handle contents at the job-assignment phase, intersected
  * with the check-time contents. A stray townie from an earlier scenario
  * registers into the handle *after* that phase (the spawn wait already
  * passed, so it is not in the snapshot; it keeps its old job, whose
  * post-extract rules carry no HUNGER_FILL) and decays deterministically
- * below the assertion - the 2026-10-15 eat_direct -12 % failure.
+ * below the assertion.
  */
 class TestExecutorFullnessScopeTest {
 

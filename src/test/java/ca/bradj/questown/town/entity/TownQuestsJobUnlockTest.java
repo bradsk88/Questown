@@ -34,8 +34,6 @@ class TownQuestsJobUnlockTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
-    // --- chooseProducerRoot (pure) ---
-
     @Test
     void chooseProducerRootPicksFirstSortedCandidate() {
         Set<String> producers = Set.of("farmer", "baker");
@@ -47,7 +45,6 @@ class TownQuestsJobUnlockTest {
 
     @Test
     void chooseProducerRootExcludesStuckRootItself() {
-        // The stuck root already holds the capacity; re-suggesting it would not help.
         assertNull(
                 TownQuests.chooseProducerRoot(Set.of("farmer"), "farmer", Set.of())
         );
@@ -55,7 +52,6 @@ class TownQuestsJobUnlockTest {
 
     @Test
     void chooseProducerRootExcludesUnlockedRoots() {
-        // A root some townie has unlocked is not something to ask for.
         assertNull(
                 TownQuests.chooseProducerRoot(Set.of("farmer", "baker"), "hunter", Set.of("farmer", "baker"))
         );
@@ -69,8 +65,6 @@ class TownQuestsJobUnlockTest {
     void chooseProducerRootEmptyWhenNoProducers() {
         assertNull(TownQuests.chooseProducerRoot(Set.of(), "farmer", Set.of()));
     }
-
-    // --- quest plumbing: JOB_UNLOCK through the real batch/quest classes ---
 
     private static MCQuestBatch jobUnlockBatch(JobID rootJob) {
         UUID batchUUID = UUID.randomUUID();
@@ -90,8 +84,6 @@ class TownQuestsJobUnlockTest {
 
     @Test
     void jobUnlockQuestCompletesWhenRootUnlocked() {
-        // Drives the real QuestBatch completion path (factory.completed, reward claim);
-        // the TownQuests wiring around it is exercised in a held run.
         MCQuestBatch batch = jobUnlockBatch(new JobID("farmer", "farmer"));
         ResourceLocation wanted = JobID.toRL(new JobID("farmer", "farmer"));
         assertTrue(batch.markRecipeAsComplete(null, wanted));
@@ -103,9 +95,7 @@ class TownQuestsJobUnlockTest {
 
     @Test
     void withdrawQuestRemovesOutrightWithNoPlaceholder() {
-        // The markRecipeAsLostByKey path replaced the quest with a lost() placeholder
-        // re-typed as an ACTIVE room quest that no completion path ever cleared (the
-        // handle-accumulation half of the JOB_UNLOCK ping-pong). Withdraw removes it.
+        // Withdrawing removes the quest outright.
         MCQuestBatch batch = jobUnlockBatch(new JobID("farmer", "farmer"));
         MCQuest q = batch.getAll().get(0);
         assertTrue(batch.withdrawQuest(q));
@@ -139,8 +129,6 @@ class TownQuestsJobUnlockTest {
             this.lost = quest;
         }
     }
-
-    // --- stuck-root encoding + in-place retarget ---
 
     @Test
     void jobUnlockStuckRootEncodingRoundTrips() {
@@ -177,8 +165,6 @@ class TownQuestsJobUnlockTest {
                 () -> q.retargetUnlock(JobID.toRL(new JobID("baker", "bread")), "x")
         );
     }
-
-    // --- retireJobUnlockQuests (dev 2026-10-22: post-onboarding quests are room quests only) ---
 
     private static final ResourceLocation MINER_ROOM = new ResourceLocation("questown", "mine");
 
@@ -227,8 +213,6 @@ class TownQuestsJobUnlockTest {
         assertEquals(1, b.getAll().size());
     }
 
-    // --- the top-need lock and the built-producer exclusion ---
-
     @Test
     void topNeedBeatOpenOnlyWhileItsRoomQuestIsOpen() {
         MCQuest open = MCQuest.standalone(UUID.randomUUID(), null, MINER_ROOM);
@@ -258,7 +242,6 @@ class TownQuestsJobUnlockTest {
         assertEquals("miner", q.lost().topNeedProducer().orElseThrow());
     }
 
-    /** A claim no-op so the completion path can run in a unit test without a town. */
     static class NoOpReward extends MCReward {
         NoOpReward() {
             super(new RewardType<>(

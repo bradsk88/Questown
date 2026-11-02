@@ -188,8 +188,7 @@ public class VillagerAdvancementsWidget {
             int y = p_97269_ + this.y;
             int ft = getFrameType();
             if (ft >= 0) {
-                // A skill not yet unlocked is dimmed; drawHover redraws it at full colour, so it
-                // lights up under the cursor (dev playtest 2026-10-29: "too subtle").
+                // A locked skill is dimmed and lights up under the cursor.
                 float shade = unlocked ? 1f : LOCKED_SHADE;
                 Util.blitState(); // 1.19.2's GuiComponent.blit set the blit state itself
                 RenderSystem.setShaderColor(shade, shade, shade, 1f);
@@ -209,20 +208,14 @@ public class VillagerAdvancementsWidget {
     }
 
     private int getFrameType() {
-        // 1.20.6 dropped FrameType and the vanilla advancement widget sheet, so the
-        // sheet is bundled as questown:textures/gui/advancements/widgets.png. It has the
-        // vanilla layout: 26-px frame cells at u 0 (task), 26 (challenge), 52 (goal),
-        // FrameType.getTexture() in 1.19.2 (javap). The port had 1 and 54, the first
-        // opaque column of the task and goal art, so the squares behind the job icons
-        // sampled 1-2 px to the right (r17 #22, dev 2026-10-25). Opaque runs on row 140:
-        // x 1-24, 27-50, 54-75.
+        // widgets.png: 26-px frames at u 0 (task), 26 (challenge), 52 (goal).
         int ft = -1;
         if (unlocked) {
-            ft = 0; // TASK
+            ft = 0;
         } else if (canUnlock) {
-            ft = 52; // GOAL
+            ft = 52;
         } else if (minecraft.player.isCreative()) {
-            ft = 26; // CHALLENGE
+            ft = 26;
         }
         return ft;
     }

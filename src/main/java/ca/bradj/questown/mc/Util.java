@@ -310,10 +310,8 @@ public class Util {
 
 
     /**
-     * Force the default GUI blit state. 1.19.2's GuiComponent.blit set shader/blend/shaderColor
-     * itself; the 1.20.6 immediate blit/fill path does not, so a prior draw (e.g. a dimming or
-     * tinted fill) can leave the state such that the next blit renders wrong. Call before the
-     * advancement widget frame/brace draws so they match 1.19.2 behaviour.
+     * Force the default GUI blit state, so a prior draw (a dimming or tinted fill) cannot leave the
+     * state the next blit renders with.
      */
     public static void blitState() {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);

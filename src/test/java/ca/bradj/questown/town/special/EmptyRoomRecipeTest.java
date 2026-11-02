@@ -13,12 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * D#2: the "empty room" onboarding quest relies on a zero-ingredient room recipe
- * ({@code data/questown/recipes/empty_room.json}) matching ANY room, so the quest
- * completes on "a room exists whose door is registered" - walls + door, no
- * contents. This pins the matching semantics that assumption needs.
- */
+/** The empty-room recipe has no ingredients, so it matches any room with a registered door. */
 class EmptyRoomRecipeTest {
 
     @BeforeAll
@@ -27,13 +22,11 @@ class EmptyRoomRecipeTest {
         Bootstrap.bootStrap();
     }
 
-    // NOT a static field: the RoomRecipe/Recipe <clinit> needs vanilla bootstrap, which runs
-    // in @BeforeAll - a static initializer would load Recipe before that and poison the JVM.
+    // Not a static field: it must load after the vanilla bootstrap.
     private RoomRecipe emptyRoomRecipe() {
         return new RoomRecipe(new ResourceLocation("questown", "empty_room"), NonNullList.create(), 1, false);
     }
 
-    /** Minimal 1.20.6 Container: only the abstract members. */
     private static Container of(ItemStack... items) {
         return new Container() {
             @Override

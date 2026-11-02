@@ -13,22 +13,11 @@ import org.junit.jupiter.api.Test;
 import java.util.Collection;
 import java.util.function.Supplier;
 
-/**
- * Guards that {@code tryGiveItems} fires {@code postExtractHook} (which runs the
- * {@code EXTRACTING_PRODUCT} special rules) once per extraction.
- *
- * <p>History: the meta-item result types (effect, knowledge) used to be branched on
- * inside {@code tryGiveItems}, and the effect branch skipped the hook — the
- * {@code eating/dine_at_time} starvation bug. Both meta-item concepts have since been
- * deleted (ADR-0003, ADR-0004): eating jobs produce empty results and the explorer
- * scouts via a rule reading the extracted map, so every result now flows through the
- * single normal/empty path that always fires the hook. These tests pin that.
- */
+/** Every extraction fires {@code postExtractHook} once, including empty results. */
 class ExtractHookFiresForMetaResultsTest {
 
     private static final Position WORK_SPOT = new Position(0, 0);
 
-    /** A {@link TestWorldInteraction} that records every {@code postExtractHook} call. */
     private static class RecordingWorldInteraction extends TestWorldInteraction {
         int postExtractCalls;
         GathererJournalTest.TestItem lastExtracted;
@@ -39,7 +28,7 @@ class ExtractHookFiresForMetaResultsTest {
                 Supplier<Claim> claim
         ) {
             super(
-                    1, // maxState; EXTRACTING_PRODUCT lives at the max state
+                    1,
                     ImmutableMap.<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>>of(),
                     ImmutableMap.of(),
                     ImmutableMap.<Integer, MonoPredicateCollection<GathererJournalTest.TestItem>>of(),
@@ -49,7 +38,6 @@ class ExtractHookFiresForMetaResultsTest {
                     inventory,
                     workStatuses,
                     claim,
-                    // A non-empty rule list at the max state makes postExtractHook delegate.
                     ImmutableMap.of(1, ImmutableList.of("test:some_extract_rule"))
             );
         }
@@ -78,8 +66,7 @@ class ExtractHookFiresForMetaResultsTest {
 
     @Test
     void emptyResult_firesPostExtractHookOnce_regressionForDineAtTimeStarvation() {
-        // The path the eating jobs now take: no product item, so the hook fires
-        // once with a null item and the EXTRACTING_PRODUCT rules run.
+        // Eating: no product, so the hook fires once with null.
         RecordingWorldInteraction twi = newWorldInteraction();
 
         twi.tryGiveItems(null, ImmutableList.of(), WORK_SPOT);
@@ -90,8 +77,7 @@ class ExtractHookFiresForMetaResultsTest {
 
     @Test
     void normalItemResult_firesPostExtractHookOncePerItem() {
-        // Every product (including the explorer's gatherer map, which the scout rule
-        // reads at this hook) now flows through this single path.
+        // Every product, including the explorer's map, goes through this one path.
         RecordingWorldInteraction twi = newWorldInteraction();
 
         twi.tryGiveItems(

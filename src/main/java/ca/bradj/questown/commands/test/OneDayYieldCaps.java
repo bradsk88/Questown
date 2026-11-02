@@ -13,15 +13,14 @@ final class OneDayYieldCaps {
 
     /**
      * hunter: the best day is two sword_full_day trips (8 attempts per 6000 ticks) with every roll
-     * a meat, now 2 per roll: 2 x 8 x 2 = 32 (dev playtest 2026-10-30, "make hunters bring meat
-     * more often"; was 15 = 3 half-day trips x 5 single items, Outfitter ruling #25).
+     * a meat, 2 per roll: 2 x 8 x 2 = 32.
      */
     static final int HUNTER = 32;
 
-    /** The most items one hunter roll gives (meat is 2 per roll since 2026-10-30). */
+    /** The most items one hunter roll gives. */
     static final int HUNTER_ITEMS_PER_ROLL = 2;
 
-    /** gatherer: axe_half_day, 5 attempts per 4000 ticks, 3 trips (Outfitter ruling #25, 2026-10-26). */
+    /** gatherer: axe_half_day, 5 attempts per 4000 ticks, 3 trips. */
     static final int GATHERER = 15;
 
     private OneDayYieldCaps() {

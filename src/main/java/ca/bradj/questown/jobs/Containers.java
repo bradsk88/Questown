@@ -47,9 +47,7 @@ public class Containers {
 
                                         @Override
                                         public @Nullable ContainerTarget<MCContainer, MCTownItem> asChest() {
-                                            // Guard on the live blockstate, not the stored record: a position
-                                            // recorded as a chest can now hold a wall block (e.g. an inset corner),
-                                            // and re-reading it here is what made the ERROR below flood the log.
+                                            // Check the block that is there now; a recorded chest can have been replaced.
                                             Block b = town.getServerLevel().getBlockState(z.getKey()).getBlock();
                                             if (!(b instanceof ChestBlock cb)) {
                                                 return null;

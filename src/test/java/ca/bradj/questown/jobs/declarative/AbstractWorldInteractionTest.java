@@ -34,9 +34,7 @@ import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorldInteractionTest {
 
-    // The loot-guarantee tests build MCHeldItems from Items.AIR (registry-bound).
-    // Detect the version before any ItemStack/Items static init or the failed clinit
-    // poisons the whole JVM for the later bootstrap classes.
+    // Before any ItemStack or Items class loads.
     @BeforeAll
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
@@ -607,11 +605,6 @@ class AbstractWorldInteractionTest {
         Assertions.assertTrue(inserted.get());
     }
 
-    // =====================================================================
-    // Lane-shared helpers (deduped from RealtimeWorldInteraction /
-    // TimeWarpWorldInteraction into the abstract base, 2026-10-09):
-    // pin their behaviour here so the moved code stays pinned.
-    // =====================================================================
 
     @Test
     void withLootGuarantees_nullFlag_isIdentity() {
@@ -619,8 +612,7 @@ class AbstractWorldInteractionTest {
                 0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
                 () -> ImmutableList.of(), () -> {}
         );
-        // No town flag (null) means neither the chicken-arc nor the first-hunter guarantee
-        // fires, so the generator's results pass through untouched (same instance).
+        // No flag: the results pass through unchanged.
         ImmutableList<MCHeldItem> base = ImmutableList.of(MCHeldItem.fromTown(MCTownItem.Air()));
         Assertions.assertSame(base, wi.withLootGuarantees(null, base));
     }
@@ -629,9 +621,6 @@ class AbstractWorldInteractionTest {
     void flagBlockEntityAt_nullLevelOrPos_returnsNull() {
         Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, new BlockPos(0, 64, 0)));
         Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, null));
-        // The non-null-level path (level.getBlockEntity lookup) needs a live world; it is the
-        // same lookup the two lanes always used, and the guarantee outcome on a live flag is
-        // covered by the worldly-seeds / first-hunter held autotest scenarios.
     }
 
     @Test
@@ -647,11 +636,7 @@ class AbstractWorldInteractionTest {
 
     @Test
     void levelProficiencies_createsWorkedId_atZeroIntervalLevelsUntouched() {
-        // interval = 0 (TestWorldInteraction) zeroes both gain and decay (durationTicks = 0),
-        // so the pin is the wiring: null-guard, id creation, and the untouched other levels.
-        // The 2-arg overload's config read (PROFICIENCY_GAIN/DECAY_PER_TICK) is registry-bound —
-        // the mod config is never loaded in JUnit — so the tests drive the 4-arg pure seam;
-        // the overload itself is a 3-line delegation to these values.
+        // Interval 0 means no gain or decay, so this checks the wiring only.
         InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
             @Override
             public Collection<GathererJournalTest.TestItem> getItems() {

@@ -66,19 +66,11 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
-        // The bed shortfall is covered one bedroom quest per grow tick: while the batch holds
-        // fewer bed quests than the shortfall, post a bed quest; once it covers the shortfall
-        // (or there is none), post room quests. This lets a batch carry more than one bed
-        // quest when several beds are missing (day-1 playtest: the town was under-bedded
-        // because it posted at most one bed quest per batch).
+        // Post a bed quest per missing bed, then room quests.
         int need = missingBeds.get();
         if (need <= 0 || bedQuestCount(batch) >= need) {
             Collection<RoomNeed<ROOM_ID>> nr = neededRooms.get();
-            // A batch carries unique requests: a needed recipe already in the
-            // batch waits for a later batch instead of filling this one (the
-            // run-16 kitchen x3 batch - the room-need queue re-picks the same
-            // recipe every grow tick, so without this filter one recipe could
-            // occupy the whole batch).
+            // A recipe already in the batch waits for a later batch.
             List<ROOM_ID> fresh = nr.stream()
                                     .map(RoomNeed::id)
                                     .filter(id -> !questAlreadyRequested(batch, id))
@@ -116,7 +108,6 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
         costSoFar += cost;
     }
 
-    /** Number of bedroom quests already in the batch (used to cover the bed shortfall). */
     protected abstract int bedQuestCount(BATCH batch);
 
     private boolean shouldSkip(
@@ -127,8 +118,6 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return true;
         }
         if (questAlreadyRequested(batch, id)) {
-            // unique-per-batch: the repeat is priced out of existence - it
-            // waits for the next batch rather than diluting this one
             return true;
         }
         if (ticksSoFar < idealTicks && (newCost < maxCost / 4f)) {

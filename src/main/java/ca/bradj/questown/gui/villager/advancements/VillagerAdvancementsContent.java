@@ -156,7 +156,6 @@ public class VillagerAdvancementsContent {
     }
 
     private record Precompute(AtomicDouble spaceUsedBySiblings, float parentY) {
-
     }
 
     @NotNull
@@ -206,11 +205,6 @@ public class VillagerAdvancementsContent {
 
             for (int i1 = -1; i1 <= 15; ++i1) {
                 for (int j1 = -1; j1 <= 8; ++j1) {
-                    // 1.20.6 blit takes normalized UV: without explicit
-                    // maxU/maxV the 7-arg overload divides by 256, so a 16x16
-                    // tile samples only the texture's top-left pixel (the pane
-                    // renders as one solid color). Vanilla's own
-                    // AdvancementTab passes the texture dimensions.
                     ctx.blit(resourcelocation, k + 16 * i1, l + 16 * j1, 0.0F, 0.0F, 16, 16, 16, 16);
                 }
             }

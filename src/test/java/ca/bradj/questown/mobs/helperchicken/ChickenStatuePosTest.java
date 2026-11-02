@@ -11,11 +11,7 @@ import org.mockito.Mockito;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 
-/**
- * 2026-10-30 agent playtest: the helper chicken stood in a cornflower when it got its seeds, and
- * the statue went one block up, floating. The block states are mocked (real ones NPE on terrain
- * queries outside mod-load, AGENTS.md).
- */
+/** The statue stands where the chicken stood, not a block up when it stood in a flower. */
 class ChickenStatuePosTest {
 
     private static final BlockPos AT = new BlockPos(56, 68, -2258);

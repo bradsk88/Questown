@@ -24,17 +24,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     @Nullable String concurrentJobIdsEncoded;
 
-    /**
-     * LOOT-quest accumulation (2026-10-15 ruling, reversing the 2026-10-04
-     * close-on-first-extraction): how many of the wanted item the town has
-     * extracted while this quest was open. The quest completes at
-     * {@link #getCountNeeded()}; a count-1 quest keeps the old
-     * close-on-first-extraction behaviour. Persisted with the quest so the
-     * progress survives world saves; legacy saves default to 0.
-     */
+    /** How many of the wanted item villagers have brought back while this quest was open. Saved. */
     private int lootExtracted;
 
-    /** Add to the extraction total; @return the running total. */
     public int addExtracted(int n) {
         lootExtracted += n;
         return lootExtracted;
@@ -102,9 +94,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
     }
 
-    // A LOOT quest is satisfied when a townie extracts (produces) matching loot from their
-    // job, not by a chest deposit. The wanted id is an item or a tag; see
-    // ca.bradj.questown.gui.Ingredients#asIngredient for the resolution.
+    // A LOOT quest completes on items villagers bring back from work, not on items in a chest.
     public static MCQuest loot(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
@@ -129,18 +119,13 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             ResourceLocation jobId
     ) {
         MCQuest q = new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
-        // Player-facing guidance shown in the quest UI, in the same style as the
-        // crafter-arc job quests. Without it the quest read as only a job id.
         q.setFlavorText("A villager wants to work as a " + JobID.fromRL(jobId).toNiceString()
                 + ". Spend a Block of Progress on the change job tab to request a job change - "
                 + "it takes effect overnight.");
         return q;
     }
 
-    /**
-     * The day-2 onboarding quest (F2): post the town's first work request on the job board.
-     * Completes from the flag's work-handle listener on any posted request while active.
-     */
+    /** Day 2's quest: post the first work request on the job board. */
     public static MCQuest firstWorkRequest(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId
@@ -153,13 +138,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
-    /**
-     * Unlock any skill on a job root's skill tree (the cook batch asks for the cook's, dev
-     * 2026-10-25). The wanted id is {@code questown:skill_unlock/<root>}, not a job RL: batch
-     * completion matches by wanted id alone, so sharing the cook JOB_CHANGE quest's id let either
-     * quest complete the other. Completes from {@code TownQuests.markSkillUnlocked} when the player
-     * spends a Block of Progress on a node with the same root.
-     */
+    /** Unlock any skill on a job root's tree. Its id is {@code questown:skill_unlock/<root>}, apart from the job-change quest's. */
     public static MCQuest skillUnlock(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
@@ -172,11 +151,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
-    /**
-     * A SKILL_UNLOCK quest that names one skill: only unlocking {@code skill} completes it (curated
-     * paths, dev 2026-10-26: "Unlock Wooden Shovel, then Wooden Sword"). Wanted id
-     * {@code questown:skill_unlock/<root>/<job>}.
-     */
+    /** Unlock one named skill. Id {@code questown:skill_unlock/<root>/<job>}. */
     public static MCQuest namedSkillUnlock(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
@@ -191,10 +166,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
 
     private static final String SKILL_UNLOCK_PREFIX = "skill_unlock/";
 
-    /**
-     * Any villager working {@code root} reaches {@code level} ({@link VillagerLevelQuests}). A
-     * curated path posts it ahead of a batch whose skills need that level.
-     */
+    /** A villager in {@code root} reaches {@code level}. */
     public static MCQuest villagerLevel(
             UUID batchUUID,
             @Nullable VillagerUUID ownerId,
@@ -208,10 +180,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return q;
     }
 
-    /**
-     * The job root a SKILL_UNLOCK quest's wanted id names. Falls back to a job RL
-     * ({@code cook_qt_extract}), the id the first build used (r19 playtest saves).
-     */
+    /** The job root a skill-unlock quest's id names. */
     public static String skillTreeRoot(ResourceLocation wantedId) {
         String path = wantedId.getPath();
         if (path.startsWith(SKILL_UNLOCK_PREFIX)) {
@@ -222,7 +191,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         return JobID.fromRL(wantedId).rootId();
     }
 
-    /** The one skill a named SKILL_UNLOCK quest wants; empty for an any-skill-on-the-tree quest. */
+    /** The one skill a named skill-unlock quest wants; empty for any skill on the tree. */
     public static Optional<JobID> namedSkill(ResourceLocation wantedId) {
         String path = wantedId.getPath();
         if (!path.startsWith(SKILL_UNLOCK_PREFIX)) {
@@ -241,33 +210,22 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable VillagerUUID ownerId,
             ResourceLocation rootJobId
     ) {
-        // Flavor text is set by the creator (TownQuests): it names the missing item and
-        // the stuck townie, which this type-specific factory does not know.
+        // The caller sets the flavor text.
         return new MCQuest(batchUUID, ownerId, rootJobId, null, QuestType.JOB_UNLOCK, 1);
     }
 
-    /**
-     * Encode the stuck root this JOB_UNLOCK quest was posted for, in fromRecipeID
-     * (persisted via NBT {@code from_recipe_id}, otherwise unused for this type), so
-     * the one-per-stuck-root dedupe survives a flag reload.
-     */
+    /** Records which stuck root this JOB_UNLOCK quest was posted for, saved with the quest. */
     public void setUnlockStuckRoot(String stuckRoot) {
         this.fromRecipeID = JobID.toRL(new JobID(stuckRoot, stuckRoot));
     }
 
-    /** The stuck root this JOB_UNLOCK quest was posted for, or empty for town-wide ones. */
     public Optional<String> unlockStuckRoot() {
         return this.fromRecipeID()
                 .map(JobID::fromRL)
                 .map(JobID::rootId);
     }
 
-    /**
-     * Retarget an open JOB_UNLOCK quest to a different producer root, in place (same
-     * batch, owner and reward): the stuck root's missing item flipped to an item the
-     * new producer makes, and re-posting a fresh quest is what used to ping-pong the
-     * handle full of phantoms.
-     */
+    /** Points an open JOB_UNLOCK quest at a different producer, in place. */
     public void retargetUnlock(ResourceLocation newRootJob, String newFlavorText) {
         if (this.getType() != QuestType.JOB_UNLOCK) {
             throw new IllegalStateException("retargetUnlock: not a JOB_UNLOCK quest: " + this.getType());

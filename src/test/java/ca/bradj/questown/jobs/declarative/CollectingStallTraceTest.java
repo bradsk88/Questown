@@ -24,7 +24,6 @@ class CollectingStallTraceTest {
         for (long tick = 0; tick <= 8000; tick += 100) {
             t.observe(true, false, tick, () -> "state", out::add);
         }
-        // first at 1200, then at 7200
         Assertions.assertEquals(2, out.size(), out.toString());
         Assertions.assertTrue(out.get(0).startsWith("stuck 1200 ticks"));
     }

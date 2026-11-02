@@ -40,10 +40,7 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         return false;
     }
 
-    // When a wander-target scan comes back null (town has no valid room), we
-    // record a retry-after tick on the villager instead of rescanning every
-    // tick. Without this, a villager in a room-less town spun a full room
-    // interior scan each tick and drowned the log in repeated errors.
+    // After a failed search, wait before searching again instead of every tick.
     private static final String DATA_KEY_WORKSPOT_RETRY_AFTER = "questown:work_spot_retry_after";
     private static final long RETRY_AFTER_FAILURE_TICKS = 100;
 
@@ -104,7 +101,7 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         return Util.getTick(serverLevel) < Long.parseLong(retryAfter);
     }
 
-    /** Returns true if a position was stored, false if the search came back null. */
+    /** True if a position was stored. */
     private boolean choosePosAndStoreOnVillager(
             java.util.function.Supplier<ImmutableList<BlockPos>> otherVillagerPositions,
             java.util.function.Supplier<BlockPos> randomWalkableTownPosition,
@@ -121,9 +118,6 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
         }
         BlockPos p = randomWalkableTownPosition.get();
         if (p == null) {
-            // The town-side wander search already logged the specific reason
-            // (no rooms / all rooms filtered out), rate-limited. Retrying is
-            // deferred via DATA_KEY_WORKSPOT_RETRY_AFTER by the caller.
             return false;
         }
         storePosOnVillager(writeUnsafeDataToVillager, p);
@@ -142,9 +136,7 @@ public class RandomShortLivedWorkSpot extends JobPhaseModifier {
     @Override
     public void beforeFindJobSite(BeforeFindJobSiteEvent event) {
         super.beforeFindJobSite(event);
-        // Missing override is the common case (villager has not been assigned a
-        // random spot yet, or the last search found no valid room). It is not a
-        // bug, so don't logBug here — that fired every tick in a room-less town.
+        // Common: no spot assigned yet.
         BlockPos override = getOverride(event.unsafeVillagerData(), false);
         if (override == null) return;
         event.applyWorkspotOverride()

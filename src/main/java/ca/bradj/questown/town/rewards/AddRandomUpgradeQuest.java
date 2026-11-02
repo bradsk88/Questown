@@ -21,7 +21,6 @@ public class AddRandomUpgradeQuest extends MCReward {
     private static final String NBT_DECLINED_FROM = "declined_from";
     private final TownInterface town;
     private VillagerUUID visitorUUID;
-    /** Rooms whose upgrade the player just declined; this upgrade skips them (dev 2026-10-24). */
     private ImmutableSet<ResourceLocation> declinedFrom = ImmutableSet.of();
 
     private AddRandomUpgradeQuest(
@@ -54,7 +53,6 @@ public class AddRandomUpgradeQuest extends MCReward {
         this(RewardsInit.RANDOM_UPGRADE_FOR_VILLAGER.get(), entity, visitorUUID);
     }
 
-    /** A discard's replacement: an upgrade for {@code visitorUUID} that skips {@code declinedFrom}. */
     public AddRandomUpgradeQuest(
             @NotNull TownInterface entity,
             @NotNull VillagerUUID visitorUUID,

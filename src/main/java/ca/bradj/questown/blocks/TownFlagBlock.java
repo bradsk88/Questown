@@ -78,12 +78,9 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
     public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
-    // A relocation deed is waiting above this flag. A blockstate (not BE) property so it auto-syncs to
-    // the client, which the flag has no ticker to hydrate BE data on. The "" model variant ignores it.
+    // A relocation deed waits above this flag.
     public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
-    // The flag's deposited BOPs have reached the cap. Rendered as a red BOP above the flag and surfaced
-    // as a warning in the BOP menu, so a full flag (which silently loses further BOPs) is visible.
-    // A blockstate (not BE) property so it auto-syncs to the client, like DEED_AVAILABLE.
+    // The flag holds as many Blocks of Progress as it can; more would be lost.
     public static final Property<Boolean> BOP_FULL = BooleanProperty.create("bop_full");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
@@ -207,7 +204,7 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     /**
      * A flag-linked block placed from an item with no (or a dead) flag link drops back as an item.
-     * Tell the placer why instead of failing silently (2026-10-21 agent playtest).
+     * Tell the placer why instead of failing silently.
      */
     public static void tellPlacerNotLinked(
             net.minecraft.world.item.context.BlockPlaceContext ctx,
@@ -280,10 +277,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             BlockGetter level,
             BlockPos pos
     ) {
-        // The town flag is unbreakable in survival: it owns the town's authoritative data and
-        // there is no loot/drop path, so mining it would destroy the town irrecoverably. The
-        // only sanctioned removal is the shutdown ritual (relocation deed) or the creative-only
-        // `qt flag destroy` dev command.
+        // The town flag can't be mined: that would destroy the town. Moving it goes through the shutdown ritual.
         return 0.0F;
     }
 
@@ -317,12 +311,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             ItemStack stack
     ) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        // F1 (2026-10-13 walkthrough): a player-placed flag grants the placer a
-        // flag-centered filled map (the flag's area becomes unknowable within
-        // one coal-search of day 1 — `.scratch/day1-playtest-2026-10-11/flag-map-when-lost.md`).
-        // Only a player placement grants: the console `/flag` command and
-        // relocation go through setBlock* without a placer, so held runs and
-        // dev worlds never pick up starter maps.
+        // A player who places a flag gets a map centred on it.
         if (!(level instanceof ServerLevel) || !(placer instanceof ServerPlayer player)) {
             return;
         }
@@ -353,7 +342,7 @@ public class TownFlagBlock extends BaseEntityBlock {
             InteractionHand hand,
             BlockHitResult hitResult
     ) {
-        // A Block of Progress used on the flag goes back into it (dev playtest 2026-10-30).
+        // A Block of Progress used on the flag goes back into it.
         if (stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
             if (level instanceof ServerLevel && player instanceof ServerPlayer sp
                     && level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
@@ -407,9 +396,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     info.showEconTab() && info.bonusFoodAvailable()
             );
             entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
-            // The chicken's "Look at the flag" beat is the right-click, whichever tab opens:
-            // before the first arrival the villagers tab is hidden and the flag opens on another
-            // one (2026-10-30: the beat waited all night).
+            // Any flag tab counts for the chicken's "look at the flag" lesson.
             ChickenArcUiObservations.markFlagUiOpened(level, pos);
         } else {
             if (!entity.isInitializing()) {

@@ -15,11 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The "train a villager" quest (dev 2026-10-27): a curated path posts "Train a Crafter to level 3"
- * ahead of a batch whose skills need level 3, so the batch opens only once a crafter can learn them.
- * It completes once any villager working the root reaches the level.
- */
+/** "Train a Crafter to level 3" completes once any crafter reaches level 3. */
 class TownQuestsVillagerLevelTest {
 
     private static final QuestBatch.ChangeListener<MCQuest> NO_OP_LISTENER = new QuestBatch.ChangeListener<>() {

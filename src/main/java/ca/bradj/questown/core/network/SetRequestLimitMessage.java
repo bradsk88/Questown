@@ -10,10 +10,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 
-/**
- * Moves a board request's pause limit by a step from the job board's - / + (dev playtest
- * 2026-10-29). A step, not a value, so rapid clicks all count (2026-10-30).
- */
+/** Moves a board request's limit by one step from the job board's - / +. */
 public record SetRequestLimitMessage(
         WorkRequest requested,
         int delta,

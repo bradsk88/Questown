@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Agent playtest r12 #10: placing an empty plate or food display synced an empty stack through
- * the non-optional ItemStack codec ("Empty ItemStack not allowed"), which dropped the player's
- * connection, and every rejoin re-sent it.
- */
+/** An empty plate or food display sends an empty stack without breaking the connection. */
 class SyncBlockItemMessageTest {
 
     @BeforeAll

@@ -20,17 +20,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// Dev-only: the agent's eyes for a room, the way a player standing in front of it
-// sees walls, a door, and what is on the floor. A headless agent placing a block at
-// a guessed coordinate lands on a wall or outside the footprint (and a setblock on
-// a wall cell breaks the room), so this command prints the room as an ASCII grid:
-// '#' a wall cell (solid at feet and head, the WallDetection.IsWall read the room
-// scan uses), 'D' the door, '.' an open interior cell (air at feet and head), and a
-// letter for each contained block (legend printed below the grid). Works for any
-// registered door: a door with no room yet (NO_RECIPE or NOT_ENCLOSED, from
-// getDeadDoors) gets a probe grid around the door so the agent can see which wall
-// cell is open instead of guessing. No permission gate, so it runs from the console
-// (FIFO).
+// Dev-only, read-only: a room drawn as text: '#' wall, 'D' door, '.' open floor, a letter per
+// block (legend below). A door with no room yet gets a grid around it.
 public class LookRoomCommand {
 
     private static final int PROBE_RADIUS = 4;
@@ -84,7 +75,6 @@ public class LookRoomCommand {
         return 0;
     }
 
-    /** One ASCII row per z, labelled with its z; a legend maps letters to block ids. */
     private static void printGrid(
             ServerLevel level, int minX, int maxX, int minZ, int maxZ, int y, BlockPos doorPos
     ) {

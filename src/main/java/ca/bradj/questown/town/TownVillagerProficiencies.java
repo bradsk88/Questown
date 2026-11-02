@@ -7,12 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * The live (realtime) per-townie proficiency store, mirroring {@link TownVillagerMoods}:
- * a {@code Map<UUID, Map<proficiency-id, level∈[0,1]>>}. The warp-side carrier is
- * {@link TownState.VillagerData#getProficiencies()}; {@code TownFlagState} bridges the
- * two each warp round-trip. See ADR-0010.
- */
+/** Each villager's proficiency levels, 0 to 1, in real time. The warp keeps its own copy, synced each warp. */
 public class TownVillagerProficiencies {
 
     private final Map<UUID, Map<String, Float>> levels = new HashMap<>();
@@ -36,10 +31,7 @@ public class TownVillagerProficiencies {
         return ImmutableMap.copyOf(m);
     }
 
-    /**
-     * True once the townie has a (possibly empty) map on record — used to decide whether
-     * spawn-seeding should run (loaded/relocated townies keep theirs).
-     */
+    /** True once the villager has a proficiency record, so a loaded villager isn't given new random ones. */
     public boolean isSeeded(UUID uuid) {
         return levels.containsKey(uuid);
     }
@@ -61,9 +53,7 @@ public class TownVillagerProficiencies {
 
     public void initialize(Map<UUID, ? extends Map<String, Float>> init) {
         if (!levels.isEmpty()) {
-            // Idempotent. A second deserialization of the same flag's data (for example on a
-            // chunk re-load) must not throw; the values are the same, so the existing live
-            // values are kept. This used to throw and crash the server on a flag tick.
+            // A second load of the same data keeps the current values.
             QT.VILLAGER_LOGGER.warn(
                     "Villager proficiencies already initialized; ignoring re-initialization "
                             + "and keeping existing values"

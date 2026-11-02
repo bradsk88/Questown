@@ -12,7 +12,6 @@ class WalkTargetsSurfaceFeetTest {
     private static final BlockPos DOOR_UPPER = DOOR_LOWER.above();
     private static final BlockPos WALL_ABOVE_DOOR = DOOR_UPPER.above();
 
-    /** The live cook (dev playtest 2026-10-29): door, door, wall, then the roof. */
     private static final Set<BlockPos> SOLID = Set.of(DOOR_LOWER, DOOR_UPPER, WALL_ABOVE_DOOR);
     private static final Set<BlockPos> DOORS = Set.of(DOOR_LOWER, DOOR_UPPER);
 

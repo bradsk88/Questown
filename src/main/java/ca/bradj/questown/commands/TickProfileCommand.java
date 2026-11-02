@@ -6,12 +6,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
-// Dev-only: enable the disabled-by-default TickProfile on a plain (non-autotest)
-// server and dump the accumulated flag-tick and whole-server-tick stats. Lets a
-// lag incident be profiled live on the real world without the perf/* autotest
-// (which wipes run/world). First call enables; later calls dump the rolling
-// stats since enable. Read-only measurement; no permission gate so it can be run
-// from the console (FIFO) without a creative player.
+// Dev-only: profile the flag tick and the server tick on a normal world. The first call starts
+// profiling; later calls print the stats since then.
 public class TickProfileCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(
@@ -45,8 +41,7 @@ public class TickProfileCommand {
         return 0;
     }
 
-    // Clear the rolling samples so the next dump measures a fresh window. Used to tell
-    // whether a stall (e.g. the 931ms server-tick max) recurs or was a one-time spike.
+    // Clears the samples, so the next dump measures a fresh window.
     private static int reset() {
         TickProfile tp = TickProfile.INSTANCE;
         if (!tp.isEnabled()) {

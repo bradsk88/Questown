@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/**
- * r17 (dev 2026-10-25): on the "jobs that make this item" screen, the Produces row listed the
- * job's whole loot (the hunter's leather, bones, ...) after a click on raw food; it should show
- * only the items that match what was clicked.
- */
+/** The Produces row shows only items matching what was clicked. */
 class ProducedMatchesTest {
 
     @BeforeAll

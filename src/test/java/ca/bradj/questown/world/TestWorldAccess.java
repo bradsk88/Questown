@@ -369,10 +369,7 @@ public class TestWorldAccess implements QTWorldAccess {
         }
     }
 
-    // Tree growth (canTreeGrowAt / growTreeAt) is real worldgen (TreeFeature.place) that needs a
-    // live level + registries, which are unavailable here. Per the plan's testability gap, we do
-    // NOT simulate worldgen: these return false and the planted-sapling carrier stays empty. This
-    // path is autotest-covered (in-game), not unit-tested.
+    // No worldgen in tests: tree growth returns false.
 
     @Override
     public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
@@ -391,7 +388,6 @@ public class TestWorldAccess implements QTWorldAccess {
 
     @Override
     public void clearPlantedSapling(BlockPos pos) {
-        // No carrier in tests.
     }
 
     @Override

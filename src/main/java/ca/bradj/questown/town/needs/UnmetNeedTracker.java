@@ -12,42 +12,17 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
- * Enter/exit bookkeeping for a town's unmet needs (design:
- * {@code .scratch/gannet-top-need/unmet-need-design.md}, items 3, 4 and 6).
- *
- * <p>A registration is idempotent per (townie, item key): entering the same
- * block again on a later recompute pass is the same need, so {@code since}
- * stays at first-enter and only the per-pass {@code attempts} diagnostic
- * grows. Rows are bounded by the roster and are cleared the moment the
- * town's recompute finds viable work again — no re-add-every-pass, no
- * cross-day phantom growth (the run-2 {@code swords=61} failure mode that
- * the old random-label + re-add path produced).
- *
- * <p><b>Union semantics (2026-10-15 ruling):</b> a townie's live needs for a
- * root are a UNION, not the best-scoring job's single key. A root can be
- * blocked on several supplies at once (the cook on coal AND raw food), and
- * the player-facing hint must name all of them instead of flapping with the
- * pass's argmax. A new key joins the townie's live set
- * ({@link #enter}), a key exits when it drops out of the pass's live set
- * ({@link #applyPass}/{@link #exitKey}), and the bubble's single item is the
- * townie's oldest live key ({@link #primaryKey}) — stable across passes.
- * This is job-set-agnostic on purpose (the job independence principle,
- * CONTEXT.md): no ordering or priority between specific jobs.
- *
- * <p>{@link #rank()} is the batch's input: actionable needs only
- * (NO_ROOM and key-carrying BLOCKED; NO_REQUEST is a board problem, not a
- * supply one), grouped by the supply key, then townies-desc, then
- * earliest-enter — determined by the world state alone. A townie blocked on
- * two keys counts in both groups.
+ * The town's unmet needs, by villager and item. A need keeps its first-seen time across passes; a
+ * villager blocked on several items has them all; its bubble names the oldest. {@link #rank()} groups
+ * the needs a quest can help with by item, most villagers first.
  */
 public final class UnmetNeedTracker {
 
     private record Key(UUID townie, String root, String key) {}
 
-    /** The per-pass diagnostic: how many recompute passes the need re-entered. */
     private final Map<Key, Row> rows = new HashMap<>();
 
-    /** One blocked townie on one supply key. */
+    /** One villager waiting on one item. */
     public record Row(
             UUID townie,
             String root,
@@ -58,7 +33,7 @@ public final class UnmetNeedTracker {
     ) {
     }
 
-    /** One ranked supply key: how many townies wait on it and since when. */
+    /** One item: how many villagers wait on it, and since when. */
     public record Need(
             String key,
             int townies,
@@ -66,7 +41,7 @@ public final class UnmetNeedTracker {
     ) {
     }
 
-    /** A (townie, key) first registered this pass — the caller's hook for the first-enter side effects. */
+    /** A villager and item seen for the first time this pass. */
     public record FirstEnter(
             UUID townie,
             String key,
@@ -74,13 +49,7 @@ public final class UnmetNeedTracker {
     ) {
     }
 
-    /**
-     * Register (or re-enter) one townie's need for a key.
-     *
-     * @return true only when this is a first entry — the caller should count
-     *         the need exactly once (econ diagnostic, townie bubble), not once
-     *         per recompute pass
-     */
+    /** Registers one villager's need. @return true the first time only */
     public boolean enter(
             long tick,
             String root,
@@ -94,24 +63,12 @@ public final class UnmetNeedTracker {
             rows.put(k, new Row(existing.townie(), existing.root(), existing.key(), reason, existing.since(), existing.attempts() + 1));
             return false;
         }
-        // Union semantics (2026-10-15 ruling): a new key for the same
-        // townie+root JOINS the townie's live needs. The old replace-on-new-key
-        // made the tracker's statement depend on which job best-scored that
-        // pass (the cook's hint flapped between coal / raw food / nothing),
-        // not on the world state.
+        // A new item adds to the villager's needs rather than replacing them.
         rows.put(k, new Row(townie, root, key, reason, tick, 1));
         return true;
     }
 
-    /**
-     * One recompute pass for a root: enter the root's live named keys for
-     * every townie and exit the registered keys that are no longer live. The
-     * caller evaluates the gate of each candidate job and hands over the
-     * distinct named keys (job-set-agnostic — no ordering between jobs).
-     *
-     * @return the (townie, key) pairs first entered this pass, so the caller
-     *         fires the first-enter side effects (econ record, bubble) once
-     */
+    /** One pass for a root: adds the live needs and clears the ones no longer live. @return the needs seen for the first time */
     public List<FirstEnter> applyPass(
             long tick,
             String root,
@@ -135,31 +92,17 @@ public final class UnmetNeedTracker {
         return first;
     }
 
-    /**
-     * Clear every need for this root+key (all townies) — the town no longer
-     * blocks on this key. A null key exits the keyless diagnostic rows.
-     */
+    /** Clears every villager's need for this item under the root. */
     public void exitKey(String root, @Nullable String key) {
         rows.values().removeIf(r -> r.root().equals(root) && (r.key() == null ? key == null : r.key().equals(key)));
     }
 
-    /**
-     * The townie's player-facing hint: the oldest live NAMED key at the root
-     * (minimum {@code since}, ties broken key-ascending). Null when the
-     * townie holds no named live key — keyless diagnostic rows never surface.
-     * Deterministic given the world state: a new pass can only change it when
-     * a key's liveness or age does.
-     */
+    /** The villager's hint: its oldest live named need under the root, or null. */
     public @Nullable String primaryKey(String root, UUID townie) {
         return primaryKey(root, townie, k -> true);
     }
 
-    /**
-     * {@link #primaryKey(String, UUID)} over only the keys {@code canHold} accepts: the
-     * townie's hint names an item only for a job that townie can hold (unlock != workability,
-     * {@code docs/design-principles.md}). A key live for the town because another townie
-     * unlocked its job is skipped, and the townie gets no item hint if nothing is left.
-     */
+    /** As above, only for items {@code canHold} accepts: jobs this villager can do. */
     public @Nullable String primaryKey(String root, UUID townie, Predicate<String> canHold) {
         String best = null;
         long bestSince = Long.MAX_VALUE;
@@ -167,8 +110,6 @@ public final class UnmetNeedTracker {
             if (!r.root().equals(root) || !r.townie().equals(townie) || r.key() == null) {
                 continue;
             }
-            // A missing room's key is its job's product, not a supply the townie lacks (dev playtest
-            // 2026-10-29: "needs Wooden Shovel" for a crafter with no smithy).
             if (!r.reason().supplyItem()) {
                 continue;
             }
@@ -183,11 +124,7 @@ public final class UnmetNeedTracker {
         return best;
     }
 
-    /**
-     * The room the townie's oldest missing-room need asks for (the dev's "They need a Smithy to
-     * work", 2026-10-29), over the keys {@code canHold} accepts; null when no such need is live.
-     * Used only when {@link #primaryKey} names no supply.
-     */
+    /** The room the villager's oldest missing-room need asks for, or null. */
     public @Nullable String primaryRoom(String root, UUID townie, Predicate<String> canHold) {
         String best = null;
         long bestSince = Long.MAX_VALUE;
@@ -206,12 +143,11 @@ public final class UnmetNeedTracker {
         return best;
     }
 
-    /** Clear every need under a root — the town found viable work there again. */
+    /** Clears every need under a root; the town found work there again. */
     public void exitRoot(String root) {
         rows.values().removeIf(r -> r.root().equals(root));
     }
 
-    /** Snapshot of every live registration (deterministic order for downstream reads). */
     public List<Row> rows() {
         List<Row> all = new ArrayList<>(rows.values());
         all.sort(Comparator.comparing(Row::root)
@@ -220,13 +156,7 @@ public final class UnmetNeedTracker {
         return all;
     }
 
-    /**
-     * The batch's input: actionable needs grouped by supply key, ranked
-     * townies-desc, then earliest-enter, then key for a stable tie. Keyless
-     * rows (a NO_REQUEST diagnostic, or a NO_ROOM whose product has no
-     * nameable supply) cannot be looked up against producers, so they rank
-     * out.
-     */
+    /** The needs a quest can help with, by item: most villagers first, then oldest. Needs with no item are left out. */
     public List<Need> rank() {
         Map<String, List<Row>> byKey = new HashMap<>();
         for (Row r : rows.values()) {

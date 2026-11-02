@@ -4,10 +4,7 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * Dev 2026-10-30: cook skills listed "Tools Used: Raw Beef" beside "Items Used: Raw Beef" (the
- * furnace template uses the meat as state 0's tool). A tool that is also used up is listed once.
- */
+/** A tool that is also used up is listed once, under Items Used. */
 class ToolsNotUsedUpTest {
 
     @Test

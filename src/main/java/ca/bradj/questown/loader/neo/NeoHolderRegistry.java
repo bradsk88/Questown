@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/** NeoForge impl of the neutral {@link HolderRegistry}; wraps a {@code DeferredRegister}. */
 public final class NeoHolderRegistry<T> implements HolderRegistry<T> {
     private final DeferredRegister<T> deferred;
 
@@ -42,7 +41,6 @@ public final class NeoHolderRegistry<T> implements HolderRegistry<T> {
         return out;
     }
 
-    /** Bind the underlying DeferredRegister to the loader mod bus (called once at mod start). */
     public void bind(IEventBus modBus) {
         deferred.register(modBus);
     }

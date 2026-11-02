@@ -9,21 +9,7 @@ import net.minecraft.world.entity.animal.Chicken;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
-/**
- * Client-side renderer for the helper chicken.
- *
- * <p>Reuses the vanilla {@link ChickenRenderer} for the base model and adds
- * a world-space speech bubble above the chicken's head via
- * {@link BubbleRenderer#renderBubbleFor}.
- *
- * <p>The bubble is rendered from this class's {@code render} override after
- * {@code super.render} returns — at that point the pose stack is in OUTER
- * (camera-relative) state with the entity's body-yaw rotation popped, so
- * {@code dispatcher.cameraOrientation()} alone gives a true camera-facing
- * billboard. Driving the bubble from a {@code RenderLayer} would happen
- * INSIDE the entity's body-yaw transformation, so the icon would rotate
- * with the chicken's facing direction instead of with the camera.
- */
+/** The helper chicken, with its speech bubble drawn after the body so it faces the camera, not the chicken's heading. */
 @OnlyIn(Dist.CLIENT)
 public class HelperChickenRenderer extends ChickenRenderer {
 

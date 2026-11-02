@@ -17,42 +17,15 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Prepends a raw-meat drop (mutton) to a hunter result set once per town —
- * the hunter-equivalent of {@link ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee}
- * (ADR-0014 — Worldly Seeds reach the player through the first gatherer, not a recipe).
- *
- * <p>Goal: close the raw-food LOOT quest deterministically on the first hunter delivery
- * so the tutorial's cook unlock is not seed-dependent. Without this, the
- * {@code self_sufficiency} autotest runs into a ~50% "cook-never-unlocks" rate —
- * the town's work-seeker scores the sword job as available, but
- * {@code canFitInDay}/the townie's day budget gates the transition on a
- * window that never opens in most seeds.
- *
- * <p>Idempotent: the guard reads {@code firstHunterLootGuaranteeFired} on the
- * flag BE, which flips at the first raw-food LOOT extraction. The two wrap
- * sites ({@code RealtimeWorldInteraction.getResults} and
- * {@code TimeWarpWorldInteraction.getResults}) therefore share this helper
- * without double-counting — the bit guarantees exactly-one-prepend per town.
- *
- * <p>Unlike the chicken-arc prepend, this is not tied to the arc — it fires
- * whenever the raw-food LOOT is still open, the job's root is {@code hunter}
- * and the job is not one of the root's upkeep jobs ({@link MetaJobs}), and the
- * once-bit has not fired.
- */
+/** Adds a mutton to the first hunt's results once per town, so the raw-food quest closes on the first delivery. */
 public final class FirstHunterLootGuarantee {
 
     private FirstHunterLootGuarantee() {
     }
 
-    /** The item prepended. Mutton — the hunter/sword job's canonical food. */
     public static final Item ITEM = Items.MUTTON;
 
-    /**
-     * True if the extracted item is a raw-food in the {<code>#questown:villager_simple_furnace_food_raw</code>}
-     * tag (rabbit, porkchop, beef, mutton, chicken, ...). Any of them closes the raw-food LOOT — so
-     * the once-bit flip should fire on any of them, not just mutton.
-     */
+    /** True for any raw meat in {@code #questown:villager_simple_furnace_food_raw}; any of them closes the raw-food quest. */
     public static boolean matchesFirstHunterItem(MCHeldItem item) {
         if (item == null || item.isEmpty()) {
             return false;
@@ -85,19 +58,14 @@ public final class FirstHunterLootGuarantee {
         if (jobId == null || !"hunter".equals(jobId.rootId())) {
             return false;
         }
-        // A meal is not a hunt: a starving hunter eating player-stocked raw beef closed the
-        // raw-food quest with the prepended mutton (agent playtest r10 #7, dev 2026-10-23).
+        // A meal is not a hunt.
         if (MetaJobs.isMeta(jobId)) {
             return false;
         }
         return rawFoodLootQuestActive(flag);
     }
 
-    /**
-     * True when the raw-food LOOT quest ({@code #questown:villager_simple_furnace_food_raw})
-     * is still open, i.e. the town has not yet produced enough raw food to unlock the
-     * cook. Once it closes, the guarantee is over.
-     */
+    /** True while the raw-food LOOT quest is open. */
     public static boolean rawFoodLootQuestActive(TownFlagBlockEntity flag) {
         QuestsHolder qh = flag.getQuestHandle();
         if (qh == null) {
@@ -115,7 +83,7 @@ public final class FirstHunterLootGuarantee {
         return false;
     }
 
-    /** The once-bit flip on the flag. Called by the LOOT-extract hook after {@code processLootQuests}. */
+    /** Marks the guarantee as used. */
     public static void flipOnceBit(TownFlagBlockEntity flag) {
         if (flag == null || flag.isFirstHunterLootGuaranteeFired()) {
             return;

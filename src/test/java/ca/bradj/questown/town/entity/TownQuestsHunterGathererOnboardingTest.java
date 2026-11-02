@@ -18,20 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-14 playtest ("Had to force hunter job change. Something caused the
- * guaranteed hunter job change to not work. That's a recent regression."): the
- * tutorial's first-hunter batch ({@code addHunterGatherer}) was not marked
- * onboarding, so its open hunter JOB_CHANGE quest was invisible to
- * {@code onboardingJobChangeGuarantee}, and a BOP spend with no BOP blessing
- * pre-rolled arbitrarily (fisher) instead of promising the hunter the quest
- * names.
- */
+/** The first-hunter batch is onboarding, so a Block of Progress spend promises the hunter. */
 class TownQuestsHunterGathererOnboardingTest {
 
     @BeforeAll
     static void bootstrap() {
-        // addHunterGatherer touches Items.STONE_SWORD via Compat.getItemId.
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }
@@ -55,9 +46,7 @@ class TownQuestsHunterGathererOnboardingTest {
 
     @Test
     void bedroomQuest_usesTheStandardRoomTooltip() {
-        // 2026-10-18 playtest: "The onboarding bed quest seems to have custom text. But the
-        // standard 'place these blocks in a room' tooltip would be better." QuestsScreen shows
-        // flavor text when present and the room-recipe tooltip otherwise.
+        // This batch brings villager 2, so it carries its bed.
         TownQuests quests = new TownQuests();
         quests.addHunterGatherer(view());
 
@@ -71,8 +60,7 @@ class TownQuestsHunterGathererOnboardingTest {
 
     @Test
     void hunterGathererBatch_carriesTheBedForTheVillagerItBrings() {
-        // Onboarding rule (dev, 2026-10-18): a batch that brings a villager carries the bed that
-        // villager will sleep in. This batch's reward is villager 2.
+        // This batch brings villager 2, so it carries its bed.
         TownQuests quests = new TownQuests();
         quests.addHunterGatherer(view());
 

@@ -37,10 +37,6 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
 
     private final String promisedRoot;
 
-    /**
-     * The flag's Blocks of Progress when the panel was opened from the flag (dev playtest
-     * 2026-10-29: spend "directly from the flag instead of having to withdraw first").
-     */
     public record FlagBop(int count) {
         public static final FlagBop NONE = new FlagBop(0);
     }
@@ -105,12 +101,12 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return false;
     }
 
-    /** The root a spend is promised to give (an open onboarding job-change quest), or empty. */
+    /** The job an open onboarding job-change quest promises, if any. */
     public Optional<String> getPromisedRoot() {
         return promisedRoot.isEmpty() ? Optional.empty() : Optional.of(promisedRoot);
     }
 
-    /** The panel spends the flag's Block of Progress: nothing in the slot, and the flag has one. */
+    /** True when the slot is empty and the flag has a Block of Progress to spend. */
     public boolean usesFlagBop() {
         return !tx.hasBlockOfProgress() && flagBop.count() > 0;
     }

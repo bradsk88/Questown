@@ -23,13 +23,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Helper-chicken entity used for the onboarding arc.
- *
- * <p>v1 behaviour: invulnerable, exposes three {@link SynchedEntityData} fields
- * for the speech-bubble layer (U2), and follows the player near the flag
- * while walking to beat-target blocks (U3).
- */
+/** The helper chicken: can't be hurt, shows a speech bubble, and follows the player near the flag. */
 public class HelperChickenEntity extends Chicken {
 
     private static final EntityDataAccessor<ItemStack> BUBBLE_ICON_A = SynchedEntityData.defineId(
@@ -41,24 +35,11 @@ public class HelperChickenEntity extends Chicken {
     private static final EntityDataAccessor<Boolean> THROUGH_WALLS = SynchedEntityData.defineId(
             HelperChickenEntity.class, EntityDataSerializers.BOOLEAN
     );
-    /**
-     * Optional override for the bubble icon. When non-empty, the bubble layer
-     * renders this texture as a flat quad instead of {@link #BUBBLE_ICON_A} /
-     * {@link #BUBBLE_ICON_B}. Used for authored bubble assets that do not have
-     * a vanilla item equivalent (e.g. the SUNSET_AND_MAP "evening" indicator).
-     * Stored as the string form of a {@code ResourceLocation} for compatibility
-     * with the default network serializer.
-     */
+    /** A texture to show in the bubble instead of the item icons, as a resource location string; empty for none. */
     private static final EntityDataAccessor<String> BUBBLE_TEXTURE_PATH = SynchedEntityData.defineId(
             HelperChickenEntity.class, EntityDataSerializers.STRING
     );
-    /**
-     * The lang key of the chicken's current monologue hint, synced so the
-     * client can show it on the overlay message when the player looks at the
-     * chicken. The click handler still drives the plain-text fourth-wall
-     * cycle; this carries the monologue. Empty for terminal beats, which have
-     * no hint.
-     */
+    /** The current hint's lang key, so the client can show it; empty when the lessons are over. */
     private static final EntityDataAccessor<String> HINT_KEY = SynchedEntityData.defineId(
             HelperChickenEntity.class, EntityDataSerializers.STRING
     );
@@ -75,32 +56,18 @@ public class HelperChickenEntity extends Chicken {
 
     @Override
     protected void registerGoals() {
-        // Allow paths to route through doors AND have the chicken physically
-        // open closed ones — without these the beat-peck navigation walks the
-        // perimeter of the room because vanilla chicken pathing treats door
-        // blocks as opaque obstacles.
+        // Let the chicken path through doors and open them.
         if (this.getNavigation() instanceof GroundPathNavigation gnav) {
             gnav.setCanOpenDoors(true);
             gnav.setCanPassDoors(true);
         }
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new OpenDoorGoal(this, true));
-        // Peck must outrank follow: both use MOVE+LOOK and the lower priority
-        // number wins, so swapping them lets peck preempt follow whenever the
-        // beat-peck goal's own gates pass (target resolved + player holds the
-        // required item, or it's a UI beat with no item gate). Follow then
-        // takes over only while peck stands down — which is what the player
-        // expects: chicken trails them while they fetch the item, then walks
-        // to the target and pecks once they have it.
-        // Sunset chest goal sits at the same priority tier as the regular peck
-        // goal: SUNSET_AND_MAP has no structure-local peck target, so the two
-        // never both want to run.
+        // Pecking outranks following, so the chicken follows only while it has nowhere to peck.
         this.goalSelector.addGoal(2, new HelperChickenSunsetChestGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(2, new HelperChickenRoomBuildGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(2, new HelperChickenBeatPeckGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(3, new HelperChickenFollowNearFlagGoal(this, 1.0D, this::getOwnerFlagPos));
-        // SUNSET_AND_MAP phase-2 wander, only active when the follow goal stands
-        // down (same priority tier — they're mutually exclusive by canUse gate).
         this.goalSelector.addGoal(3, new HelperChickenWanderNearFlagGoal(this, this::getOwnerFlagPos));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
@@ -121,27 +88,14 @@ public class HelperChickenEntity extends Chicken {
             DamageSource source,
             float amount
     ) {
-        // v1 invulnerability — the helper chicken cannot be damaged by any source.
-        // When a player attacks we convert the swing into a hint-text delivery
-        // so the player gets positive feedback instead of a silent no-op.
+        // Can't be hurt: a hit shows the hint instead.
         if (source.getEntity() instanceof ServerPlayer sp) {
             onPlayerLeftClick(sp);
         }
         return false;
     }
 
-    /**
-     * Forge calls this when the player right-clicks the chicken.
-     *
-     * <p>Two paths:
-     * <ul>
-     *   <li>Holding Worldly Seeds in the clicked hand AND beat state is
-     *       {@link ChickenBeatState#AWAITING_WORLDLY_SEEDS_DELIVERY}: consume
-     *       one seed, run the statue transform, end the arc.</li>
-     *   <li>Anything else: dispatch to the hint-text path so the click
-     *       surfaces the current beat's guidance without damage.</li>
-     * </ul>
-     */
+    /** Right-click: with Worldly Seeds during the seeds lesson, ends the lessons; otherwise shows the hint. */
     @Override
     public InteractionResult interactAt(
             Player player,
@@ -161,8 +115,7 @@ public class HelperChickenEntity extends Chicken {
         if (tryDeliverWorldlySeeds(sp, flag, held)) {
             return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
-        // Only count main-hand interactions to avoid the off-hand follow-up
-        // attempt double-incrementing the click counter.
+        // Main hand only, so one click counts once.
         if (hand == InteractionHand.MAIN_HAND) {
             ChickenArcController.onPlayerClickedChicken(sp, flag);
         }
@@ -189,11 +142,7 @@ public class HelperChickenEntity extends Chicken {
         return true;
     }
 
-    /**
-     * Routes left-click (attack) to the hint-text handler. Damage is already
-     * suppressed by {@link #hurt}; this adds the visible feedback so the player
-     * sees the chicken "teach them" rather than silently ignoring the swing.
-     */
+    /** A hit shows the hint. */
     public void onPlayerLeftClick(ServerPlayer player) {
         if (this.ownerFlagPos == null) {
             return;
@@ -243,12 +192,7 @@ public class HelperChickenEntity extends Chicken {
         this.entityData.set(HINT_KEY, key == null ? "" : key);
     }
 
-    /**
-     * World-position of the owning flag BE. Set by
-     * {@link ca.bradj.questown.town.HelperChickenSpawnController} at spawn time.
-     * The AI goals look up the flag BE via {@code level.getBlockEntity(pos)} each
-     * tick rather than holding a long-term reference.
-     */
+    /** The owning flag's position. */
     @Nullable
     public BlockPos getOwnerFlagPos() {
         return this.ownerFlagPos;
@@ -276,11 +220,7 @@ public class HelperChickenEntity extends Chicken {
         }
     }
 
-    /**
-     * Resolves the current beat state from the owning flag BE, or returns
-     * {@link ChickenBeatState#FORFEIT} if the flag BE cannot be found. Used by
-     * the follow goal's arc-active check.
-     */
+    /** The current lesson, or {@link ChickenBeatState#FORFEIT} when the flag is gone. */
     public ChickenBeatState getBeatStateSafe() {
         if (this.ownerFlagPos == null) {
             return ChickenBeatState.FORFEIT;

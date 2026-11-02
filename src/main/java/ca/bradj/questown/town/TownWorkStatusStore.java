@@ -28,8 +28,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                     );
                     return builder.build();
                 },
-                // A display (armor stand, item frame) stands in an air block and is a work spot
-                // for the display jobs (dev 2026-10-28: the villager "works" at the stand).
+                // A display stands in air and is a work spot for the display jobs.
                 (level, pos) -> level.isEmptyBlock(pos) && DisplaySlots.at(level, pos) == null,
                 (level, pos) -> {
                     if (level.isEmptyBlock(pos)) {
@@ -38,15 +37,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
                     if (State.isWelcomeMat(b.toString())) {
-                        // A welcome mat is a leaver work spot by definition: its
-                        // "needs the leaver's supplies" condition (state 0) is intrinsic to
-                        // the mat and must never depend on whether a registered job is
-                        // currently claiming an interest in the block. Gating the seed on
-                        // ServerJobsRegistry.shouldInitializeWithState (and its static
-                        // false-cache, which outlives late job registration) left ~half the
-                        // leavers' per-owner ledgers WITHOUT the mat — they never heard
-                        // "the mat is state 0 for me" and the town soft-locked on it.
-                        // (dev directive 2026-10-07; the NO_FORWARD_PROGRESS soft-lock.)
+                        // A welcome mat is always a trip work spot, whether or not a job has registered interest in it.
                         boolean init = ServerJobsRegistry.shouldInitializeWithState(Util.info(level), pos);
                         return State.welcomeMatSeedState();
                     }
@@ -76,11 +67,7 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
         );
     }
 
-    /**
-     * A work seeker always sees the job board as ready to extract: nothing gates its 0 -> 1
-     * step, and the real "is there a job" check runs at extraction. A board left at state 1
-     * by a seeker who got a job (or fell back to downtime) is therefore at rest, not stuck.
-     */
+    /** A job board left at state 1 by a work seeker is at rest, not stuck. */
     @Override
     protected boolean isRestingState(
             ServerLevel level,

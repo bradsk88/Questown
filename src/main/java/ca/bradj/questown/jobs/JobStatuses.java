@@ -24,12 +24,9 @@ public class JobStatuses {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobStatuses.class);
     private static final java.util.concurrent.ConcurrentHashMap<String, Long> whyLast = new java.util.concurrent.ConcurrentHashMap<>();
     private static final long WHY_INTERVAL_MS = 4000;
-    // [WHY] Status-circuit decision dump — the diagnostic behind the questown-status-why
-    // skill (.pi/skills/questown-status-why/SKILL.md): when whyDebugJobId is set (done by
-    // ProductionJournal each recompute), it logs the root gates + nested detail maps of the
-    // leaver's status decision for that job. Inert (no label) otherwise; gated to
-    // gatherer:/hunter:/miner: leavers and throttled to one line per label per WHY_INTERVAL_MS.
-    public static volatile String whyDebugJobId = null; // set by ProductionJournal before each status recompute, so the WHY log can attribute to the real leaver
+    // Dev diagnostics: when set, logs the gates behind this leaver's status decision, at most once
+    // per WHY_INTERVAL_MS per label.
+    public static volatile String whyDebugJobId = null;
 
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
@@ -45,19 +42,12 @@ public class JobStatuses {
         @Nullable
         STATUS tryUsingSupplies(Map<SUP_CAT, SupplyItemStatus> supplyItemStatus);
 
-        /**
-         * A finished product waits at one of the job's sites: extract it if the villager is there,
-         * else go there. Null when nothing is finished. Default: jobs without products.
-         */
+        /** A finished product waits at one of the job's sites: extract it if there, else go there. Null when nothing is finished. */
         default @Nullable STATUS tryCollectingFinishedProduct() {
             return null;
         }
 
-        /**
-         * Whether collecting this job's finished product puts something in the villager's hands
-         * that needs storage. False for products that are consumed instead (a diner's meal), so full
-         * storage never stops them. Default: true.
-         */
+        /** Whether collecting the finished product needs storage space. False for products that are used up (a diner's meal). */
         default boolean finishedProductNeedsStorage() {
             return true;
         }
@@ -104,9 +94,6 @@ public class JobStatuses {
         return nullIfUnchanged(ctx.currentStatus, resolved);
     }
 
-    // [WHY] See the whyDebugJobId note — dumps every gate (condition) in the leaver's status
-    // decision circuit, each with its boolean value + reason, so we can see "why" a stuck
-    // leaver stays in a status, not just "what" status it is.
     private static <STATUS extends IStatus<STATUS>, SUP_CAT> void maybeLogWhy(
             STATUS current, STATUS resolved, LZCD<STATUS> root) {
         String label = whyDebugJobId;
@@ -208,11 +195,7 @@ public class JobStatuses {
         Job<STATUS, SUP_CAT> job = ctx.job;
         IStatusFactory<STATUS> factory = ctx.factory;
         LZCD<STATUS> root = new LZCD<>(
-                // A villager holding work output (items no state uses) takes it to storage before
-                // any more work. Below this, "use items" (a leaver holding its tool) sent hunters
-                // and miners out with the loot in hand (2026-10-20), and itemless work (the root
-                // below) sent a miner woken with full hands back to the mineshaft (2026-10-21).
-                // A cook therefore carries each meal out before taking the next.
+                // Work output goes to storage before any more work.
                 new Pair<>(ctx.jobId, "drop loot before more work"),
                 leaf(factory::droppingLoot),
                 ImmutableList.of(
@@ -220,16 +203,12 @@ public class JobStatuses {
                         dTownHasSpace
                 ),
                 LZCDs.oneDep(
-                        // Holding output with nowhere to put it: stop, visibly, rather than work on
-                        // with the loot in hand (dev ruling, 2026-10-21 playtest: storeroom full).
+                        // Holding output with nowhere to put it: stop, so the problem shows.
                         new Pair<>(ctx.jobId, "stop when holding output and the town has no space"),
                         leaf(factory::noSpace),
                         dHoldsWorkOutput,
                         new LZCD<>(
-                                // A finished product waiting while the town has no space: collecting it
-                                // only moves it into the villager's hands, so stop visibly here too. Without
-                                // this a miner holding nothing left its coal at the mineshaft and wandered as
-                                // "going to work" with no storage signal (2026-10-21 agent playtest).
+                                // A finished product with nowhere to put it: stop here too.
                                 new Pair<>(ctx.jobId, "stop when a finished product waits and the town has no space"),
                                 leaf(factory::noSpace),
                                 ImmutableList.of(
@@ -237,12 +216,7 @@ public class JobStatuses {
                                         dTownHasNoSpace
                                 ),
                                 new LZCD<>(
-                                // A finished product waiting at a job site is collected before anything
-                                // else, even if the villager must walk there. The itemless-work root
-                                // below only takes it when already on site; away from it (home after a
-                                // sleep, or back from the storeroom) "collect supplies" won, and a
-                                // villager already holding every supply stood at the chests forever
-                                // (2026-10-15 and 2026-10-21 playtests).
+                                // A finished product waiting at a job site is collected before anything else.
                                 new Pair<>(ctx.jobId, "collect a finished product"),
                                 LZCDs.leaf(job::tryCollectingFinishedProduct, Objects::isNull),
                                 ImmutableList.of(),

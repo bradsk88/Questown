@@ -13,10 +13,7 @@ import java.util.Collection;
 import java.util.UUID;
 
 public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
-    // Every tab except ECONOMICS itself (the pane that is open). The old hand-rolled
-    // list omitted CHANGE_ROOT, so with the economics pane open the "switch job" tab's
-    // open-fn was null and it rendered as selected alongside the economics tab
-    // (2026-10-14 playtest).
+    // Every tab but economics, the open one.
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.ECONOMICS);
     private final boolean showBlockOfProgressTab;
     private final boolean showSkillsTab;
@@ -47,10 +44,7 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
         this.showInventoryTab = showInventoryTab;
     }
 
-    // NOTE: economics data is NOT part of the villager-menu wire — it flows
-    // via the separate `EconomicsUpdate` message sent before openScreen.
-    // There is deliberately no read/write codec here, and there must not be
-    // one added: `VillagerMenusPayload` is the single wire source of truth.
+    // Economics data arrives in its own EconomicsUpdate message, so this menu has no codec.
 
     @Override
     public ItemStack quickMoveStack(

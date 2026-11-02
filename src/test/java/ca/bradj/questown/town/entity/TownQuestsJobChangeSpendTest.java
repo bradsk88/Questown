@@ -13,12 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The JOB_CHANGE quest completes at the BOP-spend moment (E1: reward-on-the-spend-moment),
- * not when the root change applies in the morning. Only the quest whose wanted root matches
- * the decided pending root (blessed guarantee or pre-roll) completes, and never one already
- * owned by a different townie.
- */
+/** The job-change quest completes at the spend, if its job matches the decided one and it isn't another villager's. */
 class TownQuestsJobChangeSpendTest {
 
     private static MCQuestBatch jobChangeBatch(
@@ -48,10 +43,7 @@ class TownQuestsJobChangeSpendTest {
     private static TownQuests withBatch(MCQuestBatch batch) {
         TownQuests quests = new TownQuests();
         quests.questBatches.add(batch);
-        // QuestBatches.add re-points the batch's completion listener to the town chain
-        // (TownQuests.questCompleted needs the live flag). Re-point it back to a no-op so the
-        // pure completion decision is testable headless; the flag wiring is exercised by the
-        // autotest suite instead.
+        // Swap the listener for a no-op, so no flag is needed.
         batch.addChangeListener(new QuestBatch.ChangeListener<MCQuest>() {
             @Override
             public void questCompleted(MCQuest quest) {
@@ -128,8 +120,7 @@ class TownQuestsJobChangeSpendTest {
 
     @Test
     void spend_rootMatch_completesQuestWantedByASubJob() {
-        // The wanted quest names a specific sub-job (cook/mutton); the pending root is the
-        // family root (cook). processJobChanges' sameRoot fallback is mirrored here.
+        // The quest names cook/mutton; the decided root is cook.
         TownQuests quests = withBatch(jobChangeBatch(new JobID("cook", "mutton"), null));
         VillagerUUID villager = VillagerUUID.random();
 
@@ -148,9 +139,6 @@ class TownQuestsJobChangeSpendTest {
 
         assertFalse(second, "an already-complete quest does not complete twice");
     }
-
-    // The onboarding job-change guarantee (ruling D): an open onboarding JOB_CHANGE quest's
-    // root fills the BOP-spend's guarantee slot, the way a blessed BOP's NBT does.
 
     @Test
     void onboarding_openQuest_isTheGuaranteeForAnyTownie() {
@@ -189,8 +177,7 @@ class TownQuestsJobChangeSpendTest {
     @Test
     void onboarding_nonOnboardingQuest_doesNotGuarantee() {
         VillagerUUID villager = VillagerUUID.random();
-        // A plain (non-onboarding) JOB_CHANGE quest - the post-tutorial world: the BOP's own
-        // blessing and the pre-roll decide, not an open quest.
+        // Outside onboarding, an open quest doesn't decide the job.
         TownQuests quests = withBatches(jobChangeBatch(new JobID("cook", "cook"), null));
 
         assertTrue(quests.onboardingJobChangeGuarantee(villager).isEmpty());
@@ -214,7 +201,6 @@ class TownQuestsJobChangeSpendTest {
         VillagerUUID villager = VillagerUUID.random();
         TownQuests quests = withBatches(onboardingJobChangeBatch(new JobID("cook", "cook"), null));
 
-        // The spend's decided root comes from the guarantee; the same moment completes the quest.
         boolean completed = quests.markJobChangeCompleteAtSpend(
                 villager, quests.onboardingJobChangeGuarantee(villager).orElseThrow());
 

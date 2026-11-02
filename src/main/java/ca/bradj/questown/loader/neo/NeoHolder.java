@@ -5,7 +5,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.jetbrains.annotations.Nullable;
 
-/** NeoForge impl of the neutral {@link Holder}; wraps a {@code DeferredHolder}. */
 public final class NeoHolder<T> implements Holder<T> {
     private final DeferredHolder<T, ? extends T> holder;
 

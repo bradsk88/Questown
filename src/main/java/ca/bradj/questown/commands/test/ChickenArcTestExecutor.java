@@ -34,18 +34,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
-/**
- * Phase machine that drives one {@link ChickenArcBlueprint} end-to-end inside
- * {@code AutoTestRunner}'s tick loop. See the plan's U3 Technical Design block
- * for the phase graph.
- *
- * <p>Per-action dispatch uses an {@code instanceof}-pattern chain over the
- * sealed {@link ChickenArcScriptedAction} hierarchy (switch-on-sealed is a
- * Java 21 feature; this project targets Java 17). The U2 exhaustiveness test
- * {@code ChickenArcBlueprintTest.scriptedAction_subtypeCountMatchesSealedHierarchy}
- * guards against forgotten subtypes. All handlers call the same server-side
- * entry points the real player would trigger.
- */
+/** Runs one helper-chicken scenario, a phase per tick, through the entry points a player's actions reach. */
 public final class ChickenArcTestExecutor {
 
     private enum Phase {
@@ -98,11 +87,7 @@ public final class ChickenArcTestExecutor {
         this.output = output;
     }
 
-    /**
-     * Advance one server tick. Returns {@code true} once the scenario is done
-     * (pass or fail). The outer driver (U4's {@code ChickenArcAllExecutor})
-     * polls this each tick.
-     */
+    /** Advances one tick; true once the scenario has passed or failed. */
     public boolean tick() {
         try {
             return runOneTick();
@@ -152,9 +137,7 @@ public final class ChickenArcTestExecutor {
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, fakePlayer);
         TestArenaPreparer.flatten(level, origin, opts);
         if (blueprint.placeFlagViaCommand()) {
-            // Seed flagPos to origin so CHECK_RESULTS can look up the command-placed
-            // flag BE. The command (/qt flag place_above) lands the flag at the
-            // target coord's above(), and scenarios pass a coord one-below origin.
+            // The command places the flag above the given position, and scenarios aim one below the origin.
             flagPos = origin;
             phase = Phase.RUN_ACTIONS_LOOP;
         } else {
@@ -206,11 +189,7 @@ public final class ChickenArcTestExecutor {
     }
 
     private void placeScaffolding() {
-        // Scenarios with forceRotationDetected=false exercise the real
-        // HelperChickenRotationDetector against anchors they place themselves.
-        // Placing the default layout here would seed the arena with a campfire
-        // at CAMPFIRE_OFFSET, which breaks zero-match-forfeit and biases the
-        // ambiguity scenario. Skip the default placement for those scenarios.
+        // These scenarios place their own campfires to test rotation detection.
         if (!blueprint.forceRotationDetected()) {
             phase = Phase.TELEPORT_PLAYER_NEAR_FLAG;
             return;
@@ -250,11 +229,7 @@ public final class ChickenArcTestExecutor {
             settleTicks--;
             return;
         }
-        // Dispatch every action whose postActionWaitTicks == 0 in the same server
-        // tick — otherwise the flag BE's detector tick runs between them and can
-        // finalize state off of partial placements (e.g. rotation_ambiguity_forfeit
-        // needs both campfires visible in the same scan). Stop at the first action
-        // that declares a wait so later actions still settle.
+        // Run every no-wait action on the same tick, so the flag never scans half-placed blocks.
         while (actionIndex < blueprint.scriptedActions().size()) {
             ChickenArcScriptedAction action = blueprint.scriptedActions().get(actionIndex);
             actionIndex++;
@@ -268,14 +243,6 @@ public final class ChickenArcTestExecutor {
         phase = Phase.WARP;
     }
 
-    /**
-     * Dispatch to the per-subtype handler. Uses {@code instanceof} pattern-match
-     * chains rather than switch-on-sealed (Java 17 target predates the latter).
-     * The compiler still flags missing subtypes at
-     * {@link ChickenArcBlueprintTest#scriptedAction_subtypeCountMatchesSealedHierarchy}
-     * runtime — the U2 exhaustiveness test counts {@code 12} permitted subclasses
-     * and fails when that number drifts, which forces a matching update here.
-     */
     private void dispatchAction(ChickenArcScriptedAction action) {
         if (action instanceof ChickenArcScriptedAction.GiveItem a) {
             handleGiveItem(a);
@@ -318,7 +285,6 @@ public final class ChickenArcTestExecutor {
             return;
         }
         if (action instanceof ChickenArcScriptedAction.AdvanceTicks) {
-            // settle-only; the phase machine consumes postActionWaitTicks()
             return;
         }
         if (action instanceof ChickenArcScriptedAction.RightClickChickenWithHand a) {
@@ -372,9 +338,7 @@ public final class ChickenArcTestExecutor {
         ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
         BlockPos targetFlagPos = flagPos.offset(a.boundFlagOffset().rotate(blueprint.startRotation()));
         TownFlagBlock.StoreParentOnNBT(wand, targetFlagPos);
-        // Intentionally skip Inventory.add() — in 1.19.2 it mutates the input stack
-        // to empty while distributing it across slots. setItemInHand on the selected
-        // hotbar slot is sufficient; getMainHandItem() reads from the same slot.
+        // Not Inventory.add: in 1.19.2 it empties the stack it is given.
         fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, wand);
     }
 
@@ -399,9 +363,7 @@ public final class ChickenArcTestExecutor {
     private void handlePlaceBlock(ChickenArcScriptedAction.PlaceBlock a) {
         BlockPos pos = flagPos.offset(a.offset().rotate(blueprint.startRotation()));
         if (a.blockState().getBlock() instanceof DoorBlock) {
-            // Doors are 2-high; setBlockAndUpdate alone only fills the lower
-            // half. Place upper half so the block is a complete door the room
-            // detector recognizes.
+            // Place the upper half too, so the door is whole.
             level.setBlockAndUpdate(pos,
                     a.blockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
             level.setBlockAndUpdate(pos.above(),
@@ -409,9 +371,7 @@ public final class ChickenArcTestExecutor {
             return;
         }
         level.setBlockAndUpdate(pos, a.blockState());
-        // WelcomeMatBlock registers itself via getStateForPlacement's item-context
-        // path, which setBlockAndUpdate bypasses. Mirror the side effect here so
-        // the F3 welcome-mat beat can advance without a wand-placement shim.
+        // setBlock skips the mat's own registration, so register it here.
         if (a.blockState().is(BlocksInit.WELCOME_MAT_BLOCK.get())
                 && flag != null) {
             flag.registerWelcomeMat(pos);
@@ -455,12 +415,7 @@ public final class ChickenArcTestExecutor {
     }
 
     private void handleSetUpRegisteredRoomWithChest(ChickenArcScriptedAction.SetUpRegisteredRoomWithChest a) {
-        // Build a 9×5 perimeter (x=2..10, z=2..6) at 2-high so the authored
-        // CHEST_OFFSET (8,0,4) lands INSIDE the room — required for the
-        // store_room recipe to match (via the chest) and for
-        // TownContainers.getAllContainers to find the chest during
-        // DepositIntoContainer. The chicken scaffolding's authored 5×5 is a
-        // subset; walls overlap harmlessly.
+        // A 9x5 room, big enough that the chest offset is inside it.
         buildRegisteredRoomPerimeter();
         placeRegisteredRoomFurnishings();
         registerRoomFixtures();
@@ -468,14 +423,7 @@ public final class ChickenArcTestExecutor {
 
     private void buildRegisteredRoomPerimeter() {
         BlockPos doorOffset = HelperChickenBeatOffsets.DOOR_OFFSET;
-        // CHEST_OFFSET (8,0,4) is interior to this 9x5 footprint, so the
-        // perimeter filter already excludes it — no explicit chest-column skip
-        // is needed. The door column is on the perimeter and must be skipped.
-        // Loop iterates in LOCAL coords; rotation is applied only when
-        // computing world position. The door skip compares against the local
-        // doorOffset, which is correct: whichever local (x,z) we skip, its
-        // rotated world position matches doorOffset.rotate(startRotation),
-        // which is where the door will later be placed.
+        // Walls on the perimeter, leaving the door's column open.
         for (int x = 2; x <= 10; x++) {
             for (int z = 2; z <= 6; z++) {
                 boolean onPerimeter = (x == 2 || x == 10 || z == 2 || z == 6);
@@ -501,11 +449,7 @@ public final class ChickenArcTestExecutor {
                 doorOffset, Blocks.OAK_DOOR.defaultBlockState(), 0));
         BlockPos chestWorld = flagPos.offset(chestOffset.rotate(blueprint.startRotation()));
         level.setBlockAndUpdate(chestWorld, Blocks.CHEST.defaultBlockState());
-        // Direct JOB_BOARD_BLOCK and WELCOME_MAT_BLOCK placement — the
-        // sign→job-board conversion and welcome-mat registration are
-        // item-use side-effects that setBlockAndUpdate bypasses, so we
-        // place the target blocks directly and mirror registerWelcomeMat
-        // below in registerRoomFixtures.
+        // Placed directly: setBlock skips the sign-to-board conversion and the mat's registration.
         handlePlaceBlock(new ChickenArcScriptedAction.PlaceBlock(
                 signOffset, BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState(), 0));
         handlePlaceBlock(new ChickenArcScriptedAction.PlaceBlock(
@@ -553,7 +497,7 @@ public final class ChickenArcTestExecutor {
         }
         int hw = blueprint.effectiveHalfWidth();
         AABB area = new AABB(flagPos.offset(-hw, -5, -hw)).minmax(new AABB(flagPos.offset(hw, 10, hw)));
-        // Filter by ownerFlagPos — prior-scenario chickens may wander in.
+        // Only this flag's chicken; earlier scenarios' chickens can wander in.
         HelperChickenEntity chicken = null;
         for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
             if (e.isAlive() && flagPos.equals(e.getOwnerFlagPos())) {
@@ -575,10 +519,7 @@ public final class ChickenArcTestExecutor {
             failAction("MovePlayer", "fake player is null");
             return;
         }
-        // setPos, not teleportTo: same-level ServerPlayer.teleportTo delegates
-        // to connection.teleport(...) — a pending teleport applied on the
-        // connection's next tick, which never comes for a FakePlayer (see
-        // MovePlayer's javadoc).
+        // setPos, not teleportTo: a fake player's teleport never applies.
         fakePlayer.setPos(a.x(), a.y(), a.z());
         QT.FLAG_LOGGER.info(
                 "[autotest] moved fake player to {} {} {} (now at {})",
@@ -591,10 +532,7 @@ public final class ChickenArcTestExecutor {
             failAction("RunCommand", "fake player or server is null");
             return;
         }
-        // Elevate to permission level 4 (admin) so commands gated by
-        // isCreative / hasPermission(2) pass. The source still carries the
-        // fake player reference so handlers that dereference source.getPlayer()
-        // (e.g. FlagCommand.setBlock → APPROACH_TOWN_TRIGGER.trigger) don't NPE.
+        // Admin permission, with the fake player still the source.
         server.getCommands().performPrefixedCommand(
                 fakePlayer.createCommandSourceStack().withPermission(4),
                 a.command()
@@ -621,7 +559,6 @@ public final class ChickenArcTestExecutor {
 
     private void checkResults() {
         if (flag == null) {
-            // Scenario never placed a flag (e.g. command-placed and the command failed).
             BlockEntity be = flagPos != null ? level.getBlockEntity(flagPos) : null;
             if (be instanceof TownFlagBlockEntity fbe) {
                 flag = fbe;
@@ -654,7 +591,6 @@ public final class ChickenArcTestExecutor {
         );
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, fakePlayer);
         TestArenaPreparer.flatten(level, origin, opts);
-        // Kill any lingering visitors just in case.
         AABB area = new AABB(origin.offset(-20, -5, -20)).minmax(new AABB(origin.offset(20, 10, 20)));
         for (VisitorMobEntity e : level.getEntitiesOfClass(VisitorMobEntity.class, area)) {
             e.kill();

@@ -7,10 +7,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
-// Dev-only: locate a town flag's block position by reading the in-memory
-// TownFlags registry. Used to find the incident flag so a player can be
-// teleported to it for lag reproduction. Read-only; no permission gate so it
-// can be run from the console (FIFO) without a creative player.
+// Dev-only, read-only: a town flag's block position, from the in-memory TownFlags registry.
 public class FindFlagCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         src.register(

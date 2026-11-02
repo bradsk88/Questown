@@ -15,16 +15,12 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Shared arena-setup primitives lifted from {@link TestExecutor} so both the
- * jobs track and the chicken-arc track compose the same destroy-and-flatten
+ * Arena setup shared by the jobs track and the chicken-arc track: the same destroy-and-flatten
  * loop against one record of options.
  *
- * <p>The jobs track passes {@link PreparerOptions#jobsTrackDefaults()} to keep
- * its existing observable behavior byte-for-byte. The chicken track opts into
- * a wider arena, a {@link HelperChickenEntity} kill-sweep, a fake-player
- * inventory clear, and a {@link HelperChickenRotationDetector} retry-counter
- * clear — each of those is a no-op by default so the jobs track cannot
- * regress.
+ * <p>The chicken track opts into a wider arena, a {@link HelperChickenEntity} kill-sweep, a
+ * fake-player inventory clear and a {@link HelperChickenRotationDetector} retry-counter clear;
+ * the jobs track ({@link PreparerOptions#jobsTrackDefaults()}) uses none of them.
  */
 public final class TestArenaPreparer {
 
@@ -169,7 +165,7 @@ public final class TestArenaPreparer {
                 // Clear up to the natural surface too: where the ground stands above the fixed
                 // clear height (a plains hill), the leftover terrain roofs the arena and the
                 // fixture sits in a dark cave - crops placed there pop off at once (raw light 0,
-                // no sky). 2026-10-20: every warp farmer variant failed on such seeds.
+                // no sky).
                 int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, origin.getX() + x, origin.getZ() + z) - origin.getY();
                 int top = Math.max(region.topY(), surface);
                 for (int y = top; y >= 0; y--) {

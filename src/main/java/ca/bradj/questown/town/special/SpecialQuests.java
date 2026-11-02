@@ -28,12 +28,9 @@ public class SpecialQuests {
     public static final ResourceLocation BEDROOM = new ResourceLocation(MOD, "bedroom");
     public static final ResourceLocation JOB_BOARD = new ResourceLocation(MOD, "job_board");
     public static final ResourceLocation STORE_ROOM_SMALL = new ResourceLocation(MOD, "store_room");
-    // D#2 onboarding beat: the "empty room" quest. A room recipe with no required contents
-    // (data/questown/recipes/empty_room.json) - it matches any room, so the quest completes
-    // on "a room exists whose door is registered": walls + a registered door, no contents.
+    // The empty-room quest: a recipe with no required contents, so any room with a registered door matches.
     public static final ResourceLocation EMPTY_ROOM = new ResourceLocation(MOD, "empty_room");
-    // Day-2 onboarding quest (F2): completes when the town's first work request is posted to
-    // the job board. A standalone "do this" quest - not a room recipe.
+    // Day 2's quest: done when the town's first work request is posted.
     public static final ResourceLocation FIRST_WORK_REQUEST = new ResourceLocation(MOD, "special_quest.first_work_request");
     public static final ResourceLocation DINING_ROOM = new ResourceLocation(MOD, "dining_room");
     public static final ResourceLocation CLINIC = new ResourceLocation(MOD, "clinic");

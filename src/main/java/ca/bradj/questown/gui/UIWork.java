@@ -5,10 +5,9 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 public class UIWork {
 
     private final WorkRequest resultWanted;
-    // Storage already holds enough; villagers make no more until it drops (BoardRequests).
+    // Storage holds enough; villagers stop until it drops.
     private final boolean stocked;
-    // How much storage holds now, and the limit at which the request pauses (dev playtest
-    // 2026-10-29: "see 'we've hit the limit' and see and adjust the limit").
+    // How much storage holds, and the limit at which the request pauses.
     private final int stock;
     private final int limit;
 

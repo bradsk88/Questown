@@ -7,33 +7,14 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Per-town record of which townies had <em>no bed</em> for the night that just ended.
- * Pure and Forge-free, so the capture/drain rule is unit tested without a flag or a level.
- *
- * <p>Capture happens on the <strong>nightfall edge</strong> — the first tick whose
- * {@link Signals} is {@code EVENING} (tick 11500, before the villager schedule's
- * REST phase begins at 12500). The townies without an assigned bed at that moment
- * are recorded; the set is drained exactly once at morning, when the {@code SLEEPLESS}
- * mood effect is applied to each recorded townie. A townie that gains a bed later in
- * the evening (after the capture) is still recorded — v1 trade-off, see
- * {@code docs/plans/2026-10-09-003-feat-sleepless-no-bed-debuff-plan.md}.
- */
+/** Which villagers had no bed for the night just ended. Recorded at nightfall, used once at dawn for the sleepless effect. */
 public final class BedlessLedger {
 
     private @Nullable Signals lastSignals = null;
     private boolean captureDue = false;
     private final Set<UUID> pending = new HashSet<>();
 
-    /**
-     * Note the current tick's signal. Returns true when the capture should run now: on the
-     * nightfall edge (the first {@code EVENING} tick after the signal was anything but
-     * {@code EVENING}/{@code NIGHT}), or later that night once {@code bedsKnown}. A restart
-     * mid-night therefore does not capture until the next real evening; a restart
-     * mid-evening captures once the restarted town has matched its rooms. Before that
-     * every townie reads as bedless (2026-10-22 playtest). A capture still due at dawn is
-     * dropped: that night goes unrecorded.
-     */
+    /** True when the bed check should run: at nightfall, or later that night once beds are known. A check still pending at dawn is dropped. */
     public boolean captureEdge(Signals signals, boolean bedsKnown) {
         boolean edge = signals == Signals.EVENING
                 && lastSignals != Signals.EVENING
@@ -52,13 +33,13 @@ public final class BedlessLedger {
         return true;
     }
 
-    /** Record the townies without a bed at the nightfall edge (replaces any earlier capture). */
+    /** Records the villagers without a bed (replacing any earlier record). */
     public void recordBedless(Iterable<UUID> bedlessUuids) {
         pending.clear();
         bedlessUuids.forEach(pending::add);
     }
 
-    /** Take out the recorded set (empty when none were recorded) and clear it. */
+    /** Takes the record and clears it. */
     public Set<UUID> drain() {
         Set<UUID> out = new HashSet<>(pending);
         pending.clear();

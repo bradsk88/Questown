@@ -77,9 +77,7 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
 
     @Override
     protected MCTownState finalizeState(MCTownState state, long currentTick) {
-        // Carry the warp-recorded LOOT extractions and XP: the terminal rebuild discards
-        // instance fields, and the settle point (TownFlagState.warp) reads the final
-        // state — a fresh list here would silently drop them (2026-10-04 oracle red).
+        // Keep the LOOT extractions and XP recorded during the warp.
         return new MCTownState(
                 state.villagers,
                 state.containers,

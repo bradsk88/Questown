@@ -54,11 +54,6 @@ public class TownVillagerBedsHandle {
     public TownVillagerBedsHandle() {
     }
 
-    // DEV-DIAG (2026-10-09, sleepless): bed-visibility probe. The SLEEPLESS
-    // ledger marked every townie bedless although a recipe-completed bedroom
-    // with beds is registered; sample which link of the bed pipeline is empty
-    // (no active-recipe matches at all / no bed blocks in the contained sets /
-    // no head blocks). Remove once the bed-assignment pipeline works.
     private static Collection<BlockPos> getAllBedHeads(@NotNull TownInterface town) {
         RoomsHolder rooms = town.getRoomHandle();
         Collection<BlockPos> beds = rooms.findMatchedRecipeBlocks(

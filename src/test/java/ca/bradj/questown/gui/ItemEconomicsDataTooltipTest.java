@@ -5,7 +5,6 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-// Dev ruling 2026-10-22: a count of 1 reads "needed once", not "needed 1 times".
 class ItemEconomicsDataTooltipTest {
 
     private static String keyOf(int timesNeeded) {

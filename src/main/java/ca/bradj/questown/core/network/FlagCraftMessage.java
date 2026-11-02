@@ -45,7 +45,7 @@ public record FlagCraftMessage(BlockPos flagPos, int recipeIndex) {
                 return;
             }
             FlagCraftRecipes recipe = FlagCraftRecipes.ALL.get(recipeIndex);
-            // The screen hides a gated row until its quest is posted; refuse it by index too (r17 #1).
+            // The screen hides a row until its quest is posted; refuse it here too.
             if (recipe.unlockedByQuest() != null
                     && sender.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
                 List<ResourceLocation> posted = flag.getQuestHandle().getAllQuestsWithRewards().stream()

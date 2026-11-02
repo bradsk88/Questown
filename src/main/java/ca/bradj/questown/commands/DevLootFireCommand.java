@@ -16,11 +16,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-// Dev-only: fire the LOOT-quest-completion path (QuestsHolder.processLootQuests) with a
-// chosen item in the live world, so the match can be verified without waiting for a
-// leaver's extraction to fire on its own. No permission gate, so it runs from the
-// console (FIFO) during a held run.
-// DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+// Dev-only: complete LOOT quests as if a villager had brought back the given item.
 public class DevLootFireCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> src) {

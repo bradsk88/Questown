@@ -138,33 +138,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private static final String NBT_ATTENTION_JOB_BOARDS = "attentionJobBoards";
     private static final String NBT_ATTENTION_STORAGE_FULL = "attentionStorageFull";
 
-    /**
-     * Registered doors with no room, and why (ADR-0011). Written server-side by
-     * {@code TownRoomsMap} whenever the scan changes it; synced to clients via the update
-     * tag so the dead-door bubble can be drawn. Live read, never latched: a door leaves the
-     * set the moment its scan attaches it to a room.
-     */
+    /** Registered doors with no room, and why. Synced to clients for the dead-door bubble. */
     private Map<BlockPos, DoorTrouble> deadDoors = ImmutableMap.of();
 
-    /**
-     * Attention state for the "!" bubbles (day-1 playtest G1+G2), synced to clients via
-     * the update tag like {@code deadDoors}: whether this town still has incomplete
-     * quests (G1, bubble above the flag) and whether it has zero outstanding work
-     * requests (G2, bubble above each of its job boards), plus where those boards are.
-     * Transient, never persisted. Server: the last values {@link #syncAttentionState()}
-     * published, kept only for change detection. Client: the values received by
-     * {@code handleUpdateTag}. The tag itself is always computed live in
-     * {@code getUpdateTag}, so a client chunk-loading the flag sees current state
-     * regardless of the cached fields.
-     */
+    /** The "!" bubbles' state, synced to clients: incomplete quests (over the flag), no work requests (over each job board). */
     private boolean attentionIncompleteQuests = false;
     private boolean attentionNoWorkRequests = false;
     private ImmutableList<BlockPos> attentionJobBoards = ImmutableList.of();
-    /** Storage-full flag bubble (server: tally result last published; client: last received). */
+    /** The storage-full flag bubble's state. */
     private boolean attentionStorageFull = false;
     private final ca.bradj.questown.town.StorageBlockTally storageTally = new ca.bradj.questown.town.StorageBlockTally();
 
-    /** Whether any of this town's quests is still incomplete (live server-side read). */
     boolean hasIncompleteQuests() {
         return quests.hasIncompleteQuests();
     }
@@ -173,14 +157,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return deadDoors;
     }
 
-    /**
-     * The position range of a registered door's room, for the door-trouble
-     * guidance (ADR-0011): a {@code NO_RECIPE} door needs the player to place
-     * a recipe block inside the room, so the agent must know where the room is.
-     * Read from the live scan (the room may be un-matched), not the matched
-     * set. Empty when the door is not enclosed at all (NOT_ENCLOSED) or the
-     * door is not registered.
-     */
+    /** The area a registered door's room covers, for door-trouble hints; empty when it is not enclosed. */
     public Optional<String> getRoomRangeForDoor(BlockPos doorPos) {
         MCRoom room = null;
         for (MCRoom r : roomsHandle.getRegisteredRooms().getAllRooms()) {
@@ -246,8 +223,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
         super.handleUpdateTag(tag, provider);
-        // Unlike the town-data initializers (see the warning on load), this payload only
-        // ever feeds client-side bubble rendering, so a plain field write is safe here.
         readDeadDoors(tag);
         readAttention(tag);
     }
@@ -282,13 +257,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.attentionJobBoards = b.build();
     }
 
-    /**
-     * Re-publishes the attention state to nearby clients when it changed (G1+G2 "!"
-     * bubbles). Polls every 20 ticks from the flag's block ticker rather than hooking
-     * every mutation site: quest completion, batch re-issue and work-request
-     * add/remove happen in many places, and a one-second lag is imperceptible for a
-     * diegetic indicator.
-     */
+    /** Sends the "!" bubble state to nearby clients when it changed. Checked every 20 ticks. */
     void syncAttentionState() {
         if (!(level instanceof ServerLevel) || !isInitialized()) {
             return;
@@ -312,7 +281,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
     }
 
-    /** Townies stopped in NO_SPACE: holding work output with no free storage slot in town. */
+    /** Villagers stopped because there is no free storage. */
     private int countStorageBlockedVillagers() {
         int n = 0;
         for (net.minecraft.world.entity.LivingEntity e : getVillagerHandle().entities()) {
@@ -324,12 +293,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return n;
     }
 
-    /** Client-side: full storage has become a town blocker (flag storage bubble). */
     public boolean isAttentionStorageFull() {
         return attentionStorageFull;
     }
 
-    /** Client-side reads of the synced attention state (see the field docs). */
     public boolean isAttentionQuestsIncomplete() {
         return attentionIncompleteQuests;
     }
@@ -344,9 +311,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
-    // Deposited Blocks of Progress. Stored as real stacks (not a count) because each deposit
-    // carries the job that earned it (the BOP menu's "Earned by" line; it no longer guarantees
-    // anything, ADR-0016). FIFO: eject() gives the player the oldest deposit first.
+    // Deposited Blocks of Progress, oldest first, each keeping the job that earned it.
     final NonNullList<ItemStack> bopStacks = NonNullList.create();
     boolean tutorialBopGranted = false;
     int completedProceduralBatches = 0;
@@ -357,47 +322,28 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     boolean givenBonusFood;
 
-    // Helper-chicken onboarding arc state (U1). Storage only — logic lives in ChickenArcController (U3+).
+    // The helper chicken's state; ChickenArcController holds the logic.
     boolean chickenEverSpawned = false;
-    // The board's "auto-request" toggle (F2, default ON): when on, acquiring a root job
-    // auto-posts its initial_request(s) to the work board; the player can silence it from
-    // the board menu. Persists like the other flag tile data.
+    // The board's auto-request setting, on by default.
     boolean boardAutoRequest = true;
-    // Whether a player has opened the flag's villagers tab. Until then the tab carries a red
-    // dot once the first villager arrives. Defaults true so a town saved before this field
-    // existed shows no dot; a newly placed flag resets it to false.
+    // Whether a player has opened the villagers tab; until then it has a red dot. True for towns saved before it existed.
     boolean villagersTabSeen = true;
     final SeenQuests seenQuests = new SeenQuests();
-    // Whether a player has ever taken a BOP out of the flag. The BOP tab's red dot shows until
-    // then (playtest 2026-10-17 round 5).
+    // Whether a player has ever taken a Block of Progress out; until then that tab has a red dot.
     boolean bopWithdrawn = false;
     ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
             ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
     boolean chickenFirstGatherWorldlySeedsFired = false;
     boolean chickenArcForfeit = false;
-    /**
-     * Persisted: true once the first hunter has delivered a raw-meat that closes the
-     * raw-food LOOT (ADR-0014's hunter equivalent). Gates
-     * {@link ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee#shouldPrepend}
-     * and the LOOT-extract flip hook.
-     */
+    /** Saved: true once the first hunter's raw meat has closed the raw-food quest. */
     boolean firstHunterLootGuaranteeFired = false;
     net.minecraft.world.level.block.Rotation chickenStructureRotation =
             net.minecraft.world.level.block.Rotation.NONE;
     boolean chickenRotationDetected = false;
-    /**
-     * Persisted: has the SUNSET_AND_MAP beat already had its "chicken pecks the
-     * ground and spawns a map+axe chest" stage fire? Once true, the bubble
-     * switches from the chest icon to the sunset texture and the chicken stops
-     * being driven toward a fresh peck point.
-     */
+    /** Saved: whether the chicken has dropped its storeroom chest yet. */
     boolean chickenSunsetChestSpawned = false;
 
-    // Ephemeral observation flags consumed by ChickenArcController (U4). These are
-    // intentionally NOT persisted — they fire once during a single server session
-    // and are cleared by the controller after driving the matching transition.
-    // A save/quit mid-observation resets them, which is acceptable: the player
-    // can always reproduce the trigger (sleep again, open the UI again).
+    // One-time observations for the helper chicken's lessons. Not saved; a player can repeat them.
     private transient boolean chickenObservedSleepSinceSunset = false;
     private transient boolean chickenObservedVillagerUiOpen = false;
     private transient boolean chickenObservedFlagUiOpen = false;
@@ -448,12 +394,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return bopStacks.size();
     }
 
-    /**
-     * The root job ids that earned the deposited BOPs, in deposit (FIFO) order. A BOP no villager
-     * earned contributes "". Feeds the flag's BOP menu "Earned by: ..." line, which is
-     * the player's answer to "why does the town have BOPs?" (day-1 playtest: the deposit notice
-     * announced the amount but not the cause).
-     */
+    /** The job that earned each deposited Block of Progress, oldest first; "" for none. */
     public ImmutableList<String> depositedBopRootJobs() {
         return bopStacks.stream()
                 .map(s -> BlockOfProgress.getEarnedBy(s)
@@ -466,23 +407,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         REQUESTED, NO_BOP, NO_VILLAGER
     }
 
-    /**
-     * The root a BOP spend on this townie is promised to give, whatever the BOP: an open onboarding
-     * job-change quest's job. Empty when the spend would roll.
-     */
+    /** The job a Block of Progress spend on this villager is promised to give, if any. */
     public Optional<JobID> promisedJobChange(UUID villagerUUID) {
         return quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID));
     }
 
-    /**
-     * The spend-and-request a player makes on a BOP: schedules the townie's root change
-     * (the root is decided here - an open job-change quest's root, else a pre-roll; ADR-0016:
-     * the BOP itself never decides it) and, when a
-     * pending root was decided, completes the matching JOB_CHANGE quest at the spend moment
-     * - the reward lands on the player's act, not on the morning application. An onboarding
-     * quest's change applies at the spend (dev, r22 2026-10-26: the morning wait left the
-     * tutorial with nothing to do); every other change keeps the morning (ADR-0015).
-     */
+    /** Spends a Block of Progress on a job change: decides the job now and completes a matching job-change quest. An onboarding change applies now, others in the morning. */
     public Optional<JobID> requestJobRootChange(
             UUID villagerUUID,
             boolean instant,
@@ -499,15 +429,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return pending;
     }
 
-    /**
-     * Dev-only: the change-job-tab job change a player performs by spending a
-     * Block of Progress on the villager's change job tab (JobRootChangeMessage),
-     * driven from the console. Removes the oldest deposited BOP from the flag's
-     * store (the order the player collects them in) - the spend the player makes
-     * in the tab - and routes through {@link #requestJobRootChange(UUID, boolean, Optional)}
-     * overnight (not instant) so the spend completes any matching JOB_CHANGE quest the same
-     * way the player's in-game spend does.
-     */
+    /** Dev-only: the change-job tab's spend, with the flag's oldest Block of Progress. */
     public JobChangeResult spendBopToRequestJobChange(UUID villagerUUID) {
         boolean inTown = getVillagerHandle().entities().stream()
                 .anyMatch(e -> e.getUUID().equals(villagerUUID));
@@ -518,20 +440,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (consumed.isEmpty()) {
             return JobChangeResult.NO_BOP;
         }
-        // The quest promise (requestJobRootChange) decides, else a random root (2026-10-30 ruling).
         requestJobRootChange(villagerUUID, false, Optional.empty());
         return JobChangeResult.REQUESTED;
     }
 
-    /** The flag's oldest deposited Block of Progress (the one a spend takes), without taking it. */
+    /** The flag's oldest Block of Progress, without taking it. */
     public Optional<net.minecraft.world.item.ItemStack> peekOldestBop() {
         return bopStacks.isEmpty() ? Optional.empty() : Optional.of(bopStacks.get(0));
     }
 
-    /**
-     * Takes {@code n} of the flag's Blocks of Progress, oldest first, or none if it has fewer
-     * (a flag-crafting recipe that costs BOPs, dev playtest 2026-10-30).
-     */
+    /** Takes {@code n} of the flag's Blocks of Progress, oldest first, or none if it has fewer. */
     public boolean takeBops(int n) {
         if (bopStacks.size() < n) {
             return false;
@@ -542,7 +460,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return true;
     }
 
-    /** Removes and returns the flag's oldest deposited Block of Progress (the player collects them in this order). */
+    /** Takes the flag's oldest Block of Progress. */
     public Optional<net.minecraft.world.item.ItemStack> takeOldestBop() {
         if (bopStacks.isEmpty()) {
             return Optional.empty();
@@ -557,13 +475,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         UNLOCKED, NO_BOP, NOT_UNLOCKABLE
     }
 
-    /**
-     * Spend one of the flag's deposited Blocks of Progress on a skill, as the player does on the
-     * villager's skills tab (there the BOP comes from the player's inventory, via the confirm
-     * menu). Only a node the skills tab offers the villager may be unlocked - the level gate
-     * {@code UnlockJobMessage} applies, plus tree membership. For the growth driver and
-     * {@code _qtdev unlock_skill}.
-     */
+    /** Spends one of the flag's Blocks of Progress on a skill, as the skills tab does. The skill must be one the tab offers the villager. */
     public SkillUnlockResult spendBopToUnlockSkill(UUID villagerUUID, JobID id) {
         if (!getVillagerHandle().getUnlockableSkills(villagerUUID).contains(id)) {
             return SkillUnlockResult.NOT_UNLOCKABLE;
@@ -575,12 +487,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return SkillUnlockResult.UNLOCKED;
     }
 
-    /**
-     * Dev/test only: fill the flag's deposited BOPs directly, mirroring the tutorial
-     * {@code grantBop}. Lets a scenario pre-fill the flag (e.g. to 63, one below the 64-slot cap)
-     * without having to drive 63 level-ups through the real deposit path. Grants BOPs no
-     * villager earned.
-     */
+    /** For tests: adds Blocks of Progress to the flag directly. */
     public void grantBlockOfProgressForTest(int amount) {
         for (int i = 0; i < amount; i++) {
             bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
@@ -605,7 +512,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     final MCAsapRewards asapRewards = new MCAsapRewards();
-    /** Session-only: players already shown the camp-ready toast (see showCampReadyToastIfDue). */
+    /** Players already shown the camp-ready toast this session. */
     private final Set<UUID> campReadyToastShown = new HashSet<>();
     private UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
@@ -678,12 +585,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level instanceof ServerLevel sl) {
             ca.bradj.questown.integration.minecraft.ChestTouches.tick(sl);
         }
-        // Gate chicken-arc on isInitialized: until the load queue drains, the
-        // arc fields (chickenEverSpawned, chickenRotationDetected, ...) still
-        // hold their default values. Running detector/spawner here pre-init
-        // would re-detect rotation and writeTownData() the defaults back over
-        // the saved persistent tag — losing chickenEverSpawned=true and
-        // re-spawning a fresh helper chicken on every world load.
+        // Wait until the flag has loaded, or the chicken state is still at its defaults.
         if (level instanceof ServerLevel && e.isInitialized()) {
             ca.bradj.questown.town.HelperChickenRotationDetector.detectIfNeeded(e);
             ca.bradj.questown.town.HelperChickenSpawnController.tick(e);
@@ -692,22 +594,15 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
-    /**
-     * @param gameTime game time ({@code Util.getTick}), the clock {@code handleMorning}'s SLEEPLESS
-     *                 expiry and last-downtime stamps are read on. Every caller passes it (r16 #6:
-     *                 a daytime value stretched SLEEPLESS by the slept nights' daytime skips). The
-     *                 time-warp reference is a daytime field, so it is read from the level here.
-     */
+    /** @param gameTime game time, which the sleepless expiry and rest times are read against */
     void morningTick(long gameTime) {
-        // Playtest ruling: the second villager arrives only after the raw-food quest is
-        // complete. A queued spawn that misses the gate rolls into the next morning.
+        // The second villager arrives only once the raw-food quest is done.
         TownQuests.ArrivalRelease<MCReward> release = quests.releaseArrivals(
                 ImmutableList.copyOf(morningRewards.popChildren()),
                 r -> r instanceof SpawnVisitorReward,
                 townVillagerCount()
         );
-        // asapRewards is a LIFO stack: push arrivals last so they are claimed first and a
-        // reward that needs a villager (PostFirstWorkRequestQuestReward) sees the arrival.
+        // A stack: arrivals go last so they come out first.
         release.others().forEach(this.asapRewards::push);
         release.arrivals().forEach(this.asapRewards::push);
         release.held().forEach(this.morningRewards::add);
@@ -719,8 +614,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         this.setChanged();
         villagerHandle.handleMorning(gameTime);
-        // Re-arm "Your camp is ready" for tonight: a player who didn't sleep gets it again (the
-        // client hides it at dawn, 2026-10-22 r3 #17).
+        // Show "Your camp is ready" again tonight.
         campReadyToastShown.clear();
         roomsHandle.handleMorning();
         CompoundTag tag = Compat.getBlockStoredTagData(this);
@@ -812,12 +706,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // TODO: Serialization for ASAPs
     }
 
-    /**
-     * Only what the client reads ({@link #handleUpdateTag}: dead doors + attention). The town
-     * data used to ride along and grew with the town: at ~150 quest batches the flag's chunk
-     * packet passed the client's 2 MiB NBT limit and the world could not be joined
-     * (2026-10-22 playtest). Deed / full-BOP state are blockstates.
-     */
+    /** Only what the client reads (dead doors and the bubbles). The town data would outgrow the packet limit. */
     @Override
     public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider provider) {
         CompoundTag tag = super.getUpdateTag(provider);
@@ -836,8 +725,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void onLoad() {
         super.onLoad();
         if (!(level instanceof ServerLevel sl)) {
-            // Client side: make this flag's synced dead-door set findable by the bubble
-            // focus. Guarded so the client-only class is never touched on a server.
+            // Client side: let the bubble focus find this flag's dead doors.
             if (level != null && level.isClientSide()) {
                 DeadDoorBubbles.register(this);
                 AttentionBubbles.register(this);
@@ -850,9 +738,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
-        // Unloaded, not destroyed: stale sub-block listeners must stop counting (see
-        // TownFlagSubBlocks.retire). A destroyed flag only gets setRemoved, so orphan removal
-        // still runs for it.
+        // Unloaded, not destroyed: sub-block listeners stop.
         subBlocks.retire();
     }
 
@@ -918,7 +804,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private void updateWorkersAfterRequestChange() {
         WorksBehaviour.TownData td = getTownData();
         BoardRequests requests = workHandle.getBoardRequests();
-        // A downtime townie has no server status; null counts as not busy.
         Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(
                 e -> !IStatus.isBusy(e.getStatusForServer())
                         || ServerJobsRegistry.firstAnswerable(td, e.getJobId(), requests).isEmpty()
@@ -943,7 +828,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
-    /** Whether this session already sent the camp-ready toast to the player (village/day1 check). */
     public boolean hasShownCampReadyToast(UUID player) {
         return campReadyToastShown.contains(player);
     }
@@ -956,7 +840,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.hidesJobChangeFrom(villagerJob);
     }
 
-    /** A townie died: remove it from the saved roster so {@link #townVillagerCount} drops. */
+    /** A villager died: remove it from the saved roster. */
     public void retireVillager(UUID villager) {
         villagerHandle.retireDisplayNumber(villager);
         setChanged();
@@ -966,35 +850,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return townVillagerCount() > 0;
     }
 
-    /** Arrived villagers: the live entities or the saved roster, whichever is larger. */
+    /** Arrived villagers: the live ones or the saved roster, whichever is larger. */
     private long townVillagerCount() {
         return Math.max(villagerHandle.size(), villagerHandle.knownVillagerCount());
     }
 
     public boolean hasVillagerArrivingInMorning() {
-        // The "one more in the morning" card must not promise an arrival morningTick
-        // will hold: show it only when the spawn is queued AND the raw-food gate is met.
+        // Show "one more in the morning" only when the arrival will happen.
         return morningRewards.hasPendingSpawnVisitor() && quests.isArrivalGateOpen(townVillagerCount());
     }
 
-    /**
-     * Sends a titled tutorial toast to every online player (the chicken-arc
-     * day-one reward's "your camp is ready" announcement). Public so the
-     * rewards package can reach it without package-private access to
-     * {@code TownMessages}.
-     */
+    /** Shows a titled tutorial toast to every online player. */
     public void broadcastTutorialToast(String titleKey, String descriptionKey) {
         this.messages.broadcastTutorialToast(titleKey, descriptionKey);
     }
 
-    /**
-     * "Your camp is ready" belongs to the first night with a flag and campfire
-     * (2026-10-17 playtest: completed in the afternoon, the toast came and went
-     * unseen). Called each evening/night flag tick and from {@code CampfireReadyReward}:
-     * shows the toast once per player per session to anyone who has not yet
-     * campfire-slept (the {@code first_campfire_sleep} advancement is the persisted
-     * "slept" bit, so a restart re-shows it only to players who still need it).
-     */
+    /** Shows "Your camp is ready" once per session to each player who hasn't campfire-slept yet. */
     public void showCampReadyToastIfDue() {
         if (!(level instanceof ServerLevel sl)) {
             return;
@@ -1002,8 +873,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (!quests.isCampfireQuestComplete()) {
             return;
         }
-        // Vanilla's own sleep gate (startSleepInBed -> NOT_POSSIBLE_NOW): the EVENING signal starts
-        // ~1000 ticks before sleep is allowed, and the toast sent players to a wand use that failed.
+        // Not until vanilla allows sleeping.
         if (sl.isDay()) {
             return;
         }
@@ -1081,7 +951,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
-    /** Pauses the board requests storage already holds enough of ({@link BoardRequests}). */
+    /** Pauses the requests storage holds enough of. */
     void refreshStockedRequests(ImmutableList<MCTownItem> stacks) {
         java.util.Map<WorkRequest, Integer> stock = new java.util.LinkedHashMap<>();
         for (WorkRequest r : workHandle.getRequestedResults()) {
@@ -1106,16 +976,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.getAll();
     }
 
-    /**
-     * Onboarding gift, not a reward: a freshly-established town carries starting
-     * timber so a day-1 player (especially no-chicken) can build the onboarding
-     * pieces (door, mat, board, wall margin) without searching the biome for wood.
-     * Biome-independent by design - the tree features are ground-checked only, and
-     * the fallen-log line is guaranteed pickable wood - both placed relative to the
-     * flag (.scratch/day1-playtest-2026-10-11/onboarding-starting-trees-or-logs.md).
-     * Runs once, on the first tick of a brand-new flag (same gate as the onboarding
-     * quests); NBT-loaded flags never reseed.
-     */
+    /** A new town's starting wood: a line of fallen logs and two trees near the flag. Once, on a new flag's first tick. */
     void seedStartingTimber() {
         ServerLevel l = getServerLevel();
         if (l == null || l.isClientSide()) {
@@ -1123,9 +984,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         BlockPos flag = getBlockPos();
         int placed = 0;
-        // Fallen-log line: 8 horizontal oaks a few clear blocks off the flag (6-block
-        // radius keeps it clear of the POI join ring and the chicken's gate-room
-        // footprint). Pickable immediately - no axe, no chopping.
+        // Eight fallen logs, clear of the arrival ring and the chicken's room.
         BlockState log = Blocks.OAK_LOG.defaultBlockState()
                                        .setValue(BlockStateProperties.AXIS, Direction.Axis.X);
         for (int i = 0; i < 8; i++) {
@@ -1135,8 +994,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 placed++;
             }
         }
-        // Two trees at fixed offsets: TreeFeatureResolver seeds the grown shape by
-        // pos.asLong(), so a tree at a given position is reproducible.
+        // The same tree grows at a given position every time.
         MinecraftWorldAccess world = MinecraftWorldAccess.silent(l);
         if (world.growTreeAt(flag.offset(8, 0, 6), new ItemStack(Items.OAK_SAPLING))) {
             placed++;
@@ -1149,16 +1007,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
     }
 
-    /**
-     * F1 (2026-10-13 walkthrough, `.scratch/day1-playtest-2026-10-11/flag-map-when-lost.md`):
-     * the flag-centered filled map, in the placer's inventory from the start.
-     * Vanilla only — a map is only good if the player can tell which chunk the
-     * flag is in, and the flag-centered zoom-1 map provides that without any
-     * custom decoration/renderer work. Zoom 1 (64×64) matches the chicken
-     * path's sunset-chest map, which no longer carries a map (this grant is
-     * the single one — the chest would double-grant).
-     * Called from {@code TownFlagBlock.setPlacedBy} for player placements only.
-     */
+    /** Gives the player who placed the flag a filled map centred on it. */
     public void grantStarterMap(net.minecraft.server.level.ServerPlayer placer) {
         ServerLevel sl = getServerLevel();
         if (sl == null) {
@@ -1187,15 +1036,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         roomRecipeCreated(room, match, true);
     }
 
-    /**
-     * Block-room registration variant: the same side effects as
-     * {@link #roomRecipeCreated} (block swap, advancements, quest completion)
-     * but no broadcast - {@code registerBlockAsRoom} broadcasts separately via
-     * {@code broadcastBlockRoomCreated} (whose match carries the placed block
-     * itself, not the meta-room's surroundings), so one placement prints
-     * "Created X" exactly once. (The legacy double call double-broadcast, seen
-     * in .scratch/day1-playtest-2026-10-11/messages-print-twice.md.)
-     */
+    /** As {@link #roomRecipeCreated}, without the chat line; block rooms announce themselves once. */
     void roomRecipeCreated(
             MCRoom room,
             RoomRecipeMatch<MCRoom> match,
@@ -1219,12 +1060,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         runForTopMatch(this::recipesFromLevel, match, r -> quests.markQuestAsComplete(room, r));
     }
 
-    /**
-     * A block room (job board, welcome mat, mineshaft) registered at {@code block}: the usual room
-     * side effects, announced at the block itself. Its meta-room's door is one block east of the
-     * block ({@code Spaces.metaRoomAround}), which the chat used to print ("Job Board created at
-     * [17, -7]" for a board at x=16; 2026-10-22 playtests).
-     */
+    /** A block room (job board, welcome mat, mineshaft) at {@code block}, announced at the block. */
     void blockRoomCreated(
             MCRoom room,
             RoomRecipeMatch<MCRoom> match,
@@ -1247,10 +1083,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             RoomRecipeMatch<MCRoom> newMatch
     ) {
         ServerLevel l = getServerLevel();
-        // A sign converts to a job board only in the created/changed events, not in the
-        // quest-completion path; run the swap on changed too so a sign in a room whose
-        // top match is another recipe (e.g. a store room) still converts when it joins the
-        // match. swapBlocks is idempotent (it only swaps sign blocks, not boards).
+        // Turn signs into job boards on changes too, not only on creation.
         world.swapBlocks(l, newMatch);
         Optional<ResourceLocation> oldMatchID = getTopMatch(this::recipesFromLevel, oldMatch);
         Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
@@ -1294,9 +1127,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         long tick = Util.getTick(getServerLevel());
         VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
-        // Every exit names its branch, so "which path did the townie take" is a grep of debug.log,
-        // not an inference from the outcome (r10: a fix was marked verified while a different
-        // branch had produced the result).
+        // Every exit logs its branch.
         BiConsumer<String, JobID> changeJob = (branch, id) -> {
             getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
                     "[board] {} {} -> {} via {}", ownerVUID, currentJob, id, branch
@@ -1318,17 +1149,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
 
         boolean carrying = carriesBlockOfProgress(villager);
-        // A carried BOP is deposited even without a latch (one fetched from storage, or a second
-        // one): loot drops keep it (HeldItem.staysWithVillager), so only the flag takes it.
+        // A carried Block of Progress always goes to the flag.
         if (villagerHandle.hasBlockOfProgress(ownerVUID) || carrying) {
-            // The latch outlives the first hand-out until the deposit clears it
-            // (ClearBOPSpecialRule), so a stalled deposit loop re-enters this
-            // branch on every flag visit. One townie carries at most one BOP
-            // (town/entity/COMPLEX.md "Earn → latch → assign"): hand out only
-            // when the townie is not already carrying one.
+            // Hand one out only when the villager isn't already carrying one.
             if (!carrying) {
-                // Note the job that earned it (the BOP tab's "Earned by"); it guarantees nothing
-                // (dev ruling 2026-10-30, retiring ADR-0015's gold BOPs).
+                // Record the job that earned it.
                 ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
                 BlockOfProgress.markEarnedBy(bopStack, currentJob);
                 MCHeldItem bop = MCHeldItem.fromTown(bopStack);
@@ -1344,21 +1169,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        // Deposit carried work output before the townie dines: depositing is what counts the
-        // output as produced (and completes the onboarding mutton quest). If the town has no
-        // storage, this is a deliberate blocker state.
+        // Store carried work output before eating; storing it is what counts it as made.
         if (depositCarriedWorkOutput(villager)) {
             return true;
         }
 
-        // A starving townie that has not just given up on dining enters the diner chain here,
-        // after its work output has been deposited. (Only reached for jobs that cannot
-        // instantly switch to eating; see addHungryListener.)
+        // A starving villager that hasn't just given up on dining starts the diner chain.
         if (villagerHandle.isStarving(ownerVUID) && !villagerHandle.gaveUpDiningRecently(ownerVUID)) {
             String rid = currentJob.rootId();
             ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
             boolean hasDiningRoom = !roomsHandle.getRoomsMatching(diningRoom).isEmpty();
-            // Still starving on the way out of a diner = gave up there without eating: next stage.
+            // Still starving on the way out of a diner: try the next one.
             JobID diner = DiningStages.next(currentJob, hasDiningRoom);
             if (diner != null) {
                 changeJob.accept("starving-diner-stage", diner);
@@ -1366,8 +1187,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        // The player chose "after this trip" in the skill tree: applied at the next job pick, once
-        // the trip's loot is deposited (dev playtest 2026-10-29).
+        // The player's "after this trip" switch, applied at the next job pick.
         JobID chosen = villagerHandle.takeSwitchAfterTrip(ownerVUID);
         if (chosen != null) {
             changeJob.accept("player-after-trip", chosen);
@@ -1395,35 +1215,22 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 td
         );
         if (work != null) {
-            // The townie is being adopted into a **real work job** (not a meta-job like
-            // DowntimeWork — those were handled by the earlier cascade gates). This is
-            // their "I've earned a rest by working" signal — see DowntimeState (ca.bradj.questown.town.entity)
-            // and STATE.md § Mission. markWorked records the last-work tick, so a rest becomes
-            // available next once another NOON/downtime/sleep event anchors a "last rest"
-            // tick and it is `maxTicksBeforeDowntime` ticks old.
+            // Taking real work earns a later rest.
             villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
             changeJob.accept("work-roll", work);
             return true;
         }
 
-        // Escape hook: the board has no work for this townie (the cycler found nothing), so they
-        // would otherwise idle without a job. If they
-        // have rested long enough, rest instead of waiting forever — rule (b)'s "worked since the
-        // last rest" gate does not apply when there is truly nothing to do. Guarded on
-        // !DowntimeWork so a townie already resting on DowntimeWork is not re-adopted onto it.
+        // Nothing to do: rest, if the last rest is old enough.
         if (villagerHandle.isReadyForDowntimeIfIdle(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
             changeJob.accept("idle-escape", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
-        // A diner that has eaten (no longer starving) and has no work to go back to relaxes. Left
-        // a diner, its give-up fallback sent it to raw food for a second meal ~880 ticks later
-        // (10-21 #17; dev 2026-10-22: hunger acceptable -> back to work, or relax at night).
+        // A diner that has eaten and has no work relaxes.
         if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
             changeJob.accept("diner-ate", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
-        // A finished BOP deposit with nothing else to do relaxes too (r17 #17: a gatherer sat in
-        // bop_depositing for minutes, "needing" a Block of Progress it had already deposited).
         if (BoardIdleExits.depositFinished(currentJob)) {
             changeJob.accept("bop-deposited", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
@@ -1444,15 +1251,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return false;
     }
 
-    /**
-     * Deposit the townie's carried work output into the nearest chest so it counts as produced
-     * (and completes the onboarding mutton quest) before the townie dines. BOPs are tracked
-     * separately (the {@code hasBlockOfProgress} flag) and are not deposited here.
-     *
-     * @return true if the board should hold the townie here — there is no chest in the town to
-     * store the work output, a deliberate blocker state. Returns false when there was nothing
-     * to carry or the output was deposited, so the board continues.
-     */
+    /** Stores the villager's carried work output before it eats. @return true when the town has no chest, so the villager waits here */
     private boolean depositCarriedWorkOutput(VisitorMobEntity villager) {
         Container inventory = villager.getInventory();
         List<MCTownItem> carried = new ArrayList<>();
@@ -1471,7 +1270,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.findClosestMatching(
                 this, MCTownItem::isEmpty, villager.blockPosition(), carried);
         if (chest == null) {
-            // No chest in the town to store work output: a deliberate blocker state.
             return true;
         }
         int deposited = 0;
@@ -1502,12 +1300,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
     }
 
-    /**
-     * {@link #getTownData} for player-facing producer lists: a loot job's results are the known
-     * gather results its own loot tables can drop. The engine's lookup is not scoped per table
-     * (every biome-loot job claims every job's finds), and it also gates a leaver's extraction,
-     * so only the display narrows (dev, 2026-10-22).
-     */
+    /** {@link #getTownData} for what players see: a trip job only claims what its own loot tables can drop. */
     public WorksBehaviour.TownData getTownDataForDisplay() {
         ServerLevel level = getServerLevel();
         return new WorksBehaviour.TownData(
@@ -1546,14 +1339,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         List<BlockPos> anchors = new ArrayList<>();
         anchors.add(flagPos);
         anchors.addAll(pois.getWelcomeMats());
-        // A door's scanLevel is its Y offset from the flag, not a world Y.
         roomsHandle.getAllRegisteredDoors().forEach(d -> anchors.add(new BlockPos(d.x, flagPos.getY() + d.scanLevel, d.z)));
         return anchors;
     }
 
-    // Rate-limits the wander-failure warning so a stuck villager logs once per
-    // window instead of every tick. Keyed by the avoiding position (a proxy for
-    // the stuck villager), value is the game tick when the window opened.
+    // Rate-limits the wander-failure warning per stuck villager.
     private final Map<BlockPos, Long> wanderFailLogWindows = new HashMap<>();
     private static final long WANDER_FAIL_LOG_INTERVAL_TICKS = 200;
 
@@ -1713,12 +1503,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return uuid;
     }
 
-    /**
-     * Adopt a relocated town's identity (ADR-0009, #199). A freshly placed flag gets a random UUID,
-     * but relocation copies a dormant town's data onto a new flag, so it must also carry the original
-     * UUID — {@link TownFlags} is keyed by it, and per-villager/knowledge data is keyed against it.
-     * Must be called before the init queue drains so registration uses the carried identity.
-     */
+    /** Takes on a moved town's UUID. Call before the flag finishes loading. */
     void adoptRelocatedIdentity(UUID carried) {
         this.uuid = carried;
     }
@@ -1726,12 +1511,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
         roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
-        // Fixture completion path for the day-one gate quest (.scratch/mat-gated-arrival,
-        // decision 1): a welcome mat registered with the flag completes TOWN_GATE. The
-        // structure path (townGateFound) and room-recipe path still complete it too; this
-        // one is the canonical one and fires the moment the mat registers, so the
-        // gate batch's reward (first villager in the morning + the basics batch) hands
-        // over without needing a flanked-gate structure or a recipe-matched room.
+        // A registered welcome mat completes the town gate quest.
         Position gatePos = Positions.FromBlockPos(welcomeMatBlock);
         MCRoom gateRoom = new MCRoom(gatePos, ImmutableList.of(InclusiveSpace.from(gatePos).to(gatePos)), welcomeMatBlock.getY());
         quests.markQuestAsComplete(gateRoom, SpecialQuests.TOWN_GATE);
@@ -1744,13 +1524,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
-    /**
-     * Place a welcome mat block at {@code pos} and register it with this flag, the
-     * way a player placing the item does (the block's {@code onUse} registers it).
-     * Used where the placement cannot go through the item-use path (e.g. a console
-     * command that has no player hand to place it with). The placed block carries
-     * the flag-linking NBT so it is associated with this flag.
-     */
+    /** Places a welcome mat at {@code pos} and registers it with this flag, as a player placing one does. */
     public void placeWelcomeMat(BlockPos pos) {
         ServerLevel level = getServerLevel();
         if (level == null) {
@@ -1777,14 +1551,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.setChanged();
     }
 
-    /**
-     * Place a job-board block at {@code pos} and register it with this flag, the way
-     * a player placing the item does, but driven from the console (no player hand to
-     * place it with). Mirrors {@link #placeWelcomeMat}. Placing the JOB_BOARD_BLOCK
-     * directly is equivalent to the sign to job-board conversion
-     * (isSignConvertedToJobBoard checks for the job-board block itself), and the
-     * explicit register re-runs the placement side effect setBlockAndUpdate bypasses.
-     */
+    /** Places a job board at {@code pos} and registers it with this flag, as a player placing one does. */
     public void placeJobBoard(BlockPos pos) {
         ServerLevel level = getServerLevel();
         if (level == null) {
@@ -1796,23 +1563,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         registerJobsBoard(pos);
     }
 
-    /**
-     * Lay a room shell around a door at {@code pos}, the way the helper chicken does in its
-     * room-build beat, but driven from the console (no chicken to lay it). A room quest needs
-     * its own room, and the only hand that builds a room is the chicken's beat, which a held run
-     * with no live player cannot trigger; this is the agent's standing-in for that beat. The
-     * layout is the same pure plan the chicken uses ({@link ca.bradj.questown.mobs.helperchicken
-     * .ChickenRoomShellPlan}), so the perimeter it lays is the one RoomRecipes' wall walk accepts
-     * (a closed box, not a plus). The door is registered first so the room scan attaches the shell
-     * to it, then the perimeter is laid at feet and head ({@code WallDetection.IsWall} reads a
-     * wall when solid at both levels), leaving the interior open so a villager can stand in it.
-     */
-    // Dev-only: the empty interior cells of this flag's registered rooms, the way a player
-    // would see a room's open floor. A block placed at one of these cells is inside a room,
-    // so the room re-detection picks it up as a contained block (a chest here becomes a
-    // registered container). Returns air cells only, in a stable order, so an agent can index
-    // one without guessing a coordinate. No permission gate; a held run has no player to look
-    // into a room, so this is the agent's eyes for "where is the floor".
+    // Dev-only: the empty cells inside this flag's registered rooms. A block placed in one is inside the room.
     public java.util.List<BlockPos> interiorCells() {
         ServerLevel level = getServerLevel();
         java.util.List<BlockPos> cells = new java.util.ArrayList<>();
@@ -1835,12 +1586,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return cells;
     }
 
-    // Dev-only: place a block at the indexed interior cell, the way a player placing a block
-    // on the floor would. Thin wrapper over {@link #interiorCells()} + a vanilla setBlock;
-    // the agent picks the spot by index (a position it could not see) and the block id.
-    // Returns the real cell the block landed on, so a caller that places a chest or board
-    // can record the exact position without re-deriving it (interiorCells() is recomputed
-    // per call and its indices can shift between the two). Null if nothing was placed.
+    // Dev-only: place a block in the indexed interior cell. Returns where it landed, or null.
     public @Nullable BlockPos placeBlockInInterior(int index, Block block) {
         ServerLevel level = getServerLevel();
         if (level == null) {
@@ -1860,9 +1606,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level == null) {
             return;
         }
-        // A door that is already registered already has a room built around it, so building
-        // around it again would lay a second shell over the first - two rooms sharing a wall
-        // with no way out. A quest that needs its own room needs a new door, not this one.
+        // A registered door already has a room; another room needs another door.
         int scanLevel = doorPos.getY() - getBlockPos().getY();
         if (getRoomHandle().getAllRegisteredDoors().contains(
                 new ca.bradj.questown.town.rooms.TownPosition(doorPos.getX(), doorPos.getZ(), scanLevel)
@@ -1875,9 +1619,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
 
-        // Place a door if none exists. Without a door block the shell plan treats the door
-        // cell as an open perimeter position and fills it with cobblestone, leaving solid walls
-        // with no way in.
+        // Place a door if there isn't one, or the plan walls the doorway up.
         if (!(level.getBlockState(doorPos).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
             if (!level.getBlockState(doorPos).isAir() || !level.getBlockState(doorPos.above()).isAir()) {
                 QT.FLAG_LOGGER.warn(
@@ -1891,9 +1633,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
         int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
 
-        // Pre-flight: do not lay a shell that can not close. The feasibility check treats the
-        // door cell as open so it does not reject an already-placed door; every other cell is
-        // checked the normal way.
+        // Check first, so a room that can't close is never started.
         java.util.function.Predicate<BlockPos> isOccupied = p -> !level.getBlockState(p).isAir();
         java.util.function.Predicate<BlockPos> isOccupiedIgnoringDoorCell = p -> {
             if (p.equals(doorPos) || p.equals(doorPos.above())) {
@@ -1920,11 +1660,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 laid++;
             }
         }
-        // The shell is in place; now register the door so the scan detects the room. Registering
-        // after the shell (not before) is what the chicken's goal effectively does - it builds the
-        // shell around an already-registered door and re-reads it each tick - and it avoids
-        // registering a door a scan has already finished over (which would leave it undetected
-        // until the next scan cycle). The scan is resumable, so the room appears on a later tick.
+        // Register the door after the walls, so the scan sees the finished room.
         getRoomHandle().registerDoor(doorPos);
         QT.FLAG_LOGGER.info(
                 "[build_room] laid {} shell blocks around door {} for flag {} (door registered; the room "
@@ -1934,24 +1670,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     /**
-     * Build a complete 5x5 rectangular room (3x3 interior, single south door,
-     * plank walls, dirt floor, flat roof) around a clear door spot, register the
-     * door so the room scan detects it, and place the recipe block inside.
-     * <p>
-     * This is the reliable room-build for the self-sufficiency watchtower:
-     * the seed's {@code buildOneBuilding} shape (which the wall walk closes
-     * cleanly, unlike {@link #buildRoom}'s chicken shell at some footprints).
-     * The door spot must be on flat ground with air above and below; the method
-     * computes the building's southwest corner from the door position (the door
-     * sits at the south wall, two cells in from the west corner).
+     * Builds a 5x5 room with a south door, plank walls, a dirt floor and a roof around {@code doorPos},
+     * registers the door, and places the recipe's blocks inside.
      *
-     * @param doorPos      the clear ground-level cell for the door
-     * @param recipeBlocks the recipe's blocks, one per ingredient slot (bedroom =
-     *                     light + 2 bed blocks). A bed is two of those slots, so the
-     *                     room gets one whole bed per two bed entries
-     *                     ({@link ca.bradj.questown.logic.BedHalves})
-     * @return the door position if the room was built, or null if the spot was
-     *         not clear
+     * @param recipeBlocks the recipe's blocks, one per ingredient; a bed takes two
+     * @return the door position, or null when the spot is not clear
      */
     public @Nullable BlockPos buildRoomForRecipe(BlockPos doorPos, List<net.minecraft.world.level.block.Block> recipeBlocks) {
         ServerLevel level = getServerLevel();
@@ -2000,14 +1723,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)
         );
 
-        // Place the recipe blocks inside the 3x3 interior footprint (dx/dz 1..3 from the
-        // corner), on up to two stacked levels (floor and floor+1) — the room matcher
-        // (RecipeDetection) reads both y and y+1 of every room cell. The room matcher
-        // counts each cell, so each placed block contributes one entry to the room's
-        // block multiset. Beds reserve two adjacent cells each (foot + head half), which
-        // is the two bed entries the recipe lists per bed (inn = light + 6 beds + sign
-        // fills 14 of the 18 cells). A bed with no free adjacent pair is skipped with a
-        // warning rather than placed as a lone foot.
+        // The recipe blocks go in the 3x3 inside, on two levels. A bed takes two cells.
         int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
         int levels = 2;
         java.util.List<BlockPos> cells = new java.util.ArrayList<>();
@@ -2041,12 +1757,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 }
                 continue;
             }
-            // A bed is a two-block item: the default state is the FOOT half only, and vanilla
-            // places the HEAD at foot.relative(FACING) (BedBlock.setPlacedBy) — the same
-            // lone-half bug placeDoor's javadoc documents for doors. Find a free cell whose
-            // forward neighbour is free too and reserve both; a lone foot never passes the
-            // bed lookup (the isHead filter), so when no pair fits (e.g. an inn's 12 beds
-            // vs 18 cells) the bed is left unplaced rather than placed as a useless half.
+            // A bed needs a free cell and a free cell in front of it; without both, it is skipped.
             int placedBefore = placed;
             placedBed:
             for (BlockPos at : cells) {
@@ -2088,15 +1799,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return doorPos;
     }
 
-    /**
-     * Place a full (both-halves) oak door at {@code pos}, the way a player's door item
-     * does, but driven from the console (no player hand to place it with). A dev/agent
-     * placing a door with vanilla {@code setblock} easily places only the LOWER half
-     * (leaving a one-block gap where the UPPER half belongs, which then gets roofed over
-     * and breaks the door); this places both halves so the door is whole. Registration
-     * for room detection is a separate step ({@code _qtdev registerroom}), mirroring the
-     * player flow of placing a door then right-clicking it with the town wand.
-     */
+    /** Places a whole oak door at {@code pos}. Register it with {@code _qtdev registerroom}. */
     public void placeDoor(BlockPos pos) {
         ServerLevel level = getServerLevel();
         if (level == null) {
@@ -2121,12 +1824,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
-    /**
-     * Test seam: publish the live town state to the tile now, the way the ticker does when the town
-     * changes. {@link #warpTime} advances the state stored on the tile, <em>not</em> the live
-     * handles, so a test that mutates a villager and then warps must publish first or the warp runs
-     * against stale data and silently measures the wrong thing.
-     */
+    /** For tests: saves the live town state now, so a warp runs on current data. */
     public void publishStateToTileForTest() {
         CompoundTag tag = Compat.getBlockStoredTagData(this);
         writeTownData(tag);
@@ -2150,21 +1848,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return TownVillagerHandles.asVillagerHolder(villagerHandle);
     }
 
-    /**
-     * The raw town-villager handle (job learning, BOP spends, ...). Public for
-     * the work-request confirm hint (core.network), which filters producer
-     * jobs to the town-known subset via {@link TownVillagerHandle#getTownKnownJobs()}.
-     */
     public TownVillagerHandle getTownVillagerHandle() {
         return villagerHandle;
     }
 
-    /**
-     * Begin the town-shutdown ritual (ADR-0009): recall every townie to the flag, absorb them, and
-     * flip the flag dormant once the roster is in and the minimum-duration floor has elapsed. Only
-     * an {@link FlagPhase#ACTIVE} flag (realtime, player-present, not already shutting down) is
-     * eligible. Returns false if the flag is not currently eligible.
-     */
+    /** Starts the town shutdown: villagers come back and are taken into the flag, which goes dormant. Only for an active flag; false otherwise. */
     public boolean beginTownShutdown() {
         ServerLevel level = getServerLevel();
         if (level == null) {
@@ -2178,10 +1866,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return true;
     }
 
-    /**
-     * Abort an in-progress (not yet completed) shutdown: re-spawn the townies absorbed so far and
-     * return the flag to {@link FlagPhase#ACTIVE}. Loss-proof — the town's data never left the flag.
-     */
+    /** Stops a shutdown in progress: the villagers come back and the flag is active again. */
     public boolean cancelTownShutdown() {
         ServerLevel level = getServerLevel();
         if (level == null || !shutdownController.isRunning()) {
@@ -2202,12 +1887,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return state.hasProperty(TownFlagBlock.DEED_AVAILABLE) && state.getValue(TownFlagBlock.DEED_AVAILABLE);
     }
 
-    /**
-     * Mark that a relocation deed is ready above this (dormant) flag. The flag renders it spinning and
-     * hands it over on interaction ({@link #collectDeed}) — chosen over dropping a {@link ItemEntity}
-     * so it can't be culled or picked up by the wrong entity before the player sees it. Stored as a
-     * blockstate property so it auto-syncs to the client (the flag has no client-side BE ticker).
-     */
+    /** A relocation deed is waiting above this dormant flag; the player collects it by using the flag. */
     void makeDeedAvailable() {
         setDeedAvailable(true);
     }
@@ -2220,10 +1900,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         level.setBlock(getBlockPos(), getBlockState().setValue(TownFlagBlock.DEED_AVAILABLE, value), Block.UPDATE_ALL);
     }
 
-    /**
-     * Hand the waiting relocation deed to the player (mirrors {@code TownFlagBOPItemHandler.eject}):
-     * straight into the inventory, or dropped at the flag as a fallback if the inventory is full.
-     */
+    /** Gives the waiting deed to the player, or drops it at the flag if their inventory is full. */
     public void collectDeed(ServerPlayer recipient) {
         ServerLevel level = getServerLevel();
         if (!isDeedAvailable() || level == null) {
@@ -2243,9 +1920,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         recipient.sendSystemMessage(Compat.translatable("message.questown.relocation.deed_collected"));
     }
 
-    /**
-     * Re-issue a relocation deed for this dormant flag (loss-protection). Only valid while DORMANT.
-     */
+    /** Issues a new deed for this dormant flag. */
     public boolean reissueDeed() {
         if (!isDormant() || getServerLevel() == null) {
             return false;
@@ -2254,33 +1929,26 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return true;
     }
 
-    /**
-     * Wake this dormant town in place — re-spawn its roster and return to ACTIVE. Only valid while
-     * DORMANT; the other loss-protection path beside re-issuing the deed (ADR-0009).
-     */
+    /** Wakes this dormant town where it is. */
     public boolean wakeInPlace() {
         ServerLevel level = getServerLevel();
         if (level == null || !isDormant()) {
             return false;
         }
-        // A woken town is live again, so any deed still waiting on the flag would hand out a reference
-        // to a town that is no longer dormant (and would shadow the flag menu on every interaction).
+        // A woken town has no deed waiting.
         setDeedAvailable(false);
         shutdownController.wake(level, getBlockPos(), this);
         return true;
     }
 
-    /**
-     * Snapshot a townie's journal as the shutdown ritual absorbs it, so the respawn after wake,
-     * cancel or relocation restores its job and carried items (#26; ADR-0009 "jobs travel").
-     */
+    /** Saves a villager as it is taken in, so it comes back with its job and items. */
     void rememberAbsorbedJournal(VisitorMobEntity absorbed) {
         CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureVillager(this, absorbed));
         AbsorbedJournals.remember(Compat.getBlockStoredTagData(this), absorbed.getUUID(), villagerTag);
         setChanged();
     }
 
-    /** Townies absorbed by a shutdown and not yet respawned (persistent; survives a restart). */
+    /** Villagers taken in by a shutdown and not back yet. */
     List<UUID> absorbedVillagers() {
         return AbsorbedJournals.absorbed(Compat.getBlockStoredTagData(this));
     }
@@ -2293,13 +1961,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return tag.map(t -> TownStateSerializer.loadVillager(t).journal);
     }
 
-    /**
-     * Test seam: claim every queued immediate reward now (e.g. the roster respawn a wake queues),
-     * instead of one per tick, so an end-of-run assertion can observe its outcome.
-     */
+    /** For tests: claims every queued immediate reward now. */
     public void claimImmediateRewardsForTest() {
         while (asapRewards.tick()) {
-            // claim until empty
         }
     }
 
@@ -2326,12 +1990,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
         boolean questsTabAttention = hasIncomplete && seenQuests.hasUnseen(quests.incompleteQuestKeys());
-        // Day-1 playtest: the villagers tab is a dead-end with zero townies (its copy
-        // even reads "one more in the morning" for the first arrival). Gate it on first
-        // arrival. Economics is gated on the SAME condition: the evening playtest (day 2,
-        // pre-arrival) showed the procedural-batch gate reveals it too early - the player's
-        // bar is "not until we've met a villager", so economics and the villagers tab reveal
-        // together.
+        // The villagers and economics tabs appear with the first villager.
         boolean showVillagers = !getVillagers().isEmpty();
         boolean showEcon = showVillagers;
         return new FlagTabsEmbedding.FlagInfo(
@@ -2348,22 +2007,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
     }
 
-    /**
-     * Whether the flag's deposited BOPs have reached the cap. Read from the client-synced
-     * {@link TownFlagBlock#BOP_FULL} blockstate (mirrors {@link #isDeedAvailable()}) so the client
-     * render and the server interaction see the same value.
-     */
+    /** Whether the flag holds as many Blocks of Progress as it can. */
     public boolean isBopFull() {
         BlockState state = getBlockState();
         return state.hasProperty(TownFlagBlock.BOP_FULL) && state.getValue(TownFlagBlock.BOP_FULL);
     }
 
-    /**
-     * Reconcile the {@link TownFlagBlock#BOP_FULL} blockstate with the deposited stacks. Called at
-     * every bop-stacks-change site (deposit/collect, tutorial grant, test pre-fill) and after
-     * load, so the red-BOP render and the menu warning track the count. The blockstate persists in
-     * the block state, so it can be stale against the freshly-loaded stacks; this reconciles it.
-     */
+    /** Brings the full-flag block state in line with the deposited Blocks of Progress. */
     public void syncBopFull() {
         setBopFull(getBopCount() >= TownFlagBOPItemHandler.CAP);
     }
@@ -2396,11 +2046,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.chickenEverSpawned = v;
     }
 
-    /**
-     * A command-placed flag skips the helper-chicken arc: only worldgen-placed flags satisfy its
-     * scaffolding. Applied now and again from the init queue, because a freshly placed flag can
-     * run onLoad (whose defaults clear these bits) after the command that placed it.
-     */
+    /** A command-placed flag gets no helper chicken. */
     public void markChickenArcIneligible() {
         applyChickenArcIneligible();
         initializers.add(t -> {
@@ -2416,11 +2062,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
-    /**
-     * The player puts a Block of Progress (earned-by job and all) back on the flag (dev playtest
-     * 2026-10-30: a sneak-right-click to put one back placed it on the ground instead). False
-     * when the item isn't a BOP or the flag is full.
-     */
+    /** Puts a player's Block of Progress back on the flag. False when it isn't one or the flag is full. */
     public boolean returnBopFromPlayer(ServerPlayer player, ItemStack held) {
         if (!held.is(ItemsInit.BLOCK_OF_PROGRESS.get()) || getBopCount() >= TownFlagBOPItemHandler.CAP) {
             return false;
@@ -2432,7 +2074,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return true;
     }
 
-    /** Grants N Blocks of Progress to the flag's BOP store (onboarding rewards). */
     public void grantBlockOfProgress(int amount) {
         for (int i = 0; i < amount; i++) {
             bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
@@ -2445,35 +2086,14 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return boardAutoRequest;
     }
 
-    /**
-     * A villager took up {@code root}: post its starter requests on the job board (each default
-     * work's initial request, e.g. a cook's #questown:villager_food). A root's works produce only
-     * what the board requests, so without these a new cook reads "Product not requested" on every
-     * job and idles. Both job-change paths (the quest reward and the BOP spend) come through here.
-     * The board's auto-request toggle (F2, default ON) turns it off; manual requests are never gated.
-     */
-    /**
-     * A request the player posts (the board's + confirm, or a dev/agent stand-in for it). Unlike an
-     * auto-posted starter request ({@link #postStarterRequests}), it completes the F2 "post your
-     * first work request" quest (dev, 2026-10-22: only the player's own request counts).
-     */
-    /**
-     * A skill the player unlocks with a Block of Progress on a villager's skills tab. Unlike a
-     * setup unlock (job change defaults, test fixtures), it completes the miner batch's
-     * SKILL_UNLOCK quest.
-     */
+    /** Unlocks a skill for the villager and posts its first board request. */
     public void unlockSkillFromPlayer(UUID villagerUUID, JobID id) {
         getVillagerHandle().unlockJob(villagerUUID, id);
         quests.markSkillUnlocked(id);
-        // Outfitter #10 (dev 2026-10-26): a work runs only while the board requests its product,
-        // so a new skill posts its first request like a job change does (same toggle).
         postStarterRequests(List.of(id));
     }
 
-    /**
-     * Open named-skill quests no villager in the skill's job is levelled for yet, with the level
-     * each needs: their cards show blank ({@link ca.bradj.questown.town.quests.SkillQuestLocks}).
-     */
+    /** Open skill quests no villager is levelled for yet, with the level each needs. */
     public Map<ResourceLocation, Integer> lockedSkillQuestLevels() {
         Map<ResourceLocation, JobID> named = new HashMap<>();
         for (MCQuest q : quests.questBatches.getAll()) {
@@ -2488,7 +2108,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return SkillQuestLocks.lockedLevels(named, this::skillLevelGate, highestLevelByRoot());
     }
 
-    /** Job root -> the highest level among the town's villagers working it. */
+    /** Job root to the highest villager level in it. */
     public Map<String, Integer> highestLevelByRoot() {
         Map<String, Integer> highest = new HashMap<>();
         for (LivingEntity e : getVillagerHandle().entities()) {
@@ -2536,13 +2156,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
     }
 
-    /**
-     * The flag's top unmet item need, as a player-readable display name, or null when the
-     * unmet-need record is empty (job-board-empty-state.md: the board's empty state should
-     * point at posting the top requestable need instead of a vague teaser). Ties on
-     * timesNeeded resolve to the first entry; the economics aggregate is refreshed first so
-     * it reflects needs registered up to this tick.
-     */
+    /** The town's top missing item as a readable name, or null. */
     public @Nullable String topUnmetNeedName() {
         economics.update();
         var items = economics.getAggregatedItems(null);
@@ -2590,7 +2204,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
-    /** The player opened the quests tab: its open quests are seen (no red dot until a new one). */
+    /** The quests tab was opened: its open quests count as seen. */
     public void markQuestsSeen() {
         seenQuests.markSeen(quests.incompleteQuestKeys());
         setChanged();
@@ -2694,13 +2308,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public static final int BONUS_FOOD_COUNT = 20;
 
-    /**
-     * Deposit the one-time bonus food into the first registered container with a
-     * free slot - the same path the player takes when they leave food in the
-     * storeroom, and the path the dev-only {@code _qtdev free_food} command uses.
-     * Returns the number of carrots deposited (0 when no registered container
-     * exists yet).
-     */
+    /** Puts the free food in the first container with room. Returns the carrots placed; 0 with no container. */
     public int depositBonusCarrots() {
         ServerLevel sl = getServerLevel();
         for (ContainerTarget<MCContainer, MCTownItem> target : TownContainers.getAllContainers(this, sl)) {
@@ -2719,14 +2327,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return 0;
     }
 
-    /**
-     * The one-time free-food claim the economics tab offers (replaces the old
-     * "right-click the flag with dirt" trick, .scratch/day1-playtest-2026-10-11/
-     * free-food-economics-card.md). Prefers a registered container - the only
-     * place a villager can actually eat from - and falls back to handing the
-     * carrots to the player when the town has no container yet. The once-only
-     * bit flips only after the food actually lands.
-     */
+    /** The economics tab's free food: into a container if there is one, else to the player. Counted as given only once placed. */
     public boolean claimBonusFood(@Nullable ServerPlayer sp) {
         if (givenBonusFood) {
             if (sp != null) {
@@ -2760,13 +2361,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return givenBonusFood;
     }
 
-    /**
-     * Set the once-only bonus-food bit without dropping anything at the flag, so
-     * the {@code free_food} command can put the food in a registered container
-     * (where a villager can actually eat it) instead of a carrot ItemEntity at the
-     * flag that feeds no one. Returns false if already given, mirroring
-     * {@link #giveBonusFood(ServerPlayer)}'s once-only rule.
-     */
+    /** Marks the free food as given. False if it already was. */
     public boolean markBonusFoodGiven() {
         if (givenBonusFood) {
             return false;
@@ -2803,7 +2398,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return logToggles.getOrDefault(logId, false);
     }
 
-    /** True if a log for logId would actually be written anywhere (not silently discarded). */
     public boolean isDebugLogConsuming(String logId) {
         if (isDebugLogEnabled(logId)) {
             return true;
@@ -2811,10 +2405,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return "trace".equalsIgnoreCase(System.getenv("INVISIBLE_LOG_LEVEL"));
     }
 
-    /**
-     * Forget a villager's per-owner job-block states (see {@link Delegator#resetWorkStatus}).
-     * A fresh store is created on the next {@link #getRealWorkStatusHandle} call.
-     */
+    /** Forgets a villager's job-block states. */
     void resetWorkStatusFor(UUID villagerUUID) {
         if (jobHandles.remove(villagerUUID) != null) {
             QT.FLAG_LOGGER.info("Cleared work spot states for {} after a job root change", villagerUUID);

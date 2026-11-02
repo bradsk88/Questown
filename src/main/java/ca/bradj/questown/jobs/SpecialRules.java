@@ -30,10 +30,7 @@ public class SpecialRules {
     // "work" on that spot until they have finished their work, and then they will
     // "release" to plate for others to use. Other villagers will try to claim other
     // plates - ignoring claimed ones.
-    // The job data spells this rule "claim_workspot" (all 12 job JSONs; the constant's
-    // old value "claim_spot" matched no data, so the claim suppliers gated on it never
-    // fired - offline warp sims got no work claims and claim-gated jobs like
-    // farmer/harvest_wheat never worked there).
+    // The job data spells this rule "claim_workspot".
     public static final String CLAIM_SPOT = "claim_workspot";
 
     // If this rule is enabled, the villager will scan the blocks BELOW the job block
@@ -51,10 +48,7 @@ public class SpecialRules {
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
-    // Global rule. When a townie holding a job with this rule becomes hungry, the
-    // hungry->dining short-circuit may snap it straight to a dining work. Jobs without
-    // this rule end their current work and re-enter the work board instead, where their
-    // carried work output is deposited before they eat.
+    // A hungry villager with this job may switch straight to eating; other jobs finish first.
     public static final String CAN_INSTANTLY_SWITCH_TO_EATING = "can_instantly_switch_to_eating";
 
     // If this rule is active (globally) then blocks will only be considered
@@ -75,29 +69,24 @@ public class SpecialRules {
     // pose on top of their workspot.
     public static final String CLEAR_POSE = "clear_pose";
     // If this rule is active during the extraction stage of a job, the
-    // villager's fullness rises by 50% of max, capped at max (never lowered).
+    // Fills half of a villager's fullness, up to the maximum.
     public static final String HUNGER_FILL_HALF = "hunger_fill_half";
     // If this rule is active during the extraction stage of a job, the
     // villager's hunger will be filled up to 100%.
     public static final String HUNGER_FILL = "hunger_fill";
 
-    // If these rules are active during the extraction stage of a job, the
-    // corresponding eating mood effect is applied to the villager. They replace
-    // the EffectMetaItem results the eating jobs used to emit (see ADR-0003).
+    // Applied at extraction: gives the villager the matching eating mood.
     public static final String APPLY_COMFORTABLE_EATING = "apply_comfortable_eating";
     public static final String APPLY_UNCOMFORTABLE_EATING = "apply_uncomfortable_eating";
     public static final String APPLY_ATE_RAW_FOOD = "apply_ate_raw_food";
 
-    // If this rule is active during the extraction stage of a job and a gatherer map
-    // is extracted, the town learns one loot drop available in that map's biome
-    // (recorded as known loot). Replaces the explorer's KnowledgeMetaItem (ADR-0004).
+    // Applied at extraction of a gatherer map: the town learns one item from that map's biome.
     public static final String SCOUT_LOOT = "scout_loot";
 
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.
     public static final String ADD_ITEM_TO_CONTAINER = "add_item_to_container";
-    // The inserted item goes on the display (armor stand, item frame) at the work spot.
     public static final String DRESS_DISPLAY = "dress_display";
 
     // Global rule. By default, Questown will only allow villagers to start
@@ -150,10 +139,7 @@ public class SpecialRules {
 
     public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
 
-    // Global rule (warp-interleaved). When declared by a job (organizer/fetch),
-    // a requested ingredient is relocated from another chest into the chest
-    // holding its stock request during time warp — the warp equivalent of the
-    // realtime fetcher walking the item between chests.
+    // During a warp, moves a requested item from another chest into the chest that holds its stock request.
     public static final String RELOCATE_REQUESTED_ITEM_WARP =
             "relocate_requested_item_warp";
 }

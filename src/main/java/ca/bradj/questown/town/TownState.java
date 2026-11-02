@@ -194,17 +194,7 @@ public abstract class TownState<
         );
     }
 
-    /**
-     * Moves a single matching item from a source container into the container located at
-     * {@code targetPos}, immutably (a new town state with the two replaced containers). The source
-     * is the first container OTHER than the target that holds a matching item, so the move is
-     * directed source&rarr;target rather than first-available. Returns {@code null} when there is no
-     * container at {@code targetPos}, that container is full, or no other container holds a match.
-     * <p>
-     * This is the warp-state equivalent of the realtime fetcher relocating a requested ingredient
-     * into the request's chest. The remove (1 unit) and add (1 unit) are balanced, so the town-wide
-     * total is conserved.
-     */
+    /** Moves one matching item from another container into the one at {@code targetPos}, returning the new state. Null when the target is missing or full, or nothing else holds a match. */
     public @Nullable SELF withItemRelocatedTo(
             Predicate<I> ingredientCheck,
             BlockPos targetPos
@@ -329,8 +319,7 @@ public abstract class TownState<
         public final double xPosition, yPosition, zPosition;
         public final ImmutableSnapshot<I, ?> journal;
         private final List<Effect> effects = new ArrayList<>();
-        // Per-(townie, proficiency-id) work-speed levels ∈ [0,1]. The warp-side carrier
-        // of proficiency (mirrors the live TownVillagerProficiencies holder). See ADR-0010.
+        // Each villager's proficiency levels, 0 to 1, during a warp.
         private final ImmutableMap<String, Float> proficiencies;
 
         public VillagerData(

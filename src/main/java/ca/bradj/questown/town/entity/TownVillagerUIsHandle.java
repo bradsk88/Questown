@@ -54,12 +54,7 @@ public class TownVillagerUIsHandle {
         );
     }
 
-    /**
-     * The skills tab's nodes for this villager: children of its job known to exist, filtered by
-     * the skills-tab gate (2026-10-13 ruling) - a job is only unlockable, and so only shown, once
-     * the townie's level reaches its JSON available_at_level. At the starting level (1) the set is
-     * empty, which is what hides the tab. Includes nodes the villager already unlocked.
-     */
+    /** The skills tab's nodes for this villager: known children of its job that its level allows, unlocked ones included. Empty at level 1, which hides the tab. */
     public ImmutableSet<JobID> unlockableSkills(UUID villagerId) {
         VisitorMobEntity entity = villagers.getEntity(villagerId);
         if (entity == null) {

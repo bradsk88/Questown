@@ -10,12 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Pins the LOOT-quest extraction counter behind the 2026-10-15 accumulation
- * ruling (reversing the 2026-10-04 close-on-first-extraction): the quest's
- * "produced so far" total accumulates across extraction events and must
- * survive world saves (the NBT round trip), defaulting to 0 on legacy saves.
- */
+/** A LOOT quest's count accumulates and survives a save; older saves start at 0. */
 class MCQuestLootProgressTest {
 
     private static final ResourceLocation FOOD = new ResourceLocation("questown", "villager_food");

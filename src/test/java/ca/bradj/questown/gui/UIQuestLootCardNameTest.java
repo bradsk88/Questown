@@ -8,13 +8,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Pins the LOOT-quest card name (2026-10-14 playtest 04:20:53): the "raw food"
- * title was wrong for the {@code #questown:villager_food} quest (cooked food
- * plus apples/carrots), so the name is the neutral "Food"
- * ({@code menu.quests.food}). No vanilla bootstrap needed: the LOOT name is a
- * bare translatable key.
- */
+/** A LOOT quest card's name. */
 public class UIQuestLootCardNameTest {
 
     @Test
@@ -34,11 +28,7 @@ public class UIQuestLootCardNameTest {
         assertEquals("menu.quests.food", q.getName().getString());
     }
 
-    /**
-     * 2026-10-15/17 playtests: "The first loot quest should be entitled Raw Food ... but the
-     * second loot quest (which asks for 8x) should be titled 'Food'." The hunter's 1x quest
-     * wants the raw tag, the cook's 8x quest wants #questown:villager_food.
-     */
+    /** The first loot quest is "Raw Food"; the cook's is "Food". */
     @Test
     public void raw_food_loot_card_name_is_raw_food_key() {
         UIQuest q = new UIQuest(

@@ -65,7 +65,6 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
         return (int) mcQuestBatch.getAll().stream().filter(v -> isBedRoom(level, v.getWantedId())).count();
     }
 
-    /** Whether the room recipe {@code roomId} contains a bed. */
     public static boolean isBedRoom(
             ServerLevel level,
             ResourceLocation roomId
@@ -149,8 +148,7 @@ public class QuestBatchSeed extends AbstractQuestGarden<MCQuestBatch, ResourceLo
         }
         int recipeWeight = RoomRecipes.getRecipeWeight(hydrated.get(qID), stopAt);
         if (recipeWeight == 0 && !hydrated.get(qID).getIngredients().isEmpty()) {
-            // A zero-ingredient recipe (questown:empty_room - "any room") is intentionally
-            // weight 0; a NON-empty recipe that sums to 0 is the actual smell.
+            // The empty-room recipe weighs 0 on purpose; any other recipe at 0 is a mistake.
             QT.QUESTS_LOGGER.warn("Recipe weight is 0. This is probably a bug: {}", qID);
         }
         cachedCosts.put(qID, recipeWeight);

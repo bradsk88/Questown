@@ -38,7 +38,7 @@ public class DinerWork {
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
             BLOCK_STATE_NEED_FOOD, 0,
-            BLOCK_STATE_NEED_EAT, 10, // 50 -> 5 (dev, 2026-10-19: ~1/10) -> 10 (r22: "villagers eat too quickly", 2x)
+            BLOCK_STATE_NEED_EAT, 10,
             BLOCK_STATE_DONE, 0
     );
     public static final ImmutableMap<Integer, Integer> TIME_REQUIRED_AT_STATES = ImmutableMap.of(
@@ -91,10 +91,7 @@ public class DinerWork {
                                         SpecialRules.APPLY_COMFORTABLE_EATING
                                 )
                         ),
-                        // Finish the meal (extract at the done state) before fetching more
-                        // food: without this, a town with food in storage keeps the diner
-                        // collecting supplies after its food was consumed (playtest
-                        // 2026-10-17; eating/eat_direct). JSON jobs get this by default.
+                        // Finish the meal before fetching more food.
                         ImmutableList.of(
                                 SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.SHARED_WORK_STATUS,

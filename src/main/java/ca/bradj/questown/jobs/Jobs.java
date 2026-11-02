@@ -315,10 +315,7 @@ public class Jobs {
         return Compat.translatable("jobs." + job.rootId());
     }
 
-    /**
-     * The variant's name: a product job's item name ({@link JobNames#product}), else a
-     * {@code jobs.<root>.<job>} lang key, else {@link JobNames#variant}.
-     */
+    /** The variant's name: a product job's item name, else its lang key, else {@link JobNames#variant}. */
     public static @NotNull Component getVariantNameComponent(JobID job) {
         ResourceLocation product = JobNames.product(job, iconId(job));
         if (product != null) {
@@ -329,7 +326,7 @@ public class Jobs {
         );
     }
 
-    /** The job's icon: from the loaded jobs on the server, else the copy synced to the client. */
+    /** The job's icon: from the loaded jobs on the server, else the copy sent to the client. */
     private static @Nullable ResourceLocation iconId(JobID job) {
         if (Works.isInitialized() && Works.ids().contains(job)) {
             return Compat.getItemId(Works.get(job).get().icon.getItem());
@@ -398,8 +395,7 @@ public class Jobs {
                     target.getBlockPos(),
                     mct.toShortString()
             );
-            // By design villagers cannot stack: each item takes its own empty slot
-            // (CONTEXT.md "Unstacked deposit"). Do not merge into existing stacks.
+            // Villager items never stack: each takes its own empty slot.
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {

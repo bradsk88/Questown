@@ -20,24 +20,7 @@ import java.util.List;
 
 import static net.minecraft.world.level.block.Blocks.CHEST;
 
-/**
- * Pins the warp-lane work-block assignment seam the baker-cook-shape migration exposed
- * (2026-10-10, {@code baker/bread} warp autotest: the slot-gated predicate never matched the
- * baker's own block the way the old furnace class-sniff did, and slot-gated jobs whose gate
- * demands content the warp has not produced yet — {@code baker/extract} needs bread in slot 2
- * — must still be assigned the block). The assignment tests the job's block-identity check
- * ({@link Work#isJobBlockAt}), not the full slot-gated predicate: matching is by the block
- * itself, content-agnostic.
- *
- * <p>Seeds a fake oven-like {@code Work} whose block is a CHEST (the real bread-oven block is
- * registry-bound and cannot be constructed in a plain unit test), and asserts the predicate
- * matches the chest as the job's own block while a real furnace does NOT — i.e. matching is by
- * the job block identity, not by block-entity class.
- *
- * <p>Testability note: {@code Works.staticInitialize} cannot be called from a plain unit test
- * (its hardcoded job ids' class-initializers register mod items into the frozen vanilla
- * registries), so the pure predicate seam is tested directly instead of through the registry.
- */
+/** A warp assigns a job its block by block type alone, even when the slot it needs isn't filled yet. */
 class WorkIsJobBlockAtTest {
 
     private static final BlockPos POS = new BlockPos(0, 64, 0);
@@ -56,10 +39,8 @@ class WorkIsJobBlockAtTest {
                 ItemStack.EMPTY,
                 null,
                 null,
-                // the full slot-gated predicate (the old assignment input) — now unused by the seam
                 ctx -> ctx.blockInfo().state(ctx.blockPos()).getBlock() == Blocks.CHEST
                         && ctx.blockInfo().entity(ctx.blockPos()) instanceof ChestBlockEntity,
-                // the block-identity check the seam tests: block type only, no container
                 (info, pos) -> info.state(pos).getBlock() == Blocks.CHEST,
                 new net.minecraft.resources.ResourceLocation("questown", "test_room"),
                 ProductionStatus.FACTORY.idle(),
@@ -95,7 +76,6 @@ class WorkIsJobBlockAtTest {
     void isJobBlockAt_isContentAgnostic() {
         Work job = ovenLikeJob();
         BlockState chest = CHEST.defaultBlockState();
-        // entity null: no container present, matching still decides by block identity only
         Assertions.assertTrue(job.isJobBlockAt(ServerJobsRegistry.blockInfo(chest, null), POS));
     }
 }

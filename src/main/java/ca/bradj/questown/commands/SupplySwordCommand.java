@@ -20,20 +20,9 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 
-// Dev-only: an open sword quest is cleared by the real player path of leaving the
-// item in the storeroom the game shows you, not by a magic clear. Most item supply
-// is the villagers' own jobs; a sword quest (the wooden sword in onboarding, the
-// stone sword after) is the one kind of item quest a player supplies. This command
-// does exactly that: it deposits the wanted item into a registered container, the
-// same path a player dropping the item in the chest takes, so the quest's
-// supply-chain lesson is preserved. Scoped to sword quests only - other item needs
-// are the townies' job, not a command. One time per quest, the way a quest
-// completes: once the sword is in, the quest closes and a re-run finds no open
-// sword quest (the same once-only shape as free_food's bonus-food bit).
+// Dev-only: put the sword an open sword quest wants into a town chest. Once per quest.
 public class SupplySwordCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
-        // complete_sword_quest is the name an agent looks for; supply_sword is the
-        // older literal, kept so existing runs and docs keep working.
         for (String literal : new String[]{"complete_sword_quest", "supply_sword"}) {
             src.register(
                 Commands.literal("_qtdev").then(
@@ -44,11 +33,7 @@ public class SupplySwordCommand {
         }
     }
 
-    /** Complete every open sword quest for the given flag (and only that flag).
-     *  Public entry point for scenario code (the self_suff seed) that needs the
-     *  sword quest cleared through the real player path without driving the
-     *  command. Returns true when at least one quest was deposited, false when
-     *  there was no open sword quest on that flag. */
+    /** Completes the flag's open sword quests by putting the swords in its chests. True if any was completed. */
     public static boolean completeSwordQuestsForFlag(TownFlagBlockEntity flag, net.minecraft.server.level.ServerLevel level) {
         List<MCQuest> swordQuests = openSwordQuests(flag);
         if (swordQuests.isEmpty()) {
@@ -110,9 +95,7 @@ public class SupplySwordCommand {
         return 1;
     }
 
-    /** The open (incomplete) sword item quests on the flag (wooden_sword,
-     * stone_sword, ...). Item type only: a job quest like hunter_qt_sword also
-     * ends in "_sword" but names a job, not an item to deposit. */
+    /** The flag's open sword item quests. */
     private static List<MCQuest> openSwordQuests(TownFlagBlockEntity flag) {
         List<MCQuest> out = new ArrayList<>();
         for (AbstractMap.SimpleEntry<MCQuest, ?> e : flag.getQuestHandle().getAllQuestsWithRewards()) {
@@ -132,12 +115,7 @@ public class SupplySwordCommand {
 
     private enum DepositResult { DEPOSITED, NO_CONTAINER, ALL_FULL }
 
-    /** Deposit the wanted item into the first registered town container with an
-     * empty slot, as a player dropping the item in the chest. Tries every
-     * registered container: the first one may be full of gathered loot, and a
-     * player would just open the next chest. NO_CONTAINER when the town has no
-     * container at all (a real dead end), ALL_FULL when containers exist but
-     * none has an empty slot. */
+    /** Puts the item in the first town chest with an empty slot. */
     private static DepositResult deposit(TownFlagBlockEntity flag, CommandSourceStack source, Item item, int count) {
         ItemStack stack = new ItemStack(item, count);
         boolean sawContainer = false;
@@ -145,10 +123,7 @@ public class SupplySwordCommand {
                 TownContainers.getAllContainers(flag, source.getLevel())) {
             if (source.getLevel().getBlockEntity(target.getBlockPos()) instanceof Container c) {
                 sawContainer = true;
-                // Respect the item's max stack size: a stack larger than that
-                // (e.g. 4 swords, maxStackSize 1) is clamped to 1 on persistence,
-                // so "deposited 4x" would silently land as 1. One item per slot,
-                // the way a player dropping loose items fills the chest.
+                // One item per slot: swords do not stack.
                 for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
                     if (c.getItem(i).isEmpty()) {
                         int place = Math.min(stack.getCount(), stack.getMaxStackSize());

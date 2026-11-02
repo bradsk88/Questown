@@ -8,13 +8,12 @@ import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.UUID;
 
-/** One skill's details for the skill tree's details screen (dev playtest 2026-10-29). */
 public record ShowSkillDetailsMessage(
         UIJob job,
         BlockPos flagPos,
         UUID villager,
         boolean locked,
-        /** The flag's Blocks of Progress when the screen was opened from the flag, else 0. */
+        /** The flag's Blocks of Progress when opened from the flag, else 0. */
         int flagBops
 ) implements ClientRunnable {
 

@@ -12,13 +12,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * The flag quest-card tooltip carries "Villager N" display names over the flag-menu wire
- * (the 2026-10-14 display-name work deferred this surface pending a UUID->name map on the
- * sync; ticket .scratch/playtest-2026-10-14/villager-display-names.md "Deferred"). Pins the
- * codec order used by {@code FlagMenus.fromNetwork} (a drift would corrupt the whole
- * menu-open payload, not just the tooltip) and the label-resolution fallback.
- */
+/** Quest-card tooltips carry "Villager N" names over the network, in the order {@code FlagMenus.fromNetwork} reads them. */
 class FlagMenusVillagerNamesTest {
 
     private static final UUID A = UUID.randomUUID();
@@ -33,7 +27,6 @@ class FlagMenusVillagerNamesTest {
         TownBlockofProgressMenu.write(buf, FlagTabsEmbedding.FlagInfo.dumb(pos, true, false),
                 ImmutableList.of());
 
-        // Read in the exact order FlagMenus.fromNetwork uses.
         Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
         BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
         QuestScreenSummary summary =
@@ -69,13 +62,13 @@ class FlagMenusVillagerNamesTest {
         Assertions.assertEquals("Villager 7",
                 AbstractQuestsContainer.villagerLabelFor(names, A.toString()));
 
-        // Miss (no display name synced) falls back to the historical truncated UUID.
+        // No name sent: the shortened UUID.
         String truncated = UtilClean.truncateMiddle(A.toString());
         Assertions.assertNotEquals(A.toString(), truncated);
         Assertions.assertEquals(truncated,
                 AbstractQuestsContainer.villagerLabelFor(Map.of(), A.toString()));
 
-        // A non-UUID owner string must not throw - it degrades to the truncated form.
+        // A string that isn't a UUID is shortened, not thrown.
         Assertions.assertEquals(UtilClean.truncateMiddle("garbage"),
                 AbstractQuestsContainer.villagerLabelFor(names, "garbage"));
     }

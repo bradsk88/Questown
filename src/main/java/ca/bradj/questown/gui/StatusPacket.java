@@ -14,14 +14,10 @@ public record StatusPacket(
         JobID jobId,
         ImmutableList<Component> texts,
         ResourceLocation image,
-        /**
-         * G3 leaver-return bar: the absolute server tick at which this
-         * townie's timed trip ends. 0 = not away on a timed trip (no bar).
-         */
+        /** The server tick when the villager's trip ends, or 0 when it is not away. */
         long leaverReturnTick,
-        /** Total declared ticks of that trip (the bar's denominator). */
+        /** The trip's total ticks. */
         int leaverReturnTotal,
-        /** The current step's work done, 0..1, or -1 for no work bar (dev playtest 2026-10-30). */
         float workProgress
 ) {
     public StatusPacket(
@@ -34,7 +30,7 @@ public record StatusPacket(
         this(jobId, texts, image, leaverReturnTick, leaverReturnTotal, -1);
     }
 
-    /** Screens without leaver-return info (e.g. the inventory status row) use this. */
+    /** For screens without trip info. */
     public StatusPacket(
             JobID jobId,
             ImmutableList<Component> texts,

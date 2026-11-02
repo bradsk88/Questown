@@ -2,15 +2,7 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.Signals;
 
-/**
- * Whether a flag that was not ticking (no player in range) slept through a morning that its own
- * MORNING-signal detection will not catch on resume (playtest 2026-10-17: a BOP job change queued
- * for "the morning" never applied after the player was away overnight).
- *
- * <p>The ticker runs the morning pass when it sees the MORNING window ({@code dayTime % 24000 <
- * 6000}) after a non-morning tick. A resume inside that window is caught by the ticker, unless the
- * flag also stopped inside a morning window (its "already morning" latch is still set).
- */
+/** Whether a flag that wasn't ticking slept through a morning its own detection will miss on resume. */
 public final class MissedMorning {
     private MissedMorning() {
     }

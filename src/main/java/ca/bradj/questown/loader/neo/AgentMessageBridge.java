@@ -15,13 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-/**
- * Dev-only bridge for pushing chat to the player from outside the game — e.g. a coding
- * agent guiding a play-test without console access. Every few server ticks it reads
- * {@code run/agent_say.txt} (relative to the dev run working directory), broadcasts each
- * non-blank line to all players as system chat, and deletes the file. Inert in shipped
- * jars via {@link FMLEnvironment#production}, so this never affects real players.
- */
+/** Dev-only: every few ticks, sends each line of {@code run/agent_say.txt} to all players as chat, then deletes the file. Off in released jars. */
 public final class AgentMessageBridge {
 
     private static final Path FILE = Paths.get("agent_say.txt");
@@ -48,8 +42,7 @@ public final class AgentMessageBridge {
         if (server == null) {
             return;
         }
-        // Don't drain until someone can actually see it — otherwise a message queued before the
-        // player joins (or while the world is still loading) is deleted and lost.
+        // Wait until a player is there to read it.
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
         if (players.isEmpty()) {
             return;

@@ -45,11 +45,7 @@ import java.util.stream.Stream;
 
 public class DeclarativeJobs {
 
-    /**
-     * Records as a job with {@code maxState} reads them: one out of its range is a foreign work's
-     * record at a shared block (jobs/COMPLEX.md "Foreign work-state records read as fresh") and
-     * reads as fresh. A missing record stays missing: that spot is not seeded.
-     */
+    /** Reads records as a job with {@code maxState} does: one out of range belongs to another job and reads as fresh. A missing record stays missing. */
     static <P> Function<P, @Nullable State> inRange(
             Function<P, @Nullable State> raw,
             int maxState
@@ -469,7 +465,7 @@ public class DeclarativeJobs {
     }
 
 
-// ---- moved verbatim from ca.bradj.questown.jobs.JobsClean (consolidation plan C5, 2026-10-09) ----
+// TODO: Test "should not return null if entity is in room with finished product"
 
 // TODO: Test "should not return null if entity is in room with finished product"
     private static boolean isNearPosition(Position a, Position b, int maxDistance) {
@@ -528,11 +524,7 @@ public class DeclarativeJobs {
                 blocksSrc, work, isJobBlock, findInteractionSpot, b -> 0);
     }
 
-    /**
-     * As above, trying job blocks with a higher {@code preference} first (ties keep the shuffled
-     * order). A display job prefers the display that already holds the most (dev playtest
-     * 2026-10-30: "Display_Armor job should prefer adding pieces to the most well-equipped stand").
-     */
+    /** As above, trying job blocks with a higher {@code preference} first: a display job prefers the fullest display. */
     public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
             int maxState,
             boolean prioritizeExtraction,
@@ -570,7 +562,6 @@ public class DeclarativeJobs {
             return new WithReason<>(null, rooms.isEmpty() ? "No job sites" : "Job site found, but no usable job blocks");
         }
         if (candidates.size() > 1) {
-            // Scored once each: a display score is an entity lookup.
             Map<BLOCK, Integer> scores = new HashMap<>();
             candidates.forEach(c -> scores.computeIfAbsent(c.block(), preference::applyAsInt));
             candidates.sort(Comparator.comparingInt((JobBlockCandidate<ROOM, RECIPE, BLOCK> c) -> scores.get(c.block())).reversed());
@@ -582,9 +573,7 @@ public class DeclarativeJobs {
             if (blockState == null) {
                 blockState = State.freshAtState(0);
             } else if (blockState.processingState() > maxState) {
-                // Foreign work's record (shared block state slot, different numbering):
-                // out of this job's range it matches no bucket - read as fresh, the
-                // same as the gate path (rooms above) and the supply-loop guard.
+                // Another job's record at a shared block reads as fresh.
                 blockState = State.freshAtState(0);
             }
 
@@ -617,39 +606,22 @@ public class DeclarativeJobs {
     ) {
         ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
         Supplier<Rooms<POS, ?>> e = () -> {
-            // Keyed by position across ALL matches: overlapping job sites (e.g. a Kitchen Diner
-            // sharing blocks with another dining room) contain the same block twice. Its state
-            // and job-block flag depend only on the position, so the first entry is the truth;
-            // an ImmutableMap.Builder threw "Multiple entries with same key" here and crashed
-            // the server (playtest r12 #11, DeclarativeJobsRoomsSharedBlockTest).
+            // By position: overlapping job sites can hold the same block twice.
             Map<POS, Integer> spotStatuses = new LinkedHashMap<>();
             Map<POS, Boolean> spotJBs = new LinkedHashMap<>();
             Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
-            // Work-only rooms count: a job whose state has no tool or ingredient (cook/extract: work
-            // 0.1, nothing to hold) gets its rooms ONLY from the dueToWorkOnly bucket. Filtering them
-            // out made "town has workable blocks" false for such jobs, so the status flipped
-            // GOING_TO_JOB <-> NO_JOBSITE and the cook never walked to a furnace full of cooked food;
-            // a stick tool only worked because it moved the furnace into the tools bucket
-            // (2026-10-19 playtest blocker).
+            // Rooms that only need work count too: some jobs' states need no item at all.
             Stream<NVIRoom<ROOM, RECIPE, POS>> rooms = jobSites.get().stream();
 
             rooms.forEach(match -> {
                 for (Map.Entry<POS, ?> entry : match.room().getContainedBlocks().entrySet()) {
                     POS bp = entry.getKey();
                     State jobBlockState = jobBlockStates.apply(bp);
-                    // A block with no work-state record in this store is unstarted work, not
-                    // "no state": this read must agree with sibling sites (findJobSpot l.283,
-                    // DeclarativeJobTicker bsFn l.203 and the rni guard l.279). Skipping nulls
-                    // here deadlocked leavers whose per-owner store had not yet seeded the
-                    // gate mat (NO_JOBSITE soft-lock, 2026-10-08, WorkStatusStoreMatSeedTest).
+                    // A block with no work state yet is fresh.
                     if (jobBlockState == null) {
                         jobBlockState = State.freshAtState(0);
                     } else if (jobBlockState.processingState() > maxState) {
-                        // A record written by another work's state machine at this block
-                        // (shared state slot, different numbering - e.g. downtime's 0-9 vs
-                        // bop_depositing's 0-2). Out of this job's range it can never
-                        // advance itself; read it as fresh, same as the supply-loop guard
-                        // (DeclarativeJobTicker.computeRoomsNeedingInput).
+                        // Another job's record at a shared block reads as fresh.
                         jobBlockState = State.freshAtState(0);
                     }
                     int v = jobBlockState.processingState();
@@ -684,21 +656,7 @@ public class DeclarativeJobs {
                     });
     }
 
-    /**
-     * Whether declared work at {@code state} is unfinished work. A block at {@code maxState}
-     * holds a finished product awaiting extraction, never work: the hand-coded diner jobs
-     * declare {@code DONE: 0} work at their terminal state, and counting it sent a diner whose
-     * meal was ready "to the job site" instead of eating it (playtest 2026-10-17;
-     * eating/eat_direct).
-     * <p>
-     * A state that needs an ingredient isn't work-only either: until the ingredient arrives there
-     * is nothing to do at the block. The diners declare {@code CONSUME_FOOD: 0} work beside their
-     * food ingredient, so a meal left at state 1 (the villager was pulled away mid-meal) read as
-     * itemless work and sent the diner "to the job site", where {@code findJobSite} (rightly)
-     * found nothing without food in hand: GOING_TO_JOB with no walk target until the job timed
-     * out, again in the next diner (2026-10-31, hunter/sword [sleep_mid_trip]; the dev's
-     * "stuck going to eat" 10-28 / 10-29).
-     */
+    /** Whether {@code state} still has work to do: not the final state (a product waiting), and not a state still waiting for an ingredient. */
     public static boolean declaresUnfinishedWork(
             int state,
             int maxState,
@@ -721,9 +679,7 @@ public class DeclarativeJobs {
                     continue;
                 }
                 @Nullable State apply = getJobBlockState.apply(e);
-                // A state that declares work counts as unfinished even on a fresh block
-                // (workLeft 0): a work-only state (cook_extract: 0.1 floors to int 0) would
-                // otherwise never report itself and the itemless-work branch would stall.
+                // Declared work counts even on a fresh block.
                 if (apply != null
                         && (apply.workLeft() > 0 || workDeclaredAt.apply(apply.processingState()))) {
                     b.add(apply.processingState());

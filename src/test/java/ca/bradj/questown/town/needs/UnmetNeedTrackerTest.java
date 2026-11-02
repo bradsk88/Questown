@@ -11,24 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-/**
- * Pins the enter/exit bookkeeping behind the typed gate reasons (design:
- * {@code .scratch/gannet-top-need/unmet-need-design.md}, items 3, 4 and 6):
- * registration is idempotent per (townie, key), {@code since} is first-enter,
- * rows are bounded by the roster and clear on exit, and the batch rank is
- * townies-desc then since-asc — determined by the world state alone, not by
- * how many recompute passes retried the need (the run-2 {@code words=61}
- * failure mode).
- *
- * <p>Union semantics (2026-10-15 ruling, {@code .scratch/playtest-2026-10-14/
- * cook-status-blocker-surfacing-10-14.md}): a townie's live needs for a root
- * are a UNION, not the best-scoring job's single key — a new key joins the
- * townie's live set instead of replacing it, and a key exits when it drops
- * out of the pass's live set ({@link UnmetNeedTracker#applyPass}), not only
- * when the whole root clears. The player-facing hint is the townie's oldest
- * live key ({@link UnmetNeedTracker#primaryKey}), stable across recompute
- * passes.
- */
+/** {@link UnmetNeedTracker}: a need keeps its first-seen time, a villager can have several, its hint is the oldest, and needs are ranked by villagers then age. */
 class UnmetNeedTrackerTest {
 
     private static final UUID ALICE = new UUID(1, 1);
@@ -51,7 +34,6 @@ class UnmetNeedTrackerTest {
         UnmetNeedTracker t = new UnmetNeedTracker();
         assertTrue(t.enter(100, MINER, ALICE, "coal", COAL_NO_ROOM));
         assertFalse(t.enter(150, MINER, ALICE, "coal", COAL_NO_ROOM));
-        // One row, since is the first enter, attempts counted per pass.
         assertEquals(1, t.rows().size());
         UnmetNeedTracker.Row row = t.rows().get(0);
         assertEquals(100, row.since());
@@ -63,9 +45,7 @@ class UnmetNeedTrackerTest {
         UnmetNeedTracker t = new UnmetNeedTracker();
         t.enter(100, MINER, ALICE, "coal", COAL_NO_ROOM);
         t.enter(120, MINER, ALICE, "#fuel", FUEL_BLOCKED);
-        // The union: both keys stay live (2026-10-15 ruling - the old
-        // replace-on-new-key made the named blocker flap with the pass's
-        // best-scoring job instead of the world state).
+        // Both keys stay live.
         assertEquals(2, t.rows().size());
         Map<String, Long> sinceByKey = new java.util.HashMap<>();
         for (UnmetNeedTracker.Row r : t.rows()) {
@@ -136,7 +116,6 @@ class UnmetNeedTrackerTest {
         t.enter(130, COOK, BOB, "#fuel", FUEL_BLOCKED);
         t.exitKey(MINER, "coal");
         assertEquals(2, t.rows().size());
-        // The miner's coal row is gone; the miner's #fuel and the cook's #fuel survive.
         for (UnmetNeedTracker.Row r : t.rows()) {
             assertFalse("coal".equals(r.key()) && MINER.equals(r.root()));
         }
@@ -161,8 +140,7 @@ class UnmetNeedTrackerTest {
         assertEquals(2, first.size());
         assertEquals(2, t.rows().size());
 
-        // Second pass: #fuel is satisfied, coal is not - coal survives with its
-        // original since and a grown attempts counter; no new registrations.
+        // Second pass: #fuel is satisfied, coal keeps its first-seen time.
         List<UnmetNeedTracker.FirstEnter> second = t.applyPass(
                 200, MINER, List.of(ALICE), Map.of("coal", COAL_NO_ROOM));
         assertTrue(second.isEmpty());
@@ -186,10 +164,8 @@ class UnmetNeedTrackerTest {
         UnmetNeedTracker t = new UnmetNeedTracker();
         t.enter(100, MINER, ALICE, "#questown:raw_food", FUEL_BLOCKED);
         t.enter(100, MINER, ALICE, "#minecraft:coals", FUEL_BLOCKED);
-        // Same since: the earlier key in ascending order wins - the hint is
-        // deterministic given the world state, not the pass's argmax.
+        // Tied ages: the earlier key in order wins.
         assertEquals("#minecraft:coals", t.primaryKey(MINER, ALICE));
-        // A later key is secondary until the oldest one exits.
         t.enter(150, MINER, ALICE, "bread", NO_REQUEST_KEY);
         assertEquals("#minecraft:coals", t.primaryKey(MINER, ALICE));
         t.exitKey(MINER, "#minecraft:coals");
@@ -201,7 +177,6 @@ class UnmetNeedTrackerTest {
         UnmetNeedTracker t = new UnmetNeedTracker();
         t.enter(10, COOK, ALICE, null, NO_REQUEST);
         assertNull(t.primaryKey(COOK, ALICE));
-        // Nothing registered at all.
         assertNull(t.primaryKey(MINER, BOB));
     }
 
@@ -211,8 +186,7 @@ class UnmetNeedTrackerTest {
         t.applyPass(100, MINER, List.of(ALICE, BOB), Map.of("coal", COAL_NO_ROOM, "#fuel", FUEL_BLOCKED));
         t.applyPass(110, COOK, List.of(CAROL), Map.of("#fuel", FUEL_BLOCKED));
         List<UnmetNeedTracker.Need> ranked = t.rank();
-        // coal: 2 townies; #fuel: 3 (both miners + the cook) - the union, not
-        // the best-scoring job's single key.
+        // #fuel: three villagers; coal: two.
         assertEquals(List.of("#fuel", "coal"), ranked.stream().map(UnmetNeedTracker.Need::key).toList());
         assertEquals(3, ranked.get(0).townies());
         assertEquals(2, ranked.get(1).townies());
@@ -220,25 +194,17 @@ class UnmetNeedTrackerTest {
 
     @Test
     void primaryKeySkipsKeysTheTownieCannotHold() {
-        // Playtest 2026-10-11: a gatherer said "I need a fishing rod to work" while its jobs
-        // screen showed the rod job still locked. The rod key is live for the town (another
-        // gatherer unlocked it), but this townie's hint must name only items for jobs it can
-        // hold (unlock != workability, docs/design-principles.md).
+        // The rod key is live for the town, but this villager's hint names only its own jobs' items.
         UnmetNeedTracker t = new UnmetNeedTracker();
         t.enter(100, MINER, ALICE, "#questown:fishing_rods", FUEL_BLOCKED);
         t.enter(200, MINER, ALICE, "#minecraft:coals", FUEL_BLOCKED);
 
         assertEquals("#minecraft:coals", t.primaryKey(MINER, ALICE, k -> !k.equals("#questown:fishing_rods")));
         assertNull(t.primaryKey(MINER, ALICE, k -> false));
-        // The unfiltered hint is unchanged: the oldest live key.
         assertEquals("#questown:fishing_rods", t.primaryKey(MINER, ALICE));
     }
 
-    /**
-     * Dev playtest 2026-10-29: a crafter with no smithy read "needs Wooden Shovel to work". A
-     * missing room's key is the job's product, not a supply (town/COMPLEX.md: only supplyItem()
-     * reasons reach the item store and the bubble), so it never becomes the hint.
-     */
+    /** A missing room's key is a product, not a supply, so it is never the hint. */
     @Test
     void primaryKeySkipsAMissingRoomsProduct() {
         UnmetNeedTracker t = new UnmetNeedTracker();
@@ -248,7 +214,6 @@ class UnmetNeedTrackerTest {
         assertEquals("#fuel", t.primaryKey(MINER, ALICE));
     }
 
-    /** Dev playtest 2026-10-29: a crafter with no smithy should say "They need a Smithy to work". */
     @Test
     void primaryRoom_namesTheMissingRoom_forJobsTheTownieCanHold() {
         UnmetNeedTracker t = new UnmetNeedTracker();

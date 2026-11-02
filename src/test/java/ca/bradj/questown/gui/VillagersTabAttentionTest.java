@@ -11,10 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * The flag's villagers tab carries a red dot from the first villager's arrival until a player
- * first opens that tab (playtest 2026-10-17).
- */
+/** The villagers tab has a red dot from the first arrival until it is opened. */
 class VillagersTabAttentionTest {
 
     @BeforeAll

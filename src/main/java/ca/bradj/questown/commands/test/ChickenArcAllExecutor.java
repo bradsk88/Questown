@@ -8,17 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Parallel to {@link TestAllExecutor}: iterates over the registered
- * chicken-arc scenarios, hands each one to a fresh
- * {@link ChickenArcTestExecutor}, accumulates pass/fail totals, and emits
- * a per-scenario summary line via {@link AutotestLogFormatter}.
- *
- * <p>Matches {@link TestAllExecutor}'s tick-driven contract: returns
- * {@code true} once the whole suite is done. When a scenario throws during
- * its own ticking, the exception is caught, reported as a {@code [FAIL]}
- * line, and the outer loop advances to the next scenario.
- */
+/** Runs every helper-chicken scenario in turn and reports each one's result. A scenario that throws fails and the run moves on. */
 public class ChickenArcAllExecutor {
 
     private final ServerLevel level;

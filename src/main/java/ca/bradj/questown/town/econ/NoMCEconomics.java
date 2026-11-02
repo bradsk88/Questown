@@ -27,11 +27,7 @@ public class NoMCEconomics {
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
     private ImmutableList<RoomNeed<String>> roomsAll = ImmutableList.of();
     private final WindowTotal unmetNeedsWindow = new WindowTotal(0);
-    /** Monotonically increasing count of every unmet-item-need ever registered.
-     *  Kept separate from {@link #unmetNeedsRecord} because that is an
-     *  EvictingQueue whose size caps at {@code ECONOMIC_RECORDS_DEPTH} (evicting
-     *  old entries) and therefore does not grow monotonically. Drives the windowed
-     *  total. */
+    /** Every unmet need ever registered; the record queue drops old entries, so it can't count. */
     private long unmetNeedsCumulative = 0;
 
     public static ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> aggregateForUI(
@@ -121,7 +117,7 @@ public class NoMCEconomics {
             String requested
     ) {
         unmetNeedsRecord.add(new UnmetNeed(tick, villagerId, requested));
-        unmetNeedsCumulative++; // monotonic; the queue above may evict
+        unmetNeedsCumulative++;
         this.needAggregate = true;
     }
 
@@ -138,17 +134,7 @@ public class NoMCEconomics {
         return getAggregated(aggregatedAll, aggregated, villagerId);
     }
 
-    /**
-     * Windowed unmet item needs: the number of records registered to
-     * {@link #unmetNeedsRecord} since this method last returned a value. Zero
-     * on the first call (nothing measured yet). Callers should invoke
-     * {@link #update} first so it reflects all needs registered up to now.
-     *
-     * <p>This is the value the daily report’s {@code demand=} should use: it is
-     * a bounded per-window count, not the cumulative-since-town-start aggregate
-     * that {@link #getAggregatedItems} returns (which in a held run is pinned at
-     * the {@code EvictingQueue} depth).
-     */
+    /** Unmet needs registered since the last call; 0 the first time. Call {@link #update} first. */
     public long getUnmetNeedsWindowTotal() {
         return unmetNeedsWindow.next(unmetNeedsCumulative);
     }
@@ -157,13 +143,9 @@ public class NoMCEconomics {
         return roomsAll;
     }
 
-    /**
-     * The "last 1000 ticks" view (dev playtest 2026-10-29: "Economics should probably have 'in last
-     * 1000 ticks' view too, that would be more actionable").
-     */
     public static final long RECENT_WINDOW_TICKS = 1000;
 
-    /** Unmet item needs registered at or after {@code sinceTick}, all villagers, most-needed first. */
+    /** Unmet needs since {@code sinceTick}, all villagers, most needed first. */
     public static ImmutableList<ItemEconomicsData> aggregateSince(Collection<UnmetNeed> records, long sinceTick) {
         Map<String, Integer> counts = new HashMap<>();
         for (UnmetNeed n : records) {

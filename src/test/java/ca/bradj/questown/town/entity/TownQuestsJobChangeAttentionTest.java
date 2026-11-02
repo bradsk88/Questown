@@ -13,11 +13,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-17 playtest (05:38:35): "The 'change profession' tab should have a red dot when
- * a job change quest is active and the villager is a gatherer."
- * {@link TownQuests#wantsJobChangeFrom(JobID)} is the server-side rule behind that dot.
- */
+/** {@link TownQuests#wantsJobChangeFrom(JobID)}: the change-job tab's red dot. */
 class TownQuestsJobChangeAttentionTest {
 
     private static final JobID GATHERER = new JobID("gatherer", "gather");
@@ -50,7 +46,6 @@ class TownQuestsJobChangeAttentionTest {
         assertFalse(townWith(MCQuest.jobChange(UUID.randomUUID(), null, HUNTER)).wantsJobChangeFrom(HUNTER));
     }
 
-    /** Dev playtest 2026-10-29: "During onboarding, the change-job screen should be hidden for all non-gatherer villagers". */
     @Test
     void onboardingBeforeTheFork_hidesJobChangeFromNonGatherers() {
         TownQuests quests = onboardingTown(false);

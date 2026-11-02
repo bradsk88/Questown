@@ -21,11 +21,7 @@ public record Overrides(ImmutableMap<IStatus<?>, ResourceLocation> statusTexture
         return new Overrides(ImmutableMap.of(), ImmutableMap.of());
     }
 
-    /**
-     * The status image this job overrides, or null for the default art. A named status override
-     * wins; otherwise {@link #workingTexture} covers every work state (state:N) and extraction,
-     * which are not named core statuses (job JSON: {@code {"type": "working", ...}}).
-     */
+    /** The status art this job overrides, or null for the default. A named override wins; {@code working} covers every work state. */
     public @Nullable ResourceLocation textureFor(IStatus<?> status) {
         ResourceLocation named = statusTextures.get(status);
         if (named != null || workingTexture == null) {

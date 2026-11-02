@@ -16,11 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/**
- * Dev playtest 2026-10-28: the economics tab showed the raw id "#minecraft:saplings". A tag is named
- * through the lang key {@code "#<tag>"} ({@link Ingredients#getName}); every tag the jobs and paths
- * name gets one.
- */
+/** Every tag the jobs and paths name has a {@code "#<tag>"} lang key. */
 class TagNamesTest {
 
     private static final Pattern TAG = Pattern.compile("\"(#[a-z0-9_.-]+:[a-z0-9_/.-]+)\"");

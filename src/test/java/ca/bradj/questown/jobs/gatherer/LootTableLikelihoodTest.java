@@ -11,9 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Dev 2026-10-30: a hunter skill's "Produces:" was empty; list the most likely loot items first.
- */
+/** A skill's "Produces" lists the likeliest items first. */
 class LootTableLikelihoodTest {
 
     @Test
@@ -33,7 +31,6 @@ class LootTableLikelihoodTest {
 
     @Test
     void anItemInTwoPools_addsItsChances() {
-        // apple: 1/2 + 1/2 = 1.0 beats stick's 1/2 and dirt's 1/2
         JsonElement table = JsonParser.parseString("""
                 {"pools": [
                   {"rolls": 1, "entries": [

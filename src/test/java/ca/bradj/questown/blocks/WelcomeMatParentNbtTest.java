@@ -11,16 +11,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-/**
- * Pins the parent-NBT contract the welcome-mat placement path relies on:
- * {@code WelcomeMatBlock.getStateForPlacement} drops an unstamped mat
- * ("Welcome mat is not associated to an existing flag") because
- * {@code TownFlagBlock.GetParentFromNBT} needs the
- * tags. The menu-craft path (FlagCraftMessage.craftWelcomeMat) stamps the
- * flag the player crafted at; this test guards the stamp/read round-trip it
- * depends on (the 2026-10-11 playtest: menu-crafted mat placed, both
- * attempts dropped).
- */
+/** The flag link a welcome mat is crafted with survives the save and read. */
 class WelcomeMatParentNbtTest {
 
     @BeforeAll

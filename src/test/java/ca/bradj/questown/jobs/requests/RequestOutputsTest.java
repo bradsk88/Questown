@@ -15,12 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-/**
- * r16 #18 (dev 2026-10-24): the job board's picker split the cook's
- * {@code "initial_request": "#questown:villager_food"} into one tile per food in the tag, so it
- * offered carrot and apple though no job makes them. A tag request now stays one ingredient (the
- * picker's cycling Food tile).
- */
+/** A tag request stays one ingredient, not one per item in the tag. */
 class RequestOutputsTest {
 
     private static final TagKey<Item> VILLAGER_FOOD = Compat.itemTag(

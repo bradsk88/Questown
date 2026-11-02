@@ -24,7 +24,6 @@ public class TownRemoveQuestsContainer extends AbstractContainerMenu {
     private final Collection<UIQuest> quests;
     private final BlockPos flagPos;
     private final UUID batchUUID;
-    /** villager UUID -&gt; "Villager N" (quest-card tooltip; empty -&gt; truncated UUID). */
     private final Map<UUID, String> villagerDisplayNames;
 
     public TownRemoveQuestsContainer(

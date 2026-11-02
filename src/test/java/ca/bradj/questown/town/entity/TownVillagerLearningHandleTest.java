@@ -8,10 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * The skills tab's candidate nodes: every child known under any job of the villager's root
- * (2026-10-26, the Outfitter crafter at level 3 was offered nothing).
- */
 class TownVillagerLearningHandleTest {
 
     private static final JobID STICK = new JobID("crafter", "stick");

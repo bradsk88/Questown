@@ -39,8 +39,6 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
 
     private static final int PAGE_PADDING = 10;
 
-    // The requests are drawn as an icon grid, so pages hold grid slots, not cards (r16 #2: a
-    // card-sized page of 3 made a 4-item list "Page 1 / 2" with every item on both pages).
     private static final int GRID_COLUMNS = 8;
     private static final int GRID_ROWS = 7;
     private static final int SLOTS_PER_PAGE = GRID_COLUMNS * GRID_ROWS;
@@ -146,10 +144,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
         return categories.contains(ing);
     }
 
-    /**
-     * One grid slot per request: a category is a single slot that requests the whole tag; a
-     * multi-item ingredient gets its own slot followed by one per member.
-     */
+    /** One grid slot: a category requests its whole tag; any other ingredient requests itself. */
     private record RequestSlot(Ingredient request, ItemStack[] shown, @Nullable Component categoryName) {
     }
 
@@ -160,9 +155,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             if (allPossible.length == 0) {
                 continue;
             }
-            // A category (a tag: "Food") is one slot that requests the whole category; its members
-            // are not listed after it (most of a tag is not something the town can make - the
-            // producible ones already have their own slots).
+            // A category is one slot for the whole tag; its members are not listed after it.
             boolean category = isCategory(ing);
             b.add(new RequestSlot(ing, allPossible, category ? Ingredients.getName(ing) : null));
             if (category || allPossible.length == 1) {
@@ -211,8 +204,6 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
             Ingredient request,
             @Nullable Component categoryName
     ) {
-        // No tint on category slots: they come first, so the tint read as a darker first row (r17,
-        // dev 2026-10-25). The cycling icon and the category tooltip mark them.
         ctx.renderItemAndDecorations(itemStack, iconX, y + 1);
         if (mouseX >= iconX && mouseY >= y && mouseX < iconX + 16 && mouseY < y + 17) {
             ctx.fill(
@@ -231,7 +222,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
                         ))
                 ));
             } else {
-                this.showTooltip(itemStack.getItem().getName(itemStack)); // hovered item's name as tooltip
+                this.showTooltip(itemStack.getItem().getName(itemStack));
             }
         }
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
@@ -331,8 +322,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     ) {
         for (Slot s : slots) {
             if (s.x < x && s.x + 16 > x && s.y < y && s.y + 16 > y) {
-                // The request the slot stands for: a category slot requests the category, not the
-                // member it happens to be showing.
+                // A category slot requests the category, not the member it is showing.
                 Ingredient item = slotRequests.getOrDefault(s, Ingredient.of(s.getItem()));
                 if (!menu.canRequest(item)) {
                     QT.logBug("AddWorkScreen: ingredient slot not acceptable: {}", s.getItem());

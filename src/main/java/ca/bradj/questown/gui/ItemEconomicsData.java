@@ -10,10 +10,6 @@ public record ItemEconomicsData(
 ) implements NoMCEconomics.Needable {
     public static final int PERIOD_DAYS = 1;
 
-    /**
-     * One sentence, so a wrapped tooltip flows it as a paragraph (two hand-broken keys left
-     * the count alone on its own line once wrapped; playtest 2026-10-22).
-     */
     public static Component neededTooltip(Component itemName, int timesNeeded) {
         if (timesNeeded == 1) {
             return PERIOD_DAYS == 1

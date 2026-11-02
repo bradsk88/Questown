@@ -5,22 +5,11 @@ import net.minecraft.world.level.block.Rotation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * Locks the "the tutorial follows the town" property for flag relocation (#199, Phase 5).
- *
- * <p>The helper-chicken arc needs no special handling when the town flag is relocated:
- * {@link HelperChickenBeatOffsets#resolveTarget} computes every beat target fresh from
- * {@code flagPos + rotate(localOffset)}, and the structure rotation rides along with the
- * flag in the copied town NBT (ADR-0009 whole-blob copy). So moving the flag by a delta
- * shifts every beat target by exactly that delta, and the carried rotation keeps the arc's
- * orientation intact. These tests prove that re-derivation is position-relative — the mid-move
- * "does it crash / do beats re-anchor" question the {@code flag/relocate_nearby} autotest
- * exercises end-to-end, this pins deterministically.
- */
+/** The chicken's lesson targets move with a relocated flag, since each is the flag position plus a rotated offset. */
 class HelperChickenBeatRelocationTest {
 
     private static final BlockPos OLD_FLAG = new BlockPos(100, 64, 200);
-    private static final BlockPos NEW_FLAG = new BlockPos(-40, 70, 15); // arbitrary move, incl. Y change
+    private static final BlockPos NEW_FLAG = new BlockPos(-40, 70, 15);
 
     @Test
     void everyBeatTargetTranslatesByTheFlagDelta() {
@@ -65,8 +54,7 @@ class HelperChickenBeatRelocationTest {
 
     @Test
     void targetlessBeatsHaveNoTargetRegardlessOfFlagPosition() {
-        // The four non-positional beats stay null wherever the flag sits — relocation can't
-        // conjure a phantom peck target for them.
+        // Lessons with no place stay null wherever the flag is.
         for (ChickenBeatState state : new ChickenBeatState[]{
                 ChickenBeatState.SUNSET_AND_MAP,
                 ChickenBeatState.AWAITING_WORLDLY_SEEDS_DELIVERY,
@@ -80,9 +68,7 @@ class HelperChickenBeatRelocationTest {
 
     @Test
     void carriedRotationDeterminesOrientationSoItMustRideAlong() {
-        // A rotated offset lands somewhere different than the un-rotated one. This is why the
-        // structure rotation is carried verbatim in the relocation copy: re-deriving with a
-        // wrong (e.g. default) rotation would put the chicken on the wrong side of the new flag.
+        // A rotated offset lands elsewhere, which is why the rotation travels with the town.
         BlockPos none = HelperChickenBeatOffsets.resolveTarget(
                 ChickenBeatState.WAITING_FOR_WALL_BLOCK, NEW_FLAG, Rotation.NONE
         );
@@ -97,8 +83,7 @@ class HelperChickenBeatRelocationTest {
 
     @Test
     void flagBeatSitsExactlyOnTheFlagAfterTheMove() {
-        // WAITING_FOR_STICK targets the flag itself (FLAG_OFFSET = 0,0,0), so its target is the
-        // flag position under every rotation — the cleanest anchor that the target tracks the flag.
+        // The stick lesson's target is the flag itself, under every rotation.
         for (Rotation rotation : Rotation.values()) {
             Assertions.assertEquals(
                     NEW_FLAG,

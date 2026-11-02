@@ -41,7 +41,7 @@ public record CreateStockRequestFromUIMessage(
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             if (sender.getInventory().getFreeSlot() == 0) {
                 Compat.sendMessage(sender, Compat.translatable("no_room_for_request"));
                 return;

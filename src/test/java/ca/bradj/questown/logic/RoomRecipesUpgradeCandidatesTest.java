@@ -8,27 +8,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Pure-core test for {@link RoomRecipes#upgradeCandidates} — the room-upgrade
- * candidate selection extracted from {@code TownQuests.getUpgradeRecipe}
- * (Forge-free seam; see the {@code Work.isUnlockedInitially} precedent).
- *
- * <p>Why the extraction: the pre-fix glue iterated the raw recipe list and read
- * {@code RoomRecipe.getId()}, which is <em>null</em> for every codec-constructed
- * (data-driven) recipe — the 1.20.2 holder-id migration put the canonical id on
- * the recipe holder. Run 15 (self_suff zero-coal cell) crashed its flag
- * tick with an NPE in {@code ImmutableList.Builder.add(null)} inside
- * {@code getUpgradeRecipe} (see {@code .scratch/gannet-top-need} run record);
- * the upgrade candidates are now matched by the id the caller owns (the holder
- * key), fed in as data here.
- *
- * <p>Selection semantics (the pre-fix glue's, unchanged; only the id source
- * changed): a candidate is a recipe whose ingredient groups *cover* every
- * group of the from-recipe (each from-group must contain some to-group — the
- * upgrade refines/extends the recipe's inputs), and a perfect overlap is the
- * recipe itself, not an upgrade. Every non-overlapping candidate is
- * returned; the caller picks one (the glue picks at random).
- */
+/** {@link RoomRecipes#upgradeCandidates}: a recipe that covers every ingredient group of the other is an upgrade; the same recipe is not. */
 class RoomRecipesUpgradeCandidatesTest {
 
     private static final List<String> FURNACE = List.of("minecraft:furnace");
@@ -48,8 +28,7 @@ class RoomRecipesUpgradeCandidatesTest {
 
     @Test
     void recipeCoveringEveryFromGroup_isACandidate() {
-        // from = kitchen_small [furnace]; a to-recipe that keeps the furnace
-        // group and adds a chest group covers it.
+        // Keeping the furnace and adding a chest covers it.
         List<List<String>> from = List.of(FURNACE);
         Map<String, List<List<String>>> all = Map.of(
                 "questown:kitchen_stocked", List.of(FURNACE, CHEST));
@@ -75,7 +54,6 @@ class RoomRecipesUpgradeCandidatesTest {
 
     @Test
     void recipeMissingACoverForAFromGroup_isNotACandidate() {
-        // from has a chest group; a to-recipe without one can't cover it.
         List<List<String>> from = List.of(FURNACE, CHEST);
         Map<String, List<List<String>>> all = Map.of(
                 "questown:kitchen_small", List.of(FURNACE));
@@ -85,8 +63,7 @@ class RoomRecipesUpgradeCandidatesTest {
 
     @Test
     void groupLevelContainment_oneCoarseFromGroupCoveredByFinerToGroup() {
-        // from group [coal, stick] is covered by the finer to group [coal] —
-        // containment is per-group (containsAll), not item-equality.
+        // Coverage is per group: [coal] covers [coal, stick].
         List<List<String>> from = List.of(List.of("minecraft:coal", "minecraft:stick"));
         Map<String, List<List<String>>> all = Map.of(
                 "questown:fuel_only", List.of(COAL));

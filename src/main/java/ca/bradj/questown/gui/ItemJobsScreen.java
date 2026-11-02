@@ -37,7 +37,6 @@ import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class ItemJobsScreen extends CompatScreen {
 
-    /** How many of a job's products the card shows before "…". */
     private static final int PRODUCES_SHOWN = 3;
 
 
@@ -47,12 +46,9 @@ public class ItemJobsScreen extends CompatScreen {
     private @NotNull Ingredient requestedItem;
     private final BlockPos flagPos;
     private Button addButton;
-    // Skill-tree mode (dev playtest 2026-10-29: "a variant of the existing 'who makes <item>'
-    // screen"): one skill's card, with Unlock (locked) or Switch (unlocked) instead of Add.
+    // Skill-tree mode: one skill's card, with Unlock or Switch instead of Add.
     private final @Nullable UUID skillVillager;
     private final boolean skillLocked;
-    // Opened from the flag with Blocks of Progress there: Unlock spends one of the flag's (dev playtest
-    // 2026-10-29: "spend directly from the flag instead of having to withdraw first").
     private final int flagBops;
 
     public ItemJobsScreen(
@@ -144,13 +140,12 @@ public class ItemJobsScreen extends CompatScreen {
     }
 
     private ItemStack getFirst() {
-        // No producer known yet (a loot job's drops are listed only once the town has seen them):
-        // the raw-food quest's icon on day 1 crashed the client here (r17, 2026-10-25).
+        // No known producer yet: a loot job's drops show only once the town has seen them.
         if (jobs.isEmpty()) {
             return ItemStack.EMPTY;
         }
         UIJob j = jobs.get(delegate.getCurrentPageIndex());
-        // The request is for what the player clicked, not the job's first loot item.
+        // For the item the player clicked, not the job's first product.
         List<ItemStack> r = ProducedMatches.of(j.result(), requestedItem);
         if (r.isEmpty()) {
             return ItemStack.EMPTY;
@@ -181,7 +176,6 @@ public class ItemJobsScreen extends CompatScreen {
         int pageTopY = ((this.height - delegate.backgroundHeight)) / 2;
         int pageLeftX = ((this.width - backgroundWidth) / 2);
         int buttonHeight = (2 * font.lineHeight) + 2;
-        // The flag's Block of Progress is drawn left of Unlock (the "slot" as an item, not empty).
         int bopSpace = showsFlagBop() ? FLAG_BOP_ICON_SPACE : 0;
         this.addButton = this.addRenderableWidget(
                 Compat.button(
@@ -217,10 +211,6 @@ public class ItemJobsScreen extends CompatScreen {
         this.delegate.renderBg(ctx, partialTicks, mouseX, mouseY);
     }
 
-    // 1.20.6 parity note: vanilla Screen.render here draws the flat blurred/gradient
-    // surface for us (CompatScreen.renderBackground -> renderScreenSurface), so the
-    // paged panel sits between the surface and the renderables - the same relative
-    // order the 1.19.2 leaf's explicit renderBackground call produced.
     @Override
     protected void renderScreenContent(
             RenderContext ctx,
@@ -241,12 +231,9 @@ public class ItemJobsScreen extends CompatScreen {
                 textArea.getX() + textArea.getWidth() - 16,
                 textArea.getY() - 6
         );
-        // The hovered item's name, or the "…" note. The returned tooltip was dropped (also in
-        // 1.19.2), so no item on this card showed one (found 2026-10-30 adding "And others").
         List<Component> cardTooltip = this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
         if (jobs.isEmpty()) {
-            // Below the page-navigation row, aligned with it (r17 screenshot: a fixed offset from
-            // the title drew the text over "Page 1 / 1").
+            // Under the page buttons, so it never covers "Page 1 / 1".
             ImmutableRect2i nav = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
             ctx.darkTextWrap(
                     new Coordinate(nav.getX(), nav.getY() + nav.getHeight() + 6),
@@ -259,7 +246,6 @@ public class ItemJobsScreen extends CompatScreen {
             this.showTooltip(cardTooltip.stream().map(Compat::componentText).toList());
         }
         if (isOverFlagBop(mouseX, mouseY)) {
-            // Dev playtest 2026-10-30: say that this Block of Progress is the flag's.
             this.showTooltip(Compat.translatable("gui.flag_bop.tooltip", flagBops));
         }
     }
@@ -363,7 +349,7 @@ public class ItemJobsScreen extends CompatScreen {
         List<Component> tt1 = renderStrip.apply(c, d.ingredients(), true);
         c = c.shiftedDown(font.lineHeight);
 
-        // A job with no tools to list (or only ones it also uses up) has no Tools row at all.
+        // A job whose tools are all used up has no Tools row.
         List<Ingredient> tools = ToolsNotUsedUp.of(d.tools(), d.ingredients(), Ingredients::equal);
         List<Component> tt2 = null;
         if (!tools.isEmpty()) {
@@ -376,7 +362,6 @@ public class ItemJobsScreen extends CompatScreen {
         Component producesText = Compat.translatable("menu.item_jobs.produces");
         rc.darkText(producesText, x, (c = down.apply(c)).topY() + labelOffset);
         List<Ingredient> v = putRequestedItemFirst(Ingredients.fromItems(ImmutableList.copyOf(ProducedMatches.of(d.result(), requestedItem))));
-        // The three most likely, then "…" (dev 2026-10-30; a loot job's results come most likely first).
         List<Component> tt3 = renderStrip.apply(c, v.subList(0, Math.min(PRODUCES_SHOWN, v.size())), true);
         if (v.size() > PRODUCES_SHOWN) {
             List<Component> more = RenderUtil.renderEllipsesAndReturnTooltip(

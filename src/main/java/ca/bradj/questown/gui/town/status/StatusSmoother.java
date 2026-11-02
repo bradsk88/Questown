@@ -8,14 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Per-villager status smoothing for the villagers page: each frame shows the most frequent status
- * of the last {@link #WINDOW} frames, so a status that flickers for a frame doesn't flash.
- * <p>
- * The window must stay bounded. An unbounded history made the page show the all-time most
- * frequent status since it opened: a returning hunter never showed "dropping loot", and the
- * leaver-return bar stayed full after the next trip began (2026-10-21 playtest).
- */
+/** Shows each villager's most frequent status of the last {@link #WINDOW} frames, so a one-frame flicker doesn't flash. */
 final class StatusSmoother {
 
     private static final int WINDOW = 5;
@@ -36,10 +29,7 @@ final class StatusSmoother {
         return newestEqualTo(q, mode);
     }
 
-    /**
-     * {@link StatusPacket#equals} ignores the leaver-return fields, so two equal packets can carry
-     * different trips. The newest one has the current trip.
-     */
+    /** Equal packets can differ in their trip, so take the newest. */
     private static StatusPacket newestEqualTo(
             Iterable<StatusPacket> q,
             StatusPacket mode

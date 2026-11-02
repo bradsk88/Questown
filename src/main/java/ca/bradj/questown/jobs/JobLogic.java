@@ -16,15 +16,7 @@ import java.util.function.Supplier;
 
 public class JobLogic<EXTRA, TOWN, POS> {
 
-    /**
-     * Extra ticks the max-ticks watchdog waits while the job is EXTRACTING_PRODUCT, so the tick a
-     * leaver's trip timer completes extracts the trip's product before any hand-off (r16 #3). A
-     * window, not an exemption: a job stuck extracting still hands off. Counted from the first
-     * extracting tick, not the job's start: a trip that outlasts the job's window reached its extract
-     * tick already past a start-counted grace, and the board's BOP deposit sent the villager home
-     * without the loot (r22). Pinned by
-     * {@code JobLogicTest.tick_shouldNotHitMaxTicksFallback_OnTheExtractTick}.
-     */
+    /** Extra ticks the stuck-job watchdog waits while a job is extracting, so a trip's product is extracted before the job is handed off. */
     static final long EXTRACT_GRACE_TICKS = 200;
     private long extractingTicks = 0;
 
@@ -46,10 +38,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
     public interface JLWorld<EXTRA, TOWN, POS> {
         void changeJob(JobID id);
 
-        /**
-         * Whether {@code id} may start now under the job board's day rule (it can always start,
-         * or it finishes before evening).
-         */
+        /** Whether {@code id} may start now: it can always start, or it finishes before evening. */
         boolean fitsInDay(JobID id);
 
         WorkPosition<POS> getWorkSpot();
@@ -58,14 +47,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean tryDropLoot();
 
-        /**
-         * The villager holds output of its work (items that are not this job's supplies), which
-         * its dropping-loot status carries to storage. A finished cycle waits for that before
-         * handing off.
-         */
+        /** The villager holds work output, which it takes to storage before the job hands off. */
         boolean holdsWorkOutput();
 
-        /** Whether the townie is starving (fullness at zero). */
         boolean isStarving();
 
         void tryGetSupplies();
@@ -183,15 +167,12 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
         worked = Math.max(0, worked - 1);
         if (this.grabbingInsertedSupplies) {
-            // Read before the clear below wipes the record.
             boolean insertedAny = worldBeforeTick.timesInserted() > 0;
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
                 worldBeforeTick.clearInsertedSupplies();
-                // The extract hooks are the job's finish (a diner's meal). Run them once, and only
-                // for a cycle that put something in: running them every tick until the job changed
-                // fed a diner that gave up ~500 free meals (2026-10-22 fullness log flood).
+                // The extract hooks finish the job (a diner's meal): run them once, and only after something was put in.
                 if (insertedAny) {
                     worldBeforeTick.tryExtractWithNoItem();
                 }
@@ -206,31 +187,23 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         WorkPosition<POS> workSpot = worldBeforeTick.getWorkSpot();
-        // A job waiting on a timer has its cycle in progress (a leaver is away, so it has no
-        // work spot): re-creating it then lost the hunt's product (2026-10-17 playtest).
-        // The tick a timer completes is EXTRACTING_PRODUCT: a hand-off then left the trip's loot
-        // unextracted until the next shift (r16 #3), so extraction gets a grace window.
+        // A job waiting on a timer is mid-cycle; don't re-create it. Extraction gets a grace window.
         extractingTicks = status.isExtractingProduct() ? extractingTicks + 1 : 0;
         boolean inExtractGrace = extractingTicks > 0 && extractingTicks <= EXTRACT_GRACE_TICKS;
         if (workSpot == null && !status.isWaitingForTimers() && !inExtractGrace
                 && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
-            // A same-job fallback ("keep doing this forever") asks the board: re-creating the job
-            // directly skipped the board's BOP-deposit and starving branches, so a chaining
-            // hunter never deposited its BOP and hunted on while starving (r12 #8, r14 #2).
-            // The board re-rolls the same job when nothing more urgent applies.
+            // A fallback to the same job still goes through the board, which may have something more urgent.
             boolean sameJob = fbJov.equals(entityCurrentJob);
             if (sameJob || !worldBeforeTick.fitsInDay(fbJov)) {
-                // The fallback skips the board, and with it the day-fit rule: a gatherer was
-                // restarted just before evening and left on a trip it slept through (2026-10-22).
+                // The fallback must still respect the day rule.
                 QT.JOB_LOGGER.debug(
                         "Reached max ticks for {}. Fallback {} {}; asking the board.",
                         entityCurrentJob, fbJov, sameJob ? "is the same job" : "won't fit in the day"
                 );
                 worldBeforeTick.changeToNextJob();
-                // If the board keeps this job, wait another window before asking again: the
-                // counter never reset, so a stalled hunter asked every tick (2026-10-22 r6).
+                // If the board keeps this job, wait a full window before asking again.
                 this.ticksSinceStart = 0;
                 return;
             }
@@ -249,10 +222,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
-            // The state behind the give-up, for r16 #10 (diners took food, then gave up at
-            // state:0 without eating; which of spot / site / insert was missing is unknown).
-            // r17 #19 adds the spots the job can see, by state: a cook at state:0 with mutton in
-            // hand never targeted the kitchen's furnace.
             QT.JOB_LOGGER.debug(
                     "{} gave up waiting for ingredients after {} ticks (job: {}, status: {}, workSpot: {}, inJobSite: {}, inserted: {}, spotsByState: {})",
                     entityCurrentJob.rootId(),
@@ -297,19 +266,13 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (wrappingUp) {
             if (worldBeforeTick.holdsWorkOutput()) {
-                // Holding output: carry on as a fresh cycle instead of handing off. The job's own
-                // status keeps working while there is work, then drops loot by walking to a chest,
-                // and the empty-handed dropping-loot branch above hands off. Handing off here let
-                // the board's carried-output deposit teleport the output into the nearest chest
-                // (2026-10-20 playtest).
+                // Holding output: carry on as a fresh cycle, which takes it to a chest.
                 wrappingUp = false;
                 return;
             }
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
-            // A finished cycle hands off; it does not fetch supplies for another one. Fetching
-            // here fed the board cascade's carried-output deposit a fresh item every tick: a
-            // take/return loop of ~300 raw food per meal (2026-10-19, cook-diner-carrot-take-burst).
+            // A finished cycle hands off; it doesn't fetch supplies for another one.
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
             return;
@@ -377,12 +340,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
         return WithReason.unformatted(wrappingUp, "If worked");
     }
 
-    /**
-     * A deposit is a decision point for a starving townie: the board (which sends it to dine) is
-     * otherwise asked only between jobs, and a hunter went straight back out for a whole trip at
-     * -104% with food in the chest (r16 #1, dev ruling 2026-10-24). A diner is already going to
-     * eat; re-deciding would skip it to the next diner stage.
-     */
+    /** A deposit is when a starving villager re-decides, so it goes to eat. A diner is already eating. */
     private void redecideIfStarving(
             JLWorld<EXTRA, TOWN, POS> world,
             JobID currentJob

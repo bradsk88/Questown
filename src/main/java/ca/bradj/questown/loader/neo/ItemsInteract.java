@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
-/** Per-loader binder: forwards right-click interactions to the neutral core in {@link ItemsInit}. */
 public class ItemsInteract {
     @SubscribeEvent
     public void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {

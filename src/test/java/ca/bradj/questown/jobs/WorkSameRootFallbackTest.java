@@ -8,13 +8,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * 2026-10-17 playtest: a job change named an unregistered id (the simple-furnace template's
- * source id cook/simple_furnace_food), and ServerJobsRegistry's "any job in the same root"
- * fallback took the FIRST cook job - cook/stock_ingredients, which needs a stocked kitchen.
- * User ruling: "stock kitchen should not be a job that gets unlocked initially". The
- * fallback now prefers a job unlocked with the root ({@link Work#isUnlockedInitially}).
- */
+/** The same-root fallback prefers a job unlocked with the root. */
 class WorkSameRootFallbackTest {
 
     private record Candidate(String id, @Nullable JobID parent, boolean unlockedWithRoot) {

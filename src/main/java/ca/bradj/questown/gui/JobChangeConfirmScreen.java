@@ -94,8 +94,7 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
             unlockButton.active = menu.hasBlockOfProgress();
         }
         if (menu.usesFlagBop()) {
-            // The flag's Block of Progress in the empty slot, as an item (the dev's "the slot should
-            // change to an item renderer"); Unlock spends it from the flag.
+            // Show the flag's Block of Progress in the empty slot.
             Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
             ItemStack bop = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance().copyWithCount(Math.min(menu.flagBopCount(), 64));
             ctx.renderItemAndDecorations(bop, bgX + bopSlot.x, bgY + bopSlot.y);
@@ -105,7 +104,6 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         if (menu.usesFlagBop()) {
             Slot bopSlot = menu.slots.get(menu.slots.size() - 1);
             if (UtilClean.isCoordInBox(mouseX, mouseY, bgX + bopSlot.x, bgY + bopSlot.y, 16, 16)) {
-                // Dev playtest 2026-10-30: say that this Block of Progress is the flag's.
                 this.showTooltip(Compat.translatable("gui.flag_bop.tooltip", menu.flagBopCount()));
             }
         }
@@ -120,8 +118,7 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
 
 
-        // An open onboarding job-change quest decides the root whatever the BOP, so say which
-        // job instead of "a random profession" (2026-10-22 r8).
+        // A promised job is named instead of "a random profession".
         JobChangeText text = JobChangeText.of(
                 menu.hasBlockOfProgress(),
                 Minecraft.getInstance().player != null && Minecraft.getInstance().player.isCreative(),
@@ -153,8 +150,6 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
                 textWidth
         );
         for (FormattedCharSequence part : parts) {
-            // Dark body text like the rest of this screen (2026-10-17 playtest: the white
-            // shadowed centred string read as a different font).
             ctx.centeredDark(part, x + (textWidth / 2), bgY);
             bgY += 8;
         }

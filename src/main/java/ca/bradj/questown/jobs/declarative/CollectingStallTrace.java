@@ -3,12 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * Diagnostic tripwire (2026-10-21 playtest: after a sleep, hunters stood in COLLECTING_SUPPLIES
- * for 17+ minutes; not reproduced by autotest). Once a villager has been collecting supplies for
- * {@link #FIRST_REPORT_TICKS} without taking anything, report its state once, then every
- * {@link #REPEAT_TICKS} while it stays stuck. Taking something or leaving the status resets it.
- */
+/** Dev diagnostics: reports a villager that has been collecting supplies for a while without taking anything, then repeats while it stays stuck. */
 public final class CollectingStallTrace {
 
     public static final long FIRST_REPORT_TICKS = 1200;

@@ -17,11 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Wire-format round trip through the NeoForge envelope codec: the wire starts with the varint
- * message id and then the message's own encoder bytes; both directions must agree on that, or a
- * correct encode produces a decode that reads the message's own first bytes as the id.
- */
+/** The envelope codec writes the message id, then the message's bytes, and reads them back the same way. */
 class NeoChannelWireTest {
 
     private static final RegistryAccess ACCESS = RegistryAccess.EMPTY;
@@ -69,8 +65,7 @@ class NeoChannelWireTest {
 
     @Test
     void envelope_emptyBody_roundTrips_idAndMessage() {
-        // An empty body is the sharpest case: the wire is the id itself. An encode that does not
-        // write the id yields an empty wire, so the decode's first readVarInt fails or misroutes.
+        // An empty message: the wire is just the id.
         NeoChannel ch = channel();
         NeoEnvelope back = roundTrip(ch, new NeoEnvelope(0, new CloseScreensMessage()));
         assertEquals(0, back.id());
@@ -81,7 +76,6 @@ class NeoChannelWireTest {
     @Test
     void envelope_idsStayDistinctAcrossMessages() {
         NeoChannel ch = channel();
-        // Two distinct ids for two distinct messages; a wire that drops the id cannot survive this.
         NeoEnvelope a = roundTrip(ch, new NeoEnvelope(0, new CloseScreensMessage()));
         NeoEnvelope b = roundTrip(ch, new NeoEnvelope(1, new OnScreenTextMessage("k", "x")));
         assertEquals(0, a.id());

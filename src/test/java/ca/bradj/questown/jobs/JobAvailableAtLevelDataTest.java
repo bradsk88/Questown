@@ -13,13 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * Data-oracle half of the skills-tab level gate (2026-10-13 ruling): the material-tier
- * crafter jobs (the "blacksmith" unlock group) declare their {@code available_at_level} in
- * the job JSON, and NOTHING else does - every other job stays on the default (2, the first
- * level the tab appears). The JSON files are what {@code ResourceJobLoader} reads at server
- * start, so pinning the values here pins the gate without the Forge registry.
- */
+/** Only the tool-tier crafter jobs declare {@code available_at_level}; every other job uses the default. */
 class JobAvailableAtLevelDataTest {
 
     private static final Gson GSON = new Gson();
@@ -36,7 +30,6 @@ class JobAvailableAtLevelDataTest {
 
     @Test
     void materialTierJobs_declareTheExpectedLevels() throws Exception {
-        // Lowered for the Outfitter path (dev, 2026-10-26; were 7 / 12 / 17 / 22 / 27).
         List<String> expectations = List.of(
                 "wood:3", "stone:5", "iron:8", "golden:11", "diamond:14"
         );
@@ -45,15 +38,13 @@ class JobAvailableAtLevelDataTest {
             int level = Integer.parseInt(expectation.split(":")[1]);
             for (String tool : TOOLS) {
                 JsonObject job = read("blacksmith_" + tier + "_" + tool + ".json");
-                // The wooden pickaxe is the Outfitter's level-2 skill (dev playtest 2026-10-30:
-                // "pickaxes are good"), unlocked while training to crafter 3.
+                // The wooden pickaxe unlocks at level 2.
                 int expected = tier.equals("wood") && tool.equals("pickaxe") ? 2 : level;
                 Assertions.assertEquals(
                         expected,
                         job.get("available_at_level").getAsInt(),
                         "blacksmith_" + tier + "_" + tool + ".json must declare available_at_level " + expected
                 );
-                // the id must stay in the crafter family - the gate rides the job, not the file name
                 Assertions.assertTrue(job.get("id").getAsString().startsWith("crafter/"),
                         "the blacksmith tier files define crafter jobs: " + job.get("id"));
             }

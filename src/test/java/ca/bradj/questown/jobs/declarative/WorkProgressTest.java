@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 
 class WorkProgressTest {
 
-    /** Dev playtest 2026-10-30: a work bar on the status icon of any work-based job. */
     @Test
     void fractionIsTheWorkDone() {
         Assertions.assertEquals(0f, WorkProgress.fraction(40, 40));

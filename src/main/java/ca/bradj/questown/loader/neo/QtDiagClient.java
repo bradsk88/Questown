@@ -21,42 +21,11 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Port-test client hook. Active only when the client is launched with
- * {@code -Dquestown.diag=true} (the port-test runner does this; production
- * clients never see it). The 1.19.2 golden build carries the equivalent hook
- * (see tools/porttest/PORTTEST.md), so both versions speak the same protocol.
- *
- * Two command channels, same core:
- * <ul>
- *   <li><b>chat token</b> — a whisper from the server
- *       ({@code /msg Dev [qtdiag] <cmd>}) on the
- *       {@link ClientChatReceivedEvent} game-bus;</li>
- *   <li><b>command file</b> — one bare command per line appended to
- *       {@code <gameDir>/.qtdiag-cmd}, consumed at ~4 Hz. This needs no
- *       server console at all (the dev server's stdin may be a dead fifo).</li>
- * </ul>
- * Commands: {@code tab <type>} (open a villager tab from the current tabbed
- * menu, same {@link OpenVillagerMenuMessage} a tab click sends),
- * {@code shot <name>} (render-thread {@link Screenshot} to
- * {@code <gameDir>/diags/<name>.png}), {@code cursor <x> <y>} (park the
- * pointer at a fixed window-pixel position so hover-dependent render state —
- * e.g. the advancements-pane tooltip fade — is identical across captures), and
- * {@code inquire <x> <y> <z> [item]} (send the work-board card's
- * {@code AddWorkFromUIMessage(INQUIRED)} so the server answers with a
- * {@code WorkRequestConfirmMessage} and the confirm screen opens on the
- * render thread — the same message pair a card click produces) and
- * {@code flagtab <type> [x y z]} (send the flag tab's {@code OpenFlagMenuMessage}
- * so the server opens the flag-scoped screen — {@code villagers} or
- * {@code economics} — the same message a flag-tab click sends) and
- * {@code vopen <type> [uuid-prefix]} (open a villager's own tab menu the
- * {@code _qtdev openvillager <type>} console path uses, read as a fallback from
- * the open flag-menu screen context: the flag pos + the synced villager whose UUID
- * starts with the prefix (any villager when omitted),
- * via the same {@link OpenVillagerMenuMessage} a tab click sends),
- * {@code click <x> <y>} (left-click the open screen at a window-pixel position),
- * {@code use} (press the use key once: a right-click on whatever the crosshair is on, e.g. an
- * entity a block-only {@code _qtdev clickheld} cannot reach) and
- * {@code close} (close the open screen as Escape does).
+ * Screen-capture client hook, on only with {@code -Dquestown.diag=true}. Commands arrive as a
+ * {@code [qtdiag] <cmd>} chat whisper or as lines in {@code <gameDir>/.qtdiag-cmd}:
+ * {@code tab <type>}, {@code shot <name>}, {@code cursor <x> <y>}, {@code inquire <x> <y> <z> [item]},
+ * {@code flagtab <type> [x y z]}, {@code vopen <type> [uuid-prefix]}, {@code click <x> <y>},
+ * {@code use} and {@code close}.
  */
 public class QtDiagClient {
 
@@ -91,15 +60,11 @@ public class QtDiagClient {
         System.out.println("[qtdiag] client hook active (chat + " + cmdFile + ")");
     }
 
-    /** Called from the game-bus {@link ClientChatReceivedEvent} listener. */
     public static void onChat(ClientChatReceivedEvent event) {
         handle(event.getMessage().getString());
     }
 
-    /**
-     * Core command handler. Accepts either chat-token form
-     * ({@code [qtdiag] tab stats}) or bare file lines ({@code tab stats}).
-     */
+    /** Handles a command, from chat ({@code [qtdiag] tab stats}) or the file ({@code tab stats}). */
     public static void handle(String text) {
         if (!Boolean.getBoolean("questown.diag") || text == null || text.isEmpty()) {
             return;
@@ -156,12 +121,7 @@ public class QtDiagClient {
         System.out.println("[qtdiag] tab " + type + " requested");
     }
 
-    /**
-     * Park the pointer at a fixed window-pixel position. The screen's
-     * mouseX/mouseY come from {@code MouseHandler.xpos()/ypos()}; those are
-     * private, so set them by reflection. Dev-diag only; the pointer only
-     * moves again on a real OS mouse event.
-     */
+    /** Parks the pointer at a window-pixel position. */
     private static void cursor(Minecraft mc, double x, double y) {
         try {
             java.lang.reflect.Field fx = mc.mouseHandler.getClass().getDeclaredField("xpos");
@@ -182,16 +142,7 @@ public class QtDiagClient {
         }
     }
 
-    /**
-     * Left-click the open screen at a window-pixel position (the same space as
-     * {@code cursor}): parks the pointer there, then sends the screen a press and
-     * release at the gui-scaled coordinates, as a real click would.
-     */
-    /**
-     * Wheel input through vanilla's own {@code MouseHandler.onScroll} (private, so reflection), not
-     * a direct {@code Screen.mouseScrolled} call: the point is to exercise the event path the game
-     * uses, which a direct call would bypass (the 2026-10-22 dispatch bug lived in that path).
-     */
+    /** Scrolls through the game's own input handler, not straight into the screen. */
     private static void scroll(Minecraft mc, double x, double y, double delta) {
         cursor(mc, x, y);
         mc.execute(() -> {
@@ -211,7 +162,7 @@ public class QtDiagClient {
     private static void click(Minecraft mc, double x, double y) {
         cursor(mc, x, y);
         mc.execute(() -> {
-            // Keep the clicked screen: a click that closes it (Unlock, Craft) nulls mc.screen.
+            // A click can close the screen.
             var screen = mc.screen;
             if (screen == null) {
                 System.out.println("[qtdiag] click: no screen open");
@@ -225,7 +176,7 @@ public class QtDiagClient {
         });
     }
 
-    /** Close the open screen the way Escape does. */
+    /** Presses the use key once. */
     private static void use(Minecraft mc) {
         KeyMapping.click(mc.options.keyUse.getKey());
         System.out.println("[qtdiag] use key pressed");
@@ -289,10 +240,7 @@ public class QtDiagClient {
     }
 
     private static void vopen(Minecraft mc, String type, @Nullable String uuidPrefix) {
-        // open a VILLAGER's tab menu without the console (/_qtdev openvillager<>)
-        // when the server's stdin is a dead pipe: needs the flag's villagers
-        // menu open first (flagtab villagers) for the flag pos + villager UUIDs
-        // (the flag menu's synced villager list, static on MultiStatusScreen).
+        // Open a villager's menu without the console; needs the flag's villagers menu open first.
         if (mc.player == null) {
             System.out.println("[qtdiag] vopen: no local player");
             return;
@@ -307,8 +255,7 @@ public class QtDiagClient {
             System.out.println("[qtdiag] vopen: no villager UUIDs synced to the flag menu yet");
             return;
         }
-        // The synced map decodes as a HashMap, so "first" is arbitrary: pick by UUID prefix
-        // (`_qtdev villager_stats` prints "Villager N (<uuid>)") to reach a given villager.
+        // Pick by UUID prefix; the map has no order.
         java.util.UUID villager = villagers.keySet().stream()
                 .filter(u -> uuidPrefix == null || u.toString().startsWith(uuidPrefix))
                 .findFirst()
@@ -324,10 +271,7 @@ public class QtDiagClient {
     }
 
     private static void chat(Minecraft mc, String[] parts) {
-        // the bridge when the server's stdin/console fifo is a dead pipe:
-        // sends a ServerboundChatCommandPacket (a '/"-prefixed player chat
-        // command) so the server dispatches _qtdev with the player as source,
-        // exactly like a player typing it in the chat box.
+        // Run a command as the player, for when the server console is unavailable.
         if (mc.player == null) {
             System.out.println("[qtdiag] cmd: no local player");
             return;
@@ -342,7 +286,6 @@ public class QtDiagClient {
     }
 
     private static void shot(Minecraft mc, String name) {
-        // 1.20.6 Screenshot.grab(File dir, ...) writes to <dir>/screenshots/<token>.png.
         File base = new File(mc.gameDirectory, "diags");
         File outShotDir = new File(base, "screenshots");
         if (!outShotDir.exists() && !outShotDir.mkdirs()) {
@@ -358,10 +301,7 @@ public class QtDiagClient {
                 System.out.println("[qtdiag] shot failed: " + t);
                 return;
             }
-            // The write is async (IO worker). Poll from a daemon thread for
-            // the token file, then move it to diags/<name>.png for a stable path.
-            // grab(dir, token, ...) writes <dir>/screenshots/<token> (no
-            // extension is added; the name is used verbatim).
+            // The screenshot is written in the background; wait for it, then move it to diags/<name>.png.
             File src = new File(outShotDir, token);
             File dest = new File(base, name + ".png");
             Thread mover = new Thread(() -> {

@@ -11,23 +11,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Predicate;
 
 /**
- * A writing {@link VoidLevel} sibling that backs real worldgen ({@code TreeFeature.place})
- * with an in-memory snapshot during time warp.
- * <p>
- * Reads route snapshot-first (falling back to the real level for everything not yet
- * overridden); writes route into the snapshot instead of the live world. A {@code dryRun}
- * mode discards writes (like {@link VoidLevel}) so the same feature call can be used as a
- * plantability probe. This is the decoupling doc's reference example for complex world
- * interaction under warp (see ADR-0005).
+ * A world view for growing trees during a warp: reads fall back to the real level, writes stay in
+ * memory. With {@code dryRun}, writes are dropped.
  */
 public class SnapshotWorldGenLevel extends VoidLevel {
 
-    /** Snapshot/dirty-set access, implemented by {@code WarpWorldAccess}. */
     public interface SnapshotAccess {
-        /** Snapshot-first block state; never null (falls back to the real level / air). */
         BlockState getBlock(BlockPos pos);
 
-        /** Writes a block into the snapshot and marks it dirty for {@code applyTo}. */
         void setBlock(BlockPos pos, BlockState state);
     }
 

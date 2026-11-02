@@ -244,11 +244,7 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    /**
-     * The page selector's look: a dark strip from the previous button to {@code rightX}, with the
-     * text centred between the two arrow buttons. Also the economics tab's view toggle (dev
-     * playtest 2026-10-30: "should have the same style as the page selector").
-     */
+    /** The page selector's dark strip, with the text centred between the arrow buttons. Also used for the economics view toggle. */
     static void drawSelectorStrip(
             RenderContext ctx,
             GuiIconButtonSmall previous,
@@ -263,7 +259,7 @@ public final class PagedCardScreen<D> {
         ctx.lightText(text, textArea.getX(), textArea.getY());
     }
 
-    /** Back to page 1, for a screen whose card list just changed (QuestsScreen's open/completed toggle). */
+    /** Back to page 1, after the list of cards changed. */
     public void firstPage() {
         currentPage = 0;
     }

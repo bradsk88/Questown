@@ -3,11 +3,7 @@ package ca.bradj.questown.core;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * r16 #5: room recipe weights are summed per ingredient, and a "never recommend" item weighs
- * {@code Integer.MAX_VALUE} (the plate). Four plates overflowed a plain int sum to -4, so the
- * dining room weighed less than the empty room (0) and was announced as "Empty Room".
- */
+/** A "never recommend" item weighs {@code Integer.MAX_VALUE}: four of them must not overflow to a negative weight. */
 class SaturatingAddTest {
 
     @Test

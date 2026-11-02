@@ -9,15 +9,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 
-/**
- * Client-only island for the NeoForge loader: the local-player send hook behind
- * {@code Channel.sendToServer}, the menu-screen replay at
- * {@link RegisterMenuScreensEvent}, and the client-only common-bus handlers.
- *
- * <p>Loaded only by the {@code questown.client} mod entry. A dedicated server never touches
- * this class, which keeps client class references (Minecraft, screens) out of the
- * constant pools of every class it is loaded on.
- */
+/** The client side of the NeoForge loader: the client's send hook, menu-screen registration, and client-only event handlers. A dedicated server never loads it. */
 public final class NeoLoaderClient {
 
     private NeoLoaderClient() {
@@ -37,17 +29,11 @@ public final class NeoLoaderClient {
         Loader.api().registerCommonHandlers(new NeoMouseScrollDispatch());
     }
 
-    /**
-     * Replays the neutral screen captures taken via {@code Loader.registerScreen} into
-     * NeoForge's menu-screen registry, adapting the neutral factory to the vanilla
-     * {@code ScreenConstructor} bound.
-     */
+    /** Registers the captured menu screens with NeoForge. */
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         NeoLoader neo = (NeoLoader) Loader.api();
-        // This event fires before the FMLClientSetupEvent work queue runs, so the capture that
-        // sits in that queue is still pending. Capture here (guarded, so the later queue call is
-        // a no-op) instead of replaying an empty list and silently dropping every menu screen.
+        // This event can come before the setup queue has captured the screens, so capture them here first.
         if (neo.pendingScreens().isEmpty()) {
             ca.bradj.questown.QuestownClient.registerScreens();
         }

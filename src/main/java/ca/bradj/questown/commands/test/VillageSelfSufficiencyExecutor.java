@@ -36,22 +36,18 @@ import java.util.UUID;
  * assigned directly (a hunter for food plus the starting jobs). The chicken
  * arc is skipped entirely.
  *
- * <p>Food needs two things. *Survival* is hunter-only: villagers eat raw meat via
- * the raw-food diner work and survive at a mood penalty, so no cook is needed to
- * keep them alive. *Working* is different: a hunter or gatherer eats a cooked
- * item from #questown:villager_food to keep working (their job's ingredient), so
- * the seed must stock the store chest with cooked meat, not raw. Seeding only raw
- * meat left the town in NO_WORK_POSSIBLE.
+ * <p>Villagers survive on raw meat (the raw-food diner work, at a mood penalty), but a hunter or
+ * gatherer eats a cooked item from #questown:villager_food to keep working, so the seed stocks
+ * the store chest with cooked meat.
  *
- * <p>Watchtower layers (built up incrementally; this file currently holds the
- * seed + run window):
+ * <p>Watchtower layers:
  * <ul>
  *   <li>container-flow counter (produced/consumed/stock per item per day)</li>
  *   <li>deterministic daily report (six categories + day-over-day delta)</li>
  *   <li>lock detectors (known-lock tripwires + forward-progress net)</li>
  *   <li>self-driving room builder (open room quest -&gt; flag.buildRoom + recipe block)</li>
  *   <li>real-night pass (default): townies walk to their beds and sleep; a townie
- *       with no bed earns the SLEEPLESS mood debuff at dawn. The old `time set day`
+ *       with no bed earns the SLEEPLESS mood debuff at dawn. The `time set day`
  *       skip is opt-in via questown.village.selfsuff.skipnight=true.</li>
  * </ul>
  */
@@ -133,9 +129,7 @@ public final class VillageSelfSufficiencyExecutor {
      *  a recipe id can appear in more than one open quest at once (a random batch
      *  with kitchen_stocked twice) or in a later batch after an earlier one closed
      *  (the tutorial kitchen_stocked and a random-batch kitchen_stocked), and each
-     *  open instance needs its own room in its own place. (The earlier per-recipe
-     *  "already completed" latch refused every second instance of a recipe forever
-     *  - run 16's kitchen_stocked x2 / inn stall.) A quest that closed but was only
+     *  open instance needs its own room in its own place. A quest that closed but was only
      *  ever built once does not need rebuilding, so the counter only ever grows on
      *  actual builds, and completed (non-ACTIVE) quests do not count toward open. */
     private final java.util.Map<net.minecraft.resources.ResourceLocation, Integer> builtRoomsForRecipe =
@@ -163,7 +157,6 @@ public final class VillageSelfSufficiencyExecutor {
     /** True once the first night has been slept through; reported as a milestone
      *  in the daily report. */
     private boolean firstNightPassed = false;
-    // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon) — keep/remove per handoff
     private int seekingStallPasses = 0;
     private boolean seekingStallDiagEmitted = false;
     /** Milestones, latched once and reported from then on: a townie holding a
@@ -177,24 +170,12 @@ public final class VillageSelfSufficiencyExecutor {
      *  flush a chest filled during furnish). */
     private boolean openingFoodSeeded = false;
     /** Latched once the welcome mat (the town-gate job site) is seeded at watch start.
-     * THE missing anchor (self-sufficiency soft-lock, 2026-10-06): every
-     * hunter/gatherer off-town food job carries base room
-     * questown:special_quest.town_gate (the welcome mat), and TownPossibleWork's
-     * gateFacts scores a job ~0 when the town lacks that job site ("Town lacks
-     * required job site"), so the board stayed preselected=[] and all townies
-     * sat UNMET_ITEM (food) with no production possible - the mat's arrival
-     * raced on the onboarding/tutorial chain and lost to the 2-day
-     * NO_FORWARD_PROGRESS net (run-4: mat at +57s, lock at +4.6min; run-5: mat
-     * never). Seeding is "just past onboarding" by design, so the gate should
-     * already exist; seed it via the owner's placeWelcomeMat (places +
-     * registers) - the same call the room-builder makes when its quest path
-     * reaches it, and the pattern VillageGrowthExecutor proves green. */
+     * Every hunter/gatherer food job has the welcome mat (questown:special_quest.town_gate) as
+     * its base room, and a job scores ~0 without its job site. The seed is "just past
+     * onboarding", so it places the mat through the owner's placeWelcomeMat. */
     private boolean openingMatSeeded = false;
     /** Chest adjacency to the seeded mat: the leaver job's base room (the mat)
-     *  must hold a container for the runtime job-site/ingredient scan to resolve;
-     *  run-6 (2026-10-06) showed the seeded mat alone still left the leaver
-     *  bouncing its job (ticksSinceStart never advances, NO_JOBSITE/COLLECTING_
-     *  SUPPLIES) so no food was ever produced. The chest content fill latches
+     *  must hold a container for the runtime job-site/ingredient scan to resolve. The chest content fill latches
      *  separately (seedMatChest) once the chest block entity is up. */
     private net.minecraft.core.BlockPos matChestPos = null;
     private boolean matChestSeeded = false;
@@ -652,9 +633,7 @@ public final class VillageSelfSufficiencyExecutor {
                 // working ingredient is #questown:villager_food, and that tag is cooked
                 // items only (bread, cooked_*, baked_potato, ...). Raw meat is the
                 // *survival* food a raw-food diner work consumes, not the working
-                // ingredient a hunter or gatherer eats to keep working. Seeding raw
-                // meat left the whole town in NO_WORK_POSSIBLE (the work-seeker found
-                // no villager_food in any registered room's chest). A chest in a
+                // ingredient a hunter or gatherer eats to keep working. A chest in a
                 // registered room is searched for ingredients by the work-seeker, so
                 // the store room's chest works. The wooden/stone sword is NOT seeded at
                 // all: the sword *quest* only opens after the first villager arrives and
@@ -671,9 +650,7 @@ public final class VillageSelfSufficiencyExecutor {
         // The tutorial sword quest is NOT closed here. The seed places the town
         // "just past onboarding", but the wooden-sword item quest only opens once
         // the first villager arrives, and closing it is action-gated: a sword
-        // deposited before the quest is open does not close it. Satisfying it at
-        // furnish time misses it entirely (the run logged "no open sword quest to
-        // complete at furnish"). The watch loop satisfies the open sword quest the
+        // deposited before the quest is open does not close it. The watch loop satisfies the open sword quest the
         // real-player path once a villager is present (satisfyOpenSwordQuestIfVillager),
         // which advances the town past PHASE_KICKOFF so natural progression opens
         // the farm/cook room quests the room builder can close.
@@ -742,9 +719,8 @@ public final class VillageSelfSufficiencyExecutor {
         // output item as a work request on the job board. Without the work request
         // the job has nothing to produce and the villager sits in downtime forever
         // (work requests are not quests, and a job with no request has no work).
-        // The third villager (i == 2) is deliberately left unassigned: the
-        // reworked onboarding tutorial phase 2.5 staffs the cook via its own
-        // JOB_CHANGE quest (roster >= 3 gate), not via the seed.
+        // The third villager (i == 2) is deliberately left unassigned: onboarding staffs the cook
+        // through its own JOB_CHANGE quest (roster >= 3 gate).
         int i = 0;
         for (VillagerUUID vuid : flag.getVillagerHandle().getVillagerJobs().keySet()) {
             UUID uuid = VillagerUUID.get(vuid);
@@ -765,11 +741,9 @@ public final class VillageSelfSufficiencyExecutor {
                 net.minecraft.world.item.Items.MUTTON));
         flag.getWorkHandle().requestWork(ca.bradj.questown.jobs.requests.WorkRequest.of(
                 net.minecraft.world.item.Items.WHEAT_SEEDS));
-        // (a) demand-side fix: the board must also ask for a COOKED dish so the
-        // staffed cook (cook/simple_furnace_food, output cooked_beef) is selectable --
-        // selection is an output<->request match and a raw-only demand pruned the real
-        // cook job (gate2 canSatisfy), leaving the cook to loop its always_consider setup
-        // pair while cooked surplus clogs the store (the soft-lock's NO_SPACE wall).
+        // The board must also ask for a COOKED dish so the staffed cook
+        // (cook/simple_furnace_food, output cooked_beef) is selectable: selection is an
+        // output<->request match.
         // This request gives the cook a real job AND a drain: workers consume
         // #questown:villager_food as their working ingredient. Tag (broad) rather than a
         // single item so the demand matches whichever cook recipe is staffed.
@@ -836,7 +810,7 @@ public final class VillageSelfSufficiencyExecutor {
         // Periodic heartbeat so a held run is readable: roster, jobs, needs.
         if (ticks % 400 == 0) {
             heartbeat();
-            maybeEmitSeekingStallDiag(); // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon)
+            maybeEmitSeekingStallDiag();
         }
         // By default the night passes for real: townies walk to their beds and
         // sleep, and a townie with no bed earns the SLEEPLESS debuff at dawn - the
@@ -899,8 +873,7 @@ public final class VillageSelfSufficiencyExecutor {
         }
         // Seed the welcome mat (town-gate job site), once, same rhythm. Without
         // it the leaver job family (and thus the whole food chain) is
-        // unscoreable and the town soft-locks (the 2026-10-06 self-sufficiency
-        // lock).
+        // unscoreable and the town soft-locks.
         if (roomBuilderTicks % 200 == 0) {
             seedWelcomeMat();
         }
@@ -934,10 +907,8 @@ public final class VillageSelfSufficiencyExecutor {
      *  report's stock/produced/consumed measure the store seam (track AFTER seeding so
      *  the opening block is the seed baseline and is not counted as produced).
      *  One-shot (latched); if the block entity is not a Container yet the latch is not set
-     *  and the next cycle retries. COOKED meat, not raw: a townie's working ingredient is
-     *  #questown:villager_food (cooked items only); raw meat is the survival food a
-     *  raw-food diner work consumes, and seeding raw meat left the town in
-     *  NO_WORK_POSSIBLE. */
+     *  and the next cycle retries. Cooked meat: a townie's working ingredient is
+     *  #questown:villager_food (cooked items only). */
     /** Seed the welcome mat (town-gate job site) once at watch start. A
      *  no-op if a mat is already registered (the quest path got there first).
      *  Retries next cycle if no clear spot resolves yet. */
@@ -1110,7 +1081,7 @@ public final class VillageSelfSufficiencyExecutor {
      *    <li>general item economy (produced/consumed/stock from the flow counter)
      *        + demand side (unmet needs from {@code NoMCEconomics})</li>
      *    <li>mood aggregate (TownieNeed distribution: NONE / CANT_REACH / UNMET_ITEM)</li>
-     *    <li>locks fired today (placeholder until the lock detectors land)</li>
+     *    <li>locks fired today</li>
      *    <li>milestones reached (first night passed, cook/farmer unlocked)</li>
      *  </ol>
      *  Each line carries a delta vs the previous day's snapshot. */
@@ -1320,11 +1291,10 @@ public final class VillageSelfSufficiencyExecutor {
         msg("watch " + sb);
     }
 
-    // DEV-DIAG: stall score-dump, 2026-10-03 (wigeon) — keep/remove per handoff
     /** When 2+ townies sit in seeking_work for 3+ heartbeat passes (~60s real),
      *  dump the work-seeker's per-job scores, gate-failure reasons, and board
      *  requests for each stalled root. One-shot (latched); read-only; fires only
-     *  on a stall, so a healthy world is unaffected. Lets a log-only session
+     *  on a stall, so a healthy world is unaffected. Lets a log reader
      *  distinguish a score regression from a selection-predicate rejection
      *  (unlocks / canAlwaysStart / day-fit) without a console or client. */
     private void maybeEmitSeekingStallDiag() {
@@ -1507,7 +1477,6 @@ public final class VillageSelfSufficiencyExecutor {
         if (flag.getVillagerHandle().size() < 1) return; // no townie to convert yet
         var allQuests = flag.getAllQuestsWithRewards();
 
-        // DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
         QT.FLAG_LOGGER.info("[self_suff] [jcscan] executor sees {} quests: {}",
                 allQuests.size(),
                 allQuests.stream().map(e -> e.getKey().getType() + "/" + e.getKey().getStatus() + ":" + e.getKey().getWantedId())
@@ -1591,7 +1560,7 @@ public final class VillageSelfSufficiencyExecutor {
         // flag into a 5x5 pocket - the E/W rooms' south walls sit on the flag's own
         // row (z=0 at x 3..7 / -7..-3), the S room's north wall at z=1 and the N
         // room's south wall at z=-5, corners at (±3,-4) - so townies CANT_REACH the
-        // flag (run-1/run-2 storm: 131/123 lines). At 7 the flag's row keeps a
+        // flag. At 7 the flag's row keeps a
         // 9-cell gap (x -4..4) and rows z=1..2 stay clear to the south; later
         // rooms stack outward and can never re-close the gap.
         int[] dxs = {1, 0, -1, 0, 1, 0, -1, 0};
@@ -1687,8 +1656,7 @@ public final class VillageSelfSufficiencyExecutor {
     private static final int COAL_SEED_DEFAULT = 16;
 
     /**
-     * Test-only player-input stand-in (open decision #1 from the gannet handoff, decided:
-     * *town storage*, i.e. the store chest): the player's coal is what the cook runs on
+     * Test-only player-input stand-in (the store chest): the player's coal is what the cook runs on
      * before a miner exists. Set to 0 for a no-coal world to see the town top-need
      * without player supplies. Logged at seed time.
      */
@@ -1707,10 +1675,8 @@ public final class VillageSelfSufficiencyExecutor {
     private static final int MAT_COAL_SEED_DEFAULT = 16;
 
     /**
-     * Test-only player-input stand-in (run-14 re-drive cell): the mat supply chest's
-     * coal is a **second seed path** that {@code questown.village.selfsuff.coal}
-     * does not control — run 14's "coal-less" world still ran the cook because of it
-     * (seeded 16xminecraft:coal). Set to 0 for a truly coal-less world; logged at
+     * Test-only player-input stand-in: the mat supply chest's coal is a second seed path that
+     * {@code questown.village.selfsuff.coal} does not control. Set to 0 for a truly coal-less world; logged at
      * seed time.
      */
     private int matCoalSeed() {

@@ -126,28 +126,16 @@ public abstract class AbstractAdvanceTime<
 
     /**
      * Advances time by simulating villager work cycles.
-     * <p>
-     * The warp carries <em>two</em> timelines (see ADR-0006). Villager labour is scheduled on the
-     * {@code ticksPassed} <em>productive</em> budget (work stops at night). World-level passive
-     * effects (the {@code warpTickCallback}) run on the {@code wallClockTicks} <em>wall-clock</em> budget so
-     * crops, furnaces and trees keep advancing through the night. {@code productiveToWallClock} maps a
-     * productive offset (relative to {@code currentTick}) to its wall-clock offset within the window.
+     * <p>The warp runs two clocks: villagers work on {@code ticksPassed} (not at night), while world
+     * processes ({@code warpTickCallback}: crops, furnaces, trees) run on {@code wallClockTicks}, nights
+     * included. {@code productiveToWallClock} maps one to the other.
      *
-     * @param storedState      The town state at the start of the warp
-     * @param ticksPassed      Productive ticks to simulate (labour budget)
-     * @param wallClockTicks        Wall-clock ticks elapsed (passive-effect budget; {@code >= ticksPassed})
-     * @param currentTick      The current game tick (reference point / window end)
-     * @param productiveToWallClock Maps a productive offset to its wall-clock offset within the window
-     * @param work             Work interface for job resolution
-     * @param warperFactory    Factory for creating per-villager warpers
-     * @param cookResolver     Optional cooking resolver (can be null)
-     * @param warpTickCallback Optional callback for world-level
-     *                         effects between warp steps (can be null)
-     * @param level            Level/world for loot source
-     * @param downtimeCheck    Predicate to check if a job is a downtime job
-     * @param downtimeTicks    Number of ticks for downtime period
-     * @param logger           Logger for warp operations
-     * @return The updated town state after the warp
+     * @param ticksPassed           working ticks to simulate
+     * @param wallClockTicks        all ticks elapsed, at least {@code ticksPassed}
+     * @param productiveToWallClock maps a working offset to its clock offset
+     * @param cookResolver          may be null
+     * @param warpTickCallback      world processes between warp steps; may be null
+     * @return the town state after the warp
      */
     public Result<TOWN> advanceTime(
             TOWN storedState,
@@ -172,9 +160,7 @@ public abstract class AbstractAdvanceTime<
         TOWN liveState = storedState;
         List<TownState.VillagerData<H>> villagers = new ArrayList<>(storedState.villagers);
 
-        // Collect all warp steps across all villagers. Labour is scheduled on the productive
-        // budget only; an all-night window (ticksPassed <= 0) produces no labour steps but still
-        // runs passive effects below.
+        // Villagers work on the working budget; an all-night window has no work but still runs world processes.
         final List<Map.Entry<Long, Function<TOWN, TOWN>>> warpSteps = new ArrayList<>();
 
         for (int i = 0; ticksPassed > 0 && i < villagers.size(); i++) {
@@ -234,11 +220,7 @@ public abstract class AbstractAdvanceTime<
 
         long before = System.currentTimeMillis();
 
-        // Execute all warp steps, interleaving world-level hooks at tick boundaries.
-        // Labour fires on the productive stepTick (lastHookTick); the passive callback fires on
-        // the WALL-CLOCK timeline: it receives an absolute wall-clock currentTick (currentTick + wallClockOffset,
-        // so plantTick/age references stay coherent) and a wall-clock tickDelta that telescopes to
-        // wallClockTicks across the whole window (so night is credited to crops/furnaces).
+        // Work runs on the working clock; world processes get the full clock, nights included.
         long lastHookTick = 0;
         long wallClockCursor = 0;
         for (Map.Entry<Long, Function<TOWN, TOWN>> warpStep
@@ -246,9 +228,7 @@ public abstract class AbstractAdvanceTime<
             long stepTick = warpStep.getKey();
             if (stepTick > lastHookTick
                     && warpTickCallback != null) {
-                // Clamp into [0, ticksPassed]: some tick sources (e.g. the downtime skip in
-                // ImportantTicks) emit a leading tick that is not currentTick-relative, which
-                // would otherwise produce a negative offset (and a crop-shrinking delta).
+                // Some tick sources give a tick before the window; clamp it.
                 long productiveOffset = Math.max(0, Math.min(stepTick - currentTick, ticksPassed));
                 long wallClockOffset = Math.max(wallClockCursor, productiveToWallClock.applyAsLong(productiveOffset));
                 long wallClockTick = currentTick + wallClockOffset;
@@ -266,9 +246,7 @@ public abstract class AbstractAdvanceTime<
             }
         }
 
-        // Final hook call for the remaining wall-clock ticks after the last labour step. This covers
-        // the trailing night (and the whole window when an all-night warp produced no steps), so
-        // passive effects still run when productive ticks alone would have stopped at dusk.
+        // World processes for the time after the last work step, including any trailing night.
         if (warpTickCallback != null
                 && wallClockTicks > wallClockCursor) {
             long tickDelta = wallClockTicks - wallClockCursor;

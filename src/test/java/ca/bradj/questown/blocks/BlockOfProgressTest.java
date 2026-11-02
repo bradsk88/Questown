@@ -11,11 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * NBT round-trip for the "earned by" job carried by a villager-earned Block of Progress stack.
- * Uses the vanilla-bootstrap pattern (no Forge registries needed) with an arbitrary vanilla item,
- * since the helpers only touch the stack's NBT.
- */
+/** The "earned by" job saved on a Block of Progress. */
 class BlockOfProgressTest {
 
     @BeforeAll

@@ -7,12 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * What a job's {@code initial_request} adds to the job board's products. A tag request stays one
- * tag ingredient: the picker draws it as its category's cycling tile ("Food"). Splitting it into
- * its members offered every food in {@code #questown:villager_food}, carrot and apple included,
- * though no job makes them (r16 #18, dev 2026-10-24). Pinned by {@code RequestOutputsTest}.
- */
+/** What a job's {@code initial_request} adds to the job board's products. A tag stays one tag, shown as its category. */
 public final class RequestOutputs {
 
     private RequestOutputs() {

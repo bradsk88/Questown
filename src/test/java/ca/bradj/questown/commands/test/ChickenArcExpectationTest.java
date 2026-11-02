@@ -8,12 +8,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Minimal coverage for the {@code expectedFinalPhase} field added in U4.
- * The end-to-end behaviour (live phase derivation in
- * {@link ChickenArcResultChecker}) is exercised by chicken-arc autotest
- * scenarios in U5.
- */
 class ChickenArcExpectationTest {
 
     @Test

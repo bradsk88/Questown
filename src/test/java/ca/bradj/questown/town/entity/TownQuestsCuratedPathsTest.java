@@ -22,11 +22,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * The curated-path engine in {@link TownQuests} (plan rulings 2-4, 18-23): starters post at the
- * fork (the onboarding miner batch complete), later batches once their opens_after batches are
- * complete, each once; the ladder holds the garden while a taken path has batches left.
- */
+/** Curated paths in {@link TownQuests}: starters post at the fork, later batches once their prerequisites are done, each once. */
 class TownQuestsCuratedPathsTest {
 
     @BeforeAll
@@ -133,7 +129,6 @@ class TownQuestsCuratedPathsTest {
         assertEquals(Set.of("start", "weapons_1"), quests.pathBatchIds(OUTFITTER, true));
     }
 
-    /** Progressive discovery reveals a few random children per job; a named skill quest must not hinge on it. */
     @Test
     void postingABatch_revealsItsNamedSkills() {
         TownQuests quests = townWithMinerBeat(true);
@@ -147,7 +142,6 @@ class TownQuestsCuratedPathsTest {
         assertEquals(List.of(new JobID("crafter", "wooden_shovel")), view.getRevealedSkills());
     }
 
-    /** The ladder's path step: null (go on to the garden) only once a taken path is finished. */
     @Test
     void thePathStep_holdsTheGardenUntilTheTakenPathIsFinished() {
         TownQuests quests = townWithMinerBeat(true);
@@ -165,11 +159,7 @@ class TownQuestsCuratedPathsTest {
         assertNull(quests.tryCuratedPaths(view));
     }
 
-    /**
-     * Agent playtest 2026-10-27 #4: finishing the Outfitter had no moment; it fires an advancement.
-     * The per-tick poster sees the end: a path batch's reward queues no ladder pass (held run
-     * 2026-10-28, the first cut fired from tryCuratedPaths and never ran).
-     */
+    /** Finishing the Outfitter fires an advancement. */
     @Test
     void finishingThePath_firesItsAdvancementOnce_andNotBefore() {
         TownQuests quests = townWithMinerBeat(true);

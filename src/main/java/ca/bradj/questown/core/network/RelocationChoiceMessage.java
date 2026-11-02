@@ -14,13 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 
 
-/**
- * Client → server: the player's answer to the relocation "too far away" confirmation screen
- * (ADR-0009, #199 Phase 4). The deed has stayed in hand since {@code RelocationDeedItem.useOn}
- * deferred to the screen; this finishes the placement with the chosen {@link FarFixturePolicy} and
- * consumes the deed only on success. Cancel sends no message at all — the screen just closes, leaving
- * the deed untouched.
- */
+/** Client to server: the player's answer to the "too far away" screen. Cancel sends nothing. */
 public record RelocationChoiceMessage(
         BlockPos targetPos,
         boolean leaveBehind

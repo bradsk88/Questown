@@ -4,11 +4,7 @@ import com.google.common.collect.ImmutableSet;
 
 import java.util.Collection;
 
-/**
- * The open quests a player has seen on the flag's quests tab. The tab's red dot shows while an
- * open quest is not among them (dev playtest 2026-10-30: "The quest tab should stop showing red
- * once the player has seen the latest quests"). Keys are {@code batch UUID | wanted id}.
- */
+/** The open quests a player has seen on the quests tab; the red dot shows while one isn't among them. */
 final class SeenQuests {
 
     private ImmutableSet<String> seen = ImmutableSet.of();

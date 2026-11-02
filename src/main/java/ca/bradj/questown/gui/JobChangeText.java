@@ -3,29 +3,16 @@ package ca.bradj.questown.gui;
 import java.util.Optional;
 
 /**
- * Which line the change-job panel shows (pure so it is unit-testable; the screen turns it into
- * components). It names the next action, inserting a Block of Progress or clicking Unlock, and
- * the real timing: the change lands the next morning in survival but at once in creative
- * ({@code JobRootChangeMessage} carries the player's creative flag) or when a quest promises the
- * job (dev playtest 2026-10-28). r9 findings #2.
- *
- * @param key     the lang key of the line
- * @param root    the job root the line names, if any (promised by an onboarding quest)
- * @param whenKey the lang key of the timing ("starting tomorrow morning" / "starting now")
+ * The change-job panel's line: what to do next (insert a Block of Progress, or click Unlock) and
+ * when the change happens (the next morning, or at once in creative or for a promised job).
  */
 public record JobChangeText(String key, Optional<String> root, String whenKey) {
 
-    /**
-     * @param inserted     a Block of Progress is in the slot
-     * @param creative     the viewing player is in creative
-     * @param promisedRoot the root an open onboarding job-change quest guarantees
-     */
     public static JobChangeText of(
             boolean inserted,
             boolean creative,
             Optional<String> promisedRoot
     ) {
-        // A promised change applies at the spend (TownFlagBlockEntity.requestJobRootChange).
         boolean now = creative || promisedRoot.isPresent();
         String when = now ? "menu.unlock_root.when_now" : "menu.unlock_root.when_morning";
         if (promisedRoot.isPresent()) {

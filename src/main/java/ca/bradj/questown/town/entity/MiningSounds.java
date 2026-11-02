@@ -12,15 +12,9 @@ import java.util.Collection;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-/**
- * Pickaxe hits from a mineshaft while a villager is mining there (dev playtest 2026-10-30: "it
- * should emit pickaxe hit sounds every now and then while a villager is mining"). A miner away on
- * its trip has no work spot, but its work-state record at the mineshaft runs the trip's timer, so
- * a mineshaft position with a timer is being mined.
- */
+/** Pickaxe sounds from a mineshaft now and then while a miner is away mining it. */
 final class MiningSounds {
 
-    /** One chance in this many per flag tick, per mined shaft. */
     static final int CHANCE = 4;
 
     private MiningSounds() {

@@ -21,24 +21,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Drives one town-flag shutdown ritual: recall every townie to the flag, absorb them as they
- * arrive (or once a deadlock deadline passes), and — once the whole roster is absorbed and the
- * minimum-duration floor has elapsed — flip the flag to {@link FlagPhase#DORMANT} (ADR-0009).
- *
- * <p>Transient per-flag state: ticked only on the realtime path (warp never recalls), from
- * {@link TownFlagTicker}'s {@code SHUTTING_DOWN} branch. The blockstate phase is the durable
- * record of the ritual; this controller's progress resets if the chunk unloads mid-ritual, which
- * is benign because shutdown is realtime + player-present (the chunk stays loaded).
- */
+/** Runs a town shutdown: villagers walk to the flag and are taken in, and once all are in and the minimum time has passed the flag goes dormant. Real time only. */
 class TownShutdownController {
 
-    // A townie counts as "home" within this squared distance of the flag base. The flag is a solid
-    // block, so a townie pathing to it lands adjacent (~1 block away); 9 (3 blocks) is forgiving.
+    // Within 3 blocks of the flag counts as home.
     private static final double ABSORB_DISTANCE_SQR = 9.0;
 
-    // Deadlock backstop, well beyond the 200-tick floor: a townie that cannot path home is absorbed
-    // where it stands so the ritual always terminates.
+    // After this, a villager that can't get home is taken in where it stands.
     private static final long FORCE_ABSORB_TICKS = 600;
 
     private @Nullable ShutdownProgress progress;
@@ -85,11 +74,7 @@ class TownShutdownController {
         }
     }
 
-    /**
-     * Wake a dormant town in place: re-spawn the absorbed roster and return to
-     * {@link FlagPhase#ACTIVE}. The loss-protection path — interacting with the dormant flag instead
-     * of placing the deed (ADR-0009).
-     */
+    /** Wakes a dormant town where it is, bringing the villagers back. */
     void wake(
             ServerLevel level,
             BlockPos flagPos,
@@ -99,10 +84,7 @@ class TownShutdownController {
         QT.FLAG_LOGGER.info("Town woken in place; flag {} re-activated", flagPos);
     }
 
-    /**
-     * Restore an in-progress (not yet completed) ritual to {@link FlagPhase#ACTIVE} and re-spawn the
-     * townies absorbed so far. The town's data never left the flag, so this is loss-proof.
-     */
+    /** Stops a shutdown in progress, bringing back the villagers taken in so far. */
     void cancel(
             ServerLevel level,
             BlockPos flagPos,
@@ -121,9 +103,7 @@ class TownShutdownController {
             BlockPos flagPos,
             TownFlagBlockEntity town
     ) {
-        // The absorbed townies are the ones with a journal snapshot on the flag. That record is
-        // persistent: an in-memory list here was empty after a server restart, so waking a dormant
-        // town then respawned nobody.
+        // The villagers taken in are the ones with saved state on the flag.
         for (UUID absorbed : town.absorbedVillagers()) {
             town.addImmediateReward(new SpawnVisitorReward(town, TownRelocation.persistedVillagerUuid(absorbed)));
         }
@@ -136,7 +116,7 @@ class TownShutdownController {
             boolean force
     ) {
         VillagerHolder handle = town.getVillagerHandle();
-        // Snapshot before mutating: absorbing removes from the live entity list mid-iteration.
+        // Copy first: taking a villager in removes it from the live list.
         List<LivingEntity> live = new ArrayList<>(handle.entities());
         for (LivingEntity e : live) {
             if (!(e instanceof VisitorMobEntity vme)) {

@@ -52,11 +52,7 @@ class TownQuestsLootTest {
 
     @BeforeEach
     void bindRawFoodTag() {
-        // A unit test has no data packs, so the raw food tag would be empty. Bind a
-        // synthetic membership so the tag match runs through the real Ingredient
-        // mechanism; the actual members are data (data/questown/tags/items/
-        // villager_simple_furnace_food_raw.json) and are verified by the held run.
-        // Forge's bindTags rejects direct holders, so bind named holders for the items.
+        // No data packs in a unit test, so bind the raw-food tag here.
         List<Holder<Item>> members = Stream.of(Items.MUTTON, Items.PORKCHOP, Items.BEEF)
                 .map(i -> BuiltInRegistries.ITEM.getHolderOrThrow(ResourceKey.create(Registries.ITEM, Compat.getItemId(i))))
                 .collect(Collectors.toList());
@@ -72,8 +68,7 @@ class TownQuestsLootTest {
 
     private TownQuests townQuestsWithLootQuest(int count) {
         TownQuests quests = new TownQuests();
-        // Override the container listener: the real one (TownQuests) broadcasts through
-        // the town, which does not exist in a unit test.
+        // A no-op listener: the real one needs a town.
         quests.questBatches.addChangeListener(NO_OP_LISTENER);
         MCQuestBatch batch = new MCQuestBatch(null, null, new NoOpReward());
         batch.addLootQuest(null, TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location(), count);
@@ -99,12 +94,7 @@ class TownQuestsLootTest {
         );
     }
 
-    /**
-     * Accumulation (2026-10-15 ruling, reversing the 2026-10-04
-     * close-on-first-extraction): a count-3 LOOT quest survives two
-     * extractions and completes on the third. Count-1 quests keep the old
-     * close-on-first-extraction behaviour (1 >= 1).
-     */
+    /** A count-3 LOOT quest completes on the third extraction; a count-1 on the first. */
     @Test
     void processLootQuests_accumulatesAcrossExtractions_untilTheCountIsReached() {
         TownQuests quests = townQuestsWithLootQuest(3);
@@ -125,9 +115,7 @@ class TownQuestsLootTest {
 
     @Test
     void processLootQuests_creditsEveryMatchingOpenLootQuest() {
-        // Two open LOOT quests on the same tag (a re-issued ask after a batch
-        // reward): one extraction must credit BOTH, not be consumed by the
-        // first match (the old code returned after the first completion).
+        // One extraction credits both open LOOT quests on the tag.
         TownQuests quests = townQuestsWithLootQuest();
         MCQuestBatch second = new MCQuestBatch(null, null, new NoOpReward());
         second.addLootQuest(null, TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location(), 1);

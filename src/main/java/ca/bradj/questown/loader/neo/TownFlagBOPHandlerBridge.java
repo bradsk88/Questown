@@ -5,13 +5,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Reverse bridge: exposes a neutral {@link ItemHandler} (the town flag's BOP deposit
- * handler) as a NeoForge {@code IItemHandler} so it can be registered as an item-handler
- * capability. Deposit only: deliberately does **not** implement
- * {@code IItemHandlerModifiable} — the flag's handler is not open to slot replacement,
- * and this class therefore never surfaces {@code setStackInSlot}.
- */
+/** The flag's Block of Progress handler as a NeoForge {@code IItemHandler}, for depositing only. */
 public final class TownFlagBOPHandlerBridge implements IItemHandler {
 
     private final ItemHandler delegate;

@@ -11,10 +11,8 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 
-// Dev-only: dump the work-seeker's per-job scores and gate-failure reasons for one
-// root (plus the job-board requests), so a held run can show why a root has no
-// preselected work without the debug-log toggle. Patterned on DevLootFireCommand.
-// DEV-DIAG: raw_food hunt investigation, 2026-10-02 — grep 'DEV-DIAG' to enumerate; keep/remove per handoff
+// Dev-only: dump the work-seeker's per-job scores and gate-failure reasons for one root, plus the
+// job-board requests.
 public class DevWorkScoreCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> src) {

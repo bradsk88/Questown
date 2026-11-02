@@ -5,11 +5,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.List;
 import java.util.function.BiPredicate;
 
-/**
- * The tools a skill card lists: those the job does not also use up (dev 2026-10-30: cook skills
- * showed "Tools Used: Raw Beef" beside "Items Used: Raw Beef"; the furnace template holds the meat
- * as state 0's tool before using it). Such an item is listed under Items Used only.
- */
+/** The tools a skill card lists: those the job does not also use up. */
 public final class ToolsNotUsedUp {
 
     private ToolsNotUsedUp() {

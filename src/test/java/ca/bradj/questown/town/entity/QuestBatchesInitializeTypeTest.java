@@ -14,14 +14,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * World-load reconstruction ({@code QuestBatches.initialize} ->
- * {@code filterOutDuplicateCompletion}) must preserve the QUEST TYPE. The
- * FIRST_WORK_REQUEST and CONCURRENT_JOBS cases used to route through the generic
- * {@code addNewQuest}, silently downgrading them to ROOM-typed recipe quests: raw-id card
- * name, "No recipe found" warn, and a completion check that skips them. User playtest,
- * 2026-10-14: the day-2 quest card showed "special_quest.first_work_request".
- */
+/** Loading quests keeps their type: first-work-request and concurrent-jobs quests don't become room quests. */
 class QuestBatchesInitializeTypeTest {
 
     private static final ResourceLocation JOB_A = JobID.toRL(new JobID("farmer", "wheat"));

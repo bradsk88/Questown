@@ -29,7 +29,7 @@ public class TownVillagerLearningHandle {
             return true;
         }
         return false;
-    }, j -> true, ca.bradj.questown.town.VillagerLearningHandle.REVEAL_ALL // was Config.JOB_TREE_GROWTH (random 2)
+    }, j -> true, ca.bradj.questown.town.VillagerLearningHandle.REVEAL_ALL
     );
     private long lastTicked;
     private long lastComputed;
@@ -53,12 +53,7 @@ public class TownVillagerLearningHandle {
         boolean changed = delegate.tick(representativeJobs);
         if (!changed) return;
 
-        // Write the freshly-computed awareness back into the reveal table, per villager. Without
-        // this the tick only *logs* the next awareness and discards it, so a villager's tree reveals
-        // only the children of its initial/default jobs and deeper tiers never appear short of a new
-        // villager's registration (the only other path that calls registerAsKnown). registerAsKnown is
-        // idempotent, and the client only displays a child whose parent is unlocked, so registering the
-        // town-wide awareness to every villager is safe.
+        // Save the new awareness for every villager, so deeper tiers appear.
         Set<UUID> villagers = new HashSet<>();
         villagers.addAll(unlockedJobs.keySet());
         villagers.addAll(jobsKnownToExist.keySet());
@@ -107,13 +102,7 @@ public class TownVillagerLearningHandle {
         return childJobsKnownToExist(jobsKnownToExist, parent);
     }
 
-    /**
-     * Every child known to exist under any job of the parent's root, across all villagers. Each
-     * villager's map has one key per known job of a root (the awareness tick registers every job's
-     * children to every villager), so taking only the first same-root key showed the children of
-     * an arbitrary parent: the Outfitter crafter at level 3 was offered nothing (its first key's
-     * children were a higher tier), and the path's skill quests could not be done (2026-10-26).
-     */
+    /** Every child known under any job of the parent's root, across all villagers. */
     static ImmutableSet<JobID> childJobsKnownToExist(Map<UUID, ? extends Map<JobID, ? extends Set<JobID>>> known, JobID parent) {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (Map<JobID, ? extends Set<JobID>> villagerKnown : known.values()) {
@@ -182,7 +171,6 @@ public class TownVillagerLearningHandle {
         );
     }
 
-    /** Registers {@code child} under {@code parent} for every villager the town has learning for. */
     public void registerAsKnownForAll(JobID parent, JobID child) {
         Set<UUID> villagers = new HashSet<>(unlockedJobs.keySet());
         villagers.addAll(jobsKnownToExist.keySet());
@@ -223,15 +211,7 @@ public class TownVillagerLearningHandle {
         return false;
     }
 
-    /**
-     * The town-wide set of jobs the town KNOWS EXIST: the union, across every
-     * villager, of the knowledge-tree parents and children
-     * ({@code jobsKnownToExist}) plus the unlocked sets. Progressive discovery
-     * means the town only "knows" jobs revealed to it - hints and counts
-     * aimed at the player should count against this, not the whole dataset
-     * (2026-10-15 playtest: "There are 20 known jobs" counted every job in
-     * the dataset).
-     */
+    /** The jobs the town knows exist: revealed parents and children across villagers, plus unlocked jobs. */
     public ImmutableSet<JobID> getTownKnownJobs() {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (Map<JobID, Set<JobID>> villagerKnown : jobsKnownToExist.values()) {

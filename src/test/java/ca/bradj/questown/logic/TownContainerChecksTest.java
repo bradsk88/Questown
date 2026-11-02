@@ -140,7 +140,7 @@ public class TownContainerChecksTest {
 
     @Test
     void townHasSupplies_ShouldReturnFalse_WhenOneItemFound_AndTwoRequired_AndDifferentAllowed() {
-        // Bug #218: only one item left in town, but the job needs two of it.
+        // One left in town, but the job needs two.
         boolean result = TownContainerChecks.townHasSuppliesForStage(
                 (predicate) -> ImmutableList.of(APPLE).stream().filter(predicate).toList(),
                 isFruit,
@@ -344,7 +344,7 @@ public class TownContainerChecksTest {
 
     @Test
     void hasSupplies_ShouldReturnFalse_If_2_IngredientsRequiredAtState0_AndOnlyOneLeftInTown() {
-        // Bug #218: job needs two of an ingredient but only one remains in town (none in hand).
+        // The job needs two and only one is left.
         boolean result = TownContainerChecks.hasSupplies(
                 () -> ImmutableSet.of(0), // A room exists at state 0
                 ImmutableMap.of(
@@ -354,10 +354,9 @@ public class TownContainerChecksTest {
                         0, 2 // two ingredients required
                 ),
                 ImmutableMap.of(
-                        // No tools required
                 ),
                 predicate -> ImmutableList.of(new TestItem("ingredient", 1)).stream().filter(predicate).toList(), // town
-                predicate -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(), // inventory (empty)
+                predicate -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(),
                 (state) -> ImmutableList.of(),
                 (i) -> false
         );

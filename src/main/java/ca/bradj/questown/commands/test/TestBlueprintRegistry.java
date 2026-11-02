@@ -177,9 +177,9 @@ public class TestBlueprintRegistry {
                     return needs.stream().noneMatch(n -> n == TownieNeed.UNMET_ITEM);
                 })));
         jobs.add(entry(new JobID("cook", "simple_furnace_food"), cookBlueprint()));
-        // 2026-10-19 playtest blocker: a cook whose furnace is already fuelled and holds cooked food
-        // must take the food out. The cook starts where the playtest's cook was stuck (cook/fuel,
-        // all starting jobs unlocked); realtime, so job selection is exercised.
+        // A cook whose furnace is already fuelled and holds cooked food must take the food out. The
+        // cook starts on cook/fuel with all starting jobs unlocked; realtime, so job selection is
+        // exercised.
         jobs.add(edgeCaseEntry("cook", "fuel", "fuelled_output_ready", cookOutputReadyBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "no_coal", cookNoCoalBlueprint()));
         jobs.add(edgeCaseEntry("cook", "fuel", "requests_done", cookRequestsDoneBlueprint()));
@@ -201,8 +201,7 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
         // One warp day must not out-produce realtime: OneDayYieldCaps.HUNTER is the most generous
-        // trip tier across a day's productive ticks. Before the warp cycle budget a fresh hunter
-        // banked ~24 (2026-10-18 playtest).
+        // trip tier across a day's productive ticks.
         jobs.add(edgeCaseEntry("hunter", "sword", "warp_then_realtime", hunterWarpThenRealtimeBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "sleep_mid_trip", hunterSleepMidTripBlueprint()));
         jobs.add(edgeCaseEntry("hunter", "sword", "switch_after_trip", hunterSwitchMidTripBlueprint(true)));
@@ -225,19 +224,18 @@ public class TestBlueprintRegistry {
         jobs.add(new TestEntry("ui/hunter_status_resync", new JobID("hunter", "sword"), hunterStatusResyncBlueprint(), "ui"));
         jobs.add(new TestEntry("cook_extract_food", new JobID("cook", "fuel"), cookExtractCreditsFoodQuestBlueprint(), "loot"));
         // The same with a "Food" category request (a tag), as a player posts it from the board's
-        // categories (dev 2026-10-22: "let players request food").
+        // categories.
         jobs.add(new TestEntry("cook_extract_food_category", new JobID("cook", "fuel"),
                 cookExtractCreditsFoodQuestBlueprint(WorkRequest.of(TagsInit.Items.VILLAGER_FOOD)), "loot"));
-        // loot_on_extract_accumulate: the 2026-10-15 accumulation ruling. Posts the raw-food
+        // loot_on_extract_accumulate: posts the raw-food
         // LOOT quest at count 40 (LOOT_ACCUMULATE_COUNT), drives one hunter cycle (>=1 natural extraction), and
-        // asserts the quest did NOT complete on the first extraction (the old
-        // close-on-first-extraction semantics), then tops the counter up through the live
+        // asserts the quest did NOT complete on the first extraction, then tops the counter up through the live
         // quest handle and asserts it completes exactly at the count.
         jobs.add(new TestEntry("loot_on_extract_accumulate", new JobID("hunter", "sword"), lootOnExtractAccumulateBlueprint(), "loot"));
         // gatherer_becomes_hunter: the gatherer's leftover terminal mat state must not park the
-        // new hunter in COLLECTING_SUPPLIES (playtest 2026-10-17).
-        // One warp day must not out-produce realtime for the base gatherer either (2026-10-17
-        // playtest: 29 items in one morning away). Counts loot, not the food it eats.
+        // new hunter in COLLECTING_SUPPLIES.
+        // One warp day must not out-produce realtime for the base gatherer either. Counts loot,
+        // not the food it eats.
         jobs.add(edgeCaseEntry("gatherer", "gather", "one_day_loot", gathererOneDayLootBlueprint()));
         jobs.add(new TestEntry("loot/gatherer_becomes_hunter", new JobID("gatherer", "gather"), gathererBecomesHunterBlueprint(), "loot"));
         jobs.add(entry(new JobID("miner", "coal"), minerBlueprint()));
@@ -255,9 +253,8 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
         jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
 
-        // Organizer/fetch (un-archived). Phase A is the realtime green baseline; Phase B exercises
-        // the warp fetch-relocation model (RelocateRequestedItemWarpRule) and now expects the same
-        // source->target conservation to hold under warp.
+        // Organizer/fetch: realtime, then the warp fetch-relocation model
+        // (RelocateRequestedItemWarpRule), both with source->target conservation.
         jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
         // nav/roof_gatherer drives the REAL gatherer job (which walks gate <-> supply chests, so
         // its container nav target is actually exercised) in a supply room whose roof is
@@ -319,8 +316,7 @@ public class TestBlueprintRegistry {
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
         jobs.add(flagEntry("bop_boundary_63", bopBoundaryBlueprint()));
         jobs.add(flagEntry("bop_full_64", bopFullBlueprint()));
-        // Dev playtest 2026-10-28: two BOP depositors stood at the flag from dusk, "busy with their
-        // work", and never deposited. A gate, by night and (control) by day.
+        // BOP depositors at the flag must deposit, by night and (control) by day.
         jobs.add(flagEntry("bop_deposit_at_night", bopDepositBlueprint(13000L)));
         jobs.add(flagEntry("bop_deposit_by_day", bopDepositBlueprint(2000L)));
         jobs.add(flagEntry("bop_carried_with_loot", bopCarriedWithLootBlueprint()));
@@ -405,7 +401,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Town-shutdown ritual (ADR-0009, #199): spawn a 2-townie town, begin shutdown, then assert the
+     * Town-shutdown ritual (#199): spawn a 2-townie town, begin shutdown, then assert the
      * townies are all absorbed and the flag has gone DORMANT after the minimum-duration floor.
      */
     private static TestBlueprint townShutdownBlueprint() {
@@ -420,7 +416,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Deed issue + lost-deed recovery (ADR-0009, #199): after shutdown completes, a deed is dropped
+     * Deed issue + lost-deed recovery (#199): after shutdown completes, a deed is dropped
      * carrying the flag's reference; discarding it and re-issuing produces another; waking in place
      * returns the flag to ACTIVE. Drives the real deed item + recovery methods end-to-end.
      */
@@ -435,8 +431,7 @@ public class TestBlueprintRegistry {
     private static final JobID KEPT_JOB = new JobID("baker", "bread");
 
     /**
-     * #26 (ADR-0009 "jobs travel"): a townie absorbed by the shutdown ritual comes back with its job
-     * when the town wakes in place. Before the fix every respawn seeded a fresh gatherer journal.
+     * A townie absorbed by the shutdown ritual comes back with its job when the town wakes in place.
      */
     private static TestBlueprint shutdownWakeKeepsJobsBlueprint() {
         Set<String> expected = new HashSet<>();
@@ -464,9 +459,8 @@ public class TestBlueprintRegistry {
     private static final BlockPos RITUAL_BOARD_OFFSET = new BlockPos(8, 0, -1);
 
     /**
-     * ADR-0009: a shutdown leaves the town's physical blocks behind. The sub-block watchdog
-     * removed the job boards and welcome mats 20 ticks into the ritual, because the shutting-down
-     * and dormant flag skipped the heartbeat that tells them their flag is alive (r8, 2026-10-22).
+     * A shutdown leaves the town's physical blocks behind: the shutting-down and dormant flag must
+     * keep the heartbeat that tells its job boards and welcome mats their flag is alive.
      */
     private static TestBlueprint shutdownKeepsJobBoardBlueprint() {
         return relocationRitualBase()
@@ -489,10 +483,9 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Requesting wheat seeds said "20 known jobs produce this" (2026-10-22 agent playtest): every
-     * biome-loot job claimed the seed floor. The player-facing lookup now counts a loot job only
-     * when its own tables can drop the item; the engine lookup (it gates a leaver's extraction)
-     * is unchanged, which the hunter in the engine list proves.
+     * The player-facing producer lookup counts a loot job only when its own tables can drop the
+     * item; the engine lookup (it gates a leaver's extraction) counts every biome-loot job, which
+     * the hunter in the engine list proves.
      */
     private static TestBlueprint producerCountOwnTablesBlueprint() {
         return relocationRitualBase()
@@ -533,11 +526,9 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Regression guard for the campfire-sleep temp bed destroying the town flag. The bed spot is
-     * chosen by {@link CampfireSleepHandler}'s real {@code findSafeSleepPosition} and placed by its
-     * real {@code placeTempBed}; before the fix, a solid non-replaceable block (the flag) passed the
-     * "clear for sleep" check, so the bed overwrote it and the wake teardown left AIR — the flag,
-     * and all its town data, silently vanished. We place a lit campfire two blocks SOUTH of the flag
+     * The campfire-sleep temp bed must not replace the town flag. The bed spot is chosen by
+     * {@link CampfireSleepHandler}'s real {@code findSafeSleepPosition} and placed by its real
+     * {@code placeTempBed}. We place a lit campfire two blocks SOUTH of the flag
      * so the first-scanned bed direction (NORTH) puts the bed head exactly on the flag, run the real
      * selection + placement via the autotest seam, then assert the flag block survived.
      */
@@ -554,15 +545,13 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Campfire safety (held-run incident: a townie burned to death walking across the lit
-     * campfire). Real-code probes against the townie's own navigation
+     * Campfire safety: a townie must not burn on a lit campfire. Real-code probes against the townie's own navigation
      * ({@code VillagerPathNavigation}) and its {@code hurt} override:
      * <ol>
      *   <li>No path TO a lit campfire block: vanilla classifies it as DANGER_FIRE
      *       (walkable, cost 8), so a goal on the block is reachable and burns the townie
      *       in about a second ({@code CampfireBlock.entityInside} deals 1 fire damage per
-     *       tick, no armor, no burn time). The incident itself: a townie's active path
-     *       crossed the campfire position, which was lit while the townie was mid-route.</li>
+     *       tick, no armor, no burn time).</li>
      *   <li>Open ground: a path across the campfire's lane still exists (a detour) and
      *       never touches the campfire block — the block must not be over-blocked.</li>
      *   <li>Fire damage from a campfire the townie is inside or standing on is ignored:
@@ -612,8 +601,7 @@ public class TestBlueprintRegistry {
         // itself must not be a path node. stop() first: createPath short-circuits and
         // returns the current active path when its target is in the requested set, so
         // without it this probe could return a path the townie's own brain computed to
-        // that very block before the campfire was lit (the incident: a mid-route
-        // townie whose destination block became a lit campfire).
+        // that very block before the campfire was lit.
         townie.getNavigation().stop();
         Path toFire = townie.getNavigation().createPath(fire, 0);
         townie.getNavigation().stop();
@@ -677,7 +665,7 @@ public class TestBlueprintRegistry {
     private static final BlockPos TOO_SHORT_ROOM_OFFSET = new BlockPos(-9, 0, -2);
 
     /**
-     * Dead-door bubbling (ADR-0011, legibility item 5): a registered door that encloses nothing
+     * Dead-door bubbling: a registered door that encloses nothing
      * must surface on the flag as {@link DoorTrouble#NOT_ENCLOSED}, which is what
      * {@code DeadDoorBubbles} reads to draw the door-icon bubble client-side. Drives the real wand
      * path — {@link TownWand#onRightClicked} into its {@code DoorHandler} — rather than calling
@@ -740,9 +728,8 @@ public class TestBlueprintRegistry {
      * Walkability regression guard (Config.MIN_ROOM_WALKABLE_FRACTION): a room that is 2D-enclosed
      * but only one block tall inside — air at the feet level, a solid roof at the head level —
      * cannot be entered by a two-block-tall villager, so the room scan must reject it and the door
-     * must surface as {@link DoorTrouble#NOT_ENCLOSED}. Before the check, the 2D wall-walk counted
-     * the interior as "not a wall" (empty at feet OR head) and detected a valid room directly over
-     * a villager-unreachable floor. Builds the exact structure an agent produced in a held run.
+     * must surface as {@link DoorTrouble#NOT_ENCLOSED} (the 2D wall-walk alone counts the interior
+     * as "not a wall").
      */
     private static TestBlueprint tooShortRoomBlueprint() {
         return relocationRitualBase()
@@ -883,8 +870,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 2026-10-22 agent playtest: placing a welcome mat (or job board) with no flag link left the
-     * mat in a survival player's hand and also dropped a copy. A failed placement must cost and
+     * A welcome mat (or job board) with no flag link fails to place, and the failure must cost and
      * give nothing: held + dropped stays at exactly one.
      */
     private static TestBlueprint unlinkedPlacementNoDupeBlueprint() {
@@ -936,12 +922,10 @@ public class TestBlueprintRegistry {
     /**
      * A bed is two blocks, and room matching counts both: the recipes list two
      * {@code #minecraft:beds} per bed. One bed plus a torch is a Bedroom (light + 2 bed blocks),
-     * two beds are a Big Bedroom (light + 4). Pinned after RoomRecipes deb6333 counted only the
-     * head and doubled every bed room's cost (reverted 2026-10-22).
+     * two beds are a Big Bedroom (light + 4).
      * <p>
-     * The assertion runs RoomRecipes' detection on the built rooms directly. Registering their
-     * doors and waiting for the town's scan proved timing-dependent under parallel load (the scan
-     * had not reached the doors within the 300-tick window in 1 of 4 runs).
+     * The assertion runs RoomRecipes' detection on the built rooms directly: waiting for the
+     * town's own door scan is timing-dependent under parallel load.
      */
     private static TestBlueprint bedIsTwoBlocksBlueprint() {
         return relocationRitualBase()
@@ -1050,10 +1034,8 @@ public class TestBlueprintRegistry {
 
     /**
      * A room built in postSpawn is not in {@code blueprint.blocks()}, so the arena flatten never
-     * covered it. Flatten its footprint and a 3-block margin. Terrain left in the footprint gave
-     * a solid foot level the day-1 storeroom rule accepts (2026-10-15); terrain left around it
-     * walled off the far side of the door, and the detector registered that region as the door's
-     * room (2026-10-29). Either flipped a rejection test by seed.
+     * covered it. Flatten its footprint and a 3-block margin: leftover terrain in or around it
+     * changes which room the door detects, by seed.
      */
     private static void flattenAroundPostSpawnRoom(
             ServerLevel level,
@@ -1136,11 +1118,9 @@ public class TestBlueprintRegistry {
     private static final BlockPos FILLED_STOREROOM_OFFSET = new BlockPos(-9, 0, 18);
 
     /**
-     * day-1 playtest 2026-10-11 (room-3x3-chest-instantly-destroyed): a 3x3 room whose single
-     * interior cell is the room's own work block — the chest of the small-storeroom recipe
-     * ("a room containing one chest"). The walkability filter's original form counted that
-     * chest cell against the standable fraction and rejected the room the moment it matched,
-     * so the player saw "storeroom destroyed" and never "created". The interior is filled at the
+     * A 3x3 room whose single interior cell is the room's own work block (the chest of the
+     * small-storeroom recipe) must survive the walkability filter: the work block does not count
+     * against the standable fraction. The interior is filled at the
      * feet level, not low-roofed: no open floor cell exists, and the door must stay live with a
      * room detected.
      */
@@ -1219,9 +1199,8 @@ public class TestBlueprintRegistry {
         // (foot = campfire.north(), head = campfire.north().north() = flagPos) can seat a bed
         // whose head lands on the flag. findSafeSleepPosition tries all four directions and takes
         // the first with solid, clear ground, so we must remove the OTHER three lanes' support —
-        // otherwise it seats the bed on open ground and never touches the flag (as an earlier run
-        // showed: it picked bare ground to the east). With only the flag lane left, the buggy
-        // selector is forced onto the flag; the fix makes it decline and leave the flag alone.
+        // otherwise it seats the bed on open ground and never touches the flag. With only the flag
+        // lane left, the selector must decline and leave the flag alone.
         BlockPos campfirePos = flagPos.south().south();
         BlockPos footPos = flagPos.south();
         // The flag lane: supported floor under the foot and the flag, clear air above both.
@@ -1244,9 +1223,8 @@ public class TestBlueprintRegistry {
             level.setBlockAndUpdate(foot.relative(dir).below(), Blocks.AIR.defaultBlockState());
         }
         // The recalled townies idle on the town flag. An entity on a block makes it "obstructed",
-        // so findSafeSleepPosition skips it — which hides the bug. In the real incident the flag was
-        // empty (the tutorial runs before any villager exists), so nothing blocked the bed from
-        // landing on it. Clear the flag lane of entities to reproduce that precondition.
+        // so findSafeSleepPosition would skip it; during the tutorial no villager exists yet, so
+        // clear the flag lane of entities to match that.
         // Keep the destination inside the harness cleanup zone (origin ±20) so no townie leaks into
         // the next scenario in a full-suite run (shared arena).
         for (net.minecraft.world.entity.LivingEntity e :
@@ -1278,8 +1256,7 @@ public class TestBlueprintRegistry {
             output.msg("Expected DORMANT after shutdown, got " + phaseOf(level, flagPos));
             return false;
         }
-        // The deed is no longer dropped as an item; it hovers over the flag and is collected on
-        // interaction (ADR-0009). Assert it became available on shutdown completion.
+        // The deed hovers over the flag and is collected on interaction. Assert it became available on shutdown completion.
         if (!town.isDeedAvailable()) {
             output.msg("No deed became available on the flag after shutdown completion");
             return false;
@@ -1305,7 +1282,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Town relocation placement (ADR-0009, #199, Phase 3): isolate the placement step from the
+     * Town relocation placement (#199): isolate the placement step from the
      * shutdown ritual (which has its own test). After the town spawns, drop it straight to DORMANT
      * (a blockstate write, not the logic under test), mint a deed, and drive the real
      * {@link TownRelocation#place} to a nearby target with a non-zero Y delta. The realtime monitor
@@ -1335,7 +1312,7 @@ public class TestBlueprintRegistry {
         FarFixturePolicy policy = FarFixturePolicy.BRING_ALL;
         long tickRadiusSq = Config.TOWN_TICK_RADIUS.get();
         int beyondCount;
-        // Job proficiency (ADR-0010): a known level stamped on one townie pre-move, asserted to
+        // Job proficiency: a known level stamped on one townie pre-move, asserted to
         // survive the whole-blob copy (it rides NBT_TOWN_STATE, no bespoke relocation code).
         UUID profVillager;
         float expectedProf;
@@ -1364,18 +1341,18 @@ public class TestBlueprintRegistry {
                 .size();
         // Put the onboarding arc mid-flight (non-default beat + rotation) so the carry-check below
         // proves the chicken beat state and structure rotation ride the whole-blob copy to the new
-        // flag — #199 Phase 5 "the tutorial follows you". Re-anchoring the beat geometry itself is
+        // flag. Re-anchoring the beat geometry itself is
         // locked deterministically by HelperChickenBeatRelocationTest.
         town.setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_CHEST);
         town.setChickenStructureRotation(net.minecraft.world.level.block.Rotation.CLOCKWISE_90);
         // Stamp a known proficiency on the first townie so the assertion can prove it rode the
-        // whole-blob copy (ADR-0010 Phase 5). Set before writeTownData so it lands in NBT_TOWN_STATE.
+        // whole-blob copy . Set before writeTownData so it lands in NBT_TOWN_STATE.
         java.util.Collection<net.minecraft.world.entity.LivingEntity> ents = town.getVillagerHandle().entities();
         if (!ents.isEmpty()) {
             cap.profVillager = ents.iterator().next().getUUID();
             cap.expectedProf = 0.42f;
             town.getVillagerHandle().setProficiency(cap.profVillager, RelocateCapture.PROF_ID, cap.expectedProf);
-            // #26: the same townie takes a non-gatherer job, published to the tile's town state the
+            // The same townie takes a non-gatherer job, published to the tile's town state the
             // way the ticker does, so the assertion proves the respawn keeps it.
             UUID stamped = cap.profVillager;
             town.getVillagerHandle().getVillagerJobs().keySet().stream()
@@ -1465,7 +1442,7 @@ public class TestBlueprintRegistry {
             ok &= report(output, "8 data-carried[" + key + "]", same);
         }
 
-        // (9) job proficiency rode the whole-blob copy: the stamped townie keeps its level (ADR-0010)
+        // (9) job proficiency rode the whole-blob copy: the stamped townie keeps its level
         if (cap.profVillager != null) {
             float got = newBe.getVillagerHandle().getProficiency(cap.profVillager, RelocateCapture.PROF_ID);
             output.msg("proficiency: got=" + got + " expected=" + cap.expectedProf);
@@ -1474,7 +1451,7 @@ public class TestBlueprintRegistry {
             ok &= report(output, "9 proficiency-carried (NO ROSTER — cannot verify)", false);
         }
 
-        // (10) job carried: the respawned townie keeps the job it had before the move (#26)
+        // (10) job carried: the respawned townie keeps the job it had before the move
         if (cap.profVillager != null) {
             ok &= report(output, "10 job-carried",
                     assertJobsKept(output, newBe, Set.of(cap.profVillager.toString())));
@@ -1484,7 +1461,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Deed consumption on a successful placement (#199, playtest follow-up). A deed that survives its
+     * Deed consumption on a successful placement (#199). A deed that survives its
      * own relocation is a duplication hazard: placed again it mints a second flag referencing a town
      * that no longer exists. The other relocate scenarios call {@link TownRelocation#place} directly,
      * so nothing covered the item layer that is supposed to take the deed away.
@@ -1609,7 +1586,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Town relocation "leave it behind" (ADR-0009, #199 Phase 4): relocate with {@link
+     * Town relocation "leave it behind" (#199): relocate with {@link
      * FarFixturePolicy#LEAVE_BEHIND} and a deliberately tiny tick radius, so every fixture in the
      * arena counts as "too far to come" against the nearby (solid-ground) target. Drives the real
      * {@link TownRelocation#place} overload — no far terrain needed, so the scenario stays in the
@@ -1683,7 +1660,7 @@ public class TestBlueprintRegistry {
     }
 
     // Stable, persisted town data copied wholesale by relocation; if these round-trip identically
-    // across the move, the rest of the whole-blob copy did too (ADR-0009 copy fidelity). Economics
+    // across the move, the rest of the whole-blob copy did too. Economics
     // is intentionally excluded: it's a running log of unmet-needs records (with ticks) that legit-
     // imately grows over the monitored ticks, so equality is not a valid carry-check for it.
     private static final java.util.List<String> CARRIED_DATA_KEYS = java.util.List.of(
@@ -1839,7 +1816,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Proficiency leveling parity (ADR-0010, #269) — the feature's acceptance gate. The same work
+     * Proficiency leveling parity (#269) — the feature's acceptance gate. The same work
      * must move a townie's proficiency by the same amount whether it happened live or offline; a
      * warp path that credited "once per important tick" instead of once per completed action would
      * drift a townie's skill away from its realtime self while the player was away.
@@ -1897,7 +1874,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * The acceptance gate of ADR-0010: per completed work action, the realtime path and the warp
+     * The parity gate: per completed work action, the realtime path and the warp
      * path must move proficiency by the same amount — gain on the worked id, decay on the others.
      * Normalizing by completed actions (rather than comparing raw deltas) is what makes the two
      * windows comparable without forcing them to do an identical amount of work.
@@ -2013,15 +1990,13 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Regression gate for `.scratch/autotest-suite/warp-scores-tools-against-containers-not-held.md`:
-     * warp scores tool availability against town <em>containers</em> only, so when the worker is
-     * holding the town's only tool (the normal steady state), warp re-scores them onto a job that
-     * needs no tool and the tooled job does no offline work.
+     * Warp must count a tool the worker holds: when the worker holds the town's only tool (the
+     * normal steady state), scoring against containers alone moves them onto a job that needs no
+     * tool, and the tooled job does no offline work.
      * <p>
      * Realtime runs first so the farmer fetches the hoe; the warp half is driven inside the
      * assertion because the executor's own warp pass runs <em>before</em> realtime, when the hoe
-     * is still in the chest and the bug cannot show. Reproduced the bug pre-fix (wheat 3 -> 3
-     * under warp); fixed by `TownPossibleWork.townHasTool`, which counts tools held by townies.
+     * is still in the chest.
      */
     private static TestBlueprint heldToolWarpBlueprint() {
         TestBlueprint base = farmerBlueprint(); // exactly one hoe, a full field of ripe wheat
@@ -2249,8 +2224,8 @@ public class TestBlueprintRegistry {
      * Asserts the full grow→chop cycle: >=5 logs, which is only reachable if the seeded sapling
      * grows into a tree (the starter column alone is 4) and cut_trees chops it in the same warp.
      * For growth to place a tree, the sapling needs a clear footprint — guaranteed by the jobs-track
-     * flatten now clearing the whole build volume + tree headroom (see {@code TestArenaPreparer
-     * .buildVolume}). See ADR-0005.
+     * flatten clearing the whole build volume + tree headroom (see {@code TestArenaPreparer
+     * .buildVolume}).
      */
     private static TestBlueprint arboristFullCycleBlueprint() {
         List<BlockPlacement> blocks = new ArrayList<>();
@@ -2304,11 +2279,10 @@ public class TestBlueprintRegistry {
                         // fells one whole trunk here, and the starter column alone is only 4 logs, so
                         // >=5 can only be reached by chopping the GROWN oak. Growth is deterministic
                         // (TreeFeatureResolver.seededFor), so the grown trunk is a fixed 5 logs every
-                        // run — robustly >=5, never the flaky 4..6 of level.random. See ADR-0005.
+                        // run, never the 4..6 of level.random.
                         //
                         // LOAD-BEARING COORDINATE: the "5" is the deterministic oak height for the
-                        // seed pos.asLong() of the sapling at (ox+3, oz+3) under the ORIGIN at the
-                        // time of writing. Moving the arena origin or this sapling offset re-seeds the
+                        // seed pos.asLong() of the sapling at (ox+3, oz+3) under the ORIGIN. Moving the arena origin or this sapling offset re-seeds the
                         // RNG and can drop the grown trunk to 4 (then this fails, predictably — not a
                         // flake). If you relocate it, re-pin this threshold to the new deterministic
                         // height. It also assumes the single felled trunk is the grown oak (job-block
@@ -2330,11 +2304,11 @@ public class TestBlueprintRegistry {
         );
     }
 
-    // --- Organizer / fetch (un-archived; see docs/plans/2026-06-08-001 and ADR-0005 precedent) ---
+    // --- Organizer / fetch ---
 
     // A distinctive ingredient guaranteed absent from the flattened arena. The fetch relocates it
     // from the supply store room to the requested target store room; a relocation is a town-wide
-    // no-op, so the per-position container oracle (U1) is the only thing that can gate it.
+    // no-op, so the per-position container oracle is the only thing that can gate it.
     private static final String ORGANIZER_ITEM = "minecraft:emerald";
     private static final int ORGANIZER_FETCH_COUNT = 4;
 
@@ -2437,23 +2411,21 @@ public class TestBlueprintRegistry {
     private static volatile int navMaxY;
 
     /**
-     * Roof-navigation before/after, on the vehicle that actually walks: the gatherer (gate &lt;-&gt;
-     * supply chests). The supply room's roof is reachable (a 3-step staircase on its east edge),
-     * and the supplies chest sits one level above the room's scan level (yCoord+1, on a plank)
-     * under a head-height grass ledge with a one-block roof hole above it. The ledge occupies the
-     * chest's interact spot (chest + one toward the door, at chest height), so that spot is not
-     * standable from inside the room, while the ledge top (feet y=2) is Manhattan-1 from the
-     * pre-fix walk target (the interact spot at the chest's own height). Pre-fix the only node
-     * within the pathfinder's completion distance is on the grass above the room, so the townie
-     * climbs the stairs and stands on the ledge. Post-fix ({@code navTargetForContainer} pins the
-     * target to the room's yCoord) the target is the interior floor spot one block lower, whose
-     * Manhattan-1 neighbours are standable interior floor — so the path goes through the door.
+     * Roof navigation, on the vehicle that actually walks: the gatherer (gate &lt;-&gt; supply
+     * chests). The supply room's roof is reachable (a 3-step staircase on its east edge), and the
+     * supplies chest sits one level above the room's scan level (yCoord+1, on a plank) under a
+     * head-height grass ledge with a one-block roof hole above it. The ledge occupies the chest's
+     * interact spot (chest + one toward the door, at chest height), so that spot is not standable
+     * from inside the room, while the ledge top (feet y=2) is Manhattan-1 from it. With the target at
+     * the chest's own height, the only node within the pathfinder's completion distance is on the
+     * grass above the room; {@code navTargetForContainer} pins the target to the room's yCoord, the
+     * interior floor spot one block lower, whose Manhattan-1 neighbours are standable interior floor,
+     * so the path goes through the door.
      * <p>
-     * The assertion gates on the fix: the townie must enter the room (feet y == flagY inside the
-     * room footprint) and never visit the roof/ledge (feet y &gt;= flagY+2). Pre-fix it bites:
-     * the townie climbs the stairs, crosses the roof, and drops onto the ledge above the chest.
-     * The axe readout is informational: the gatherer's first container leg is DROPPING_LOOT (the
-     * vehicle under test), so the supplies walk may not run within the window.
+     * The assertion: the townie must enter the room (feet y == flagY inside the room footprint) and
+     * never visit the roof/ledge (feet y &gt;= flagY+2). The axe readout is informational: the
+     * gatherer's first container leg is DROPPING_LOOT (the vehicle under test), so the supplies walk
+     * may not run within the window.
      */
     private static TestBlueprint navGathererBlueprint() {
         SupplyRoom sr = buildSupplyRoom(4, -2);
@@ -2618,11 +2590,10 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Phase B — warp fetch relocation, green. Same setup as Phase A but runs the warp path, which
-     * now has a fetch model: {@code RelocateRequestedItemWarpRule} (declared as a global rule in
-     * organizer_fetcher.json) moves the requested ingredient source->target on the warp town state,
-     * so the per-position conservation holds. This supersedes the former XFAIL spec; the warp gap is
-     * closed.
+     * Warp fetch relocation: the realtime setup on the warp path, where
+     * {@code RelocateRequestedItemWarpRule} (a global rule in organizer_fetcher.json) moves the
+     * requested ingredient source->target on the warp town state, so the per-position conservation
+     * holds.
      */
     private static TestBlueprint organizerFetchWarpBlueprint() {
         TestBlueprint base = new TestBlueprint(
@@ -2715,11 +2686,9 @@ public class TestBlueprintRegistry {
     private static final BlockPos COOK_FURNACE_OFFSET = new BlockPos(5, 0, -1);
 
     /**
-     * The 2026-10-19 cook blocker as a fixture: the kitchen furnace already has coal in its fuel slot
-     * and five cooked beef in its output; the cook (all starting jobs unlocked, standing on cook/fuel
-     * as in the playtest) must move at least three to the chest within 1500 realtime ticks. Before
-     * the fix, cook/fuel's ALWAYS_CONSIDER skipped the empty-fuel-slot check, so the cook kept picking
-     * fuel (top priority) and sat in COLLECTING_SUPPLIES for ~2400 ticks per pick.
+     * The kitchen furnace already has coal in its fuel slot and five cooked beef in its output; the
+     * cook (all starting jobs unlocked, standing on cook/fuel) must move at least three to the chest
+     * within 1500 realtime ticks, not keep picking fuel while the fuel slot is full.
      */
     private static TestBlueprint cookOutputReadyBlueprint() {
         TestBlueprint base = cookBlueprint();
@@ -2769,10 +2738,8 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 2026-10-19 village/growth: the cook batch's "eight pieces of food" LOOT quest never counted
-     * the cook's meals. cook/extract takes the furnace output in a pre-extract rule
-     * (take_from_slot_2), which handed the item to the cook without the LOOT-quest check that every
-     * other extraction gets (warp already routed it through). The output-ready kitchen with an open
+     * cook/extract takes the furnace output in a pre-extract rule (take_from_slot_2), and that
+     * extraction must count toward LOOT quests like every other. The output-ready kitchen with an open
      * count-8 #questown:villager_food quest: the cook's realtime extractions must credit it.
      */
     private static TestBlueprint cookExtractCreditsFoodQuestBlueprint() {
@@ -2780,14 +2747,13 @@ public class TestBlueprintRegistry {
     }
 
     private static TestBlueprint cookExtractCreditsFoodQuestBlueprint(WorkRequest boardRequest) {
-        // The cook batch's quest counts cooked food since r17 (VILLAGER_COOKED_FOOD).
+        // The cook batch's quest counts cooked food (VILLAGER_COOKED_FOOD).
         ResourceLocation food = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
         return cookRealtimeBlueprint(cookBlueprint().supplyItems(), new TestExpectation(List.of(), 0, 100))
                 .withSetupHook((level, flagPos, town, output) -> {
                     town.getQuestHandle().addLootQuest(food, 8);
-                    // A board with a request, as in play (2026-10-20 playtest: the cook batch posts
-                    // cooked mutton). The work picker only takes a job that satisfies one, which
-                    // cook/extract's old cooked_cod initial_request never did.
+                    // A board with a request, as in play: the work picker only takes a job that
+                    // satisfies one.
                     town.getWorkHandle().requestWork(boardRequest);
                     return seedFuelledFurnaceWithOutput(level, flagPos, town, output);
                 })
@@ -2805,11 +2771,9 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 2026-10-21 dev request: full storage should be visible. The output-ready kitchen with every
-     * town container slot filled: the cook must stop in NO_SPACE with the NO_STORAGE need (bubble)
-     * without taking the meal out of the furnace (agent playtest #40: a villager not yet holding
-     * output gave no storage signal); after 1200 villager-ticks of that, the flag reports storage
-     * full (its bubble).
+     * Full storage is visible. The output-ready kitchen with every town container slot filled: the
+     * cook must stop in NO_SPACE with the NO_STORAGE need (bubble) without taking the meal out of the
+     * furnace; after 1200 villager-ticks of that, the flag reports storage full (its bubble).
      */
     private static TestBlueprint cookStorageFullBlueprint() {
         // 3000 ticks: time to extract and enter NO_SPACE, then 1200+ villager-ticks for the flag.
@@ -2844,7 +2808,7 @@ public class TestBlueprintRegistry {
                     boolean flagBubble = town.isAttentionStorageFull();
                     output.msg("storage-full: villager bubble=" + anyNoStorage + " flag bubble=" + flagBubble);
                     // With no storage the cook must stop before taking the meal out: collecting it only
-                    // moves it into the cook's hands (2026-10-21 agent playtest, finding #40).
+                    // moves it into the cook's hands.
                     int left = level.getBlockEntity(flagPos.offset(COOK_FURNACE_OFFSET)) instanceof AbstractFurnaceBlockEntity f
                             ? f.getItem(2).getCount() : -1;
                     // At least 5: the furnace may finish another beef before the check (one run saw 6).
@@ -2855,7 +2819,7 @@ public class TestBlueprintRegistry {
 
     /**
      * The {@link #cookBlueprint()} kitchen as a realtime fixture: one cook starting on cook/fuel
-     * with every cook starting job unlocked (as a staffed playtest cook has), morning start, no
+     * with every cook starting job unlocked, morning start, no
      * warp, 1500 realtime ticks.
      */
     private static TestBlueprint cookRealtimeBlueprint(Collection<ItemStack> supplies, TestExpectation realtime) {
@@ -2892,11 +2856,9 @@ public class TestBlueprintRegistry {
     /**
      * A kitchen with raw mutton (the cook's starter recipe) and no fuel anywhere. The cook can't
      * fuel the furnace, so it must say so: the need bubble names coal (UNMET_ITEM on a coal key),
-     * which is what tells the player to bring fuel. A guard, not a fix pin: it passed when added
-     * (2026-10-19, ruling out "no coal need" as the village/growth cook stall). Since 64cd1b54 a
-     * relaxing (downtime) villager's bubble is hidden (dev playtest 2026-10-29), and a cook blocked
-     * on coal idles into downtime; then the town must still hold the coal need for it, so the
-     * bubble returns when it seeks work again.
+     * which is what tells the player to bring fuel. A relaxing (downtime) villager's bubble is
+     * hidden, and a cook blocked on coal idles into downtime; the town must still hold the coal need
+     * for it, so the bubble returns when it seeks work again.
      */
     private static TestBlueprint cookNoCoalBlueprint() {
         TestExpectation realtime = new TestExpectation(List.of(), 0, 100);
@@ -2922,9 +2884,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-30: an idle cook said "They need raw pork to work" with mutton in the
-     * chest, and the dev ruled an idle villager whose requests are all met says "All my requests
-     * are done". Storage holds cooked mutton past its request limit (paused) and the board asks
+     * An idle villager whose requests are all met says "All my requests are done". Storage holds cooked mutton past its request limit (paused) and the board asks
      * for nothing else; the cook has raw mutton and coal. Once it idles, it must show no need and
      * the requests-done status line.
      */
@@ -2949,8 +2909,8 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev ruling 2026-10-31: an open request the cook can't fill keeps it from being done, and its
-     * bubble names what is missing. With a porkchop request and no raw pork (mutton and coal in
+     * An open request the cook can't fill keeps it from being done, and its bubble names what is
+     * missing. With a porkchop request and no raw pork (mutton and coal in
      * stock, mutton requests stocked), the idle cook shows the raw-pork bubble.
      */
     private static TestBlueprint cookOpenRequestNoPorkBlueprint() {
@@ -2960,7 +2920,7 @@ public class TestBlueprintRegistry {
                 item -> item.contains("porkchop") && !item.contains("cooked"));
     }
 
-    /** Dev ruling 2026-10-31: a porkchop request with raw pork but no coal shows the coal bubble. */
+    /** A porkchop request with raw pork but no coal shows the coal bubble. */
     private static TestBlueprint cookOpenRequestNoCoalBlueprint() {
         return cookOpenRequestBubbleBlueprint(
                 List.of(new ItemStack(Items.PORKCHOP, 16)),
@@ -3001,7 +2961,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev ruling 2026-10-31: with porkchop and beef requests open and only beef and coal in town,
+     * With porkchop and beef requests open and only beef and coal in town,
      * a cook working through the beef never shows a need bubble. Every tick it holds a cook job
      * that isn't stuck (not seeking work, relaxing or eating, nor NO_SUPPLIES / NO_JOBSITE), its
      * need must not be an unmet item or room.
@@ -3048,8 +3008,7 @@ public class TestBlueprintRegistry {
     /**
      * The cook kitchen with cooked mutton 10 at request limit 4 (paused), plus open requests for
      * {@code openRequests}; {@code probe} sees the villager every server tick for 4000 ticks. The
-     * cook also knows the porkchop and beef recipes, as the dev's playtest cook did (its "They
-     * need raw pork to work" came from the learned porkchop job).
+     * cook also knows the porkchop and beef recipes.
      */
     private static TestBlueprint cookRequestsBlueprint(
             List<ItemStack> supplies,
@@ -3154,7 +3113,7 @@ public class TestBlueprintRegistry {
         )));
 
         // The Armory tier exactly (armorer's table + chest); with more chests the room's top match
-        // could be a store room instead (2026-10-28 armory tiers).
+        // could be a store room instead.
         blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 1), BlocksInit.ARMORERS_TABLE_BLOCK.get().defaultBlockState()));
         blocks.add(new BlockPlacement(new BlockPos(ox + 1, 0, oz + 3), Blocks.CHEST.defaultBlockState()));
 
@@ -3187,7 +3146,7 @@ public class TestBlueprintRegistry {
     private static final BlockPos DISPLAY_FRAME_OFFSET = new BlockPos(4 + 1, 0, -2 + 3);
 
     /**
-     * Dev 2026-10-28: putting armor on a stand is its own job, worked at the stand. The Armory
+     * Putting armor on a stand is its own job, worked at the stand. The Armory
      * fixture plus an empty armor stand (an Armor Display) and leather boots in the chest: the
      * crafter on crafter/display_armor must put the boots on the stand's feet within 1500 ticks.
      */
@@ -3217,9 +3176,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-30: with one Weapon Display frame, the display job kept working the frame
-     * after it held a sword, and every further sword it inserted was destroyed ("Item lost: no free
-     * display slot", every ~25 s). Three swords, one frame: one goes in the frame, and the other two
+     * A full display frame takes no more swords. Three swords, one frame: one goes in the frame, and the other two
      * must stay with the town (chest or villager), none dropped or lost. The frame is town storage
      * (DisplaySlots), so the container count includes the displayed sword: all three stay counted.
      */
@@ -3263,10 +3220,8 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * The dev's room (2026-10-30): two item frames on the walls of a corner share one block
-     * position, one already holding a stone sword. The sword in the chest must go into the empty
-     * frame. Before the fix the display lookup took whichever frame the entity list gave first, so
-     * the insert could hit the full frame and destroy the sword.
+     * Two item frames on the walls of a corner share one block position, one already holding a
+     * stone sword. The sword in the chest must go into the empty frame.
      */
     private static TestBlueprint displayWeaponsCornerFramesBlueprint() {
         return displayBlueprint(
@@ -3298,8 +3253,7 @@ public class TestBlueprintRegistry {
     private static final BlockPos DISPLAY_SECOND_STAND_OFFSET = new BlockPos(4 + 3, 0, -2 + 3);
 
     /**
-     * Dev playtest 2026-10-30: "Display_Armor job should prefer adding pieces to the most
-     * well-equipped stand." Two stands in the Armory: an empty one, and one already wearing leather
+     * The armor display job adds pieces to the best-equipped stand. Two stands in the Armory: an empty one, and one already wearing leather
      * boots. A leather chestplate in the chest must go on the stand with the boots.
      */
     private static TestBlueprint displayArmorFullestStandBlueprint() {
@@ -3531,8 +3485,7 @@ public class TestBlueprintRegistry {
     /**
      * One warp day (24000 ticks, at most 12000 productive) for a fed base gatherer. The cap counts
      * gathered loot in the chest and on the gatherer, excluding the cooked beef supplied as food:
-     * the "*" net delta nets eaten food out and hid an over-producing warp (the dropped
-     * 2026-10-19 one_day_yield attempt).
+     * the "*" net delta would net eaten food out and hide an over-producing warp.
      */
     private static TestBlueprint gathererOneDayLootBlueprint() {
         TestBlueprint base = welcomeMatBlueprint(List.of(new ItemStack(Items.COOKED_BEEF, 8)));
@@ -3664,9 +3617,7 @@ public class TestBlueprintRegistry {
                     boolean typeOk = quest.getType() == Quest.QuestType.LOOT;
                     boolean complete = quest.isComplete();
                     output.msg("loot_on_extract: quest complete=" + complete + " (type LOOT=" + typeOk + ")");
-                    // DEV-DIAG (2026-10-04, keep/remove per handoff): pin where the extracted mutton
-                    // physically sits — villager-held (journal) vs which container — so the grant path
-                    // (dine/deposit vs job-inventory vs extract) is settled from the state, not inferred.
+                    // Where the extracted mutton sits: villager-held (journal) or which container.
                     MCTownState state = town.captureCurrentState();
                     if (state != null) {
                         Map<String, Integer> held = TestResultChecker.snapshotVillagerHeldCounts(state);
@@ -3679,23 +3630,21 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * A gatherer becomes a hunter (playtest 2026-10-17: the BOP-blessed morning change). The
-     * gatherer leaves its welcome-mat spot at its terminal state 3, which hunter:sword also uses
+     * A gatherer becomes a hunter. The gatherer leaves its welcome-mat spot at its terminal state 3, which hunter:sword also uses
      * as "hunt finished"; the stale state, read from away from the mat (a walk to the spot the
-     * "not going to jobsite" gate rejects), parked the new hunter in COLLECTING_SUPPLIES until the
-     * 20000-tick self-heal. The root change must clear it, so the hunter completes the raw-food
+     * "not going to jobsite" gate rejects), would park the new hunter in COLLECTING_SUPPLIES. The
+     * root change must clear it, so the hunter completes the raw-food
      * LOOT quest inside the 4800-tick window (the loot_on_extract oracle).
      */
     private static TestBlueprint gathererBecomesHunterBlueprint() {
-        // The supply chest well away from the mat, as in the playtest town (chest ~10 blocks from
-        // the gate): next to the mat, the trip to fetch the sword walks the hunter into the mat's
+        // The supply chest well away from the mat: next to the mat, the trip to fetch the sword walks the hunter into the mat's
         // room, where it extracts the stale state instead of stalling.
         TestBlueprint farChest = welcomeMatBlueprint(hunterBlueprint().supplyItems().stream().toList(), -8, -2);
         return lootOnExtractBlueprint(farChest, false).withPostSpawnAction((level, flagPos, town, output) -> {
             BlockPos matPos = flagPos.offset(new BlockPos(3, 0, 0));
             JobID hunter = new JobID("hunter", "sword");
-            // Away from the mat, as in the playtest (the change lands at the morning, by the bed):
-            // a villager standing on the mat just extracts the stale state, which hides the bug.
+            // Away from the mat (the change lands in the morning, by the bed): a villager standing on
+            // the mat just extracts the stale state.
             for (net.minecraft.world.entity.LivingEntity e : town.getVillagerHandle().entities()) {
                 e.teleportTo(flagPos.getX() - 5.5, flagPos.getY(), flagPos.getZ() + 4.5);
                 output.msg("gatherer_becomes_hunter: moved " + e.getUUID() + " to " + e.blockPosition().toShortString());
@@ -3713,16 +3662,15 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * The accumulation oracle (2026-10-15 ruling): count-4 raw-food LOOT quest,
+     * The accumulation oracle: count-4 raw-food LOOT quest,
      * one realtime hunter cycle, then a deterministic top-up through the live
      * quest handle (the same entry point {@code RealtimeWorldInteraction}
-     * uses on extraction, and {@code _qtdev loot_fire} in a held run).
-     * Pre-fix, the first natural extraction completed the quest outright and
-     * the "incomplete with progress" assertion fails.
+     * uses on extraction, and {@code _qtdev loot_fire} in a held run). The first natural
+     * extraction must not complete the quest outright.
      */
     /**
-     * 2026-10-21 playtest: with the flag's villagers page open, a returning hunter's card kept its
-     * trip bar full and never showed "dropping loot". The page re-syncs through a StatusListener it
+     * With the flag's villagers page open, a returning hunter's card must show its trip ending and
+     * "dropping loot". The page re-syncs through a StatusListener it
      * attaches to each villager on open (FlagMenus.writeAndLink); this fixture attaches one the same
      * way and records what it hears over a realtime hunt.
      */
@@ -3782,8 +3730,7 @@ public class TestBlueprintRegistry {
         )
                 .withSetupHook((level, flagPos, town, output) -> {
                     ResourceLocation tag = rawFoodTag();
-                    // 40, not 4: since hunters bring twice the meat (2026-10-30) one natural
-                    // cycle delivers ~25 raw food and completed a count-4 quest before the check.
+                    // 40, not 4: one natural hunter cycle delivers ~25 raw food.
                     town.getQuestHandle().addLootQuest(tag, LOOT_ACCUMULATE_COUNT);
                     boolean posted = town.getQuestHandle().getAllQuestsWithRewards().stream()
                             .anyMatch(e -> e.getKey().getType() == Quest.QuestType.LOOT
@@ -3997,15 +3944,14 @@ public class TestBlueprintRegistry {
 
     // --- Plus-shaped room (report) ---
     //
-    // Reproduction for the "specifically shaped room" report: a rectangular room with a pillar in
+    // A rectangular room with a pillar in
     // each corner (a "plus-shaped space"), chests on the N/S walls, a door on the east wall. The
     // four interior corner pillars are the pathological case for the wall-walking detector:
     // Crawl.forwardSpread fans 5 child crawls from every wall block, the corner pillars emit
     // several overlapping sub-rooms, and LevelRoomDetector.removeOverlaps re-runs a full wall-walk
     // (RoomDetection.findRoomForDoor) per overlapping pair. This is a MEASUREMENT, not a gate: it
     // always passes and reports the flag-tick TickProfile so the cost shows up as a number rather
-    // than a red scenario. The perf/town_large harness is a synthetic town and cannot build this
-    // shape, so it is what the perf autotest could not answer.
+    // than a red scenario. perf/town_large is a synthetic town and cannot build this shape.
 
     /**
      * Builds a {@code size}x{@code size} self-enclosing shell (floor/walls/ceiling) with a
@@ -4198,7 +4144,6 @@ public class TestBlueprintRegistry {
     //   bop_boundary_63: pre-fill to 63 (one slot free); the 64th deposit is ACCEPTED (bopCount->64).
     //   bop_full_64:     pre-fill to 64 (full); the next deposit is REJECTED, yet the townie's XP
     //                    latch (hasBlockOfProgress) STILL clears -> the townie is NOT re-stalled.
-    // That last line is the finding that refutes "a full flag re-stalls the townie".
 
     private static TestBlueprint bopStallBase(int realtimeTicks) {
         SupplyRoom base = buildSupplyRoom(-6, -2);
@@ -4295,9 +4240,9 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev 2026-10-30: "BOPs should ALWAYS be deposited on the flag." A villager carrying a Block of
-     * Progress it did not earn (no latch: one taken from storage, or a second one) plus some loot
-     * stored the BOP with the loot (r23 #7). It must store the loot and take the BOP to the flag.
+     * Blocks of Progress always go to the flag. A villager carrying one it did not earn (no latch:
+     * one taken from storage, or a second one) plus some loot must store the loot and take the BOP
+     * to the flag.
      */
     private static TestBlueprint bopCarriedWithLootBlueprint() {
         return bopStallBase(3000)
@@ -4324,14 +4269,11 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: a 3x3 kitchen (walls included, one interior cell holding the
-     * furnace) is used from its door cell. The cook stood on the roof (40323611 keeps it in the
-     * doorway) and later stalled in "going to eat" with no walk target. Here the cook cooks from
-     * the doorway, its hunger is emptied mid-run, and it must leave the doorway, eat from the supply
+     * A 3x3 kitchen (walls included, one interior cell holding the furnace) is used from its door
+     * cell. The cook cooks from the doorway, its hunger is emptied mid-run, and it must leave the doorway, eat from the supply
      * room and still have cooked. With {@code restFirst} the cook starts in downtime, which works at
      * the flag (states 0-9) and leaves its per-owner record there; the diner stages also use the flag
-     * (states 0-2). The live cook then stalled in "going to eat" (cook-stuck-going-to-eat.md).
-     * With {@code rawOnly} the town has raw mutton and no coal or cooked food, as the live town did:
+     * (states 0-2). With {@code rawOnly} the town has raw mutton and no coal or cooked food:
      * the cooked-food diner must expire and the raw-food diner must eat the mutton.
      */
     private static TestBlueprint cookDoorwayKitchenBlueprint(boolean restFirst, boolean rawOnly) {
@@ -4407,8 +4349,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * r23 #16 (dev 2026-10-30): leaves grew across the kitchen door and the cook's only hint was
-     * "They can't find a way there." The doorway kitchen's door is blocked from outside by
+     * The doorway kitchen's door is blocked from outside by
      * persistent leaves; the cook must give up with a CANT_REACH need that names the kitchen
      * ("They can't get into the Kitchen. Is its door blocked?").
      */
@@ -4451,9 +4392,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: "Can we debounce how many times a navigating villager interacts with a
-     * door?" - walking through and standing in the doorway both flapped it, "common in 3x3 rooms".
-     * The doorway kitchen's cook works from the door cell. A flap is the door closing while a
+     * Door debounce: the doorway kitchen's cook works from the door cell. A flap is the door closing while a
      * villager is still in or beside it (within 1.5 blocks): it then bumps it open again.
      */
     private static TestBlueprint cookDoorFlapsBlueprint() {
@@ -4532,7 +4471,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: switching a hunter's job from the skill tree mid-trip offers "after
+     * Switching a hunter's job from the skill tree mid-trip offers "after
      * this trip" or "now (trip is lost)". Once the hunter is away, a listener requests the other
      * trip (sword_half_day, or sword if it is already on the half day). After-trip: the job must stay
      * while away and change later (the board's next pick). Now: the job changes at once.
@@ -4564,7 +4503,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: "Longest that fits the day". With sword, sword_half_day and
+     * The longest trip that fits the day: with sword, sword_half_day and
      * sword_full_day unlocked and the morning ahead, the hunter's first trip is the full day.
      */
     private static TestBlueprint hunterLongestTripBlueprint() {
@@ -4605,8 +4544,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: "They need a Smithy to work" - a villager whose every job waits on a
-     * missing room names the room. A cook in a town with no kitchen (only the store room) must show
+     * A villager whose every job waits on a missing room names the room. A cook in a town with no kitchen (only the store room) must show
      * MISSING_ROOM naming a kitchen at some point (relaxing hides it, so a listener samples).
      */
     private static TestBlueprint cookNoKitchenBlueprint() {
@@ -4652,8 +4590,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Dev playtest 2026-10-29: "Keep as designed, but the player needs some way to see 'we've hit
-     * the limit' and to see and adjust the limit." Storage holds 5 bread and the board requests bread:
+     * The request limit is visible and adjustable. Storage holds 5 bread and the board requests bread:
      * at limit 4 the request pauses, raised to 6 it resumes; the work handle reports stock 5.
      */
     private static TestBlueprint requestLimitBlueprint() {
@@ -4849,7 +4786,7 @@ public class TestBlueprintRegistry {
                 base.supplyDoorOffset(), 24000, 0L, null, false, null,
                 false, false, null, null, null, null, null, false
         ).withCustomAssertion((level, flagPos, town, output) -> {
-            // Legibility pass (ADR-0011): with no supplies, the farmer must be
+            // With no supplies, the farmer must be
             // flagged UNMET_ITEM so the need bubble can say so. Silence means working.
             List<TownieNeed> needs = town.getVillagerHandle().entities().stream()
                     .map(v -> ((VisitorMobEntity) v).getNeed())
@@ -4907,10 +4844,9 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 2026-10-21 playtest: after the player slept (a night-skip catch-up warp), both hunters stood
-     * at the storeroom chests in COLLECTING_SUPPLIES forever: their swords were in a chest, and the
-     * shared town-gate work spot sat at the finished state with nobody extracting it. A warp, then
-     * a realtime window in which the hunter must bring loot back to storage.
+     * After a night-skip catch-up warp, the shared town-gate work spot must not sit at its finished
+     * state with nobody extracting it. A warp, then a realtime window in which the hunter must bring
+     * loot back to storage.
      */
     private static TestBlueprint hunterWarpThenRealtimeBlueprint() {
         TestBlueprint base = hunterBlueprint();
@@ -4937,9 +4873,7 @@ public class TestBlueprintRegistry {
     private static final int HUNTER_SLEEP_AT = 10000;
 
     /**
-     * 2026-10-21 playtest: after the player slept at the campfire while two hunters were out, both
-     * stood at the chests in COLLECTING_SUPPLIES forever (the shared mat left at its finished
-     * state, unextracted). Unlike warp_then_realtime, nothing is respawned: two hunters work from
+     * The player sleeps at the campfire while two hunters are out. Unlike warp_then_realtime, nothing is respawned: two hunters work from
      * late afternoon into the night, the player "sleeps" mid-trip (the growth driver's sleep step:
      * clock to morning + TownFlags.onSleepFinished), and each hunter must hunt again afterwards.
      */
@@ -4956,7 +4890,7 @@ public class TestBlueprintRegistry {
                 new TestExpectation(List.of(), 0, 100), null, null, null, null, false
         )
                 .withSetupHook((level, flagPos, town, output) -> {
-                    // Two hunters, two swords (the playtest town had one each).
+                    // Two hunters, two swords.
                     if (level.getBlockEntity(flagPos.offset(base.chestOffset())) instanceof net.minecraft.world.Container c) {
                         for (int i = 0; i < c.getContainerSize(); i++) {
                             if (c.getItem(i).isEmpty()) {
@@ -4968,7 +4902,7 @@ public class TestBlueprintRegistry {
                     return true;
                 })
                 .withPostSpawnAction((level, flagPos, town, output) -> {
-                    // Late afternoon: the first trip runs into the night, as in the playtest. Set on the
+                    // Late afternoon: the first trip runs into the night. Set on the
                     // first tick after the monitor starts (startMonitor pins dayTime to 1000).
                     long[] sleepTick = {-1};
                     for (LivingEntity e : town.getVillagerHandle().entities()) {
@@ -5046,8 +4980,7 @@ public class TestBlueprintRegistry {
     private static final int CYCLE_TIME_TICKS = 12000;
 
     /**
-     * 2026-10-21 playtest: "miner is very slow" (one trip in 12 min while miner/coal and
-     * hunter/sword share a 2000-tick timer). Runs one villager realtime with no warp, logs every
+     * Miner trip pace (miner/coal and hunter/sword share a 2000-tick timer). Runs one villager realtime with no warp, logs every
      * status change with its game time, and passes when it finishes at least two cycles
      * (EXTRACTING_PRODUCT reached). The hunter variant is the baseline for the miner's.
      */
@@ -5078,8 +5011,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * The live miner stalled once town storage filled up (2026-10-21: no trips finished after
-     * 18:01, a 150 s max-ticks reset ever since). With every town container slot full, the miner
+     * With every town container slot full, the miner
      * comes back from its first trip with loot and nowhere to put it: it must stop in NO_SPACE
      * with the NO_STORAGE need. The run ends before dusk (~10500 ticks after the 1000 dayTime start):
      * at nightfall the villager leaves NO_SPACE for its drop-loot-before-bed path.
@@ -5182,8 +5114,7 @@ public class TestBlueprintRegistry {
      * sleeps through night, dayTime jumps ~11000 ticks to morning.
      * The flag was ticking normally before sleep, so its reference tick is
      * current. Villagers sleep at night, so the jump must produce NOTHING:
-     * the expectation is a non-positive item delta (regression guard for the
-     * bug where a sleep warp yielded a full loot batch). The lower bound is
+     * the expectation is a non-positive item delta. The lower bound is
      * unbounded because a hungry villager may legitimately eat from the
      * chest during the live settle window.
      * startTimeTick=12000 (evening), warpAmount=11000 (jump to next morning).
@@ -5264,8 +5195,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 2026-10-21 (agent playtest #40): with full storage a villager stops before collecting a
-     * finished product, since it would only have nowhere to put it. A diner's product is its meal,
+     * With full storage a villager stops before collecting a finished product, since it would only have nowhere to put it. A diner's product is its meal,
      * eaten not stored (WorkDescription.productConsumed), so a hungry villager must still eat when
      * every chest is full. eat_direct's town (villager starts on dining_no_table), hunger drained,
      * every empty slot filled at spawn.
@@ -5345,9 +5275,7 @@ public class TestBlueprintRegistry {
                         1, 1
                 ),
                 // One raw meal is +50% and fullness drains ~1/tick, so after timing out of
-                // dining_no_table (~300 ticks) the window ends near 16-20%. The old 0.3 floor was
-                // only met while a diner that gave up got free meals every tick (fixed cf1b7072;
-                // 2026-10-22 r5: 20% after one meal, -40% before the give-up fallback fix).
+                // dining_no_table (~300 ticks) the window ends near 16-20%.
                 0.15f, null, null,
                 new TestExpectation(List.of(new ExpectedProduct("minecraft:beef", 0, 1)), 0, 1),
                 false
@@ -5355,9 +5283,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Like eat_raw_food with only one raw item in town. Agent playtest r12 #7: a starving cook took
-     * the town's single chicken for dining_raw_food over and over and "gave up waiting for
-     * ingredients"; no raw meal ever finished. The meal must finish with one raw item.
+     * Like eat_raw_food with only one raw item in town: the meal must finish with one raw item.
      */
     private static TestBlueprint eatRawFoodSingleBlueprint() {
         TestBlueprint base = welcomeMatBlueprint(List.of(
@@ -5404,9 +5330,8 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * 10-21 #17: at night a no-table diner ate bread, had no work to go back to, stayed a diner, and
-     * ~880 ticks later its give-up fallback fed it raw food as a second meal. Dev 2026-10-22: a
-     * diner whose hunger is acceptable goes back to work, or relaxes at night. Starts at night on
+     * A diner whose hunger is acceptable goes back to work, or relaxes at night, instead of eating
+     * again. Starts at night on
      * dining_no_table with bread and raw mutton in storage: the bread is eaten, the mutton is not.
      */
     private static TestBlueprint noRawMealAfterEatingBlueprint() {
@@ -5446,16 +5371,12 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Agent playtest r23 #10 (2026-10-30): a starving gatherer gave up on raw food 5 s before the
-     * town's 20 free carrots reached the chest, then waited out "gave up waiting for different work"
-     * and the food give-up buffer without looking again, and ate ~2 minutes later. Starts on
-     * dining_no_table with empty storage in the evening (as in r23: no work fits in the day, so the
-     * board has nothing else for it); once dining_raw_food has given up, carrots arrive. The
-     * villager must eat them.
+     * Food that arrives after a starving villager gave up on raw food must still be eaten. Starts on
+     * dining_no_table with empty storage in the evening (no work fits in the day, so the board has
+     * nothing else for it); once dining_raw_food has given up, carrots arrive.
      * <p>
-     * XFAIL until fixed: carrots are villager_food, not villager_raw_food, so only the no-table
-     * diner can eat them, and nothing restarts the chain once raw food has given up (ticket
-     * .scratch/agent-playtest-2026-10-30-overnight/starving-villager-ignores-food-after-give-up.md).
+     * XFAIL: carrots are villager_food, not villager_raw_food, so only the no-table diner can eat
+     * them, and nothing restarts the chain once raw food has given up.
      */
     private static TestBlueprint foodArrivesAfterGiveUpBlueprint() {
         TestBlueprint base = welcomeMatBlueprint(List.of());
@@ -5547,7 +5468,7 @@ public class TestBlueprintRegistry {
     // --- UI checks ---
 
     /**
-     * Roadmap #182: the work-request / stock-request screens only offer products of jobs the
+     * The work-request / stock-request screens (#182) only offer products of jobs the
      * town has unlocked. Exercises {@link ServerJobsRegistry#getAllOutputs} against the real
      * {@code Works} registry with controlled predicates to prove the gate (no town build needed,
      * since getAllOutputs reads only the registry + the level + the gather-knowledge function).
@@ -5557,9 +5478,9 @@ public class TestBlueprintRegistry {
      * neutralised:
      * <ul>
      *   <li>predicate {@code false} ⇒ empty offer set — the gate suppresses even the
-     *       always-known floor when no job is unlocked (the design decision for #182),</li>
+     *       always-known floor when no job is unlocked,</li>
      *   <li>predicate {@code true} ⇒ non-empty, and the always-known floor (wheat seeds)
-     *       surfaces via its gather job (pre-#182 base intact),</li>
+     *       surfaces via its gather job,</li>
      *   <li>single-root predicate ⇒ non-empty and a strict subset of the full set
      *       (the gate filters by {@link JobID}, never invents items).</li>
      * </ul>
@@ -5619,17 +5540,14 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Roadmap #182, integration half: closes the gap left by {@link #jobBoardKnowledgeGatingCheck()},
-     * which proves the {@code getAllOutputs} filter against <em>synthetic</em> predicates only. Here the
-     * gate is driven by the <em>real</em> {@link TownVillagerLearningHandle#isUnlocked} — the exact method
-     * {@code VillagerHolder.isUnlocked} delegates to ({@code TownVillagerHandles} line ~246), which is the
-     * reference both request surfaces pass ({@code TownWorkHandle.openMenuRequested},
-     * {@code StockRequestClipboardItem.use}). It encodes ADR-0007's governing invariant — "what the player
-     * can request == what a townie will build" — by unlocking exactly one real root via the real handle and
+     * The {@code getAllOutputs} gate (#182) driven by the real
+     * {@link TownVillagerLearningHandle#isUnlocked}, which both request surfaces use
+     * ({@code TownWorkHandle.openMenuRequested}, {@code StockRequestClipboardItem.use}): what the
+     * player can request is what a villager will make. It unlocks exactly one real root via the real handle and
      * asserting the offer set is:
      * <ul>
      *   <li>identical to the controlled single-root predicate's offer set (the real handle gates to exactly
-     *       the unlocked {@link JobID}, never more) — this is the new coverage,</li>
+     *       the unlocked {@link JobID}, never more),</li>
      *   <li>non-empty (the unlocked root's products surface),</li>
      *   <li>a strict subset of the full set (progression-locked tiers and other roots are excluded),</li>
      *   <li>and the predicate itself returns true for the unlocked root, false for a different root.</li>

@@ -23,20 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Loads the two baker stock job files through the PRODUCTION loader
- * ({@link ResourceJobLoader.ReloadListener#apply}), not the MC-free
- * {@code TestJobLoader} that most job-data tests use.
- *
- * <p>Why this exists: {@code workFromJsonV2} requires {@code "block"} to be a JSON
- * object ({@code {"id": ...}}) and throws {@code "block must be an object"} on the v1
- * string form. The 2026-10-10 cook-shape migration (commit f2f049cc) shipped
- * {@code baker_stock_wheat.json} / {@code baker_stock_coal.json} at version 2 with the
- * v1 string form, so both jobs silently failed to load at server start (the failure is
- * logged and skipped unless {@code crash_on_invalid_jobs} is set). The MC-free
- * {@code TestJobLoader} never inspects the {@code block} field, so the
- * {@code JobIntegrationTest} coverage of these files stayed green.
- */
+/** Loads the baker stock jobs through the real loader, which requires {@code "block"} to be an object. */
 class BakerStockJobLoaderTest {
 
     private static final String JOBS_PATH = "data/questown/questown_jobs/";
@@ -66,7 +53,6 @@ class BakerStockJobLoaderTest {
         Assertions.assertNotNull(wheat, "baker/stock_wheat must load via the production v2 path");
         Assertions.assertNotNull(coal, "baker/stock_coal must load via the production v2 path");
 
-        // v2 fields survive the real parse
         Assertions.assertEquals(new JobID("baker", "extract"), wheat.parentID);
         Assertions.assertEquals(new JobID("baker", "fuel"), coal.parentID);
         Assertions.assertEquals(new ResourceLocation("questown:breadmaker_stocked"), wheat.baseRoom);
@@ -77,14 +63,7 @@ class BakerStockJobLoaderTest {
         Assertions.assertTrue(coal.getSpecialGlobalRules().contains(SpecialRules.EXCLUDE_FROM_WARP));
     }
 
-    /**
-     * A stock job moves an input into the breadmaker's chest; it makes nothing. Its
-     * {@code initial_request} is read as the job's declared product (top-need producer
-     * pick, board-request satisfaction), so it must name the chain's product (bread), as
-     * the cook's stock jobs name villager food. With coal declared, a coal shortage in a
-     * town that already had a miner posted "unlock baker + build a breadmaker" (agent
-     * playtest 2026-10-22 r3), and the bakery burns coal.
-     */
+    /** A stock job's {@code initial_request} names the chain's product (bread), since it is read as what the job makes. */
     @Test
     void bakerStockJobs_doNotDeclareTheirInputsAsProducts() {
         ResourceJobLoader.ReloadListener listener = ResourceJobLoader.LISTENER;

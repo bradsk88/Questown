@@ -67,8 +67,7 @@ public class AutoTestRunner {
         // Fast-forward tick-budgeted runs. The scenario clock is ticks (warp-simulated
         // or a realtime tick budget), never wall clock, so a 200 t/s server delivers
         // the same tick sequence in ~5% of the 20 t/s wall time (vanilla default).
-        // Applies to held runs too - it is what the 2026-10-09 guidance did by hand
-        // via `ffeed.sh '/tick rate 200'`. Override (e.g. back to vanilla): -Dquestown.autotest.tickrate=20
+        // Override (e.g. back to vanilla): -Dquestown.autotest.tickrate=20
         float tickRate = parseTickRate();
         Compat.setServerTickRate(server, tickRate);
         QT.FLAG_LOGGER.info("[autotest] tick rate set to {} t/s (override: -D{}=<tps>)", tickRate, SYSPROP_TICKRATE);
@@ -138,10 +137,7 @@ public class AutoTestRunner {
         if (runVillage || runSelfSuff) {
             runJobs = false;
             runChicken = false;
-            // The village scenarios test the quest and economy flow, not survival: a creeper at
-            // the flag killed a whole growth town (2026-10-24, dev ruling: peaceful). The watch
-            // listener's login hook set this only when a spectator joined; headless runs ran on
-            // the world's default difficulty.
+            // The village scenarios test the quest and economy flow, not survival.
             server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
             QT.FLAG_LOGGER.info("[village] difficulty set to peaceful");
             // The growth scenario runs for many minutes; let a spectator client
@@ -205,8 +201,7 @@ public class AutoTestRunner {
     /**
      * Autotest default tick rate: 1000 t/s, i.e. "as fast as the server can" — the box tops out
      * near 370 t/s on village/day1. Scenarios are tick-budgeted, so a "Can't keep up" stall only
-     * costs wall time (2026-10-19: day1 452 s at 200 -> 242 s at 1000, full suite 72/75 with the
-     * known reds only). Override: -Dquestown.autotest.tickrate=<tps>.
+     * costs wall time. Override: -Dquestown.autotest.tickrate=<tps>.
      */
     private static final float DEFAULT_TICK_RATE = 1000f;
 
@@ -312,10 +307,6 @@ public class AutoTestRunner {
     // Hold-mode companion: drops each joining player at the test arena, and
     // keeps re-aiming each hold spectator at the nearest thing worth a
     // screenshot: a NEEDY townie when one exists, otherwise a dead door.
-    // (The roster wanders and doors don't move, but the re-aim is what puts
-    // the target square enough in the cone for the bubble's second-gesture
-    // hint to fire.) A headless screenshot (grim) then sees what a player
-    // walking up to the problem would see.
     static class HoldModeLoginListener {
         private static final int REAIM_TICKS = 40;
         private int ticks = 0;
@@ -474,9 +465,7 @@ public class AutoTestRunner {
         private int tickCoverageTries = 0;
         private boolean tickCoverageDone = false;
         private boolean tickCoverageReported = false;
-        // Room chunks this check already force-loaded. Rooms register over several seconds, so
-        // a one-shot check at the first room missed the later ones (2026-10-28: the at_fork
-        // hunter froze in an unloaded west room for the whole run).
+        // Room chunks this check already force-loaded; rooms register over several seconds.
         private final java.util.Set<String> tickCoverageForced = new java.util.TreeSet<>();
 
         @SubscribeEvent
@@ -504,16 +493,14 @@ public class AutoTestRunner {
         @SubscribeEvent
         public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
             checkTickCoverage();
-            // No-op: the login handler gives each spectator an initial viewpoint
-            // (aimed at the flag) and then leaves them alone, so the user can fly
-            // around and observe on their own. The former per-tick re-aim kept
-            // resetting the camera and fought the user's own movement.
+            // No-op: the login handler gives each spectator an initial viewpoint and then leaves
+            // them free to fly around.
         }
 
         // Invariant: in a headless autotest world there is no player chunk ticket, so
         // non-player mobs tick ONLY inside entity-ticking chunks. A room laid down
-        // outside an entity-ticking chunk stalls any leaver that crosses into it
-        // (811/812 class soft-lock). Boot force-loads only the 3x3 around the flag, so
+        // outside an entity-ticking chunk stalls any leaver that crosses into it.
+        // Boot force-loads only the 3x3 around the flag, so
         // this watches (every ~10 s) for rooms outside that region and force-loads their
         // chunks (idempotent), logging each newly covered chunk. Fails open: never blocks the run.
         private void checkTickCoverage() {
@@ -697,8 +684,6 @@ public class AutoTestRunner {
             // A 0/0 run must not read as a failure: it means no assertion-bearing
             // scenario ran (a self_sufficiency-only sweep), not that anything
             // failed — the verdict for those runs is the scenario's own watch lines.
-            // (Exit-code semantics are unchanged: 0/0 still takes the halt(1)
-            // path below, exactly as before this banner tweak.)
             String verdict = total == 0 ? "no assertions executed (report-only)"
                     : allPassed ? "ALL PASS" : "FAILURES";
 

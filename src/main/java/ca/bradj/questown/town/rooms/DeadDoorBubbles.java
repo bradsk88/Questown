@@ -11,16 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Client-side access to the dead-door sets that each loaded flag block entity syncs via its
- * update tag (ADR-0011). The server decides *which* doors are dead and why; this class only
- * collects the copies that happen to be chunk-loaded on this client so {@code NeedBubbleFocus}
- * can treat doors and townies as candidates in the one shared bubble.
- *
- * <p>A player standing near a door of a town whose flag chunk is NOT loaded sees no bubble —
- * that is the accepted cost of riding the block-entity update tag instead of a dedicated
- * packet (2026-08-09 grilling).
- */
+/** Client side: each loaded flag's dead doors. A door whose flag's chunk isn't loaded shows no bubble. */
 @OnlyIn(Dist.CLIENT)
 public final class DeadDoorBubbles {
 
@@ -29,17 +20,14 @@ public final class DeadDoorBubbles {
     private DeadDoorBubbles() {
     }
 
-    /** Called from the flag block entity when it loads on the client. */
     public static void register(TownFlagBlockEntity flag) {
         LOADED_FLAGS.add(flag);
     }
 
-    /** Called from the flag block entity when it unloads on the client. */
     public static void unregister(TownFlagBlockEntity flag) {
         LOADED_FLAGS.remove(flag);
     }
 
-    /** Every dead door within bubble range of the player, from all client-loaded flags. */
     public static Map<BlockPos, DoorTrouble> near(Player player) {
         ImmutableMap.Builder<BlockPos, DoorTrouble> b = ImmutableMap.builder();
         for (TownFlagBlockEntity flag : LOADED_FLAGS) {

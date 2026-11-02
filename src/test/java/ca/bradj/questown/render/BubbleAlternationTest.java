@@ -8,11 +8,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Covers the pure icon-selection logic extracted from
- * {@link BubbleRenderer}. Rendering itself is not unit-testable
- * and is verified in-game per the U2 plan.
- */
+/** Which icon the bubble shows. */
 class BubbleAlternationTest {
 
     @BeforeAll

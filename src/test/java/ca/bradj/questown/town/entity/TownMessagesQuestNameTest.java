@@ -7,11 +7,7 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * 2026-10-21 agent playtest: the chat line for a completed job-change quest read
- * "Quest completed: room.hunter_qt_sword" (a raw key) while the quest card read "Villager job:
- * Hunter". The chat name must use the card's wording and the job's translated name.
- */
+/** A completed job-change quest's chat line uses the card's wording and the job's name. */
 class TownMessagesQuestNameTest {
 
     @Test

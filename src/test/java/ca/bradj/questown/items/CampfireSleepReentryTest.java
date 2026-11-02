@@ -26,13 +26,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 
-/**
- * A second wand use on the campfire while the player already sleeps there must do nothing.
- * 2026-10-22 agent playtest: the second use placed another temp bed and failed to start sleep
- * (OTHER_PROBLEM); its failure path cleared the sleeper's records, so the first temp bed stayed in
- * the world, the campfire stayed lit, and the wake never granted {@code first_campfire_sleep}
- * (the "Your camp is ready" toast then came back every evening).
- */
+/** A second wand use while already asleep at the campfire does nothing. */
 class CampfireSleepReentryTest {
 
     @BeforeAll
@@ -62,7 +56,6 @@ class CampfireSleepReentryTest {
         Mockito.verify(player, Mockito.never()).startSleepInBed(any(BlockPos.class));
     }
 
-    /** DimensionType is a final record; the handler only logs {@code hasFixedTime()}. */
     private static DimensionType overworld() {
         return new DimensionType(
                 OptionalLong.empty(), true, false, false, true, 1.0, true, false, -64, 384, 384,
@@ -71,7 +64,7 @@ class CampfireSleepReentryTest {
         );
     }
 
-    /** Open air everywhere except a lit campfire at {@code campfire} (as CampfireSleepSideTest). */
+    /** Open air with a lit campfire at {@code campfire}. */
     private static ServerLevel litCampfireInOpenAir(BlockPos campfire) {
         ServerLevel level = Mockito.mock(ServerLevel.class);
         BlockState air = Mockito.mock(BlockState.class);

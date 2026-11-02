@@ -12,11 +12,7 @@ import java.util.function.*;
 
 public class VillagerLearningHandle<JOB_ID> {
 
-    /**
-     * Reveal every child of an unlocked job (dev playtest 2026-10-29: "For now, show all children -
-     * remember the education path we have planned for the future"). Pass a smaller count (the old
-     * {@code JobTreeGrowth} config) to go back to a random few, e.g. when education gates learning.
-     */
+    /** Reveal every child of an unlocked job; a smaller count reveals a random few. */
     public static final int REVEAL_ALL = Integer.MAX_VALUE;
 
     private final Collection<JOB_ID> townKnownJobs = new ArrayList<>();

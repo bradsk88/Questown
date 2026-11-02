@@ -5,14 +5,7 @@ import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 
-/**
- * Static handles to the four custom advancement criterion triggers, bound once at load
- * by the loader's trigger-type registration (see {@code loader.neo.NeoAdvancementTriggers}).
- *
- * <p>The bind is deferred to registry load time (1.20.6's trigger-type registry is baked at
- * bootstrap), so these statics are only usable during gameplay (after load) - the same
- * constraint the old path had.
- */
+/** The mod's custom advancement triggers. Usable once the game has loaded. */
 public class AdvancementsInit {
 
     public static VisitorTrigger VISITOR_TRIGGER;

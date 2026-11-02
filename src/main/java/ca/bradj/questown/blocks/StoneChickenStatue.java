@@ -8,17 +8,7 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Trophy block left where the helper chicken stood when the onboarding arc
- * completes. It is a full solid block for collision and light, but its own
- * model is empty: the block entity renders a stone-colored chicken model over
- * it (see {@code ChickenStatueBlockEntityRenderer}), so the finished chicken
- * looks like a statue rather than a cube.
- *
- * <p>Strength 0.0 with no correct-tool requirement means it breaks by hand
- * and drops itself via {@code blocks/stone_chicken_statue}, so the player can
- * pick the statue up easily.
- */
+/** The stone chicken left behind when the helper chicken's lessons end. Breaks by hand and drops itself. */
 public class StoneChickenStatue extends Block implements EntityBlock {
     public static final String ITEM_ID = "stone_chicken_statue";
 

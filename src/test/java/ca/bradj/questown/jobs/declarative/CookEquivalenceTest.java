@@ -81,8 +81,7 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-        // Equivalence alone is hollow: both sides stalling together still "equivalents".
-        // Assert the job actually completed on BOTH sides.
+        // Both sides must actually finish, not just agree.
         Assertions.assertTrue(
                 tickerResult.productExtracted() && advancerResult.productExtracted(),
                 "both sides must actually complete the extract, not just agree to idle");
@@ -123,8 +122,7 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-        // Equivalence alone is hollow: both sides stalling together still "equivalents".
-        // Assert the job actually completed on BOTH sides.
+        // Both sides must actually finish, not just agree.
         Assertions.assertTrue(
                 tickerResult.productExtracted() && advancerResult.productExtracted(),
                 "both sides must actually complete the extract, not just agree to idle");
@@ -159,20 +157,13 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-        // Equivalence alone is hollow: both sides stalling together still "equivalents".
-        // Assert the job actually completed on BOTH sides.
+        // Both sides must actually finish, not just agree.
         Assertions.assertTrue(
                 tickerResult.productExtracted() && advancerResult.productExtracted(),
                 "both sides must actually complete the extract, not just agree to idle");
     }
 
-    /**
-     * Work-only start-gate regression (cook/stick stall): a state 0 that declares ONLY work
-     * (cook_extract's 0.1 floors to int 0, no ingredients, no tools) must still start on a
-     * fresh block and extract its product with an EMPTY inventory. Before the fix, the
-     * fresh block is invisible to the work bucket AND excluded from itemless work
-     * (workLeft()==0), so the cook idles in NO_JOBSITE.
-     */
+    /** A state 0 that only needs work starts on a fresh block with empty hands. */
     @Test
     void cook_extract_workOnly_state0_emptyInventory_shouldExtractProduct() {
         JobDefinition definition = workOnlyCookExtract();
@@ -186,7 +177,6 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.TickerSetup tickerSetup =
                 EquivalenceTestFramework.createTickerSetup(definition, world);
-        // inventory stays EMPTY - no tool, no ingredient
 
         EquivalenceTestFramework.runTicker(tickerSetup, 100);
         EquivalenceTestFramework.SimulationResult tickerResult =
@@ -198,7 +188,6 @@ class CookEquivalenceTest {
                 "the extracted product must land in the empty inventory; got " + tickerResult);
     }
 
-    /** cook_extract with the tools/note workaround stripped: pure work-only state 0. */
     private static JobDefinition workOnlyCookExtract() {
         try (InputStream is = CookEquivalenceTest.class.getClassLoader()
                 .getResourceAsStream(JOBS_PATH + "cook_extract.json")) {
@@ -220,8 +209,7 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.TickerSetup tickerSetup =
                 EquivalenceTestFramework.createTickerSetup(definition, world);
-        // No held stick: cook/extract no longer uses one, and a villager holding an item no state
-        // uses drops it before more work (2026-10-21), which this harness's store cannot accept.
+        // No stick: a held item no state uses would be dropped first.
 
         EquivalenceTestFramework.runTicker(tickerSetup, 50);
         EquivalenceTestFramework.SimulationResult tickerResult =
@@ -242,8 +230,7 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
-        // Equivalence alone is hollow: both sides stalling together still "equivalents".
-        // Assert the job actually completed on BOTH sides.
+        // Both sides must actually finish, not just agree.
         Assertions.assertTrue(
                 tickerResult.productExtracted() && advancerResult.productExtracted(),
                 "both sides must actually complete the extract, not just agree to idle");

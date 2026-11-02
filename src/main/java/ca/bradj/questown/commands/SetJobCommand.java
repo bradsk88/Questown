@@ -75,8 +75,6 @@ public class SetJobCommand {
             if (!(e instanceof VisitorMobEntity vme)) {
                 continue;
             }
-            // The owner makes the worker: a hand-rolled change + single unlock made a cook with
-            // no cook/fuel, unlike any player-made one (r15).
             VillagerUUID vuid = vme.getVUID();
             if (vuid == null) {
                 continue;

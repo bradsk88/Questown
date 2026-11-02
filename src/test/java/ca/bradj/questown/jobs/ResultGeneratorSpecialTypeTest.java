@@ -3,11 +3,7 @@ package ca.bradj.questown.jobs;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * {@code isResultAlwaysEmpty} becomes {@code Work.hasNoOutput}, which the "N known jobs produce
- * this" hint skips. 2026-10-20 playtest: "cooked mutton: 0 jobs produce it" — every simple-furnace
- * recipe (result type via_other_job) was flagged as producing nothing, like cook/fuel.
- */
+/** A recipe whose product comes through another job still counts as producing something; cook/fuel doesn't. */
 class ResultGeneratorSpecialTypeTest {
 
     @Test

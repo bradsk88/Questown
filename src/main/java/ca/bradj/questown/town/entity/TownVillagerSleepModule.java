@@ -18,12 +18,7 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     private final UnsafeTown town = new UnsafeTown(getClass());
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
 
-    /**
-     * Claims that arrived before the town initialized. Entity load out-runs the flag's
-     * initializer: a townie deserialized before {@link #associate} must not be
-     * dropped (vanilla aborts the load when {@code claimBed} throws), so its bed
-     * claim is deferred to this point.
-     */
+    /** Bed claims from villagers that loaded before the town did, made once it initializes. */
     private final List<VisitorMobEntity> pendingClaims = new ArrayList<>();
 
     public void associate(TownFlagBlockEntity t) {
@@ -54,9 +49,7 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     @Override
     public void claimBed(VisitorMobEntity vEntity) {
         if (!town.isInitialized()) {
-            // Load-time registration: the town's bed map is not resolvable yet.
-            // Deferring instead of throwing keeps the loading entity alive;
-            // associate() drains the queue once the flag initializes.
+            // The bed map isn't ready while loading; claim later.
             pendingClaims.add(vEntity);
             return;
         }
@@ -80,7 +73,7 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
 
     @Override
     public boolean bedsKnown() {
-        // Beds come from recipe-matched rooms, which the room scan rebuilds after a load.
+        // Beds come from matched rooms, rebuilt after a load.
         return town.isInitialized() && town.getUnsafe().getRoomHandle().getRegisteredRooms().hasScannedSinceLoad();
     }
 }

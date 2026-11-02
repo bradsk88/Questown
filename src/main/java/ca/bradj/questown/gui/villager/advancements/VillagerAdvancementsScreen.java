@@ -32,7 +32,6 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
     public static final int backgroundHeight = 140;
     private final BlockPos flagPos;
     private final UUID villagerUUID;
-    // Opened from the flag (management-only): a skill unlock may spend the flag's Block of Progress.
     private final boolean fromFlag;
     private final VillagerAdvancementsContent content;
     private final VillagerTabs tabs;
@@ -73,10 +72,6 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
-                // Management-only sessions keep the inventory tab hidden here too
-                // (every other tabbed villager menu filters on showInventoryTab;
-                // this screen used to return VillagerTabs.all() and resurrected
-                // the tab - 2026-10-15 playtest).
                 return VillagerTabs.skillsPaneTabs(showInventoryTab);
             }
 
@@ -95,8 +90,6 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
                 return showBlockOfProgressTab;
             }
 
-            // Without this the row kept the inventory tab (default true) with no open fn, drawn
-            // lit beside the skills tab - the co-highlight the dev reported (playtest 2026-10-29).
             @Override
             public boolean showInventoryTab() {
                 return showInventoryTab;
@@ -113,10 +106,6 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
 //        this.advancements.setListener(this);
     }
 
-    // 1.19.2 parity: the 1.19.2 background here was the (blurred) world, not the opaque
-    // 1.20.6 menu background; the HUD was drawn above it. See QuestownHudEvents for the
-    // HUD redraw. The compat base routes Screen.renderBackground here, so the surface
-    // hook keeps the blur where the golden's render drew it (before the content).
     @Override
     protected void renderScreenSurface(
             RenderContext ctx,
@@ -183,15 +172,8 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             ctx.centered(NO_ADVANCEMENTS_LABEL, i, p_97378_ + 18 + 56 - 4, -1);
             ctx.centered(VERY_SAD_LABEL, i, p_97378_ + 18 + 113 - 9, -1);
         } else {
-            // 1.20.6: clip the stone-tile content to the pane so it does not bleed
-            // past the window border. enableScissor(x, y, right, bottom) takes
-            // absolute canvas edges (not width/height - confirmed from the
-            // ScreenRectangle(x, y, p3 - x, p4 - y) ctor), so it wraps the
-            // pose push/translate block.
+            // Keep the tiles inside the pane.
             ctx.enableScissor(p_97377_ + 9, p_97378_ + 18, p_97377_ + 9 + 234, p_97378_ + 18 + 113);
-            // 1.20.6: GUI transforms live on guiGraphics.pose(); touching the global
-            // modelview stack here corrupts the u_ModelView uniform that the
-            // RenderType.gui() pipeline (fill/drawString) applies, clipping content.
             ctx.pose().pushPose();
             ctx.pose().translate(p_97377_ + 9, p_97378_ + 18, 0.0F);
             advancementtab.drawContents(ctx);
@@ -229,10 +211,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         if (this.content != null) {
             ctx.pose().pushPose();
-            // z +400, as the 1.19.2 golden (translate(..., 400.0)): drawTooltips shifts its content
-            // to -200, so a 0 here put the hover box, the job name and the pane dim at z -200,
-            // behind the pane background (2026-10-19 playtest: "the hover tooltips on the skills
-            // UI do not show the job names").
+            // z 400: the tooltips draw at -200 relative to this.
             ctx.pose().translate(paneX + 9, paneY + 18, 400.0F);
             this.content.drawTooltips(ctx, mouseX - paneX - 9, mouseY - paneY - 18, paneX, paneY);
             ctx.pose().popPose();
@@ -254,8 +233,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             return super.mouseClicked(mouseX, mouseY, p_94697_);
         }
 
-        // A click opens the skill's details (what it needs, where, what it makes); Unlock / Switch
-        // live there (dev playtest 2026-10-29: "Details with Unlock button").
+        // A click opens the skill's details, where Unlock and Switch are.
         QuestownNetwork.sendToServer(new OpenSkillDetailsMessage(flagPos, villagerUUID, id, content.isLocked(id), fromFlag));
         return true;
     }

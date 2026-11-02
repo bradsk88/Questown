@@ -13,9 +13,7 @@ import java.util.Map;
 public class StatusArt {
 
     private static final Map<ProductionStatus, String> pArt;
-    // Work states (state:N) are not constants, so they map by predicate in getTexture.
-    // working/waiting/extracting.png are placeholders (copies of existing art) until the
-    // dev's own icons replace them (2026-10-23 ruling, r9 findings #14).
+    // working, waiting and extracting are placeholder art.
     private static final String WORKING_ART = "menu/gatherer/working.png";
     private static final String WAITING_ART = "menu/gatherer/waiting.png";
     public static final ResourceLocation ERROR_TEX = new ResourceLocation("questown", "textures/error.png");
@@ -26,8 +24,7 @@ public class StatusArt {
         b.put(ProductionStatus.NO_SPACE, "menu/gatherer/no_space.png");
         b.put(ProductionStatus.RELAXING, "menu/gatherer/relaxing.png");
         b.put(ProductionStatus.NO_JOBSITE, "menu/gatherer/no_jobsite.png");
-        // The walking-to-work figure (dev playtest 2026-10-30: "there's already a going to jobsite
-        // graphic"); leaving.png, the empty path, read as "left town" on an in-town crafter.
+        // The walking figure; the leaving art would read as "left town".
         b.put(ProductionStatus.GOING_TO_JOB, "menu/gatherer/gathering.png");
         b.put(ProductionStatus.NO_SUPPLIES, "menu/gatherer/no_supplies.png");
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");

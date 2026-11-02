@@ -57,8 +57,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
     private JobID cachedJob = null;
     private int stickyTicks = 0;
     private final WarpCycleBudget cycleBudget = new WarpCycleBudget();
-    // A job resolved while the budget could not yet afford it; kept so the tier rotation does
-    // not skip it while the villager "waits out" the time.
+    // A job picked before the warp's budget could afford it, kept so the rotation doesn't skip it.
     private @Nullable JobID unaffordedJob = null;
     private final Map<JobID, @Nullable BlockPos> assignedWorkBlocks = new HashMap<>();
 
@@ -93,17 +92,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
         return resolveJob(ticksPassed, cachedJob != null);
     }
 
-    /**
-     * Finds the room blocks the job's own block-identity check matches (the job's container
-     * block — a furnace for the cook family, the bread oven for the baker family). A job whose
-     * block does not occur in any room gets no assigned work block, and its warper works at a
-     * virtual position as before. The identity check is content-agnostic (no slot gate): the
-     * warp is what fills the slots, so gating the assignment on slot contents would leave a
-     * take-job like {@code baker/extract} unassigned for the whole warp. With several matching
-     * blocks the villager is round-robined onto one, matching the old furnace assignment.
-     * The value only matters for jobs with slot rules; {@code TimeWarpWorldInteraction
-     * .shouldUseRealWorkBlock()} gates on it.
-     */
+    /** A room block the job's own block matches (a furnace, the bread oven), by block only, whatever it holds. Null puts the villager at a virtual position. */
     @Nullable BlockPos findAssignedWorkBlock(ServerLevel level, JobID job) {
         if (assignedWorkBlocks.containsKey(job)) {
             return assignedWorkBlocks.get(job);
@@ -160,8 +149,7 @@ public class PostDowntimeWarper implements Warper<ServerLevel, MCTownState> {
             return liveState;
         }
 
-        // Duration is a property of the job, not its owner (ServerJobsRegistry.canFit also
-        // resolves it with a null villager).
+        // Duration belongs to the job, not the villager.
         long cycleDuration = work.getTotalDuration(resolvedJob, null);
         if (!cycleBudget.canStart(cycleDuration)) {
             unaffordedJob = resolvedJob;

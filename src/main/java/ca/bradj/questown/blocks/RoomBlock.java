@@ -73,12 +73,7 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
         return Questown.ResourceLocation("block_room/" + rb.getDescriptionId());
     }
 
-    /**
-     * The item dropped when the flag orphans this block. The block's own
-     * item, carrying the flag's NBT via {@code dropWhenOrphaned}
-     * (TownFlagBlock.StoreParentOnNBT) so a re-placement re-attaches to the
-     * same flag.
-     */
+    /** The item dropped when this block loses its flag. It keeps the flag link, so placing it again re-attaches it. */
     public Item getOrphanDropItem() {
         return asItem();
     }

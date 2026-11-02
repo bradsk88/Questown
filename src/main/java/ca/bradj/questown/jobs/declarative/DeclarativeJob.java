@@ -77,7 +77,7 @@ public class DeclarativeJob extends
     private final @NotNull Integer maxState;
     private final JobID jobId;
 
-    // take-driver count: feeds the [PROBE:supplies] TOOK line (psweep verdict oracle; keep)
+    // Counts supply takes, for the [PROBE:supplies] log line.
     private static final java.util.concurrent.atomic.AtomicLong SUPPLY_TOOK_CNT = new java.util.concurrent.atomic.AtomicLong();
     private final ExpirationRules expiration;
     private boolean finishedProductNeedsStorage = true;
@@ -334,14 +334,7 @@ public class DeclarativeJob extends
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
-    /**
-     * The timed leaver trip this job is currently on, when its gate-mat
-     * timer is still counting down: the absolute server tick at which the
-     * timer expires and the trip's declared total duration. Null when the
-     * job has no live timed trip (no work spot, no state, no timer, or the
-     * state declares no time). Feeds the villagers-menu leaver-return
-     * progress bar.
-     */
+    /** The trip this job is on while its timer runs: when it ends and how long it is. Null otherwise. */
     public @Nullable LeaverReturn getLeaverReturn(TownInterface town) {
         WorkPosition<BlockPos> spot = ticker.workSpot();
         if (spot == null || spot.jobBlock() == null) {
@@ -371,20 +364,7 @@ public class DeclarativeJob extends
         return new LeaverReturn(level.getGameTime() + remaining, Math.max(total, remaining));
     }
 
-    /**
-     * Eyes-level debug snapshot of the job's current work-site progress: the
-     * processing state and how many work/time ticks remain before the next
-     * stage. This backs the "progress / [work/time] left" indicator and is how
-     * an observer tells a leaver who is genuinely mid-trip (timer still
-     * counting down) from one whose trip was cut short. Returns null when the
-     * job has no current work spot (e.g. it is not yet assigned a job block).
-     */
-    /**
-     * How far the current step's work is done, 0..1, or -1 when the job is not working off a
-     * work count right now (dev playtest 2026-10-30: "Crafters should have a progress bar on
-     * their status icon too. Or any work-based job"). The work left can exceed the declared work
-     * (proficiency scaling), so the larger of the two is the denominator.
-     */
+    /** How much of the current step's work is done, 0 to 1, or -1 when the job is not working off a count. */
     public float getWorkProgress(TownInterface town) {
         WorkPosition<BlockPos> spot = ticker.workSpot();
         if (spot == null || spot.jobBlock() == null) {
@@ -601,12 +581,7 @@ public class DeclarativeJob extends
         return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state);
     }
 
-    /**
-     * {@link #hasRoomsAtState} for the warp's job list: job blocks are tested without their slot
-     * precondition ({@code blockAlreadyUsed=true} skips it in {@code ResourceJobLoader.isJobBlockV2}),
-     * because the warp simulates the slot contents step by step. A furnace with an empty output
-     * slot is still a cook/extract site for a warp that will fill it.
-     */
+    /** {@link #hasRoomsAtState} without the slot check, for a warp, which fills the slots itself. */
     public WithReason<Boolean> hasRoomsAtStateIgnoringSlot(
             TownFlagBlockEntity town,
             int state
@@ -935,7 +910,7 @@ public class DeclarativeJob extends
         );
     }
 
-    /** The job works at the town flag (downtime, the diners, BOP depositing), whose record it shares. */
+    /** The job works at the town flag (downtime, the diners, depositing). */
     public boolean worksAtTheFlag() {
         return ca.bradj.questown.town.special.SpecialQuests.TOWN_FLAG.equals(location.baseRoom());
     }
@@ -997,7 +972,6 @@ public class DeclarativeJob extends
 
     @Override
     public int getExperienceEarned() {
-        // The warp grant uses the same formula (JobExperience, shared since 2026-10-24).
         int earned = JobExperience.formula(
                 specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED),
                 initialWork.values(),
@@ -1034,10 +1008,7 @@ public class DeclarativeJob extends
 
     // Package-accessible delegates for DeclarativeJobTickerDependencies
 
-    /**
-     * False for a job whose finished product is consumed, not stored (a diner's meal); set by
-     * {@code WorksBehaviour} from {@code WorkDescription.productConsumed}. Full storage never stops such a job.
-     */
+    /** False when the finished product is used up, not stored (a diner's meal). Full storage never stops such a job. */
     public DeclarativeJob withFinishedProductNeedsStorage(boolean needsStorage) {
         this.finishedProductNeedsStorage = needsStorage;
         return this;
@@ -1063,7 +1034,7 @@ public class DeclarativeJob extends
             BlockPos entityBlockPos,
             long currentTick
     ) {
-        Long before = this.lastSupplyTick; // nullable until the first take
+        Long before = this.lastSupplyTick;
         this.tryGetSupplies(town, roomsNeedingInput, entityBlockPos, currentTick);
         collectingStall.observe(
                 journal.getStatus().isCollectingSupplies(),
@@ -1076,7 +1047,6 @@ public class DeclarativeJob extends
 
     private final CollectingStallTrace collectingStall = new CollectingStallTrace();
 
-    /** What the job sees while stuck collecting: its own and the town's non-zero spots, and the input it is told about. */
     private String describeCollectingStall(
             TownInterface town,
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput,
@@ -1094,12 +1064,7 @@ public class DeclarativeJob extends
         return b.toString();
     }
 
-    /**
-     * Where the villager stands, the walk target the job computes for the supply chest, the
-     * distance between them, and the chest's room (2026-10-24 growth stall: a hunter stood ~5
-     * blocks outside the storeroom with matching swords inside; ticket
-     * growth-hunter-never-fetches-sword.md).
-     */
+    /** Where the villager stands, where it is walking for the supply chest, the distance, and the chest's room. */
     private void appendSupplyWalk(StringBuilder b, BlockPos entityBlockPos) {
         b.append(" pos=").append(entityBlockPos.toShortString());
         if (suppliesTarget == null) {
@@ -1111,7 +1076,6 @@ public class DeclarativeJob extends
          .append(" chestRoom=").append(suppliesTarget.getRoom());
     }
 
-    /** What the live entity is doing: its brain's walk target and its current path's end. */
     private void appendNavigation(StringBuilder b, TownInterface town) {
         net.minecraft.world.entity.Mob mob = town.getVillagerHandle().entities().stream()
                 .filter(e -> e.getUUID().equals(ownerUUID))
@@ -1207,7 +1171,6 @@ public class DeclarativeJob extends
     @Override
     public Iterable<MCHeldItem> getItemsForDrop() {
         if (!FetcherHack.isFetcher(jobId)) {
-            // Store the work output and keep the job's own supplies (r16 #9).
             return HeldWorkOutput.<MCHeldItem, MCTownItem>ofStates(
                     maxState, checks::getIngredientsForStep, checks::getToolsForStep
             ).itemsToDrop(super.getItemsForDrop());
@@ -1256,8 +1219,7 @@ public class DeclarativeJob extends
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
         if (FetcherHack.isFetcher(jobId)) {
-            // The fetcher's bespoke status (acquire request → fetch ingredient → deliver) is not
-            // expressible in the generic pipeline; drive it here so the supply getter engages.
+            // The fetcher's status (get request, fetch, deliver) doesn't fit the shared pipeline, so it is computed here.
             return FetcherHack.computeStatusOverride(town, journal.getItems());
         }
         return null; // Default: use standard status computation

@@ -12,30 +12,19 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-/**
- * Where a villager stands to use a block inside a room (a job block or a container).
- * Shared by {@code DeclarativeJob} (job blocks) and {@code TownContainers} (chests): the
- * chest path used to step one block toward the door without checking the cell, so a chest
- * whose door-side neighbour is a wall got a walk target inside the wall and the villager
- * ended up standing on the chest (2026-10-17 playtest).
- */
+/** Where a villager stands to use a block in a room: a cell it can stand on, never inside a wall. */
 public final class InteractionSpots {
 
     private InteractionSpots() {
     }
 
-    /**
-     * The door-side neighbour if standable, else the first standable horizontal neighbour,
-     * else - for a 1x1 room (plus walls) - the door cell; null when none qualifies.
-     */
+    /** The door-side neighbour if standable, else the first standable neighbour, else (in a 1x1 room) the door; null if none. */
     public static @Nullable BlockPos find(
             BlockPos bp,
             Room room,
             Predicate<BlockPos> isStandable
     ) {
-        // A job block built into the wall (room matching counts wall blocks, so the room quest
-        // completes) is used from inside: the first standable neighbour could be outdoors (r17:
-        // the dev's kitchen furnace in its east wall).
+        // A job block built into the wall is used from inside the room.
         if (isWallCell(bp, room)) {
             for (Direction dd : Direction.Plane.HORIZONTAL) {
                 BlockPos n = bp.relative(dd);

@@ -7,12 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
-/**
- * Client → server: the flag menu's "Cancel moving" during the shutdown ritual. Wraps
- * {@link TownFlagBlockEntity#cancelTownShutdown()}, the same path as
- * {@code /qt flag <pos> shutdown cancel}: the townies absorbed so far come back and the flag
- * returns to ACTIVE.
- */
 public record CancelTownShutdownMessage(BlockPos flagPos) {
 
     public static void encode(

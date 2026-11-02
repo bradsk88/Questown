@@ -9,12 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-/**
- * r16 #9: the loot drop emptied every unlocked item, so a BOP depositor coming home with trip loot
- * dropped its own Block of Progress into the chest (and a hunter its sword). The drop now takes
- * only the work output (items no state of the job uses); with no output in hand it still drops
- * everything, so the "drop loot when no work possible" branches keep returning unused supplies.
- */
+/** A loot drop takes only the work output, so a depositor keeps its Block of Progress and a hunter its sword. With no output it drops everything. */
 class HeldWorkOutputTest {
 
     private static final TestItem BOP = TestItem.of(false, "block_of_progress");
@@ -22,7 +17,6 @@ class HeldWorkOutputTest {
     private static final TestItem LEATHER = TestItem.of(false, "leather");
     private static final TestItem EMPTY = TestItem.of(true, "air");
 
-    /** The BOP depositor's shape: BOP is the tool at state 0 and the ingredient at state 1. */
     private static HeldWorkOutput<TestItem, TestItem> bopDepositor() {
         Map<Integer, IPredicateCollection<TestItem>> ingredients = Map.of(1, named("block_of_progress"));
         Map<Integer, IPredicateCollection<TestItem>> tools = Map.of(0, named("block_of_progress"));

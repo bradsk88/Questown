@@ -14,28 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Registry-free bake arithmetic for {@link BreadOvenBake} — the single source
- * of truth shared by the realtime {@link BreadOvenBlockEntity} and the warp
- * lane: 1 wheat + 1 coal -> 1 bread over {@link BreadOvenBake#BAKE_TICKS}
- * ticks, output stacks like a furnace, partial-progress reset on a slot
- * change. No level, no registry — just a slot list.
- */
+/** {@link BreadOvenBake}: 1 wheat and 1 coal make 1 bread over {@link BreadOvenBake#BAKE_TICKS} ticks; changing a slot restarts the bake. */
 class BreadOvenBakeTest {
 
     @BeforeAll
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
-        // #minecraft:coals ships in the vanilla datapack, which a unit test
-        // never loads — bind the tag onto the coal/charcoal holders so
-        // BreadOvenBake.isCoal resolves the way the game's tag registry
-        // resolves it (1.20.6 checks ItemStack.is(tag) via the holder's
-        // own TagKey set, populated by bindTags). Mirrors the job data's
-        // #minecraft:coals. (BuiltInRegistries must NOT be touched
-        // before bootStrap(): its clinit registers vanilla entries and
-        // demands the bootstrap flag — a pre-bootstrap touch poisons the
-        // whole forked JVM.)
+        // A unit test loads no data packs, so give coal and charcoal their #minecraft:coals tag here.
         Items.COAL.builtInRegistryHolder().bindTags(Set.of(ItemTags.COALS));
         Items.CHARCOAL.builtInRegistryHolder().bindTags(Set.of(ItemTags.COALS));
     }
@@ -138,7 +124,7 @@ class BreadOvenBakeTest {
         BreadOvenBake b = bake(1, 1, 0);
         b.advance(999);
         Assertions.assertEquals(999, b.progress());
-        b.setItem(BreadOvenBake.SLOT_WHEAT, ItemStack.EMPTY); // e.g. the wheat was pulled
+        b.setItem(BreadOvenBake.SLOT_WHEAT, ItemStack.EMPTY);
         b.advance(BreadOvenBake.BAKE_TICKS);
         Assertions.assertTrue(b.getItem(BreadOvenBake.SLOT_BREAD).isEmpty(),
                 "an interrupted bake must not complete");

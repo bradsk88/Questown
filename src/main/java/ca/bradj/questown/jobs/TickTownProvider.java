@@ -130,9 +130,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     public Collection<ROOM> roomsAtState(Integer state) {
         var atState = roomsNeedingVillagerInput.get().get(state);
         if (atState == null) {
-            // a state absent from the room map has no rooms (the work-only
-            // state-0 admission can ask about a state the map does not hold
-            // yet - fresh-world morning, 2026-10-09 held-run crash)
+            // A state missing from the room map has no rooms.
             return ImmutableList.of();
         }
         return atState.stream()
@@ -174,7 +172,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         return hasSpace.get();
     }
 
-    /** False for jobs whose product is consumed rather than stored (see JobStatuses.Job). */
+    /** False for jobs whose product is used up rather than stored. */
     public TickTownProvider<ROOM, POS, MATCH, HELD_ITEM, TOWN_ITEM, CONTAINER> withFinishedProductNeedsStorage(boolean needsStorage) {
         this.finishedProductNeedsStorage = needsStorage;
         return this;

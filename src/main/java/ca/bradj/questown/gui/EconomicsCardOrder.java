@@ -2,11 +2,7 @@ package ca.bradj.questown.gui;
 
 import com.google.common.collect.ImmutableList;
 
-/**
- * The economics tab lists needs most-needed first. While the one-time free-food claim is open, the
- * food card is the day-1 lifeline and stays in row 1: a new need ranking above it pushed it to row
- * 2 and the player's click landed on the wrong card (2026-10-22 r3 #28).
- */
+/** Orders the economics cards, most needed first. While the free food is unclaimed, its card stays in the first row. */
 public final class EconomicsCardOrder {
 
     private EconomicsCardOrder() {

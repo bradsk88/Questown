@@ -18,9 +18,6 @@ import java.util.UUID;
 public abstract class AbstractVillagerMenu extends AbstractContainerMenu {
     protected final BlockPos flagPos;
     protected final UUID villagerUUID;
-    // Item slots sit directly on these vanilla Containers (was a neoforged `InvWrapper` + `SlotItemHandler`
-    // pair). These menus carry a custom quickMoveStack that only uses Slot.set/get/mayPlace and never
-    // insertItem/extractItem, so plain Slots over the Container are behaviourally equivalent.
     private final Container gathererInventory;
     protected final Inventory playerInventory;
     private static final int inventoryLeftX = 8;

@@ -55,7 +55,7 @@ public class TownFlagMenus {
         TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.serverLevel().getBlockEntity(flagPos);
         TownInterface flag = flagEntity;
         if (OpenFlagMenuMessage.VILLAGERS.equals(type)) {
-            // Clear the villagers-tab red dot before building the info the screen renders.
+            // Clear the villagers tab's red dot before building the screen's data.
             flagEntity.markVillagersTabSeen();
         }
         if (OpenFlagMenuMessage.QUESTS.equals(type)) {
@@ -145,8 +145,7 @@ public class TownFlagMenus {
 
         Runnable runnable = showers.get(type);
         if (runnable == null) {
-            // The type comes from a client packet: reject an unknown one instead of throwing in the
-            // network handler (2026-10-21: a dev-tool "bop" for "blocks_of_progress").
+            // The type comes from the client: reject an unknown one.
             QT.GUI_LOGGER.error("Unexpected menu type: \"{}\"", type);
             return;
         }
@@ -159,8 +158,6 @@ public class TownFlagMenus {
             ServerPlayer p,
             Collection<? extends Quest<ResourceLocation, ?>> q
     ) {
-        // The holder owns the id in 1.20.2+; the codec-constructed RoomRecipe carries a null id.
-        // Eligibility = (holder-id match) AND (value is a farm recipe) - both, in that order.
         for (Quest<ResourceLocation, ?> mcQuest : q) {
             ResourceLocation wanted = mcQuest.getWantedId();
             RecipeRef.RecipePair<RoomRecipe> pair = wanted == null

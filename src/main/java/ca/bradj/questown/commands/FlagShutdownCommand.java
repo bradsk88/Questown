@@ -11,16 +11,9 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 
 /**
- * {@code /qt flag <pos> shutdown} begins the town-shutdown relocation ritual on the flag at
- * {@code pos}; {@code /qt flag <pos> shutdown cancel} aborts an in-progress ritual (ADR-0009, #199),
- * and {@code wake} / {@code reissue} are the dormant flag's loss-protection paths.
- *
- * <p>This is the admin/dev trigger for the ritual. The polished in-game entry point — the "Begin
- * moving this town" button on the flag menu's crafting tab (see
- * {@link ca.bradj.questown.core.network.BeginTownRelocationMessage}) — wraps this same
- * {@link TownFlagBlockEntity#beginTownShutdown()} entry point. Players reach cancel, wake and
- * re-issue through the flag UI too (gui/COMPLEX.md "Town shutdown: wake, deed re-issue and cancel
- * from the UI"); the ritual itself is covered by the {@code flag/town_shutdown} autotest.
+ * {@code /qt flag <pos> shutdown} starts moving the town; {@code shutdown cancel} stops it, and
+ * {@code wake} / {@code reissue} recover a dormant flag. Players do the same from the flag's
+ * Settings tab.
  */
 public class FlagShutdownCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {

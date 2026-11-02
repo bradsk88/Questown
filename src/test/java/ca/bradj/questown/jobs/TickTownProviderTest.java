@@ -112,17 +112,9 @@ class TickTownProviderTest {
         Assertions.assertTrue(result, "BUG: isUnfinishedTimeWorkPresent() returns FALSE when timer is active");
     }
 
-    /**
-     * Crash guard (2026-10-09, held self_sufficiency run, crash-2026-10-09_19.45.25):
-     * c9e55434's work-only state-0 admission let tryChoosingItemlessWork ask
-     * roomsAtState(0) on a fresh-world morning where the room map holds no
-     * state-0 room yet (kitchen registered two seconds earlier). The unguarded
-     * Map.get(...).stream() NPE'd the server thread. A state absent from the
-     * room map answers "no rooms", not a crash.
-     */
+    /** A state missing from the room map has no rooms, rather than throwing. */
     @Test
     void roomsAtState_stateAbsentFromRoomMap_yieldsEmptyCollection() {
-        // builder's roomsNeedingVillagerInput is an empty map - no state has rooms
         TickTownProvider<?, ?, ?, ?, ?, ?> provider = new SimpleTownBuilder().build();
 
         Assertions.assertDoesNotThrow(() ->

@@ -36,16 +36,12 @@ public class BlockOfProgress extends Block {
         return SHAPE;
     }
 
-    /**
-     * Records which root job earned this Block of Progress (the flag's BOP tab says "Earned by").
-     * It guarantees nothing: a job change with a BOP takes an open job-change quest's job, else a
-     * random root (dev ruling 2026-10-30, which retired ADR-0015's "gold" BOPs).
-     */
+    /** Records which job earned this Block of Progress, shown as "Earned by" on the flag. */
     public static void markEarnedBy(ItemStack item, JobID job) {
         Compat.updateItemDataTag(item, tag -> QTNBT.put(tag, EARNED_BY, JobID.toTag(job)));
     }
 
-    /** The root job that earned this BOP, or empty. Reads a pre-2026-10-30 "gold" BOP's job too. */
+    /** The job that earned this Block of Progress, if it was recorded. */
     public static Optional<JobID> getEarnedBy(ItemStack item) {
         CompoundTag data = customData(item);
         if (QTNBT.contains(data, EARNED_BY)) {

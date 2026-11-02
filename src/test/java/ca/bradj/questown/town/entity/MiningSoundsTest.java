@@ -14,7 +14,6 @@ class MiningSoundsTest {
     private static final BlockPos SHAFT = new BlockPos(1, 64, 1);
     private static final BlockPos FURNACE = new BlockPos(5, 64, 5);
 
-    /** Dev playtest 2026-10-30: pickaxe sounds while a villager is mining. */
     @Test
     void aShaftWithATripTimer_isBeingMined() {
         TownWorkStatusStore miner = new TownWorkStatusStore((m, p) -> {});

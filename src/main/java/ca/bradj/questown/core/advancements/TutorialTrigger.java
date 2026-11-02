@@ -49,7 +49,6 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
         Chapter3,
         Chapter4,
         FirstCampfireSleep,
-        // Curated path finished (agent playtest 2026-10-27 #4): "path_" + the path id's path.
         OutfitterPath;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.<Triggers, String>builder()

@@ -6,11 +6,7 @@ import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * r17 (2026-10-25): the dev's kitchen furnace sat in the east wall (x -147 of walls x -149..-147);
- * room matching counted it and the kitchen quest completed, but the cook's work-spot scan read
- * the interior only and never saw it.
- */
+/** A furnace in a kitchen wall counts as a work spot, as room matching counts it. */
 class JobBlockScanTest {
 
     @Test

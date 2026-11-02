@@ -7,21 +7,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.ToIntFunction;
 
-/**
- * Which open named-skill quests show as a blank card (dev ruling 2026-10-26, Outfitter #20): while
- * no villager in the skill's job is at the skill's level, the card names neither the skill nor its
- * item and its tooltip gives the level needed. It fills in once a villager reaches it.
- */
+/** Which open named-skill quests show as a blank card: until a villager in the skill's job reaches its level. */
 public final class SkillQuestLocks {
 
     private SkillQuestLocks() {
     }
 
     /**
-     * @param openNamedSkills    open SKILL_UNLOCK quest id -> the skill it names
+     * @param openNamedSkills    each open skill quest's id and the skill it names
      * @param levelGate          the skill's {@code available_at_level}
-     * @param highestLevelByRoot job root -> the highest level among the town's villagers in it
-     * @return quest id -> the level needed, for each quest that is still locked
+     * @param highestLevelByRoot each job root's highest villager level
+     * @return each still-locked quest's id and the level it needs
      */
     public static Map<ResourceLocation, Integer> lockedLevels(
             Map<ResourceLocation, JobID> openNamedSkills,

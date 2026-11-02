@@ -79,13 +79,12 @@ public class JobBoardBlock extends RoomBlock {
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Job Board is not associated to an existing flag");
             TownFlagBlock.tellPlacerNotLinked(ctx, "message.job_board.not_linked");
-            // Null makes the placement fail without consuming the stack. Returning AIR and dropping
-            // a copy duplicated it whenever the player kept the stack (2026-10-22 playtest).
+            // Null cancels the placement and keeps the stack.
             return null;
         }
 
         parent.registerJobsBoard(matPos);
-        BlockState superState = super.getStateForPlacement(ctx); // registers the block-room on the flag
+        BlockState superState = super.getStateForPlacement(ctx);
         if (superState == null) {
             return null;
         }
@@ -105,9 +104,7 @@ public class JobBoardBlock extends RoomBlock {
             boolean isMoving
     ) {
         if (!state.is(newState.getBlock())) {
-            // Actually removed (not replaced by another block state): drop the
-            // flag's persisted board registration so a broken board does not
-            // leave a stale entry that errors on the next world load.
+            // The board was removed, not replaced: forget it on the flag.
             for (TownFlagBlockEntity flag : TownFlags.all()) {
                 flag.removeJobsBoard(pos);
             }

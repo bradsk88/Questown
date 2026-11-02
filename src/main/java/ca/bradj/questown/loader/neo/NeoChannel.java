@@ -20,17 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * NeoForge 1.20.6 impl of the neutral {@link Channel}: one registered payload
- * ({@link NeoEnvelope}) whose StreamCodec delegates to the neutral per-message encoder/decoders, and
- * one IPayloadHandler per direction that dispatches by the envelope's id. All loader-specific
- * networking (payload, codec, handler, the ICommonPacketListener send calls) is contained to this
- * package; main code only sees {@link Channel}.
- *
- * <p>The per-message {@link Channel#message(Class, Direction)} direction is accepted (a legacy
- * Forge impl needs it) but irrelevant to Neo registration, which registers the payload for both
- * play directions: a TO_SERVER message is only ever received by the server and vice versa.
- */
+/** The NeoForge {@link Channel}: one payload type carries every message, tagged with its id, and is registered for both directions. */
 public final class NeoChannel implements Channel {
 
     private final String channelId;
@@ -76,7 +66,6 @@ public final class NeoChannel implements Channel {
 
     private java.util.function.Consumer<NeoEnvelope> clientSend;
 
-    /** Installed by the client island; the common path never names client classes. */
     public void setClientSend(java.util.function.Consumer<NeoEnvelope> hook) {
         this.clientSend = hook;
     }
@@ -99,7 +88,6 @@ public final class NeoChannel implements Channel {
         return new NeoEnvelope(entry.id, msg);
     }
 
-    /** Fired once (mod bus) before the payload handshake; reads whatever the neutral registry holds then. */
     void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
         for (Entry e : entries) {
             if (e.encoder == null || e.decoder == null || e.handler == null) {
@@ -108,15 +96,12 @@ public final class NeoChannel implements Channel {
             }
         }
         PayloadRegistrar reg = event.registrar(channelId);
-        // 20.6 API: one bidirectional registration per ResourceLocation; playToClient + playToServer
-        // both key on the same location and the second throws "already registered".
+        // One registration for both directions; registering each direction separately throws.
         reg.playBidirectional(NeoEnvelope.TYPE, wireCodec(), payloadHandler());
         QT.LOGGER.info("[questown] registered {} message types on the Neo payload channel '{}'", entries.size(), channelId);
     }
 
-    /**
-     * The wire format: a varint message id, then the message's neutral encoder bytes.
-     */
+    /** On the wire: the message id as a varint, then the message's own bytes. */
     public StreamCodec<RegistryFriendlyByteBuf, NeoEnvelope> wireCodec() {
         return StreamCodec.of(
                 (buf, env) -> {
@@ -130,10 +115,7 @@ public final class NeoChannel implements Channel {
         );
     }
 
-    /**
-     * One handler for both play directions: dispatches by the envelope's id to the
-     * registered neutral handler with a {@link NeoPayloadContext} wrapper.
-     */
+    /** Hands each arriving envelope to its message's handler. */
     public IPayloadHandler<NeoEnvelope> payloadHandler() {
         return (env, ctx) -> {
             Object msg = env.msg().orElse(null);

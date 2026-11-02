@@ -26,11 +26,9 @@ class JobNamesTest {
 
     @Test
     void aBareLengthWordIsKept() {
-        // "full" alone is a job name, not a trip length.
         assertEquals("Full", JobNames.variant("full"));
     }
 
-    /** Outfitter playtest #19: "Unlock Wooden shovel" read like a job id, not the item. */
     @Test
     void aProductJobIsNamedForItsIconItem() {
         ResourceLocation shovel = new ResourceLocation("minecraft", "wooden_shovel");

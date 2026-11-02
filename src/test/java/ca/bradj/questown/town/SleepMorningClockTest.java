@@ -6,12 +6,7 @@ import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * r16 #6: a slept night's morning passed the new *daytime* into the morning pass, while the state
- * it writes (SLEEPLESS expiry, last-downtime) is read on *game time*. Sleep skips advance daytime
- * but not game time, so every slept night stretched those timers. The slept morning must run on
- * the same clock as the ticker's own morning detection: {@code getTick} (game time).
- */
+/** The morning after a sleep runs on game time, as the ticker's own morning does. */
 class SleepMorningClockTest {
 
     private static final long GAME_TIME = 50_460L;

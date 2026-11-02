@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean instant,
-                                   /** Spend the flag's oldest Block of Progress, not the slot's (opened from the flag). */
+                                   /** Spend the flag's oldest Block of Progress (opened from the flag). */
                                    boolean fromFlag) {
 
     public static void encode(
@@ -41,8 +41,7 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;
             }
-            // A BOP guarantees nothing (dev ruling 2026-10-30): an open job-change quest's promise
-            // decides in requestJobRootChange, else the root is random.
+            // The job comes from an open job-change quest, else at random.
             if (fromFlag) {
                 if (flag.takeOldestBop().isEmpty()) {
                     QT.GUI_LOGGER.info("Flag has no Block of Progress; job root of {} not changed", villagerUUID);
@@ -51,8 +50,6 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
             } else {
                 BopTransactionSyncer.syncConsumedBOP(sender);
             }
-            // The flag owns the spend-and-request: it schedules the root change (deciding the
-            // root now) and completes any matching JOB_CHANGE quest at the spend moment.
             flag.requestJobRootChange(villagerUUID, instant, Optional.empty());
         });
 

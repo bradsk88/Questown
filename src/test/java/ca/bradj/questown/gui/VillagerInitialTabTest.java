@@ -6,10 +6,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-/**
- * Playtest 2026-10-17 round 5: a villager menu opened by the player starts on the change
- * profession tab while that tab carries its red dot.
- */
+/** A villager menu opens on the change-job tab while that tab has a red dot. */
 class VillagerInitialTabTest {
 
     @Test

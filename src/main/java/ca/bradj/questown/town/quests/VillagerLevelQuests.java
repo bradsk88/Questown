@@ -5,13 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * A "train a villager" quest (dev 2026-10-27): it completes once any villager working a job root
- * reaches a level. A curated path posts one ahead of a batch whose skills need that level, so the
- * batch only appears once someone can learn them. Skill unlocks are per villager, so "any villager
- * of the root" is the one the player then spends the Block of Progress on. Wanted id
- * {@code questown:villager_level/<root>/<level>}.
- */
+/** "Train a villager" quests: done once any villager in a job root reaches a level. Id {@code questown:villager_level/<root>/<level>}. */
 public final class VillagerLevelQuests {
 
     static final String PREFIX = "villager_level/";
@@ -26,7 +20,6 @@ public final class VillagerLevelQuests {
         return PREFIX + root + "/" + level;
     }
 
-    /** The root and level a villager-level quest id names; empty for any other id. */
     public static Optional<Target> target(ResourceLocation id) {
         String path = id.getPath();
         if (!path.startsWith(PREFIX)) {
@@ -44,7 +37,7 @@ public final class VillagerLevelQuests {
         }
     }
 
-    /** @param highestLevelByRoot job root -> the highest level among the town's villagers in it */
+    /** @param highestLevelByRoot each job root's highest villager level */
     public static boolean met(Target t, Map<String, Integer> highestLevelByRoot) {
         return highestLevelByRoot.getOrDefault(t.root(), 0) >= t.level();
     }

@@ -23,7 +23,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
 
     private final int quantity;
     private final Item item;
-    /** the stack's CUSTOM_DATA (1.20.5+ data components) — the only per-item payload this model keeps */
+    /** The stack's NBT. */
     private final CompoundTag nbt;
 
     public static MCTownItem fromMCItemStack(ItemStack i) {
@@ -36,12 +36,12 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
         int quantity;
         CompoundTag nbt;
         if (itemTag.contains("item", Tag.TAG_STRING)) {
-            // New format (1.20.6): {item: <name>, count: <int>, data: <compound>}
+            // 1.20.6 format: {item, count, data}
             item = Compat.itemFromId(new ResourceLocation(itemTag.getString("item")));
             quantity = itemTag.getInt("count");
             nbt = itemTag.getCompound("data");
         } else if (itemTag.contains("id")) {
-            // Legacy format (1.19): {id: <name>, Count: <int>, tag: <compound>}
+            // 1.19.2 format: {id, Count, tag}
             item = Compat.itemFromId(new ResourceLocation(itemTag.getString("id")));
             quantity = itemTag.getInt("Count");
             nbt = itemTag.getCompound("tag");
@@ -195,7 +195,7 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     private ItemStack toItemStack(StackPolicy preserveQTNBT) {
         ItemStack newOne = new ItemStack(item, quantity);
         if (!newOne.getItem().equals(item)) {
-            // item id was unregistered; an AIR stack carries the count
+            // Unknown item: an AIR stack keeps the count.
             newOne = new ItemStack(Items.AIR, quantity);
         }
         CompoundTag data = (preserveQTNBT == StackPolicy.STRIP_QT_NBT) ? stripQTNBT(nbt) : nbt;

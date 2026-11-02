@@ -110,12 +110,7 @@ public class DowntimeWork {
         ).withOverrides(overrides());
     }
 
-    /**
-     * Downtime is spent in the work states and extraction, which have no default art or text
-     * (the villagers tab showed the error checkerboard and "busy with their work"): they all
-     * read as relaxing. So does NO_SUPPLIES, the status circuit's fallback when no wander spot is
-     * found (r22, dev: "status is 'looking for supplies' but should be 'relaxing'").
-     */
+    /** Every downtime status, including the fallback with no wander spot, shows as relaxing. */
     static Overrides overrides() {
         Pair<String, String> relaxingText = new Pair<>(
                 "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
@@ -128,8 +123,7 @@ public class DowntimeWork {
         for (int i = 0; i < MAX_STATE; i++) {
             text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);
         }
-        // Idle art throughout: the RELAXING status art is the night scene ("finished for the day"),
-        // not "relaxing for a moment" (dev playtest 2026-10-28).
+        // The idle art: the relaxing art is the end-of-day night scene.
         ResourceLocation idle = StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE);
         return new Overrides(
                 ImmutableMap.of(

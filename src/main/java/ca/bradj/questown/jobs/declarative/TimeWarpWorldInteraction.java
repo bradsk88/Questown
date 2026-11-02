@@ -83,17 +83,13 @@ public class TimeWarpWorldInteraction extends
         this.warpWorld = warpWorld;
     }
 
-    /** XP a completed cycle earns this townie during warp (the realtime grant's value). */
+    /** The XP a completed cycle earns during a warp. */
     public TimeWarpWorldInteraction withExperiencePerCompletion(int experiencePerCompletion) {
         this.experiencePerCompletion = experiencePerCompletion;
         return this;
     }
 
-    /**
-     * Records the cycle's XP on the warp state for {@code TownFlagState.warp} to grant once
-     * (realtime's completion listener has no warp counterpart; a warp paid no XP before
-     * 2026-10-24). Pinned by {@code TimeWarpExperienceTest}.
-     */
+    /** Records the cycle's XP on the warp state, granted once when the warp ends. */
     @Override
     protected MCTownState onJobCompleted(
             Inputs inputs,
@@ -347,11 +343,7 @@ public class TimeWarpWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
-        // Post-extract rules apply item-data / hunger / mood / knowledge — none touch the
-        // deferred block state the WarpWorldAccess holds, but non-migrated rules (SCOUT_LOOT)
-        // DO need a real ServerLevel for loot-table RNG via asServerLevel(). The realtime path
-        // passes a real-level world here too; resolveWorld() would hand back the WarpWorldAccess
-        // whose asServerLevel() is null, so use the real level directly.
+        // Some rules need the real level, not the warp's world view.
         ca.bradj.questown.world.QTWorldAccess postExtractWorld = inputs.level != null
                 ? MinecraftWorldAccess.silent(inputs.level)
                 : resolveWorld(inputs);
@@ -450,17 +442,7 @@ public class TimeWarpWorldInteraction extends
         // TODO[WARP]: Implement tracking of needs
     }
 
-    /**
-     * Warp-path mirror of {@code RealtimeWorldInteraction.onLootExtracted}:
-     * instead of closing the matching LOOT quest immediately (the warper must
-     * stay pure — no live quest handle), record non-empty extractions onto the
-     * {@link MCTownState} snapshot. The settle point in
-     * {@code TownFlagState.warp} applies them through
-     * {@code getQuestHandle().processLootQuests(...)} so warp and realtime
-     * yield the same quest outcome. Same {@link LootExtractGuard} contract as
-     * realtime (non-empty item, independent of the job's {@code EXTRACTING_PRODUCT}
-     * rule).
-     */
+    /** Records non-empty extractions on the warp state; matching LOOT quests close when the warp ends. */
     @Override
     protected @Nullable MCTownState postExtractHook(
             Inputs inputs,

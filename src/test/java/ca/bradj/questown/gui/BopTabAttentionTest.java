@@ -13,10 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Playtest 2026-10-17 round 5: the BOP tab's red dot clears once a player has withdrawn a BOP,
- * and an unseen BOP tab gets the flag's initial focus over the quests tab.
- */
+/** The Blocks of Progress tab's red dot clears after the first withdrawal, and an unseen tab opens first. */
 class BopTabAttentionTest {
 
     @BeforeAll

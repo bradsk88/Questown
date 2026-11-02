@@ -131,7 +131,7 @@ public class Loots {
         LootParams lc = lcb.create(LootContextParamSets.EMPTY);
 
         int max = minItems + (level.random.nextInt(maxItems - minItems + 1));
-        // Empty rolls don't count: a leaver brings back one item per attempt (dev, 2026-10-26).
+        // Empty rolls don't count: a trip brings back an item per attempt.
         List<ItemStack> rItems = new ArrayList<>(LootRolls.roll(
                 max, Compat.configGet(Config.BASE_MAX_LOOP).get(), () -> lootTable.getRandomItems(lc), ItemStack::isEmpty
         ));
@@ -142,17 +142,12 @@ public class Loots {
                 .toList();
     }
 
-    // The player-facing previews below read the job loot tables' JSON, cached until the server's
-    // resource manager changes (a datapack reload replaces it).
+    // Read from the loot table files, cached until a data reload.
     private static ResourceManager previewedManager;
     private static final Map<GathererTools.LootTablePrefix, ImmutableSet<String>> PREVIEWS = new HashMap<>();
     private static final Map<String, ImmutableList<String>> MOST_LIKELY = new HashMap<>();
 
-    /**
-     * Every item the job loot tables under {@code data/questown/loot_tables/<prefix>/**} can drop.
-     * Player-facing producer lists use it so a loot job counts as producing an item only when its
-     * own tables can drop it; the extraction gate does not.
-     */
+    /** Every item the job loot tables under {@code <prefix>} can drop. */
     public static synchronized ImmutableSet<String> previewForPrefix(
             ResourceManager manager,
             GathererTools.LootTablePrefix prefix
@@ -161,10 +156,7 @@ public class Loots {
         return PREVIEWS.computeIfAbsent(prefix, p -> readDrops(manager, p));
     }
 
-    /**
-     * The item ids of one questown loot table ({@code data/questown/loot_tables/<table>.json}), most
-     * likely first ({@link LootTableLikelihood}); empty when the table cannot be read.
-     */
+    /** One job loot table's items, most likely first; empty when it can't be read. */
     public static synchronized ImmutableList<String> getMostLikelyItems(
             ResourceManager manager,
             String table

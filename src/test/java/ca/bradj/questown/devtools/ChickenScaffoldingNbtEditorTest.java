@@ -25,14 +25,7 @@ import java.util.List;
 
 class ChickenScaffoldingNbtEditorTest {
 
-    /**
-     * Structure-local position the synthetic flag is seeded at. Deliberately
-     * non-origin AND non-zero on Y so tests exercise the editor's flag-anchor
-     * translation path. A regression that wrote layout offsets directly to
-     * structure-local (the original bug) would land the campfire at (3,0,5)
-     * instead of FLAG_ANCHOR + (3,0,5), and every position assertion below
-     * would fail.
-     */
+    /** The flag sits off the origin, so a layout written without translating fails every check. */
     private static final BlockPos FLAG_ANCHOR = new BlockPos(5, 1, 7);
 
     @BeforeAll
@@ -40,10 +33,6 @@ class ChickenScaffoldingNbtEditorTest {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }
-
-    // -------------------------------------------------------------------------
-    // Happy path — synthetic structure tag
-    // -------------------------------------------------------------------------
 
     @Test
     void applyScaffolding_insertsPlannedBlocksIntoEmptyStructure() {
@@ -53,7 +42,6 @@ class ChickenScaffoldingNbtEditorTest {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
         ListTag blocks = result.getList("blocks", Tag.TAG_COMPOUND);
-        // freshStructureTag seeds 1 flag block; layout adds plan.size() more.
         Assertions.assertEquals(plan.size() + 1, blocks.size(),
                 "every planned placement lands as one block entry (plus the seed flag)");
 
@@ -92,13 +80,6 @@ class ChickenScaffoldingNbtEditorTest {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Anchor translation — regression guard for the structure-local vs
-    // flag-relative bug. ChickenScaffoldingLayout.forRotation returns offsets
-    // RELATIVE TO THE FLAG; structure NBT stores positions in structure-local
-    // coords (origin at the bounding box corner). The editor must translate.
-    // -------------------------------------------------------------------------
-
     @Test
     void applyScaffolding_translatesEveryLayoutOffsetByFlagAnchor() {
         CompoundTag tag = freshStructureTag();
@@ -115,9 +96,7 @@ class ChickenScaffoldingNbtEditorTest {
                     findBlockAt(blocks, translated),
                     "layout offset " + untranslated + " must land at FLAG_ANCHOR + offset = " + translated
             );
-            // Regression guard: the untranslated coordinate must NOT be in the
-            // blocks list (unless it happens to coincide with another planned
-            // placement, which the test's FLAG_ANCHOR=(5,1,7) is chosen to avoid).
+            // The untranslated position must not be there.
             if (!translated.equals(untranslated)) {
                 Assertions.assertNull(
                         findBlockAt(blocks, untranslated),
@@ -127,10 +106,6 @@ class ChickenScaffoldingNbtEditorTest {
             }
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Idempotency — tag-equivalent re-runs
-    // -------------------------------------------------------------------------
 
     @Test
     void applyScaffolding_isIdempotent() {
@@ -153,10 +128,6 @@ class ChickenScaffoldingNbtEditorTest {
                 "applyScaffolding must not mutate its input"
         );
     }
-
-    // -------------------------------------------------------------------------
-    // Palette management
-    // -------------------------------------------------------------------------
 
     @Test
     void applyScaffolding_reusesExistingCobblestonePaletteEntry() {
@@ -201,10 +172,6 @@ class ChickenScaffoldingNbtEditorTest {
                 "palette must grow to include the appended campfire entry");
     }
 
-    // -------------------------------------------------------------------------
-    // Overwrite existing block at target offset
-    // -------------------------------------------------------------------------
-
     @Test
     void applyScaffolding_overwritesExistingBlockAtCampfireOffset() {
         CompoundTag tag = freshStructureTag();
@@ -212,7 +179,6 @@ class ChickenScaffoldingNbtEditorTest {
         ListTag blocks = tag.getList("blocks", Tag.TAG_COMPOUND);
 
         BlockPos campfirePos = FLAG_ANCHOR.offset(ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets.CAMPFIRE_OFFSET);
-        // Seed: a dirt block already sits where the campfire will go.
         palette.add(NbtUtils.writeBlockState(Blocks.DIRT.defaultBlockState()));
         int dirtIdx = palette.size() - 1;
         CompoundTag existing = new CompoundTag();
@@ -248,14 +214,9 @@ class ChickenScaffoldingNbtEditorTest {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Size expansion
-    // -------------------------------------------------------------------------
-
     @Test
     void applyScaffolding_expandsSizeToEncloseAuthoredOffsets() {
         CompoundTag tag = freshStructureTag();
-        // Start with an undersized box (2x1x2 — smaller than the authored layout).
         ListTag size = new ListTag();
         size.add(IntTag.valueOf(2));
         size.add(IntTag.valueOf(1));
@@ -270,9 +231,7 @@ class ChickenScaffoldingNbtEditorTest {
         int sy = finalSize.getInt(1);
         int sz = finalSize.getInt(2);
 
-        // Layout max coords (flag-relative): x=6 (wall), y=1 (2-high walls), z=9 (gate fence).
-        // Translated by FLAG_ANCHOR (5,1,7): structure-local max x=11, y=2, z=16.
-        // size = max + 1.
+        // Layout max (relative to the flag): x 6, y 1, z 9; plus the anchor, plus 1.
         int absMaxX = FLAG_ANCHOR.getX() + 6 + 1;
         int absMaxY = FLAG_ANCHOR.getY() + 1 + 1;
         int absMaxZ = FLAG_ANCHOR.getZ() + 9 + 1;
@@ -297,10 +256,6 @@ class ChickenScaffoldingNbtEditorTest {
         Assertions.assertEquals(50, finalSize.getInt(2));
     }
 
-    // -------------------------------------------------------------------------
-    // Disk I/O round-trip
-    // -------------------------------------------------------------------------
-
     @Test
     void run_apply_writesBackupAndUpdatedFile(@TempDir Path dir) throws IOException {
         Path structure = dir.resolve("empty_town.nbt");
@@ -322,7 +277,7 @@ class ChickenScaffoldingNbtEditorTest {
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
         Assertions.assertEquals(
-                plan.size() + 1, // +1 for the seeded flag in freshStructureTag
+                plan.size() + 1,
                 reloaded.getList("blocks", Tag.TAG_COMPOUND).size()
         );
     }
@@ -350,26 +305,9 @@ class ChickenScaffoldingNbtEditorTest {
         Assertions.assertEquals(0, exit);
     }
 
-    // -------------------------------------------------------------------------
-    // On-demand entry point: apply editor to the real empty_town.nbt
-    // -------------------------------------------------------------------------
+    /** Applies the editor to the real {@code empty_town.nbt}. Disabled; enable it, run it, commit the file, disable it again. */
 
-    /**
-     * Opt-in run that mutates the real committed {@code empty_town.nbt}. Kept
-     * {@code @Disabled} by default so {@code ./gradlew test} stays side-effect-free.
-     *
-     * <p>To apply: temporarily remove the {@code @Disabled} annotation, run
-     * {@code ./gradlew test --tests
-     * "ca.bradj.questown.devtools.ChickenScaffoldingNbtEditorTest.applyToRealStructure"},
-     * commit the resulting change to {@code empty_town.nbt}, then restore
-     * {@code @Disabled}.
-     *
-     * <p>A Gradle system-property gate was the original design, but Gradle 7.2 +
-     * Groovy 3.0 + the ForgeGradle dependency cache hits a class-version-65 bug
-     * when {@code test {}} references {@code System.getProperty} or
-     * {@code project.findProperty} — see
-     * {@code docs/conventions/editing-empty-town-nbt.md}.
-     */
+    /** Applies the editor to the real {@code empty_town.nbt}. Disabled; enable it, run it, commit the file, disable it again. */
     @Test
     @Disabled("On-demand tool; remove @Disabled to apply ChickenScaffoldingLayout to empty_town.nbt.")
     void applyToRealStructure() throws IOException {
@@ -381,29 +319,9 @@ class ChickenScaffoldingNbtEditorTest {
         Assertions.assertEquals(0, exit);
     }
 
-    // -------------------------------------------------------------------------
-    // Guard: if Bootstrap isn't set up, Blocks.CAMPFIRE is null — editor should
-    // surface the error clearly rather than segfault on a null state.
-    // -------------------------------------------------------------------------
-
-    @Test
-    @Disabled("demonstrates the Bootstrap prerequisite; run only when investigating harness issues")
-    void applyScaffolding_failsCleanlyWithoutBootstrap() {
-        // Intentionally not calling Bootstrap.bootStrap() would make Blocks.CAMPFIRE null,
-        // but @BeforeAll already booted it for the whole class. This test documents the
-        // requirement; enable it manually to verify the failure mode.
-    }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
     private static CompoundTag freshStructureTag() {
         CompoundTag tag = new CompoundTag();
-        // Palette entry 0: questown:cobblestone_flag_base — the editor's
-        // findFlagAnchor scans for this. The flag is placed at FLAG_ANCHOR
-        // (non-origin) so tests fail if the editor regresses to writing
-        // layout offsets directly to structure-local without translating.
+        // The flag sits off the origin, so a layout written without translating fails.
         ListTag palette = new ListTag();
         CompoundTag flagPaletteEntry = new CompoundTag();
         flagPaletteEntry.putString("Name", "questown:cobblestone_flag_base");
@@ -426,7 +344,7 @@ class ChickenScaffoldingNbtEditorTest {
         size.add(IntTag.valueOf(8));
         size.add(IntTag.valueOf(32));
         tag.put("size", size);
-        tag.putInt("DataVersion", 3120); // 1.19.2
+        tag.putInt("DataVersion", 3120);
         return tag;
     }
 

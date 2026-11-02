@@ -27,19 +27,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
-/**
- * The optional {@code experience} job field (dev ruling 2026-10-24): XP per completion, used
- * instead of the formula ({@code DeclarativeJob.getExperienceEarned}: work units x action length +
- * a tenth of the timed duration, at least 1). Every cook and baker job declares
- * {@code "work": 0.1}, which the loader reads with {@code getAsInt()} as 0, so each completion
- * earned 1 XP (logs: 267 "[Experience] +1 from cook"); the dev set them to 200, a hunter's short
- * trip. Since r22 (dev, 2026-10-26: "the cook might be leveling a touch too fast") only the cook's
- * recipe steps pay; its fuel, extract and stocking steps declare 0, which also replaces the formula.
- * <p>
- * The v1 and v2 parse paths run through the production loader. The two template expansions (cook
- * simple-furnace food, armorer) iterate item tags that a unit JVM leaves empty (see
- * {@code CookStarterRecipeLoaderTest}); they chain the same parse.
- */
+/** A job's {@code experience} field replaces the XP formula, which would give cooks and bakers 1. */
 class JobExperienceFieldTest {
 
     private static final String JOBS_PATH = "data/questown/questown_jobs/";

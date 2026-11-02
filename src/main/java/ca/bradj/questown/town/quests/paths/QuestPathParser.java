@@ -5,13 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-/**
- * Reads one path file. Each quest is an object with exactly one kind key ({@code room},
- * {@code job_change}, {@code loot}, {@code skill},
- * {@code level}) and, for {@code loot}, a {@code count}; a {@code level} quest names a job root and
- * the level to reach in {@code at}. Throws
- * {@link IllegalArgumentException} naming the field on a malformed file.
- */
+/** Reads one path file. Each quest has one of {@code room}, {@code job_change}, {@code loot} (with {@code count}), {@code skill}, {@code level} (with {@code at}). */
 public final class QuestPathParser {
 
     private QuestPathParser() {

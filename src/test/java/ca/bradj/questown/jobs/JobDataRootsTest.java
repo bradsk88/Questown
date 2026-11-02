@@ -19,12 +19,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
-/**
- * The random job-root pool a plain Block of Progress rolls from is every job with no
- * {@code parent} ({@link ServerJobsRegistry#getAllRootJobs}). A root id that has two parentless
- * jobs appears twice in that pool, doubling its odds (2026-10-22 r4 finding #15: crafter/stick and
- * crafter/ladder; dev: "ladder should have a crafter parent").
- */
+/** A Block of Progress rolls among jobs with no parent; one root with two such jobs would double its odds. */
 class JobDataRootsTest {
 
     private static final Gson GSON = new Gson();
@@ -45,10 +40,7 @@ class JobDataRootsTest {
         Assertions.assertEquals(Map.of(), parentlessByRoot, "roots with more than one parentless job");
     }
 
-    /**
-     * Dev playtest 2026-10-28: "Crafter is showing the \"leaver\" icon when they work". The
-     * default working art is the leaver's gathering picture, so every crafter job names its own.
-     */
+    /** Every crafter job names its own working art. */
     @Test
     void everyCrafterJobDeclaresItsWorkingArt() throws IOException, URISyntaxException {
         List<String> missing = new ArrayList<>();
@@ -61,17 +53,12 @@ class JobDataRootsTest {
         Assertions.assertEquals(List.of(), missing, "crafter jobs without a \"working\" status texture");
     }
 
-    /** Dev 2026-10-29: a job worked at the blacksmith's table shows that table, not the crafting table. */
     @Test
     void blacksmithsTableJobs_showTheBlacksmithsTable() throws IOException, URISyntaxException {
         Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:blacksmiths_table",
                 "questown:textures/blocks/blacksmiths_table_front.png"), "blacksmith's table jobs without its working art");
     }
 
-    /**
-     * Dev playtest 2026-10-29: "Crafter building boots is showing the 'left town' icon". The
-     * armorer files' ids start "armorer/", so the crafter check above missed them.
-     */
     @Test
     void armorersTableJobs_showTheArmorersTable() throws IOException, URISyntaxException {
         Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:armorers_table",

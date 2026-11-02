@@ -14,13 +14,12 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 import java.util.UUID;
 
-/** A skill-tree click: asks the server for that skill's details screen (dev playtest 2026-10-29). */
 public record OpenSkillDetailsMessage(
         BlockPos flagPos,
         UUID villager,
         JobID job,
         boolean locked,
-        /** Opened from the flag: the details offer the flag's Block of Progress for Unlock. */
+        /** Opened from the flag: Unlock can use the flag's Block of Progress. */
         boolean fromFlag
 ) {
 

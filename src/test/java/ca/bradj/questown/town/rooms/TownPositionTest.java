@@ -3,15 +3,11 @@ package ca.bradj.questown.town.rooms;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * The fixture Y-rebase used by flag relocation (ADR-0009, #199): a registered fixture's absolute
- * world Y must survive moving the flag to a new origin, since the physical block stays put.
- */
+/** A fixture keeps its world Y when the flag moves to a new height. */
 class TownPositionTest {
 
     @Test
     void rebasePreservesAbsoluteYWhenFlagMovesDown() {
-        // Fixture sits 3 above a flag at Y=64 → absolute Y 67. Move the flag down to Y=60.
         TownPosition fixture = new TownPosition(10, 20, 3);
         Assertions.assertEquals(67, fixture.getY(64));
 
@@ -24,7 +20,7 @@ class TownPositionTest {
 
     @Test
     void rebasePreservesAbsoluteYWhenFlagMovesUp() {
-        TownPosition fixture = new TownPosition(-5, 8, -2); // absolute Y = 70 + (-2) = 68
+        TownPosition fixture = new TownPosition(-5, 8, -2);
         Assertions.assertEquals(68, fixture.getY(70));
 
         TownPosition rebased = fixture.rebasedTo(70, 80);

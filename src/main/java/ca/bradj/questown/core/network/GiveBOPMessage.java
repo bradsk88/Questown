@@ -29,14 +29,13 @@ public record GiveBOPMessage(BlockPos flagPos) {
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             if (!(sender.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
             }
             flag.ejectBlockOfProgress(sender);
-            // Re-open the tab with the new count instead of the client closing it (r17 #11).
             flag.menus.showUI(sender, OpenFlagMenuMessage.BOP, flag.getInfo(), flag.getBlocksOfProgress());
         });
 

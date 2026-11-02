@@ -180,7 +180,7 @@ public class FishingHook extends Projectile {
     }
 
     public void tick() {
-//        this.syncronizedRandom.setSeed(this.getUUID().getLeastSignificantBits() ^ this.level().getGameTime());
+//        this.syncronizedRandom.setSeed(this.getUUID().getLeastSignificantBits() ^ this.level.getGameTime());
         super.tick();
         LivingEntity player = this.getPlayerOwner();
         if (player == null) {

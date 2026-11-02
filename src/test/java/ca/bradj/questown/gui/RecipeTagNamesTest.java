@@ -14,12 +14,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
-/**
- * A room quest card names each tag ingredient through the {@code "#<tag>"} lang key
- * ({@link Ingredients#getName}). A tag without one shows its raw id. 2026-10-21 agent playtest:
- * the storeroom's chest read {@code #c:chests}, because the lang file still named the 1.19.2
- * {@code #forge:chests}.
- */
+/** Every tag ingredient in a room recipe has a {@code "#<tag>"} lang key, so no card shows a raw id. */
 class RecipeTagNamesTest {
 
     private static final Path RECIPES = Path.of("src/main/resources/data/questown/recipes");

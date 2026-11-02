@@ -2,23 +2,13 @@ package ca.bradj.questown.jobs;
 
 import java.util.Collection;
 
-/**
- * The XP formula for one job completion, shared by the realtime grant
- * ({@code DeclarativeJob.getExperienceEarned}) and the warp grant
- * ({@code TimeWarpWorldInteraction.onJobCompleted}), so both paths pay the same for the same job.
- * A job's declared `experience` replaces it ({@link Work#experienceEarned}). Pinned by
- * {@code JobExperienceTest}.
- */
+/** The XP for one job completion, the same in real time and during a warp. A job's declared {@code experience} replaces it. */
 public final class JobExperience {
 
     private JobExperience() {
     }
 
-    /**
-     * Work units across the states x the action length, plus a tenth of the timed duration (at
-     * least 1). Zero for a job with {@code no_experience_gained} (the BOP deposit, the diners,
-     * downtime).
-     */
+    /** Work units times the action length, plus a tenth of the timed duration (at least 1). Zero for jobs that give no experience. */
     public static int formula(
             boolean noExperienceGained,
             Collection<Integer> workPerState,

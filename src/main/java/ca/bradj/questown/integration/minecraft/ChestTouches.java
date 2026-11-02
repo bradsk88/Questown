@@ -15,14 +15,9 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * A villager taking from or putting into a chest opens its lid with the chest sound and closes it
- * shortly after, as a player's use does (dev playtest 2026-10-29). A chest a player has open is
- * left alone, so the villager does not close it under them.
- */
+/** A villager using a chest opens and closes its lid, with the sound, like a player. A chest a player has open is left alone. */
 public final class ChestTouches {
 
-    /** Vanilla's chest block event: type 1 carries the opener count, which drives the lid. */
     private static final int LID_EVENT = 1;
 
     private static final Map<ResourceKey<Level>, ChestLidTimers<BlockPos>> TIMERS = new HashMap<>();
@@ -43,7 +38,6 @@ public final class ChestTouches {
         }
     }
 
-    /** Closes the lids that are due. Call once per server tick per level. */
     public static void tick(ServerLevel level) {
         ChestLidTimers<BlockPos> timers = TIMERS.get(level.dimension());
         if (timers == null) {

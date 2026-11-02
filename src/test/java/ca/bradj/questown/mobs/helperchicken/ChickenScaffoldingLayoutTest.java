@@ -23,10 +23,6 @@ class ChickenScaffoldingLayoutTest {
         Bootstrap.bootStrap();
     }
 
-    // -------------------------------------------------------------------------
-    // NONE rotation — authored base layout
-    // -------------------------------------------------------------------------
-
     @Test
     void forRotation_none_containsUnlitCampfireAtCampfireOffset() {
         List<ChickenScaffoldingLayout.BlockPlacement> base =
@@ -101,8 +97,7 @@ class ChickenScaffoldingLayoutTest {
                 .filter(p -> p.blockState().is(Blocks.COBBLESTONE))
                 .count();
 
-        // 5x5 footprint perimeter = 16 columns × 2 rows (y=0, y=1) = 32 positions,
-        // minus WALL_BLOCK_OFFSET (1 gap at y=0) and DOOR_OFFSET column (2 gaps, y=0 and y=1) = 29.
+        // 16 columns by 2 rows, minus the wall gap and the door column: 29.
         Assertions.assertEquals(
                 29L,
                 cobbleCount,
@@ -164,10 +159,7 @@ class ChickenScaffoldingLayoutTest {
 
     @Test
     void signAndChestOffsets_landInsideRoomInterior() {
-        // The room recipe scan fires only on blocks placed INSIDE a registered
-        // room (perimeter walls at x=2/x=6, z=2/z=6 → interior x∈[3..5], z∈[3..5]).
-        // If the chicken's peck targets sit on or outside the perimeter the
-        // sign-to-job-board conversion never runs and the beat deadlocks.
+        // The sign and chest are inside the walls, so the room scan sees them.
         BlockPos sign = HelperChickenBeatOffsets.SIGN_OFFSET;
         BlockPos chest = HelperChickenBeatOffsets.CHEST_OFFSET;
         Assertions.assertTrue(
@@ -198,10 +190,6 @@ class ChickenScaffoldingLayoutTest {
                 ))
         );
     }
-
-    // -------------------------------------------------------------------------
-    // Rotation invariance
-    // -------------------------------------------------------------------------
 
     @Test
     void forRotation_clockwise90_sameSizeAsBase() {
@@ -301,13 +289,8 @@ class ChickenScaffoldingLayoutTest {
         Assertions.assertNotNull(findAt(rotated, baseEast.rotate(Rotation.CLOCKWISE_90)));
     }
 
-    // -------------------------------------------------------------------------
-    // Directional property rotation
-    // -------------------------------------------------------------------------
-
     @Test
     void forRotation_clockwise90_rotatesCampfireFacingProperty() {
-        // Default campfire faces NORTH. CLOCKWISE_90 rotates NORTH → EAST.
         ChickenScaffoldingLayout.BlockPlacement baseCampfire = findAt(
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE),
                 HelperChickenBeatOffsets.CAMPFIRE_OFFSET
@@ -323,10 +306,6 @@ class ChickenScaffoldingLayoutTest {
                 baseCampfire.blockState().rotate(Rotation.CLOCKWISE_90);
         Assertions.assertEquals(expectedRotated, rotatedCampfire.blockState());
     }
-
-    // -------------------------------------------------------------------------
-    // No duplicate offsets
-    // -------------------------------------------------------------------------
 
     @Test
     void forRotation_none_offsetsAreUnique() {

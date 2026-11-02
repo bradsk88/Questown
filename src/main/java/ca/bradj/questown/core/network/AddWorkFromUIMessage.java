@@ -20,8 +20,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.Objects;
 
-/**
- */
 public final class AddWorkFromUIMessage {
     private final Ingredient requested;
     private final BlockPos flagPos;
@@ -75,7 +73,7 @@ public final class AddWorkFromUIMessage {
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             BlockEntity flag = sender.level().getBlockEntity(flagPos);
             if (!(flag instanceof TownFlagBlockEntity tfbe)) {
@@ -86,14 +84,9 @@ public final class AddWorkFromUIMessage {
                 case INQUIRED -> {
                     WorksBehaviour.TownData td = tfbe.getTownDataForDisplay();
                     Ingredient result = (Ingredient) requested;
-                    // Only jobs the town KNOWS count - progressive discovery means
-                    // "20 known jobs" should not count the whole dataset
-                    // (2026-10-15 playtest: the hint listed jobs the town has
-                    // never been revealed).
+                    // Only jobs the town knows, and only those whose results include the item.
                     ImmutableSet<JobID> townKnown = tfbe.getTownVillagerHandle().getTownKnownJobs();
                     ImmutableMap.Builder<JobID, ResourceLocation> producers = ImmutableMap.builder();
-                    // ...and only jobs whose (knowledge-limited) results include it: a job's
-                    // declared initial_request alone does not count (2026-10-19 playtest).
                     ServerJobsRegistry.getJobsKnownToProduce(td, result)
                                       .forEach((jobId, icon) -> {
                                           if (townKnown.contains(jobId)) {

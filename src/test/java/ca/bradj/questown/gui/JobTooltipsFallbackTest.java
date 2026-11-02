@@ -13,19 +13,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * 2026-10-14 playtest ("Diner tooltip is showing i18n key"): the standard status
- * tooltip keys (tooltips.villagers.job.&lt;cat&gt;.status_N.&lt;STATUS&gt;) only exist for
- * authored category × status pairs; anything else (a diner mid-supply-run, a
- * fisher in any status - the fisher has no keys at all) surfaced the raw key
- * to the player. The components must carry a vanilla translatableWithFallback
- * last-resort so a missing key renders the fallback line, never the key.
- */
+/** A status with no tooltip of its own shows the fallback line, never the raw key. */
 class JobTooltipsFallbackTest {
 
     @BeforeAll
     static void bootstrap() {
-        // JobTooltips references the diner work classes (Ingredient statics).
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
     }

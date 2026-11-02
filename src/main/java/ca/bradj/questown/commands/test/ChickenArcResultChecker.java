@@ -18,17 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Reads the final state of a {@link TownFlagBlockEntity} after a chicken-arc
- * scenario finishes and emits one {@code [autotest] chicken-arc:<name>} line
- * per assertion in {@link ChickenArcExpectation}.
- *
- * <p>Item-delta assertions compose {@link TestResultChecker} so the two tracks
- * share one contract for item-count checks.
- */
+/** Checks a helper-chicken scenario's expectation against the flag and logs one line per check. */
 public final class ChickenArcResultChecker {
 
-    /** Result of evaluating an entire {@link ChickenArcExpectation}. */
     public record Result(boolean passed, int passedCount, int totalCount) {}
 
     private ChickenArcResultChecker() {
@@ -153,11 +145,7 @@ public final class ChickenArcResultChecker {
         return pass;
     }
 
-    /**
-     * Resolve a named flag bit to a live accessor read. Returns null when the
-     * key doesn't match any known accessor so the caller can log a clear
-     * {@code [FAIL] unknown flag bit} message rather than silently passing.
-     */
+    /** A flag bit by name, or null when no bit has that name. */
     private static Boolean readFlagBit(TownFlagBlockEntity flag, String key) {
         return switch (key) {
             case "chicken-first-gather-worldly-seeds-fired" -> flag.getChickenFirstGatherWorldlySeedsFired();
@@ -226,8 +214,7 @@ public final class ChickenArcResultChecker {
             TestOutput output
     ) {
         AABB area = new AABB(flagPos.offset(-halfWidth, -5, -halfWidth)).minmax(new AABB(flagPos.offset(halfWidth, 10, halfWidth)));
-        // Count only chickens bound to THIS flag. Prior-scenario chickens may
-        // wander into the arena bounds, producing spurious counts.
+        // Only this flag's chickens; earlier scenarios' chickens can wander in.
         int live = 0;
         for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, area)) {
             if (!e.isAlive()) {

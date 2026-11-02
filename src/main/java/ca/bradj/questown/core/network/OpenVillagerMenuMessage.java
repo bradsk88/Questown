@@ -22,7 +22,7 @@ public record OpenVillagerMenuMessage(
     public static final String CHANGE_ROOT = "change_root";
     public static final String ECONOMICS = "economics";
     public static final String BOP = "bop";
-    /** Not a tab: the server picks the opening tab ({@code VillagerTabs.initialTab}). */
+    /** Not a tab: the server chooses which tab opens. */
     public static final String INITIAL = "initial";
 
     public static void encode(OpenVillagerMenuMessage msg, FriendlyByteBuf buffer) {
@@ -50,7 +50,7 @@ public record OpenVillagerMenuMessage(
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             if (!(sender.level().getBlockEntity(new BlockPos(flagX, flagY, flagZ)) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}, {}, {}. Quest will not be removed.", flagX, flagY, flagZ);

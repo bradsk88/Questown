@@ -5,11 +5,7 @@ import ca.bradj.questown.loader.ConfigSpec;
 import ca.bradj.questown.loader.ConfigValue;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
-/**
- * NeoForge impl of the neutral {@link ConfigBuilder}; delegates to {@code ModConfigSpec.Builder}.
- * {@code define} is a straight generic pass-through; {@code defineInRange} dispatches on the value type
- * because NeoForge exposes primitive-specialised overloads (Int/Long/Double) rather than one generic.
- */
+/** The NeoForge {@link ConfigBuilder}, over {@code ModConfigSpec.Builder}. */
 public final class NeoConfigBuilder implements ConfigBuilder {
     private final ModConfigSpec.Builder builder;
 

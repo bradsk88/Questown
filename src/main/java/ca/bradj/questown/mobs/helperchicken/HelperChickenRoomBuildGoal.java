@@ -19,44 +19,20 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
-/**
- * Room-build goal for the {@link ChickenBeatState#WAITING_FOR_ROOM_BUILD} beat.
- *
- * <p>A door registered in open ground is a door but not a room (the wall walk
- * has no walls to close around), so the chest beat that follows would stand
- * down forever. This goal is the fix: after the door is registered, the
- * chicken walks to it and lays a small enclosed shell around it, one block at
- * a time on the peck cadence, so the player watches a room appear where they
- * put the door. When the shell is up and the room scan sees an enclosed room
- * at the door, the beat's condition is met and the controller advances.
- *
- * <p>The layout is pure ({@link ChickenRoomShellPlan}); this goal owns the
- * world side effects: pathing to the next block, the peck, the place, and the
- * POOF. It re-plans from the live world every block, so a block the player
- * placed (or broke) mid-build is simply skipped (or re-laid).
- */
+/** The room-build lesson: the chicken lays a small room around the registered door, a block at a time. It re-plans every block, so the player's own blocks are skipped. */
 public class HelperChickenRoomBuildGoal extends Goal {
 
     private static final double ARRIVAL_DISTANCE_SQR = 2.0D;
-    /**
-     * Same nav-settle loosening as the chest goal: the path follower stops a
-     * block-and-a-half short, which is past the tight arrival radius but close
-     * enough to place the block. See HelperChickenSunsetChestGoal.
-     */
+    /** The path stops about a block and a half short, which is close enough to place. */
     private static final double NAV_SETTLE_ARRIVAL_SQR = 9.0D;
     private static final int STUCK_TELEPORT_TICKS = 600;
-    // The per-block peck cadence: the chicken pecks, waits this many ticks, then lays
-    // the block. 5 ticks (2x the prior 10, 4x the original 20) lays the shell twice as
-    // fast. This is a cosmetic/animation rate, not a perf or correctness knob; it only
-    // shortens how long the shell takes to appear. The chest goal keeps its own
-    // 20-tick peck (the drop is meant to be watched, not rushed).
+    // Ticks between peck and placing each block.
     private static final int PECK_TICKS = 5;
     private static final double SPEED_MODIFIER = 1.0D;
 
     private final HelperChickenEntity chicken;
     private final Supplier<BlockPos> flagPosSupplier;
 
-    /** Blocks this goal has already laid, so re-planning does not loop on them. */
     private final Set<BlockPos> laid = new HashSet<>();
 
     private BlockPos targetPos;
@@ -82,13 +58,11 @@ public class HelperChickenRoomBuildGoal extends Goal {
             return false;
         }
         if (doorHasRoom(flag)) {
-            // Nothing to build; the controller advances the beat this tick.
             return false;
         }
         BlockPos next = nextBlock(flag, sl);
         if (next == null) {
-            // The plan is empty but no room registered: nothing more the chicken
-            // can lay (every cell is occupied). Stand down rather than loop.
+            // Nothing left to lay but no room: stop.
             logStoodDown(sl, flag, "plan exhausted but no room detected");
             return false;
         }
@@ -197,12 +171,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
         this.targetPos = null; // force re-plan on next canUse
     }
 
-    /**
-     * The next shell block to lay, or null when the plan is exhausted. Re-plans
-     * from the live world each call: occupied cells (the door, terrain, a block
-     * the player placed) and blocks this goal already laid are skipped, so the
-     * plan converges instead of re-laying.
-     */
+    /** The next block to lay, or null when done. */
     @org.jetbrains.annotations.Nullable
     private BlockPos nextBlock(TownFlagBlockEntity flag, ServerLevel sl) {
         TownPosition door = firstRegisteredDoor(flag);
@@ -224,7 +193,6 @@ public class HelperChickenRoomBuildGoal extends Goal {
         return plan.steps().get(0).pos();
     }
 
-    /** True when any registered door already has an enclosed room. */
     private boolean doorHasRoom(TownFlagBlockEntity flag) {
         Collection<MCRoom> rooms = flag.getRoomHandle().getRegisteredRooms().getAllRooms();
         return !rooms.isEmpty();

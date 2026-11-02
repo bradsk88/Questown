@@ -9,12 +9,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
-/**
- * Categories a player can request on the job board ("Food", "Swords") instead of one exact item.
- * A cook starts with a few recipes, but the player just wants food (dev, 2026-10-22). A category is
- * an item tag; the request is an ordinary tag {@code WorkRequest}, so any job whose products fall in
- * the tag answers it. A category is offered only while some unlocked job can make something in it.
- */
+/** Categories a player can request on the job board ("Food", "Swords") instead of one item. A category is offered while some unlocked job makes something in it. */
 public final class RequestCategories {
 
     public static final List<ResourceLocation> CATEGORIES = List.of(
@@ -32,7 +27,6 @@ public final class RequestCategories {
     private RequestCategories() {
     }
 
-    /** The categories, in list order, that at least one producible item belongs to. */
     public static <I> List<ResourceLocation> offered(
             Collection<I> producible,
             BiPredicate<I, ResourceLocation> inCategory
@@ -46,11 +40,7 @@ public final class RequestCategories {
         return out;
     }
 
-    /**
-     * The products minus any that is a whole offered category (a tag product, like the cook's
-     * {@code #questown:villager_food}): the category's own tile already draws and requests it
-     * (r16 #18).
-     */
+    /** The products without those that are a whole offered category; the category's own tile covers them. */
     public static <I> List<I> withoutCategories(
             Collection<I> products,
             Function<I, @Nullable ResourceLocation> tagOf,

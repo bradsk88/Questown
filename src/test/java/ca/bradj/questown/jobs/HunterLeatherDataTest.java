@@ -16,11 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * Outfitter playtest #21 (dev 2026-10-26): the Armor batch's "Leather x4" took ~40 short trips at
- * forest's 10.4%. Every hunter table that drops leather gives it at least a quarter of the roll
- * (~16 trips for four). Jungle has no leather and stays that way.
- */
+/** Every hunter table with leather gives it at least a quarter of the roll. Jungle has none. */
 class HunterLeatherDataTest {
 
     private static final Gson GSON = new Gson();

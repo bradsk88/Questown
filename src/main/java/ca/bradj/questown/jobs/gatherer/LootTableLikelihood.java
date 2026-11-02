@@ -9,13 +9,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * A loot table's item ids, most likely first (dev 2026-10-30: a skill's "Produces:" lists the three
- * most likely loot items). An item's likelihood is its expected count per roll of the table: in each
- * pool, the rolls times its weight's share of the pool's total weight (an entry's weight defaults to
- * 1; empty and tag entries take their share and are not listed), summed over pools. Ties keep the
- * table's order. Read from the table JSON, so it needs no registry.
- */
+/** A loot table's items, most likely first: expected count per roll, summed over pools. Ties keep the table's order. */
 public final class LootTableLikelihood {
 
     private LootTableLikelihood() {
@@ -64,7 +58,7 @@ public final class LootTableLikelihood {
         return 1;
     }
 
-    /** A number, or a uniform {min, max} provider (its mean); anything else counts as one roll. */
+    /** A number, or the mean of a {min, max}; anything else counts as one roll. */
     private static double rolls(JsonElement rolls) {
         if (rolls != null && rolls.isJsonPrimitive()) {
             return rolls.getAsDouble();

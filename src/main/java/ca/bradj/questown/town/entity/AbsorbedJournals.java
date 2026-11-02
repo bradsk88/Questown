@@ -8,15 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * The journals of townies absorbed into the flag by a shutdown ritual (ADR-0009), keyed by UUID on
- * the flag's persistent tag, so a respawn (wake, cancel, or relocation placement) brings each
- * townie back with its job, status and carried items instead of a fresh gatherer. Living on the
- * flag tag means the snapshots travel with the relocation's whole-blob copy and survive a restart.
- *
- * <p>Holds the serialized villager tag only ({@code TownStateSerializer.storeVillager} format); the
- * caller encodes and decodes it.
- */
+/** The saved state of villagers taken into the flag when a town shuts down, so each comes back with its job and items. Kept on the flag, so it moves with the town. */
 final class AbsorbedJournals {
 
     static final String NBT_ABSORBED_JOURNALS = "absorbed_journals";
@@ -34,12 +26,7 @@ final class AbsorbedJournals {
         flagTag.put(NBT_ABSORBED_JOURNALS, journals);
     }
 
-    /**
-     * Snapshot every townie in the stored town state that has no absorb-time snapshot yet. For a
-     * flag that went dormant without absorbing its townies (a town shut down before snapshots
-     * existed). Must run before the respawn starts: each respawned townie re-publishes the town
-     * state, which drops the entries of townies not yet respawned.
-     */
+    /** Saves every villager in the town state that has no saved state yet. Run before the respawns begin. */
     static void adoptTownState(
             CompoundTag flagTag,
             String townStateKey
@@ -59,14 +46,14 @@ final class AbsorbedJournals {
         flagTag.put(NBT_ABSORBED_JOURNALS, journals);
     }
 
-    /** The townies with a snapshot waiting: the ones absorbed and not yet respawned. */
+    /** The villagers saved and not yet back. */
     static List<UUID> absorbed(CompoundTag flagTag) {
         return flagTag.getCompound(NBT_ABSORBED_JOURNALS).getAllKeys().stream()
                 .map(UUID::fromString)
                 .toList();
     }
 
-    /** Remove and return {@code villager}'s snapshot; empty for a genuinely new visitor. */
+    /** Removes and returns the villager's saved state; empty for a new villager. */
     static Optional<CompoundTag> take(
             CompoundTag flagTag,
             UUID villager

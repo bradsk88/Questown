@@ -73,12 +73,7 @@ public class TownCycle {
         return findCampfire(pos, level, bs -> true);
     }
 
-    /**
-     * Variant that accepts an extra predicate over the campfire's block state,
-     * so callers can require e.g. that the campfire be lit. The block-type
-     * check ({@code is(Blocks.CAMPFIRE)}) is always applied first; the
-     * predicate runs only on campfire states.
-     */
+    /** As above, with an extra check on the campfire's state (for example, that it is lit). */
     public static Optional<BlockPos> findCampfire(
             BlockPos pos, Level level, Predicate<BlockState> match
     ) {

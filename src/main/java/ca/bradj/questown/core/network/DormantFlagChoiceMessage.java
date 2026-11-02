@@ -7,12 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
-/**
- * Client → server: the dormant-flag screen's choice. {@code wake} wakes the town in place
- * ({@link TownFlagBlockEntity#wakeInPlace()}); otherwise the deed is re-issued above the flag
- * ({@link TownFlagBlockEntity#reissueDeed()}). Both are only valid while DORMANT; the owner
- * decides, and the player gets a chat line either way.
- */
+/** The dormant-flag screen's choice: wake the town in place, or get the deed back. */
 public record DormantFlagChoiceMessage(BlockPos flagPos, boolean wake) {
 
     public static void encode(

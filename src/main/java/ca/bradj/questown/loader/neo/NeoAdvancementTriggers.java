@@ -12,16 +12,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Trigger-type registration for the four leaf {@code CriterionTrigger}s. 1.20.6's trigger-type
- * registry is baked at bootstrap (the old {@code CriteriaTriggers.register} path throws
- * "already frozen"), so the deferred registration + the bind of the convenience statics in
- * {@link AdvancementsInit} happens in this mod-bus binder. The leaves keep only the statics and
- * the trigger implementations.
- *
- * <p>Called from the {@code @Mod} entry with the mod bus (where it used to live in
- * {@code core.init.AdvancementsInit.init(IEventBus)}).
- */
+/** Registers the advancement triggers. The trigger registry is fixed early on 1.20.6, so they go through a deferred register on the mod bus. */
 public class NeoAdvancementTriggers {
 
     private static final DeferredRegister<CriterionTrigger<?>> TRIGGERS =

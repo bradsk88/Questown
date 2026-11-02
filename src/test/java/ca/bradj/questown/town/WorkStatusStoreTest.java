@@ -56,12 +56,7 @@ class WorkStatusStoreTest {
 
     }
 
-    /**
-     * A job that claims no spots (the diner jobs: their claim supplier returns null) may work a
-     * block another villager claimed, as AbstractItemWI already allows on insert. canClaim used to
-     * call owner() on the null claim, and the NPE crashed the server (village/growth, 2026-10-25:
-     * a hunter dining at a spot the cook held).
-     */
+    /** A job that claims no spots can work a block someone else claimed. */
     @Test
     void canClaim_aJobWithNoClaimMayWorkAClaimedSpot() {
         TestWorkStatusStore s = new TestWorkStatusStore();
@@ -113,7 +108,7 @@ class WorkStatusStoreTest {
         Position pos = new Position(1, 2);
         s.setJobBlockStateWithTimer(pos, State.fresh(), 10);
 
-        // Five rooms appear in the same tick. The timer must still only lose `ticksSinceLast`.
+        // Five rooms in one tick: the timer still drops by `ticksSinceLast`.
         s.tick(null, roomsAt(0, 10, 20, 30, 40), 1);
 
         Assertions.assertEquals(9, s.getTimeToNextState(pos));
@@ -169,7 +164,6 @@ class WorkStatusStoreTest {
         Position pos = new Position(1, 2);
         UUID other = UUID.randomUUID();
         s.claimSpot(pos, new Claim(UUID.randomUUID(), 10));
-        // A flag tick advances by the game-tick delta (5), not by 1.
         s.tick(null, ImmutableList.of(arbitaryRoom), 5); // 10 -> 5
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
         s.tick(null, ImmutableList.of(arbitaryRoom), 5); // 5 -> 0, expired
@@ -184,7 +178,7 @@ class WorkStatusStoreTest {
         UUID other = UUID.randomUUID();
         s.claimSpot(pos, new Claim(owner, 3));
         tick(s); // 3 -> 2
-        // Re-claiming by the same owner refreshes the TTL (an active townie re-claims each insert).
+        // The same owner re-claiming renews it.
         Assertions.assertTrue(s.claimSpot(pos, new Claim(owner, 3)));
         tick(s); // would have reached 1; the refresh put it back to 3 -> 2
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
@@ -192,9 +186,7 @@ class WorkStatusStoreTest {
 
     @Test
     void Test_StuckBlockWithNoTimerReseedsToFreshAfterThreshold() {
-        // Self-heal for the 2026-10-15 playtest stall: a job block that sits in a
-        // non-fresh state with no timer is dead; the store reseeds it to fresh so the
-        // next cycle can restart instead of every leaver idling behind it.
+        // A block in a non-fresh state with no timer is reset to fresh.
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
@@ -206,8 +198,7 @@ class WorkStatusStoreTest {
 
     @Test
     void Test_RestingStateBlockIsNotReseeded() {
-        // The job board: a work seeker always sees it as ready to extract (state 1), so a
-        // board left at 1 is at rest, not stuck (2026-10-17 day1: reseeded 5x from state 1).
+        // A job board at state 1 is at rest, not stuck.
         Position board = new Position(1, 2);
         TestWorkStatusStore s = new TestWorkStatusStore(board);
         s.setJobBlockState(board, State.freshAtState(1));
@@ -233,7 +224,7 @@ class WorkStatusStoreTest {
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
         tick(s, 19_000);
-        // A state write (e.g. a p1 work-progress write) restarts the stuck window.
+        // A write restarts the stuck count.
         s.setJobBlockState(pos, State.freshAtState(1).setCount(2));
         tick(s, 19_000);
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
@@ -245,7 +236,6 @@ class WorkStatusStoreTest {
         Position pos = new Position(1, 2);
         s.setJobBlockStateWithTimer(pos, State.freshAtState(1), 30_000);
         tick(s, 20_000);
-        // The timer is still running; the block is in progress, not stuck.
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
         Assertions.assertNotNull(s.getTimeToNextState(pos));
     }

@@ -6,11 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/**
- * 2026-10-21 playtest: the cook's "working" status image should be the vanilla furnace front.
- * Working states (state:N, extracting) are not named core statuses, so a job can declare one
- * "working" texture for all of them.
- */
+/** One "working" texture covers every work state and extraction. */
 class OverridesTest {
 
     private static final ResourceLocation FURNACE = new ResourceLocation("minecraft", "textures/block/furnace_front.png");

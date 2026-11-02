@@ -10,20 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-14 playtest: with the economics pane open, the "switch job"
- * (change_root) tab also rendered as selected. A tab renders selected when its
- * open-fn is null, and the open-fn is null exactly when the pane's
- * {@code getEnabledTabs()} omits that tab's type. The economics menu used a
- * hand-rolled enabled list that omitted CHANGE_ROOT (every sibling pane uses
- * {@link VillagerTabs#except(String)}), so the change_root tab got a null fn
- * alongside the economics one.
- *
- * <p>The list is a private static on the menu class (the menu's constructor is
- * registry-bound and needs a Forge mod-load harness), so the pin reads the
- * field reflectively. The static initializer itself is pure string math
- * ({@code VillagerTabs.except(ECONOMICS)}), safe to load in a unit JVM.
- */
+/** With the economics pane open, only the economics tab shows as selected: its tab list is {@link VillagerTabs#except(String)}. */
 class VillagerEconomicsMenuEnabledTabsTest {
 
     @SuppressWarnings("unchecked")
@@ -48,8 +35,6 @@ class VillagerEconomicsMenuEnabledTabsTest {
 
     @Test
     void matches_the_sibling_pane_construction() throws Exception {
-        // Every other villager pane builds its list as except(ownTab); the economics
-        // pane must hold the same invariant, not a hand-maintained subset.
         assertEquals(VillagerTabs.except(OpenVillagerMenuMessage.ECONOMICS), enabledTabs());
     }
 }

@@ -59,9 +59,7 @@ class TutorialPhaseGateTest {
     }
 
     private TownQuests questsWithDayOneBatches() {
-        // The new day-one world (.scratch/mat-gated-arrival): the campfire and
-        // gate batches both exist from flag placement and both are done; the
-        // arrival + basics batch came from the gate reward.
+        // Day one done: the campfire and gate batches, plus the basics batch from the gate reward.
         TownQuests quests = newTownQuests();
         MCQuestBatch camp = new MCQuestBatch(null, null, new NoOpReward());
         camp.addNewQuest(null, SpecialQuests.CAMPFIRE);
@@ -74,7 +72,6 @@ class TutorialPhaseGateTest {
         return quests;
     }
 
-    /** Seeds the (completed) basics batch the welcome-mat reward posts. */
     private void completeBasics(TownQuests quests) {
         MCQuestBatch basics = new MCQuestBatch(null, null, new NoOpReward());
         basics.addNewQuest(null, SpecialQuests.JOB_BOARD);
@@ -84,15 +81,10 @@ class TutorialPhaseGateTest {
         quests.questBatches.add(basics);
     }
 
-    // ===== Day one: campfire + gate batches, no arrival yet =====
-
     @Test
     void whenDayOneFlag_zeroVillagers_noPhaseApplies() {
-        // No tutorial phase keys off the campfire batch any more: the first
-        // villager is the gate batch's reward, so with zero villagers the
-        // machine must wait (SKIPPED) even when a batch request is pending.
+        // With no villagers, the tutorial waits.
         TownQuests quests = questsWithCampfireOnly();
-        // Explicit: the builder defaults to one villager.
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(0).build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
@@ -104,8 +96,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenDayOneFlag_twoVillagers_hunterGathererApplies() {
-        // A hand-grown town (two villagers already present, no JOB_CHANGE yet)
-        // skips straight into the hunter-gatherer batch.
+        // A town that already has two villagers goes straight to the hunter-gatherer batch.
         TownQuests quests = questsWithCampfireOnly();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -113,8 +104,6 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        // Day-2 playtest: the two sword asks (4 wooden + 1 stone) are consolidated into a single
-        // "4 stone swords" item quest - one sword quest only.
         assertTrue(all.stream().anyMatch(q ->
                 Compat.getItemId(Items.STONE_SWORD).equals(q.getWantedId())
                         && q.getType() == Quest.QuestType.ITEM
@@ -124,8 +113,6 @@ class TutorialPhaseGateTest {
                 Compat.getItemId(Items.WOODEN_SWORD).equals(q.getWantedId())
         ), "the wooden-sword quest is gone (one sword quest only)");
     }
-
-    // ===== Phase 2: day-one done → hunter-gatherer =====
 
     @Test
     void whenDayOneDoneAndTwoVillagers_hunterGathererAdded() {
@@ -140,8 +127,7 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        // The hunter's food quest is a LOOT quest on the raw food tag: it completes on
-        // extraction (production), not on a chest deposit.
+        // The hunter's food quest is a LOOT quest on raw food.
         assertTrue(all.stream().anyMatch(q ->
                 TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location().equals(q.getWantedId())
                         && q.getType() == Quest.QuestType.LOOT
@@ -175,9 +161,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenDayOneDoneAndOneVillager_hunterGathererAdded() {
-        // 2026-10-17 playtest ruling: the second villager arrives only after the raw-food
-        // quest completes, so the batch that posts that quest must open with the first
-        // villager alone (it used to wait for two - a deadlock with the arrival gate).
+        // The batch opens with the first villager alone; the second waits for the raw food.
         TownQuests quests = questsWithDayOneBatches();
         completeBasics(quests);
 
@@ -195,9 +179,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenHunterBatchAlreadyOpen_notReapplied() {
-        // The hunter-gatherer batch (with its JOB_CHANGE quest) already exists:
-        // the machine must not open a second one just because a second villager
-        // arrived while the first job change is pending.
+        // No second hunter-gatherer batch while the first job change is pending.
         TownQuests quests = questsWithDayOneBatches();
         completeBasics(quests);
 
@@ -237,22 +219,17 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.STONE_SWORD));
         quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
 
-        // The newcomer-bedroom batch sits between the hunter-gatherer batch and the cook batch.
         quests.addTutorialBatches(view);
         quests.questBatches.markRecipeAsComplete(null, SpecialQuests.BEDROOM);
 
         return quests;
     }
 
-    /** The hunter-gatherer batch is done; nothing after it posted yet. */
     private TownQuests questsAfterHunterGathererDone() {
         return questsAfterHunterGathererDone(false);
     }
 
-    /**
-     * @param withDayOneEmptyRoom include the day-1 single empty-room batch (posted by the gate
-     *                            reward, before the basics), as a real onboarding world has
-     */
+    /** @param withDayOneEmptyRoom include the first day's empty-room batch, as a real world has */
     private TownQuests questsAfterHunterGathererDone(boolean withDayOneEmptyRoom) {
         TownQuests quests = questsWithDayOneBatches();
         if (withDayOneEmptyRoom) {
@@ -275,8 +252,6 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenHunterGathererDone_newcomerBedroomBatchAdded_notTheCookBatch() {
-        // Dev, r22 2026-10-26: a bedroom fills the wait for villager 2's morning arrival (it was one
-        // empty room from 2026-10-19).
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -295,9 +270,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void dayOneEmptyRoomBatch_isNotMistakenForThePostHunterOne() {
-        // The day-1 batch is a single EMPTY_ROOM quest, as the post-hunter batch was before r22; the
-        // day-1 one (completed, posted before the hunter-gatherer batch) must not count as the
-        // post-hunter batch, or the phase skips straight to the cook batch.
+        // The first day's empty-room batch is not the post-hunter batch.
         TownQuests quests = questsAfterHunterGathererDone(true);
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -348,8 +321,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void bedroomQuest_needsABedroomNoBedroomQuestClaimed() {
-        // r22: the town already has the hunter-gatherer bedroom, so the newcomer's bedroom quest
-        // must not close on it.
+        // The new villager's bedroom quest doesn't close on the existing bedroom.
         TownQuests quests = newTownQuests();
         MCQuestBatch batch = new MCQuestBatch(null, null, new NoOpReward());
         batch.addNewQuest(null, SpecialQuests.BEDROOM);
@@ -392,10 +364,7 @@ class TutorialPhaseGateTest {
         );
     }
 
-    /**
-     * Same state as {@link #questsAtPhase2_5()} except the raw-food LOOT quest is left
-     * incomplete: no live raw-food producer exists yet, so phase 2.5 must not open.
-     */
+    /** As at phase 2.5, but with the raw-food quest still open. */
     private TownQuests questsAfterHunterRawLootOutstanding() {
         TownQuests quests = questsWithDayOneBatches();
         completeBasics(quests);
@@ -426,23 +395,17 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
-        // Phase 2.5 teaches the cheap cook and then proves it cooks.
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
         ));
-        // Cooked Food x4 and the cook skill wait for the cook (r20, dev 2026-10-25: "the cook's
-        // batch is too bulky"); the follow-up batch carries them.
         assertFalse(hasCookFollowUpQuest(all), "phase 2.5 batch must not carry the cook follow-up quests");
-        // The batch carries the cook's room quest too: every cook/* job requires
-        // kitchen_small (see cook_simple_furnace_food.json), and without it the
-        // staffed cook has no selectable work and the batch can never complete.
+        // The cook needs kitchen_small, so the batch carries that room quest.
         ResourceLocation kitchenSmall = new ResourceLocation("questown", "kitchen_small");
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.ROOM
                         && q.getWantedId().equals(kitchenSmall)
         ), "phase 2.5 batch must carry the kitchen_small room quest");
-        // ...and the first storage upgrade: storage fills around the kitchen beat.
         ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.ROOM
@@ -466,8 +429,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void cookFollowUp_waitsForTheMorningJobChange() {
-        // r22, dev: a BOP spend closes the cook JOB_CHANGE at once, but "they won't be a cook until
-        // morning"; Food x8 and the cook skill wait for a villager on the cook root.
+        // The food and skill quests wait for a villager who is actually a cook.
         TownQuests quests = questsAtPhase2_5();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
                 .villagerRoots("hunter", "gatherer").build();
@@ -495,13 +457,11 @@ class TutorialPhaseGateTest {
                         && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
                         && q.getCountNeeded() == TownQuests.COOKED_FOOD_COUNT
         ), "follow-up must carry Cooked Food x4");
-        // A skill on the cook's tree, beside the food quest it helps fill (dev, 2026-10-25).
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.SKILL_UNLOCK
                         && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
         ), "follow-up must carry the cook skill-unlock quest");
-        // Onboarding rule (dev, 2026-10-18): a batch that brings a villager carries the bed that
-        // villager will sleep in. The follow-up brings villager 3: Bedroom (2 beds) -> Big Bedroom.
+        // The follow-up brings villager 3, so the bedroom becomes a big bedroom.
         ResourceLocation bedroom = new ResourceLocation("questown", "bedroom");
         ResourceLocation bigBedroom = new ResourceLocation("questown", "big_bedroom");
         assertTrue(all.stream().anyMatch(q ->
@@ -547,8 +507,7 @@ class TutorialPhaseGateTest {
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
-        // Phase 2.5 must wait until a raw-food producer has actually produced; the ladder
-        // stops here with SKIPPED rather than advancing to later phases.
+        // Phase 2.5 waits for the raw food.
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
         boolean cookAdded = quests.questBatches.getAll().stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
@@ -559,9 +518,6 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenHunterDoneAndTwoVillagers_jobChangeAndFoodAdded() {
-        // 2026-10-18: villager 2 is the hunter-gatherer batch's reward and villager 3 the cook
-        // batch's, so the cook batch opens with two villagers (the hunter + the future cook).
-        // Gated on three, it never opened once the basics batch stopped bringing a villager.
         TownQuests quests = questsAtPhase2_5();
 
         TestTutorialTownView view = TestTutorialTownView.builder()
@@ -598,22 +554,16 @@ class TutorialPhaseGateTest {
                 .build();
         quests.addTutorialBatches(view);   // applies phase 2.5: cook JOB_CHANGE + kitchen ROOM + VILLAGER_COOKED_FOOD LOOT
 
-        // Complete the second job change (the cook) and the cooked-food LOOT quest.
-        // (The kitchen ROOM quest is not needed for the phase gate, which tracks
-        // JOB_CHANGE completions; the batch reward does need it.)
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
         quests.questBatches.markRecipeAsComplete(null, TagsInit.Items.VILLAGER_COOKED_FOOD.location());
 
-        // Two completed job changes open the post-cook miner beat (phase 2.7): post it and
-        // complete all four of its quests (JOB_CHANGE + farm room + pickaxes + coal). The
-        // next walk continues past the done miner beat.
+        // Two job changes done: the miner lesson posts.
         quests.addTutorialBatches(view);   // applies phase 2.7: the miner beat
         completeMinerBeat(quests);
 
         return quests;
     }
 
-    /** Completes the post-cook miner beat's quests (room = the view's farm stand-in). */
     private void completeMinerBeat(TownQuests quests) {
         quests.questBatches.markRecipeAsComplete(null, JobID.toRL(new JobID("miner", "coal")));
         quests.questBatches.markRecipeAsComplete(null, new ResourceLocation("questown", "farm"));
@@ -623,10 +573,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void whenMinerBeatDone_itIsNotPostedAgain() {
-        // 2026-10-22 agent playtest: phase 2.7 had no "already posted" check, so each batch
-        // request re-posted the miner beat; backfill closed it at once (the town already had
-        // the mineshaft, pickaxes, coal and a miner) and its reward brought another villager
-        // - 8 arrivals in 3 seconds.
+        // The miner lesson posts once.
         TownQuests quests = questsWithTwoJobChangesDone();
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
@@ -679,10 +626,8 @@ class TutorialPhaseGateTest {
                 .villagerCount(3)
                 .build();
 
-        // This should add the cook job change quest (phase 2.5), not advance to phase 4.
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.APPLIED, result);
-        // The count of JOB_CHANGE quests should be 2 now (hunter + cook).
         long jobChangeCount = quests.questBatches.getAll().stream()
                 .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE)
                 .count();
@@ -698,8 +643,7 @@ class TutorialPhaseGateTest {
                 .build();
         quests.addTutorialBatches(view);
 
-        // Don't complete the second job change: only one job change is done, so the
-        // post-cook miner beat (which needs two) is not even posted.
+        // One job change only: the miner lesson doesn't post.
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
     }
@@ -763,8 +707,6 @@ class TutorialPhaseGateTest {
         assertEquals(TownQuests.Tutorial.SKIPPED, result);
     }
 
-    // ===== After the supply chain: done (phase 7, exotic wood, was cut 2026-10-19) =====
-
     private TownQuests questsAfterSupplyChain() {
         TownQuests quests = questsWithCrafterDone();
 
@@ -792,9 +734,7 @@ class TutorialPhaseGateTest {
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
         assertEquals(TownQuests.Tutorial.DONE, result, "nothing after the supply chain (phase 7 cut)");
-        // The supply-chains journal entry still opens once the supply chain is done.
         assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.SecondJobType));
-        // The storage upgrade lives only in the cook batch (dev, 2026-10-18): no second copy.
         ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
         assertEquals(1, quests.questBatches.getAll().stream().filter(q ->
                 storeRoomMedium.equals(q.getWantedId()) && q.getType() == Quest.QuestType.ROOM
@@ -840,7 +780,6 @@ class TutorialPhaseGateTest {
                 TutorialTownView.PHASE_5
         );
 
-        // Post a phase's batch through this view and collect the reward phase names it builds.
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(2)
@@ -870,30 +809,18 @@ class TutorialPhaseGateTest {
         assertTrue(view.getMessagesSent().get(0).contains("New quests"));
     }
 
-    // ===== Milestone: procedural-batch counting =====
-
     @Test
     void campfireBatch_isNotProceduralBatch() {
-        // Regression: placing a campfire (the very first step) was instantly counted as a
-        // procedural-batch milestone (the "village is thriving" first-batch broadcast, since
-        // removed 2026-10-15, and the 5/10/20 chapter triggers) because campfire batch
-        // completion was counted as a procedural batch.
+        // The campfire batch isn't a procedural batch, so it doesn't count toward the milestones.
         MCQuestBatch campfireBatch = new MCQuestBatch(null, null, new NoOpReward());
         campfireBatch.addNewQuest(null, SpecialQuests.CAMPFIRE);
         assertFalse(TownQuests.isProceduralBatch(campfireBatch));
     }
 
-    // ===== Superset completion for onboarding quests =====
-
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
 
-    /**
-     * Drives the onboarding superset completion path the same way the production wiring would:
-     * {@code roomRecipeCreated} matches a room's recipe IDs against each onboarding quest's wanted id
-     * and calls {@code markQuestAsComplete} for any match. This tests the mechanism (a superset
-     * matches a smaller storeroom quest) without a live world, which the full method needs.
-     */
+    /** Completes onboarding quests whose recipe a room contains, as {@code roomRecipeCreated} does. */
     private static void applySupersetCompletion(
             TownQuests quests,
             ResourceLocation... matchedRecipeIds
@@ -917,7 +844,6 @@ class TutorialPhaseGateTest {
                 .anyMatch(Quest::isComplete);
     }
 
-    /** Adds a single quest to a fresh TownQuests via the onboarding-style Inputs flow. */
     private TownQuests questsWithQuest(MCQuest q) {
         TownQuests quests = newTownQuests();
         MCQuestBatch.Inputs inputs = new MCQuestBatch.Inputs(q.getBatchUUID(), null);
@@ -944,7 +870,6 @@ class TutorialPhaseGateTest {
     @Test
     void superset_randomSmallStoreroomQuest_notCompletedByHugeStoreroom() {
         MCQuest randomSmallQuest = MCQuest.standalone(null, null, SpecialQuests.STORE_ROOM_SMALL);
-        // not onboarding
         TownQuests quests = questsWithQuest(randomSmallQuest);
 
         applySupersetCompletion(quests,

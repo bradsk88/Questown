@@ -10,12 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Room display names (RoomRecipes.getName): a block room is registered as
- * "block_room/block.&lt;ns&gt;.&lt;block&gt;" (RoomBlock.getRoomId) and has no "room.*"
- * lang key, so its name must fall through to the block's own lang key instead of
- * rendering as a raw key in the quest UI / room-created chat broadcast.
- */
+/** A block room's name is its block's name, never a raw key. */
 class RoomRecipesNameTest {
 
     @Test

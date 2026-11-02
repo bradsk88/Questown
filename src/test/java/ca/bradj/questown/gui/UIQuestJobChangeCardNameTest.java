@@ -11,11 +11,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-17 playtest: the job-change card read "Villager job: simple_furnace_food" (and
- * "Villager job: sword" for the hunter) - the bare job id. Design principle "Nothing raw
- * reaches the player": the card names the profession via its jobs.<root> key.
- */
+/** A job-change card names the profession, never the raw job id. */
 public class UIQuestJobChangeCardNameTest {
 
     @Test

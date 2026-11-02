@@ -13,11 +13,8 @@ import net.minecraft.commands.arguments.UuidArgument;
 
 import java.util.UUID;
 
-// Dev-only: the skill a player unlocks on a villager's skills tab by spending a Block of
-// Progress. Thin wrapper over TownFlagBlockEntity.spendBopToUnlockSkill (which spends one of the
-// flag's deposited BOPs rather than the player's held one); this command only parses the args and
-// reports the result. The job is "root/job" (e.g. cook/fish); the villager's UUID is read from
-// `_qtdev inspect villagers`. No permission gate, so it runs from the console (FIFO).
+// Dev-only: unlock a skill on a villager with one of the flag's Blocks of Progress, as the skills
+// tab does. The job is "root/job".
 public class UnlockSkillCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> src) {

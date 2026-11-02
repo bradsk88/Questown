@@ -7,15 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import org.apache.logging.log4j.Logger;
 
-/**
- * Loader-neutral mod bootstrap.
- *
- * <p>The per-loader {@code @Mod} entry (see {@code loader.neo.QuestownMod}) installs the
- * {@link Loader} facade, registers the config specs, defines the registries, and wires the
- * setup/client events onto the active loader's buses. This class holds only the shared,
- * loader-independent pieces: the mod id, logging, default item props, and the neutral
- * {@code onCommonSetup}/{@code onClientSetup} bodies.
- */
+/** The mod's shared setup: its id, logging, and the setup steps each loader calls. */
 public class Questown {
     public static final String MODID = "questown";
 
@@ -35,7 +27,6 @@ public class Questown {
         return new ResourceLocation(Questown.MODID, String.format(id, args));
     }
 
-    // ---- Neutral bootstrap, driven by the per-loader @Mod entry -----------
 
     public static void registerConfigs() {
         Loader.registerConfig(Loader.ConfigType.SERVER, Config.SPEC, Config.FILENAME);

@@ -15,7 +15,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 
-/** Drives {@link NeedBubbleFocus} once per client tick, and draws the dead-door bubble. */
 @EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
 public final class NeedBubbleClientEvents {
 
@@ -25,13 +24,7 @@ public final class NeedBubbleClientEvents {
         ca.bradj.questown.mobs.helperchicken.ChickenArcHintFocus.tick(Minecraft.getInstance());
     }
 
-    /**
-     * Townie bubbles ride the entity renderer, but a dead door has no entity — its bubble is
-     * drawn here, once, for whichever door (if any) currently holds the focus. Same single
-     * bubble, same renderer, same 16-block gate. The "!" attention bubbles (flag with
-     * incomplete quests, job board with no work requests) draw through the same single
-     * focus — exactly one of a door or an attention target can hold it at a time.
-     */
+    /** The dead-door and "!" bubbles have no entity, so the one that holds the focus is drawn here. */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {

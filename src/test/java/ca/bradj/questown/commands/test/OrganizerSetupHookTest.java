@@ -12,15 +12,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit coverage for the seam the organizer setup hook (U2) depends on: fabricating a
+ * Unit coverage for the seam the organizer setup hook depends on: fabricating a
  * {@link StockRequestItem} whose {@code request} NBT names the distinctive ingredient, exactly as
  * {@code CreateStockRequestFromUIMessage} does in-game. The workspot/job-block NBT is stamped at
  * runtime by {@code TownContainers.setWorkSpot} (based on the chest the clipboard sits in), so it
- * is NOT the hook's responsibility and is verified end-to-end by the autotest scenario (U6).
- *
- * <p>The hook's chest placement and the zero-pre-existing-ingredient guard require a live
- * {@code ServerLevel} and are likewise covered by U6 — there is no JUnit-reachable interface for
- * them without simulating core town/container logic (per CLAUDE.md, not simulated here).
+ * is not the hook's responsibility; the organizer autotest covers it, and the hook's chest
+ * placement, end to end.
  */
 class OrganizerSetupHookTest {
 

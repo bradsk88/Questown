@@ -4,7 +4,6 @@ import ca.bradj.questown.loader.ConfigValue;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.jetbrains.annotations.Nullable;
 
-/** NeoForge impl of the neutral {@link ConfigValue}; wraps {@code ModConfigSpec.ConfigValue}. */
 public final class NeoConfigValue<T> implements ConfigValue<T> {
     private final ModConfigSpec.ConfigValue<T> value;
 

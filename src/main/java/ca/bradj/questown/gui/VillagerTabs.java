@@ -58,8 +58,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             boolean changeRootAttention
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
-        // The flag's click-through hides the inventory; a tab with no open fn would render lit
-        // beside the current pane (dev playtest 2026-10-29), so leave it out like the skills tab.
+        // Opened from the flag, the menu has no inventory tab.
         if (showInventoryTab) {
             b.add(new Tab(
                     (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CHEST.getDefaultInstance(), x + 10, y + 7),
@@ -80,14 +79,11 @@ public class VillagerTabs extends Tabs implements SubUI {
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    // 1.19.2 golden: blit(stack, x+13, y+11, z=0, u=0, v=0, 9, 9, 256, 256).
                     Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), x + 13, y + 11, 0, 0, 9, 9);
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
-        // Before the villager has skills to learn, the tab shows locked: dimmed, no-op, and its
-        // tooltip says why (dev playtest 2026-10-29). Not omitted, and not lit (the 10-14 lit-dead
-        // defect, gui/COMPLEX.md).
+        // Locked until the villager has skills to learn: dimmed, with a tooltip saying why.
         float skillsShade = showSkillsTab ? 1f : 0.35f;
         b.add(new Tab(
                 (rc, x, y) -> {
@@ -98,7 +94,6 @@ public class VillagerTabs extends Tabs implements SubUI {
                     stack.scale(15f / 30f, 15f / 30f, 1);
                     int adjustedX = (int) ((x + 11) / (15f / 30f));
                     int adjustedY = (int) ((y + 7) / (15f / 30f));
-                    // 1.19.2 golden: blit(stack, adjX, adjY, z=0, u=17, v=7, 30, 30, 256, 256).
                     Util.blitShaded(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30, skillsShade);
                     stack.popPose();
 
@@ -109,7 +104,6 @@ public class VillagerTabs extends Tabs implements SubUI {
                 showSkillsTab && skillScreenFn == null,
                 false
         ));
-        // Onboarding hides the change-job tab from non-gatherers (dev playtest 2026-10-29).
         if (showChangeRootTab) {
             b.add(new Tab(
                     (rc, x, y) -> {
@@ -121,7 +115,6 @@ public class VillagerTabs extends Tabs implements SubUI {
                     }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
             ));
         }
-        // No Quests tab on villagers (r17 #20, dev: "not useful"); the flag's Quests tab stays.
         if (showBopTab) {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
@@ -170,11 +163,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             }
             return null;
         };
-        // The skills-tab gate rides on the menu, not the tab list: pre-level (no unlockable
-        // jobs yet) the server keeps SKILLS out of enabledTabs via hideSkills, and forMenu
-        // simply disables it for every tabbed villager menu.
         Runnable skillFn = menu.showSkillsTab() ? factory.apply(OpenVillagerMenuMessage.SKILLS) : null;
-        // The flag's villagers click-through is the management view without the inventory tab.
         VillagerBopTab bop = VillagerBopTab.decide(!menu.showInventoryTab(), menu.showBlockOfProgressTab());
         Runnable bopFn = bop.opensFlagUi()
                 ? FlagTabs.makeOpenFn(FlagTabsEmbedding.FlagInfo.dumb(menu.getFlagPos(), true, false), OpenFlagMenuMessage.BOP)
@@ -196,40 +185,30 @@ public class VillagerTabs extends Tabs implements SubUI {
         );
     }
 
-    /**
-     * Client-side: the change-profession red dot per villager, from the last villager-menu
-     * payload (server-computed, TownQuests.wantsJobChangeFrom). Every tab click re-opens the
-     * menu, so the entry refreshes on each open; only the client renders tabs, so the flag
-     * rides the payload instead of each of the five menu constructors.
-     */
+    // Client side: each villager's change-job red dot, from the last menu it opened with.
     private static final Map<UUID, Boolean> CHANGE_ROOT_ATTENTION = new HashMap<>();
 
     static void recordChangeRootAttention(UUID villager, boolean attention) {
         CHANGE_ROOT_ATTENTION.put(villager, attention);
     }
 
-    /** Client-side, like {@link #CHANGE_ROOT_ATTENTION}: false while onboarding hides the tab. */
+    // Client side: false while onboarding hides the change-job tab.
     private static final Map<UUID, Boolean> SHOW_CHANGE_ROOT_TAB = new HashMap<>();
 
     static void recordShowChangeRootTab(UUID villager, boolean show) {
         SHOW_CHANGE_ROOT_TAB.put(villager, show);
     }
 
-    /**
-     * The skills pane's tabs: every tab but its own, so the skills tab renders lit ("you are here",
-     * dev playtest 2026-10-29: it showed no tab highlighted), minus inventory when management-only.
-     */
+    /** The skills pane's tabs: every tab but its own, without inventory when opened from the flag. */
     public static Collection<String> skillsPaneTabs(boolean showInventoryTab) {
         Collection<String> others = except(OpenVillagerMenuMessage.SKILLS);
         return showInventoryTab ? others : hideInventory(others);
     }
 
-    /** The tab list minus the skills tab (the level gate: no unlockable jobs, no tab). */
     public static Collection<String> hideSkills(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.SKILLS)).toList();
     }
 
-    /** The tab list minus the inventory tab (management-only flag click-through). */
     public static Collection<String> hideInventory(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.INVENTORY)).toList();
     }
@@ -247,11 +226,7 @@ public class VillagerTabs extends Tabs implements SubUI {
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
 
-    /**
-     * The tab a villager menu opens on when the player opens it (not a tab click): the change
-     * profession tab while it carries its red dot (playtest 2026-10-17 round 5), else the
-     * inventory, or the stats pane for the management view that has no inventory tab.
-     */
+    /** The tab a villager menu opens on: change-job while it has a red dot, else inventory, or stats when there is no inventory tab. */
     public static String initialTab(boolean changeRootAttention, boolean showInventoryTab) {
         if (changeRootAttention) {
             return OpenVillagerMenuMessage.CHANGE_ROOT;

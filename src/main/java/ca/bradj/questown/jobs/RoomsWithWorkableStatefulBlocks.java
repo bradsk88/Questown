@@ -88,8 +88,7 @@ public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependen
 
     @Override
     public String describe() {
-        // null-safe: a dependency node may be read before the state machine populated it
-        // (an unevaluated branch), in which case `value` is null and a bare value.value() NPEs.
+        // An unevaluated branch has no value yet.
         if (value == null) {
             return "RoomsContainWorkState=<not populated>";
         }

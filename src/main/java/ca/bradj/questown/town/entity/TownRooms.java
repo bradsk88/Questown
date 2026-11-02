@@ -121,12 +121,7 @@ public class TownRooms implements
             if (recipe.isPresent()) {
                 name = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
             }
-            // The matched-recipe case already announced via the recipe-listener
-            // path above (roomRecipeCreated -> "Built a X"), so only the
-            // unmatched case gets its own "Room created at ..." line here -
-            // otherwise one placement prints two announcements (2026-10-15
-            // playtest: Kitchen built at 03:32:21 broadcast both keys in the
-            // same ms).
+            // A matched room was already announced; only an unmatched one gets its own line.
             if (name.isEmpty()) {
                 entity.messages.roomCreated(null, doorPos);
             }

@@ -12,18 +12,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-/**
- * While a villager is not working, {@link StatusNeedLine} replaces the second status line with
- * "They need X to work." A first line that only made sense with its own second line then dangled:
- * 2026-10-23 r10, a swordless hunter read "Hunter can't find work. Check / They need Swords to
- * work." Every first line must be a sentence on its own, except working states (crafting steps),
- * whose second line is never replaced.
- */
+/** Every status's first line is a sentence on its own, since the second can be replaced, except working states. */
 class StatusFirstLineSentenceTest {
 
     private static final Path LANG = Path.of("src/main/resources/assets/questown/lang/en_us.json");
 
-    /** Working-state keys: StatusNeedLine leaves their second line alone. */
     private static final List<String> WORKING_PREFIXES = List.of(
             "tooltips.villagers.job.blacksmith.",
             "tooltips.villagers.job.crafter.",

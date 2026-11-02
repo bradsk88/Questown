@@ -5,11 +5,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.List;
 
-/**
- * The results the "jobs that make this item" screen shows for a job: only those matching the
- * clicked item (r17, dev 2026-10-25), or all of them when none match, so the row is never blank.
- * Pinned by {@code ProducedMatchesTest}.
- */
+/** A job's results that match the clicked item, or all of them when none match. */
 public final class ProducedMatches {
 
     private ProducedMatches() {

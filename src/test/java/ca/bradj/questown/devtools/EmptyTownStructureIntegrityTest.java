@@ -18,20 +18,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Resource-level invariants for the committed {@code empty_town.nbt}. These
- * run on every {@code ./gradlew test} so a regression in the structure file
- * itself fails CI, not just regressions in the editor logic that produced it.
- *
- * <p>The original chicken-arc bug landed because the editor wrote layout
- * offsets directly to structure-local instead of translating by the flag's
- * structure-local anchor. {@link
- * ChickenScaffoldingNbtEditorTest#applyScaffolding_translatesEveryLayoutOffsetByFlagAnchor}
- * locks the editor down. This test locks the resulting resource file down —
- * any future edit (manual NBT surgery, schema migration, structure block
- * round-trip) that breaks the campfire's position relative to the flag
- * fails here.
- */
+/** Checks the committed {@code empty_town.nbt} itself, including the campfire's place relative to the flag. */
 class EmptyTownStructureIntegrityTest {
 
     private static final Path STRUCTURE = Path.of(
@@ -46,9 +33,6 @@ class EmptyTownStructureIntegrityTest {
 
     @Test
     void emptyTownHasTerrainShaperLayersBaked() throws IOException {
-        // Locks the EmptyTownTerrainShaper output into the committed resource
-        // so manual NBT surgery / schema migrations can't silently regress
-        // the dirt floor, air ceiling, or grass cascade ring.
         CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
@@ -68,8 +52,7 @@ class EmptyTownStructureIntegrityTest {
         long airCount = countBlocksWithStateIn(blocks, airIdx);
         long grassBlockCount = countBlocksWithStateIn(blocks, grassBlockIdx);
 
-        // Lower bounds — exact counts depend on bbox size and cascade geometry,
-        // but anything well below these means a layer was lost.
+        // Lower bounds: well below these, a layer is missing.
         Assertions.assertTrue(dirtCount > 1000,
                 "expected >1000 dirt entries (floor + cascade body), found " + dirtCount);
         Assertions.assertTrue(airCount > 5000,

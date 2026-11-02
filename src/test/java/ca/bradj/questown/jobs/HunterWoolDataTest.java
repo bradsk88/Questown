@@ -16,14 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * r17 #9 (dev 2026-10-25): "it would be nice if the hunter could bring SOME [wool] back (maybe 1
- * every 5 trips, or whatever random chance would be equivalent) to unblock a scenario where wool or
- * steel (for shears) is scant." A short trip brings one item from one roll of its biome table, so
- * every hunter table gives white wool about a tenth of the roll. Before, forest, taiga and four
- * other biome tables had none. It was a fifth until the r19 playtest (dev 2026-10-25: "The rate of
- * wool is too high for the hunter. It should be about 50% lower.").
- */
+/** Every hunter table gives white wool about a tenth of the roll. */
 class HunterWoolDataTest {
 
     private static final Gson GSON = new Gson();

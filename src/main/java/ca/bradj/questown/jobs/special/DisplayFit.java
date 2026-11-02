@@ -7,11 +7,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Which slot of a display an item goes in (dev 2026-10-28: a villager puts armor on a stand, or a
- * weapon in a frame, as its own job). A stand's slots are {@link DisplaySlots#ARMOR_STAND_SLOTS}
- * (four); a frame has one.
- */
+/** Which slot of a display an item goes in: an armor stand has four, an item frame one. */
 public final class DisplayFit {
 
     public static final int NO_SLOT = -1;
@@ -19,7 +15,6 @@ public final class DisplayFit {
     private DisplayFit() {
     }
 
-    /** The empty slot the item fits, or {@link #NO_SLOT}. */
     public static int slotFor(
             List<ItemStack> slots,
             ItemStack item
@@ -44,7 +39,6 @@ public final class DisplayFit {
         return i;
     }
 
-    /** True when at least one of the items fits an empty slot. */
     public static boolean anyFits(
             List<ItemStack> slots,
             Collection<ItemStack> items
@@ -52,7 +46,6 @@ public final class DisplayFit {
         return items.stream().anyMatch(i -> slotFor(slots, i) != NO_SLOT);
     }
 
-    /** The kind a display's slot list says it is: an armor stand has four, a frame one. */
     public static boolean isArmorStand(List<ItemStack> slots) {
         return slots.size() == DisplaySlots.ARMOR_STAND_SLOTS.size();
     }

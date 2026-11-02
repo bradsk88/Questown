@@ -158,8 +158,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
             int xRef,
             int y
     ) {
-        // The strip returns the hovered job's name; without showing it the icons (often a
-        // job's tool, e.g. three boots) never said which jobs they are (2026-10-23 r10).
+        // Show the hovered job's name: the icons alone don't say which job they are.
         List<Component> hovered = RenderUtil.stripOfRequestableItems(
                 (ingr, coord) -> {
                     Ingredient ing = Ingredients.fromRL(ingr.getValue());

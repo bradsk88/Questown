@@ -13,13 +13,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-// The villager-menu wire used to make the client resolve the townie by raw id
-// and read the UUID + slot locks off that local entity. When the local entity
-// is gone the screen open NPEs and the client disconnects (see
-// .scratch/work-board-request/quests-menu-null-townie-client-crash.md). The
-// payload now carries UUID + slot locks so wire data stands alone, and the
-// local entity id is best-effort (listener attachment when the entity
-// happens to still be present).
+// The menu's network data stands alone; the entity id is only used when the entity is still there.
 class VillagerMenusPayloadTest {
 
     private static final UUID VILLAGER = UUID.fromString("0e5f0a3c-8a18-4f2e-9d41-1b6c0d12e5aa");

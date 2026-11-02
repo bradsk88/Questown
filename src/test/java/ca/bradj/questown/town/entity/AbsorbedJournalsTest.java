@@ -67,7 +67,7 @@ class AbsorbedJournalsTest {
 
     @Test
     void adoptingTheTownStateSnapshotsTowniesWhoWereNeverAbsorbed() {
-        // A flag that went dormant before snapshots existed, or without the recall ritual.
+        // A flag that went dormant without saving its villagers.
         CompoundTag flag = new CompoundTag();
         UUID cook = UUID.randomUUID();
         UUID farmer = UUID.randomUUID();
@@ -81,7 +81,6 @@ class AbsorbedJournalsTest {
 
     @Test
     void adoptedSnapshotsSurviveTheTownStateBeingRepublishedMidRespawn() {
-        // Each respawned townie re-publishes the town state with only the townies spawned so far.
         CompoundTag flag = new CompoundTag();
         UUID first = UUID.randomUUID();
         UUID second = UUID.randomUUID();
@@ -119,8 +118,7 @@ class AbsorbedJournalsTest {
 
     @Test
     void theAbsorbedListIsTheTowniesStillWaitingToRespawn() {
-        // Wake/cancel respawn exactly these; the list lives on the flag tag, so it survives a
-        // restart (an in-memory list was empty after one and a woken town respawned nobody).
+        // The list is saved on the flag, so it survives a restart.
         CompoundTag flag = new CompoundTag();
         UUID a = UUID.randomUUID();
         UUID b = UUID.randomUUID();

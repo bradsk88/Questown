@@ -533,8 +533,7 @@ public class TestExecutor {
         boolean containerPassed = checkContainerContentsIfNeeded(
                 beforeContainerContents, afterState, blueprint.expectation());
         // A warp-only scenario has no realtime check phase — the custom assertion and the
-        // villager-held gate must still run here or they are vacuous (2026-10-04:
-        // loot_on_extract_warp passed with the quest never closed). Mixed realtime+warp
+        // villager-held gate must still run here or they are vacuous. Mixed realtime+warp
         // scenarios run them in both — assertions must be read-only/idempotent.
         boolean customPassed = checkCustomAssertionIfNeeded();
         boolean heldPassed = checkVillagerHeldIfNeeded(afterState);

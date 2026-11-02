@@ -17,11 +17,7 @@ import java.util.List;
 
 public class Ingredients {
     private static com.google.gson.JsonElement toJson(Ingredient item) {
-        // 1.20.6's CODEC_NONEMPTY rejects an empty ingredient ("Item array cannot be
-        // empty"); 1.19.2's built-in Ingredient.toJson() produced {"items":[]}. Return
-        // that empty-items shape so isTag/getName/toString fall through the way the
-        // golden does (isTag -> false) instead of throwing and taking the whole
-        // skills-pane card render down (putRequestedItemFirst -> isTag).
+        // 1.20.6 can't encode an empty ingredient; write it as {"items":[]}.
         if (item.isEmpty()) {
             com.google.gson.JsonObject empty = new com.google.gson.JsonObject();
             empty.add("items", new com.google.gson.JsonArray());
@@ -46,10 +42,7 @@ public class Ingredients {
         return Compat.translatable("this");
     }
 
-    /**
-     * A tag's name when the lang file has none: its path, words capitalized
-     * ("minecraft:saplings" -> "Saplings"), never the raw id (dev playtest 2026-10-28).
-     */
+    /** A tag's name when the lang file has none: its path in words, never the raw id. */
     static String tagFallbackName(String tag) {
         String path = tag.substring(tag.indexOf(':') + 1);
         path = path.substring(path.lastIndexOf('/') + 1);
@@ -118,10 +111,7 @@ public class Ingredients {
         return j.getAsJsonObject().get("tag").getAsString();
     }
 
-    /**
-     * A rotating representative item for an ingredient (one per second, as the "needs" row cycles),
-     * or null when none matches. Used both by {@link #render} and the townie need bubble.
-     */
+    /** An item for the ingredient, changing once a second, or null if nothing matches. */
     public static @Nullable ItemStack representativeItemStack(Ingredient ing) {
         ItemStack[] matchingStacks = ing.getItems();
         if (matchingStacks.length == 0) {
@@ -164,12 +154,7 @@ public class Ingredients {
         return Ingredient.of(l);
     }
 
-    /**
-     * Resolve a ResourceLocation to an ingredient, item-first: a registered item id yields
-     * the item ingredient; anything else (a tag id, or an unknown id) yields a tag
-     * ingredient. A tag ingredient for an unregistered tag simply matches nothing, so a
-     * missing id fails safe instead of throwing.
-     */
+    /** The item with this id, or else the tag; an unknown id matches nothing. */
     public static Ingredient asIngredient(ResourceLocation value) {
         Item asItem = Loader.itemFromId(value);
         if (asItem != null) {

@@ -76,9 +76,7 @@ public class QuestBatches<
             BiPredicate<KEY, ITEM> questMatchesStack,
             Tracker<ITEM_KEY, ITEM, QUEST> tracker
     ) {
-        // Open ITEM quests only, and only an ITEM quest is completed: a finished ITEM quest for X
-        // plus X in stock used to close the next open quest wanting X whatever its type, so a
-        // LOOT ("make X") card closed on stock (2026-10-26, the Outfitter's Stone Sword).
+        // Only open ITEM quests complete here; items in stock never close a LOOT quest.
         List<QUEST> stacksToFind = getAll().stream()
                                            .filter(v -> v.getType() == Quest.QuestType.ITEM && !v.isComplete())
                                            .collect(Collectors.toCollection(ArrayList::new));
@@ -191,17 +189,12 @@ public class QuestBatches<
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 if (q.getType() != Quest.QuestType.UNKNOWN) {
-                    // The typed rebuild drops what the save carried beyond type/id/count: the
-                    // onboarding marker (village/day1 2026-10-17: the arrival gate opened after a
-                    // reload), flavor text, LOOT progress.
+                    // Restore what the rebuild doesn't: the onboarding flag, flavor text and LOOT progress.
                     e.newestQuest().carrySavedStateFrom(q);
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
-                    // Replay, not completion: the persisted quest was already rewarded on disk
-                    // (its reward is restored applied), so re-claiming through
-                    // markRecipeAsComplete would trip the once-guard on every load
-                    // (see QuestBatch.markRecipeAsCompleteForReplay).
+                    // The saved quest was already rewarded, so replay it rather than complete it again.
                     e.markRecipeAsCompleteForReplay(q.completedOn, q.getWantedId());
                     completedQuests.remove(iq);
                 }
@@ -277,13 +270,7 @@ public class QuestBatches<
             @Nullable ROOM room,
             KEY recipeId
     ) {
-        // The startup double-fill guard (96a74471) used to return whenever ANY quest for this
-        // recipe was already completed on this room. Room objects keep their identity across
-        // rescans, so a re-issued quest for the same recipe (visitor-batch re-issue after the
-        // batch completion reward) was bounced by the original completion forever and the
-        // chain stalled (kitchen_stocked wall, 2026-10-10). Skip only when nothing open remains
-        // for this recipe - that is the state the guard was actually protecting; when an open
-        // quest exists, complete it.
+        // A re-issued quest for the same recipe can still complete on the same room.
         boolean openForRecipe = batches.stream()
                 .anyMatch(b -> b.getAll().stream()
                         .anyMatch(v -> !v.isComplete() && recipeId.equals(v.getWantedId())));

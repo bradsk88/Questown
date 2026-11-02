@@ -13,12 +13,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
-/**
- * Tier 1 ({@link QTNativeRule}). Confirms that a held/town sapling can grow at the workspot:
- * a 3x3 air gap above, then the real plantability check via {@code canTreeGrowAt} — which runs
- * {@code TreeFeature.place} behind the {@code QTWorldAccess} seam (a {@code VoidLevel} dry run in
- * realtime, a {@code SnapshotWorldGenLevel} dry run in warp). No {@code asServerLevel()} here.
- */
+/** Checks that a sapling can grow at the work spot: room above it, then a dry run of the tree's growth. */
 public class CheckTreePlantable extends JobPhaseModifier implements QTNativeRule {
 
     @Override

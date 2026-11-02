@@ -5,18 +5,8 @@ import com.electronwill.nightconfig.core.Config;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-// Pure (Forge-free) encode/decode of the item-weights table.
-//
-// ForgeConfigSpec cannot round-trip a nightconfig Config value through TOML: a TOML load
-// yields a SimpleCommentedConfig while the default is a SimpleConfig, so every load is
-// flagged "not correct" and re-saved (rewrite, then the file watcher reloads it, forever).
-// Encoding the weights as a single string makes them round-trip cleanly.
-//
-// Format: "key=value;key=value;...". Keys (e.g. minecraft:crafting_table, #minecraft:beds)
-// never contain '=' or ';', so both are safe delimiters. Values are ints.
-//
-// Kept separate from RecipeItemConfig so this round-trip is unit-testable without a Forge
-// registry bootstrap.
+// The item-weights table as one "key=value;key=value" string. A map value does not survive a TOML
+// load and save, so the config would rewrite itself forever.
 public final class ItemWeightCodec {
     private ItemWeightCodec() {
     }
@@ -45,7 +35,7 @@ public final class ItemWeightCodec {
             try {
                 map.put(pair.substring(0, eq), Integer.parseInt(pair.substring(eq + 1).trim()));
             } catch (NumberFormatException ignored) {
-                // skip one malformed pair rather than dropping the whole set
+                // Skip a malformed pair, keep the rest.
             }
         }
         return map;

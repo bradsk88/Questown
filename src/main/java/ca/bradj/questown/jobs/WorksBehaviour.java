@@ -223,8 +223,7 @@ public class WorksBehaviour {
                         states,
                         world.resultGenerator()::generate,
                         special.specialStatusRules(),
-                        // Resolved per warp (the registry is loaded by then): the same value the
-                        // realtime grant pays.
+                        // The same XP the real-time path pays.
                         ServerJobsRegistry.getExperienceEarned(jobId, JobExperience.formula(
                                 special.containsGlobal(SpecialRules.NO_EXPERIENCE_GAINED),
                                 states.workRequired().values(),

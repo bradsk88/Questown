@@ -28,22 +28,21 @@ public interface QTWorldAccess {
     // Tree chopping — removes all connected blocks of the same type and returns drops
     List<ItemStack> chopTree(BlockPos trunkPos);
 
-    // Tree growth (real worldgen behind the seam). Both run TreeFeature.place; they differ
-    // only in the level adapter (VoidLevel / SnapshotWorldGenLevel) so realtime and warp match.
+    /** Whether a tree from {@code sapling} would grow at {@code pos}. Writes nothing. */
 
-    /** Plantability gate: would a tree from {@code sapling} generate at {@code pos}? (dry run, no writes) */
+    /** Whether a tree from {@code sapling} would grow at {@code pos}. Writes nothing. */
     boolean canTreeGrowAt(BlockPos pos, ItemStack sapling);
 
-    /** Generates the tree from {@code sapling} at {@code pos}, writing blocks. Returns whether it placed. */
+    /** Grows the tree from {@code sapling} at {@code pos}. Returns whether it grew. */
     boolean growTreeAt(BlockPos pos, ItemStack sapling);
 
-    /** A sapling planted during warp (or farm-seeded at warp start), awaiting growth. */
+    /** A sapling planted during a warp, waiting to grow. */
     record PlantedSapling(BlockPos pos, ItemStack sapling, long plantTick) {}
 
-    /** Saplings awaiting in-warp growth. Empty in realtime (vanilla grows saplings there). */
+    /** Saplings waiting to grow during a warp. Empty in real time. */
     Collection<PlantedSapling> getPlantedSaplings();
 
-    /** Drops a planted-sapling entry once {@code GrowTreesWarpRule} has grown (or skipped) it. */
+    /** Forgets a planted sapling once it has grown or been skipped. */
     void clearPlantedSapling(BlockPos pos);
 
     // Item use on block (planting, bone meal)
@@ -63,15 +62,12 @@ public interface QTWorldAccess {
     boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item);
     ItemStack extractFromSlot(BlockPos pos, int slot, int count);
     boolean insertIntoContainer(BlockPos pos, ItemStack item);
-    /**
-     * The slots of the display (armor stand: feet, legs, chest, head; item frame: one) standing at
-     * pos, or an empty list when there is none.
-     */
+    /** The slots of the display at pos (armor stand: feet, legs, chest, head; item frame: one), or empty. */
     List<ItemStack> getDisplaySlots(BlockPos pos);
-    /** Puts the item in that slot of the display at pos; false when there is no such display. */
+    /** Puts the item in that slot of the display at pos; false when there is none. */
     boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item);
 
-    /** Drops the item as an entity at pos (an item that has nowhere to go must not vanish). */
+    /** Drops the item at pos, so an item with nowhere to go isn't lost. */
     void dropItem(BlockPos pos, ItemStack item);
 
     // Sound

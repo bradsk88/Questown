@@ -25,10 +25,7 @@ public class FlagCommand {
         LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("place_above");
 
         // @formatter:off
-        // Both the default and skip-chicken branches mark the flag as chicken-ineligible.
-        // skip-chicken exists to surface the intent explicitly in the command line; v1
-        // functionally behaves the same, since only worldgen-placed flags satisfy the
-        // helper chicken's scaffolding assumptions (R13).
+        // A flag placed by command never gets the helper chicken.
         src.register(
             Commands.literal("qt").then(
                 subCmd

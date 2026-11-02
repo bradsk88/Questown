@@ -41,7 +41,7 @@ public record RemoveWorkFromUIMessage(
     ) {
         ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = (ServerPlayer) ctx.sender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
             Optional<TownFlagBlockEntity> flag = sender.level()
                                                        .getBlockEntity(

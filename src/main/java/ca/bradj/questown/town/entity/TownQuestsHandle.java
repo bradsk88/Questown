@@ -57,8 +57,7 @@ public class TownQuestsHandle implements QuestsHolder {
             ServerPlayer sender,
             boolean promptUser
     ) {
-        // Only procedurally generated batches are discardable (the quest card shows no x for the
-        // rest); refuse the others in case a stale client still sends the request.
+        // Only procedural batches can be discarded; refuse others from a stale client.
         boolean discardable = unsafeGetTown().quests.questBatches.getAllBatches().stream()
                 .filter(v -> batchID.equals(v.getBatchUUID()))
                 .anyMatch(v -> v.getAll().stream().anyMatch(MCQuest::isDiscardable));
@@ -313,8 +312,7 @@ public class TownQuestsHandle implements QuestsHolder {
             return;
         }
 
-        // The upgrade replacement must not repost what was just declined (dev ruling 2026-10-24:
-        // a hunter whose only room was a bedroom got the declined bedroom -> inn back).
+        // The replacement must not repost what was just declined.
         ImmutableSet<ResourceLocation> declinedFrom = b.getAll().stream()
                 .map(MCQuest::fromRecipeID)
                 .flatMap(Optional::stream)

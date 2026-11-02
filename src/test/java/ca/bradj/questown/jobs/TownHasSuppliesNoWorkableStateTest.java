@@ -17,17 +17,7 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * 2026-10-14 playtest: hunter's mat block sat at its terminal (extractable) state; the
- * hunter had lost its sword (it was deposited into the village chest on a drop-loot).
- * With no state at a workable block, {@code TownHasSupplies} collected NO relevant
- * tools/ingredients, so "town has supplies" was false even though the village chest
- * held a stone_sword — and the "get work supplies" branch of the status circuit was
- * dead. The hunter was soft-locked in NO_JOBSITE until the world was reset.
- *
- * <p>The requirement set must fall back to the full set when no state is currently
- * workable, so the town can still acquire the tool needed to resume the cycle.
- */
+/** With no workable state, the town still needs the full set of tools and ingredients, so it can resume. */
 class TownHasSuppliesNoWorkableStateTest {
 
     record FakeItem(String name) implements Item<FakeItem> {
@@ -118,7 +108,6 @@ class TownHasSuppliesNoWorkableStateTest {
         }
     }
 
-    /** No spot in any state is workable — mirrors the mat sitting at its terminal state. */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static RoomsWithWorkableStatefulBlocks<?> notWorkable(int state) {
         Rooms rooms = new Rooms(ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of());
@@ -229,9 +218,7 @@ class TownHasSuppliesNoWorkableStateTest {
 
     @Test
     void tool_still_counts_when_no_state_is_workable() {
-        // The mat sits at its terminal (extractable) state: no state has a workable block,
-        // but the town still needs the tool to resume the cycle — the sword in the chest
-        // must count.
+        // The mat is in its final state; the sword in the chest still counts.
         TownHasSupplies<FakeItem, FakeItem, ContainerTarget<ContainerTarget.Container<FakeItem>, FakeItem>> h =
                 hasSupplies(false);
         WithReason<Boolean> r = h.apply(() -> null);
@@ -240,9 +227,7 @@ class TownHasSuppliesNoWorkableStateTest {
 
     @Test
     void tool_does_not_count_when_the_town_has_no_job_block_at_all() {
-        // 2026-10-19 playtest: cook/fuel with every furnace already fuelled. No furnace passes the
-        // empty-fuel-slot precondition, so there is no cycle to resume and the coal in the chest must
-        // not make "town has supplies" true (the cook sat in COLLECTING_SUPPLIES instead of moving on).
+        // Every furnace fuelled: no cycle to resume, so the coal doesn't count.
         ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<?>> states =
                 ImmutableMap.of(0, notWorkable(0), 1, notWorkable(1));
         @SuppressWarnings("unchecked")
@@ -261,7 +246,6 @@ class TownHasSuppliesNoWorkableStateTest {
 
     @Test
     void nothing_needed_when_no_state_workable_and_no_tools_declared() {
-        // No tools, no ingredients, no workable state: the town genuinely has nothing to supply.
         ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<?>> states =
                 ImmutableMap.of(0, notWorkable(0), 1, notWorkable(1), 2, notWorkable(2));
         @SuppressWarnings("unchecked")

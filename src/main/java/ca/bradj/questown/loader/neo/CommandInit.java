@@ -55,7 +55,6 @@ public class CommandInit {
 
     @SubscribeEvent
     public static void on(RegisterCommandsEvent event) {
-        // Dev commands
         DevQuestAddItemCommand.register(event.getDispatcher());
         DevQuestDeserializeCommand.register(event.getDispatcher());
         DevFlagDebugToggleCommand.register(event.getDispatcher(), event.getBuildContext());
@@ -64,7 +63,6 @@ public class CommandInit {
         DevLootFireCommand.register(event.getDispatcher());
         DevWorkScoreCommand.register(event.getDispatcher());
 
-        // Player commands
         SetJobCommand.register(event.getDispatcher(), event.getBuildContext());
         TimeWarpCommand.register(event.getDispatcher());
         FreezeCommand.register(event.getDispatcher());

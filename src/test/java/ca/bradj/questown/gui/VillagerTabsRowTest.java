@@ -9,10 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Which tabs the villager menu row draws. A tab with no open function renders lit (the
- * "you are here" marker), so a tab the menu leaves out must be omitted, not drawn dead.
- */
+/** Which tabs the villager menu draws. A tab the menu leaves out is omitted, not drawn as lit. */
 class VillagerTabsRowTest {
 
     private static final Runnable OPEN = () -> {
@@ -25,7 +22,6 @@ class VillagerTabsRowTest {
     }
 
     private static List<String> titles(boolean showInventoryTab) {
-        // The stats pane is open (its fn is null); every other tab can be opened.
         Runnable inv = showInventoryTab ? OPEN : null;
         return VillagerTabs.build(inv, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, showInventoryTab, true, false)
                 .stream().map(Tab::titleKey).toList();
@@ -37,10 +33,6 @@ class VillagerTabsRowTest {
                 .stream().filter(Tab::selected).map(Tab::titleKey).toList();
     }
 
-    /**
-     * Dev playtest 2026-10-29: "the inventory tab is shown co-highlighted with the stats tab when
-     * opening villager Ui from flag". The flag's click-through hides the inventory tab.
-     */
     @Test
     void managementOnly_omitsTheInventoryTab() {
         assertEquals(List.of("tooltips.stats"), litTitles(false));
@@ -53,7 +45,6 @@ class VillagerTabsRowTest {
         assertEquals(List.of("tooltips.stats"), litTitles(true));
     }
 
-    /** Dev playtest 2026-10-29: onboarding hides the change-job tab from non-gatherers. */
     @Test
     void hiddenChangeRoot_omitsTheChangeJobTab() {
         List<String> titles = VillagerTabs.build(OPEN, OPEN, null, OPEN, OPEN, OPEN, OPEN, true, false, true, true, false, false)
@@ -62,7 +53,6 @@ class VillagerTabsRowTest {
         assertEquals(true, titles(true).contains("tooltips.change_root"));
     }
 
-    /** Dev playtest 2026-10-29: "show the skills TAB but not allow it to be opened until the villager is leveled". */
     @Test
     void noSkillsYet_showsALockedSkillsTab_notLit() {
         List<Tab> tabs = VillagerTabs.build(OPEN, OPEN, null, null, OPEN, OPEN, OPEN, true, false, false, true, true, false);
@@ -71,7 +61,6 @@ class VillagerTabsRowTest {
         assertEquals(false, skills.selected());
     }
 
-    /** Dev playtest 2026-10-29: "When viewing the skill tab, the tab itself should be highlighted". */
     @Test
     void skillsPane_leavesOutItsOwnTab() {
         assertEquals(false, VillagerTabs.skillsPaneTabs(true).contains(ca.bradj.questown.core.network.OpenVillagerMenuMessage.SKILLS));

@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
 public class TownFlagBOPItemHandler implements ItemHandler {
 
-    /** The flag holds at most this many Blocks of Progress; a full flag silently drops further ones. */
+    /** The most Blocks of Progress the flag holds; more are lost. */
     public static final int CAP = 64;
 
     private final TownFlagBlockEntity town;
@@ -29,7 +29,7 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             TownFlagBlockEntity flag,
             ServerPlayer recipient
     ) {
-        // FIFO: the player collects the oldest deposit first (see bopStacks on the entity).
+        // The oldest deposit comes out first.
         if (flag.bopStacks.isEmpty()) {
             return;
         }
@@ -75,11 +75,7 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             boolean simulate
     ) {
         if (itemStack.isEmpty()) {
-            // A consumed/empty stack is not a deposit. 1.20.6 copy() of an empty stack hands
-            // back the global ItemStack.EMPTY singleton, and setCount() on it does not reset
-            // the item reference, so storing it would poison the shared EMPTY and make the
-            // BE save throw "Cannot encode empty ItemStack" (1.19.2 never hit this; its
-            // save() tolerated empties).
+            // An empty stack is not a deposit.
             return itemStack;
         }
         if (!isItemValid(i, itemStack)) {
@@ -89,24 +85,18 @@ public class TownFlagBOPItemHandler implements ItemHandler {
             town.bopStacks.add(stored);
             town.syncBopFull();
             QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
-            // Two lines in one message (r17 #18, dev: "that message should be two lines"): the lang
-            // value carries the line break, since two broadcasts are paced 100 ticks apart.
+            // One message with a line break, since two would arrive 100 ticks apart.
             town.messages.broadcastMessage("messages.bop.earned");
         });
     }
 
-    /**
-     * Takes one item off {@code from} and hands {@code store} a 1-count snapshot of it (earned-by
-     * NBT included). Returns what is left of {@code from}.
-     */
+    /** Takes one item off {@code from} and stores a copy of it. Returns what is left of {@code from}. */
     static ItemStack depositOne(
             ItemStack from,
             boolean simulate,
             Consumer<ItemStack> store
     ) {
-        // Snapshot BEFORE shrinking: a villager carries one BOP, so shrink(1) empties the
-        // stack and copy() would hand back ItemStack.EMPTY (agent playtest 2026-10-22 r3:
-        // earned BOPs were stored as EMPTY, counted but never saved or collectable).
+        // Copy before shrinking, or the copy is empty.
         ItemStack stored = from.copyWithCount(1);
         if (simulate) {
             return from.copyWithCount(from.getCount() - 1);
@@ -151,6 +141,5 @@ public class TownFlagBOPItemHandler implements ItemHandler {
 
     @Override
     public void setChanged() {
-        // No-op: the flag owns the bopStacks list and marks itself changed on deposit/eject.
     }
 }

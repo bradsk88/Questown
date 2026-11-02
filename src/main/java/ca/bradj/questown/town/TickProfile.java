@@ -4,17 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * A dev-only rolling record of town-flag tick durations, in microseconds.
- *
- * <p>Exists because the pre-existing {@code TICK_SAMPLING_RATE} profiling reported only a
- * millisecond-resolution <em>average</em>, which cannot see a flag tick at all: the whole server
- * tick budget is 50ms, so a flag tick that costs 400us rounds to 0 and a rare 30ms spike is
- * averaged into invisibility. Stutter is a tail problem, so the tail is what this records.
- *
- * <p>Disabled by default and off the production path — {@link #enable()} is called only by the
- * autotest perf scenario.
- */
+/** Dev-only: recent flag-tick durations in microseconds, with the slow tail. Off unless a perf scenario or the profile command turns it on. */
 public final class TickProfile {
 
     public static final TickProfile INSTANCE = new TickProfile();
@@ -23,21 +13,14 @@ public final class TickProfile {
 
     private final List<Integer> micros = new ArrayList<>();
     private final java.util.Map<String, List<Integer>> phases = new java.util.LinkedHashMap<>();
-    /** Whole-server-tick samples (one per game tick), separate from the flag-tick {@link #micros}.
-     *  The flag tick is only one phase of the server tick, so a whole-server stall (a 2s
-     *  "Can't keep up") is invisible in the flag-tick bucket even when the flag tick itself is
-     *  0.6ms. This is the tail the flag bucket cannot see, measured on the ServerTickEvent
-     *  boundary by {@code ServerTickProfiler}. */
+    /** Whole-server-tick samples, kept apart from the flag-tick ones: a server stall can happen while the flag tick is fast. */
     private final List<Integer> serverMicros = new ArrayList<>();
     private boolean enabled = false;
 
     private TickProfile() {
     }
 
-    /**
-     * Times {@code body} into a named bucket so a run attributes cost to a phase rather than only
-     * reporting a total. Zero overhead when disabled beyond the boolean check.
-     */
+    /** Times {@code body} into a named bucket. */
     public void phase(String name, Runnable body) {
         if (!enabled) {
             body.run();
@@ -88,17 +71,7 @@ public final class TickProfile {
         return total;
     }
 
-    /**
-     * Attributes the worst whole-server-tick against the flag-tick, so a stall is not just
-     * "a 1195ms server tick exists" but "1195ms server-tick; the flag tick accounts for X,
-     * Yms is outside the flag tick." The flag tick is only one part of the server tick, so a
-     * big server-tick can happen while the flag tick is small; the remainder is the part to
-     * look for elsewhere (chunk save, GC, another block entity).
-     *
-     * <p>The flag-tick max is an upper bound on the sum of the phase maxes (the flag tick also
-     * includes untimed work: villagers, economics), so the remainder is a lower bound on what is
-     * outside the flag tick, not an exact measurement.
-     */
+    /** How much of the worst server tick the flag tick accounts for, and how much lies outside it. */
     public synchronized List<String> describeStallAttribution() {
         List<String> out = new ArrayList<>();
         if (serverMicros.isEmpty() || micros.isEmpty()) {
@@ -113,9 +86,6 @@ public final class TickProfile {
                 phaseMaxSum += maxOf(bucket);
             }
         }
-        // The remainder outside the flag tick: the server-tick is the flag-tick plus everything
-        // else. Use the flag-tick max (not the phase-max sum) because the flag tick includes
-        // untimed work, so phaseMaxSum would under-count the flag tick and over-state the gap.
         long outsideFlag = Math.max(0, serverMax - flagMax);
         out.add(String.format(
                 "  [stall] server-tick max = %dms | flag-tick max = %dms | "
@@ -170,8 +140,7 @@ public final class TickProfile {
         micros.add((int) (nanos / 1000));
     }
 
-    /** Records one whole-server-tick sample. Guarded by the same enable/MAX_SAMPLES gates as
-     *  {@link #record} so the production path pays one boolean check per server tick. */
+    /** Records one whole-server-tick sample. */
     public synchronized void recordServer(long nanos) {
         if (!enabled || serverMicros.size() >= MAX_SAMPLES) {
             return;
@@ -199,9 +168,7 @@ public final class TickProfile {
         );
     }
 
-    /** Snapshot of the whole-server-tick samples (one per game tick), as distinct from the
-     *  flag-tick {@link #snapshot}. A whole-server stall shows up here even when the flag tick
-     *  is fast, because the flag tick is only one phase of the server tick. */
+    /** The whole-server-tick samples. */
     public synchronized Snapshot snapshotServer() {
         if (serverMicros.isEmpty()) {
             return new Snapshot(0, 0, 0, 0, 0, 0);
@@ -227,7 +194,7 @@ public final class TickProfile {
         return sorted.get(Math.max(0, Math.min(sorted.size() - 1, idx)));
     }
 
-    /** All durations in microseconds. A 20 TPS server has a 50_000us budget per server tick. */
+    /** All in microseconds; a 20 TPS server has 50,000 per tick. */
     public record Snapshot(int count, double avgMicros, int p50Micros, int p95Micros, int p99Micros,
                            int maxMicros) {
         public String describe() {

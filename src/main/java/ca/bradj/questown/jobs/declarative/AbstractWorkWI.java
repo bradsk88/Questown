@@ -71,9 +71,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
             actionCompleted = true;
         }
-        // Only the write that advances into the next state starts that state's timer: a partial
-        // work write started it early, and the completing write then "clobbered" it (day1 run,
-        // 2026-10-17: hunter state 1 -> 2, "from 1990 to 2000").
+        // Only the write that moves into the next state starts its timer.
         TOWN result = !actionCompleted || nextStepTime <= 0
                 ? setJobBlockState(extra, bp, bs)
                 : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
@@ -83,12 +81,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         return result;
     }
 
-    /**
-     * Fires once per <em>completed</em> work action (workLeft exhausted → the block advances
-     * a processing state), on both the realtime and warp paths. This is the proficiency-leveling
-     * seam (ADR-0010): timer jobs and no-proficiency jobs never reach it. Implementations may
-     * return an updated {@code town}. Default: pass through.
-     */
+    /** Called once per completed work action, in real time and during a warp; where proficiency levels up. May return an updated {@code town}. */
     protected TOWN onWorkActionCompleted(
             EXTRA extra,
             TOWN town

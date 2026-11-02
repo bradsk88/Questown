@@ -81,17 +81,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             return gateOut;
         }
         if (SpecialQuests.JOB_BOARD.equals(recipeId)) {
-            // The board quest's wanted id is the room recipe questown:job_board, but a placed
-            // board registers as a synthetic block room under block_room/<board block id>
-            // (RoomBlock.getRoomId), which the fast path above can never equal. Without this
-            // branch, a board placed outside any door-registered room is invisible to the
-            // per-tick backfill (the fallback below only scans door-registered rooms) and the
-            // quest stalls ACTIVE forever - 2026-10-14 live playtest: the board was placed
-            // "near the flag", exactly as the quest text says. Maps the quest id to the
-            // board's registered block-room key, the way TOWN_GATE maps to the welcome mat.
-            // (The event path - roomRecipeCreated's top match - can also miss it: the board's
-            // meta room ties at equal cost between the real recipe and the synthetic
-            // block_room recipe, and the winner is stream order, not merit.)
+            // A placed job board registers as its own block room, so map the board quest to it.
             return getBlockMetaRooms(t, RoomBlock.getRoomId(
                     (RoomBlock) BlocksInit.JOB_BOARD_BLOCK.get()));
         }
@@ -124,9 +114,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         t.subBlocks.register(pos);
         MCRoom room = Spaces.metaRoomAround(pos, Config.META_ROOM_DIAMETER.get());
         Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
-        // No broadcast here: broadcastBlockRoomCreated below is the one player-facing
-        // "Created X" line (its match carries the placed block, not the meta-room's
-        // surroundings). The legacy double-broadcast is messages-print-twice.md.
+        // No chat line here; the block room announces itself.
         t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()), false);
         t.setChanged();
         broadcastBlockRoomCreated(blockId, pos, t);
@@ -264,12 +252,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return (beds / 2) >= numVillagers;
     }
 
-    /**
-     * The bed shortfall: how many more <em>complete</em> beds (2 blocks each) the town needs to
-     * reach {@code beds/2 >= numVillagers}. 0 when the town already has enough. The quest
-     * garden uses this to post enough bedroom quests to cover the shortfall (day-1 playtest:
-     * the town was under-bedded - it posted at most one bed quest per batch).
-     */
+    /** How many more whole beds the town needs for its villagers; 0 when there are enough. */
     int missingBeds(long numVillagers) {
         long completeBeds = bedBlockCount() / 2;
         return (int) Math.max(0L, numVillagers - completeBeds);
@@ -278,14 +261,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
         Collection<RoomRecipeMatch<MCRoom>> matches;
-        // 2026-10-06 flake fix: the TOWN_GATE match normally comes from the gate DOOR ROOM's
-        // recipe, captured by the room-detection pump at door registration. In ~half of seeded
-        // worlds the pump completed before the welcome mat was placed, so the door room never
-        // matches special_quest.town_gate and leavers stay in COLLECTING_SUPPLIES forever
-        // (their supplies scan - Containers.get via this method - has no candidate container).
-        // The welcome mat defines its own meta room (getWelcomeMatMetaRooms); when no room-map
-        // entry carries the TOWN_GATE recipe, add it so the mat's room (and the seeded mat chest
-        // inside it) is visible to the selector regardless of detection ordering.
+        // The welcome mat's own room counts for the town gate, even when no door room matched it.
         java.util.List<RoomRecipeMatch<MCRoom>> result = new java.util.ArrayList<>(roomsMap.getAllMatches(include));
         boolean hasGate = result.stream().anyMatch(m -> m.anyMatch(SpecialQuests.TOWN_GATE));
         if (!hasGate) {

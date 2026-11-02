@@ -8,16 +8,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Registry-free bake state machine for the bread oven: 1 wheat + 1 coal
- * &rarr; 1 bread over {@link #BAKE_TICKS} ticks, with the partial-progress
- * reset rule (a slot change interrupts the bake — mirroring the furnace).
- *
- * <p>Single source of truth shared by BOTH lanes so the warp can never
- * drift from real time: the realtime {@link BreadOvenBlockEntity} (whose
- * NBT-persisted slots it mutates) and the warp lane
- * ({@code WarpWorldAccess.advanceBreadOven}, which runs it against its
- * in-memory slot snapshot). The machine operates on the slot list it is
- * given and only owns the progress counter.
+ * The bread oven's baking: 1 wheat and 1 coal make 1 bread over {@link #BAKE_TICKS} ticks. Changing
+ * a slot restarts the bake. Used in real time and during a warp.
  */
 public final class BreadOvenBake {
 
@@ -44,17 +36,14 @@ public final class BreadOvenBake {
         items.set(index, stack);
     }
 
-    /** Ticks accumulated toward the in-flight bake (0 when idle). */
     public int progress() {
         return progress;
     }
 
-    /** NBT hydration hook: restore a persisted partial bake. */
     public void loadProgress(int progress) {
         this.progress = progress;
     }
 
-    /** True while this oven can still make progress on the next bake. */
     public boolean canBake() {
         ItemStack bread = getItem(SLOT_BREAD);
         boolean outputRoom = bread.isEmpty()
@@ -64,14 +53,9 @@ public final class BreadOvenBake {
                 && outputRoom;
     }
 
-    /**
-     * One bake step.
-     *
-     * @return true iff this tick completed a bake (slot contents changed)
-     */
+    /** @return true when this tick finished a bread */
     public boolean advanceOneTick() {
         if (!canBake()) {
-            // Bake interrupted (a slot changed) — the partial progress is not kept.
             progress = 0;
             return false;
         }
@@ -86,12 +70,7 @@ public final class BreadOvenBake {
         return false;
     }
 
-    /**
-     * Up to {@code ticks} bake steps (warp lane). Stops as soon as no
-     * further bake is possible.
-     *
-     * @return true iff at least one bake completed (slot contents changed)
-     */
+    /** Bakes for up to {@code ticks} ticks. @return true when at least one bread finished */
     public boolean advance(int ticks) {
         int capped = Math.min(ticks, MAX_ADVANCE_TICKS);
         boolean completed = false;

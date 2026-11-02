@@ -16,7 +16,7 @@ import java.util.Collection;
 public class TownBlockofProgressMenu extends AbstractContainerMenu implements FlagTabsEmbedding {
     private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.BOP);
     final int blocksOfProgressCount;
-    /** Root job ids of the deposited BOPs, in deposit order; "" for a plain BOP. */
+    /** The job that earned each deposited Block of Progress, in order; "" for none. */
     final ImmutableList<String> bopRootJobs;
     private FlagInfo flagInfo;
 

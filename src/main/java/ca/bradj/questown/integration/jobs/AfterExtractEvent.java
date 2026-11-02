@@ -16,16 +16,12 @@ public record AfterExtractEvent<CONTEXT>(
         BiFunction<CONTEXT, ImmutableMap<String, Integer>, CONTEXT> itemDataApplier,
         BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater,
         MoodApplier<CONTEXT> moodUpdater,
-        // The product just extracted (null when extraction produced no item). Lets a
-        // rule react to what was produced — e.g. scouting reads the gatherer map's biome.
+        // The item just extracted, or null when there was none.
         @Nullable MCHeldItem extractedItem,
-        // Registers a found-loot identity as town knowledge (carries biome + tool prefix).
+        // Records a found item as something the town knows.
         BiFunction<CONTEXT, MCHeldItem, CONTEXT> knowledgeUpdater
 ) {
-    /**
-     * Applies a mood effect to the working villager for {@code durationTicks},
-     * threading the town context (live handle in realtime, immutable state in warp).
-     */
+    /** Gives the working villager a mood effect for {@code durationTicks}. */
     @FunctionalInterface
     public interface MoodApplier<CONTEXT> {
         CONTEXT apply(CONTEXT ctx, ResourceLocation effect, long durationTicks);

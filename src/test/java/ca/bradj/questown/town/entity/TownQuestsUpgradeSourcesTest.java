@@ -12,15 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Which completed room quests an upgrade roll may build on ({@code TownQuests.upgradeSources}).
- * <p>
- * Dev ruling 2026-10-24: a discard never reposts the quest just declined. Discarding a batch
- * queues a replacement; half the time that is an upgrade for the same owner, and a hunter whose
- * only completed room was a bedroom got the bedroom -> inn upgrade straight back (village/growth
- * stalled at roster 3 on a reposted inn). The replacement now skips the rooms whose upgrade was
- * declined; with nothing left it falls back to a random batch.
- */
+/** Which completed room quests an upgrade can build on; a declined upgrade isn't posted again. */
 class TownQuestsUpgradeSourcesTest {
 
     private static final ResourceLocation BEDROOM = new ResourceLocation("questown", "bedroom");

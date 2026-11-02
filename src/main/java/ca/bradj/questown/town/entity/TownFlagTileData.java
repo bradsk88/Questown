@@ -34,7 +34,6 @@ public class TownFlagTileData {
     private static final String NBT_QUEST_BATCHES = String.format("%s_quest_batches", Questown.MODID);
     private static final String NBT_MORNING_REWARDS = String.format("%s_morning_rewards", Questown.MODID);
     private static final String NBT_WELCOME_MATS = String.format("%s_welcome_mats", Questown.MODID);
-    // Package-visible: flag relocation (TownRelocation) reads the rooms sub-tag to re-anchor fixtures.
     static final String NBT_ROOMS = String.format("%s_rooms", Questown.MODID);
     private static final String NBT_JOBS = String.format("%s_jobs", Questown.MODID);
     private static final String NBT_KNOWLEDGE = String.format("%s_knowledge", Questown.MODID);
@@ -56,8 +55,6 @@ public class TownFlagTileData {
     private static final String NBT_CHICKEN_STRUCTURE_ROTATION = QTNBT.keyify("chicken_structure_rotation");
     private static final String NBT_CHICKEN_ROTATION_DETECTED = QTNBT.keyify("chicken_rotation_detected");
     private static final String NBT_CHICKEN_SUNSET_CHEST_SPAWNED = QTNBT.keyify("chicken_sunset_chest_spawned");
-    // The board's "auto-request" toggle (F2). Default ON - the board reads alive on a fresh
-    // town; the player can silence auto-posting from the board menu.
     private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
     private static final String NBT_VILLAGERS_TAB_SEEN = QTNBT.keyify("villagers_tab_seen");
     private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
@@ -106,7 +103,7 @@ public class TownFlagTileData {
     private static InitPair initBoardAutoRequest() {
         return new InitPair(
                 (tag, flag) -> {
-                    // Old flags without the tag keep the default (auto-request ON).
+                    // Older flags keep the default.
                     flag.boardAutoRequest = tag.contains("value") && tag.getBoolean("value");
                     return true;
                 },
@@ -358,9 +355,7 @@ public class TownFlagTileData {
             TownVillagerHandle villagerHandle = t.initializer().getVillagers();
             villagerHandle.associate(t);
             villagerHandle.addHungryListener(e -> {
-                // Only jobs that opt in (CAN_INSTANTLY_SWITCH_TO_EATING) get the direct
-                // dining switch. A working townie instead ends its job and re-enters the
-                // work board, where its carried work output is deposited before it eats.
+                // Only jobs that opt in switch straight to eating; others finish and store their output first.
                 if (!e.canInstantlySwitchToEating()) {
                     return;
                 }

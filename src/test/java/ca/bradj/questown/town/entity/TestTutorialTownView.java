@@ -10,8 +10,7 @@ import java.util.List;
 
 class TestTutorialTownView implements TutorialTownView {
 
-    // Arrival provisioning reads the live town's beds and rewards; the planner is pinned by
-    // ArrivalProvisionsTest, so tutorial-flow tests leave batches as built.
+    // Tutorial tests leave batches as built; ArrivalProvisionsTest covers the provisioning.
     @Override
     public void provisionArrival(
             ca.bradj.questown.town.quests.MCReward reward,

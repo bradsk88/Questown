@@ -11,14 +11,7 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
-// Dev-only: build a room around a door by block position, the way the helper chicken does in its
-// room-build beat, but driven from the console (FIFO). A room quest needs its own room, and the
-// only hand that lays a room is the chicken's beat, which a held run with no live player cannot
-// trigger; this is the agent's standing-in for that beat. It delegates the whole action to the flag
-// (TownFlagBlockEntity.buildRoom), which registers the door and lays the same shell the chicken's
-// build goal lays (ChickenRoomShellPlan), so the agent does not hand-roll a plus-shaped room that
-// RoomRecipes' wall walk rejects. No permission gate, so it runs from the console. Registered exactly
-// like FlagPlaceBoardCommand (same _qtdev parent, same BlockPos arg).
+// Dev-only: build a room around a door, as the helper chicken does.
 public class FlagBuildRoomCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(
@@ -47,8 +40,7 @@ public class FlagBuildRoomCommand {
             return 1;
         }
         flag.buildRoom(pos);
-        // buildRoom may have backed off (it refuses a footprint that can not close); the detail
-        // is in its log line, so do not assert success here.
+        // The build can refuse a footprint; its log line says why.
         return 0;
     }
 

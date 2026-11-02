@@ -91,7 +91,6 @@ class AbstractWorkWITest {
 
     }
 
-    /** Records timer writes instead of refusing them. */
     private static class TimerRecordingWorkWI extends TestWorkWI {
         final java.util.List<String> timerWrites = new ArrayList<>();
 
@@ -110,8 +109,7 @@ class AbstractWorkWITest {
         }
     }
 
-    // 2026-10-17 day1 "Clobbered time … from 1990 to 2000": the hunter's partial work write at
-    // state 1 started state 2's timer, and the completing write ten ticks later restarted it.
+    // A partial write at state 1 doesn't start state 2's timer.
     @Test
     void tryWork_partialWork_doesNotStartTheNextStatesTimer() {
         TimerRecordingWorkWI wi = new TimerRecordingWorkWI(

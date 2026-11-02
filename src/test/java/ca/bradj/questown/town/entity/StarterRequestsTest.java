@@ -11,14 +11,11 @@ class StarterRequestsTest {
 
     private static final Set<String> FOOD = Set.of("cooked_mutton", "cooked_beef", "bread");
 
-    /** "#food" covers any item in FOOD; nothing else covers anything. */
     private static final BiPredicate<String, String> COVERS =
             (a, b) -> a.equals("#food") && FOOD.contains(b);
 
     @Test
     void onboardingCook_postsTheFoodTagAndNotTheMuttonItCovers() {
-        // cook/extract and cook/fuel declare #villager_food; the starter recipe cook/mutton
-        // declares cooked_mutton (findings r10 #11).
         List<String> declared = List.of("#food", "#food", "cooked_mutton");
 
         Assertions.assertEquals(List.of("#food"), StarterRequests.toPost(declared, COVERS));
@@ -48,7 +45,6 @@ class StarterRequestsTest {
         Assertions.assertEquals(List.of("cooked_beef", "bread"), StarterRequests.toPost(declared, COVERS));
     }
 
-    /** Dev playtest 2026-10-30: cooked_porkchop was auto-posted under an existing #questown:villager_food. */
     @Test
     void aRequestTheBoardAlreadyCovers_isNotPosted() {
         List<String> declared = List.of("#food", "cooked_mutton");

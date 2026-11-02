@@ -10,11 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/**
- * Grants Blocks of Progress straight to the flag's BOP store - the small, concrete
- * reward the onboarding quest batches hand out (e.g. the day-2 "first work request"
- * quest). Mirrors the tutorial's BOP grant (TownFlagTutorialAdapter.grantBop).
- */
+/** Gives Blocks of Progress to the flag. */
 public class GrantBlockOfProgressReward extends MCReward {
 
     public static final String ID = "grant_block_of_progress";
@@ -41,7 +37,6 @@ public class GrantBlockOfProgressReward extends MCReward {
         this(RewardsInit.GRANT_BOP.get(), entity, amount);
     }
 
-    /** Deserialization entry: amount is restored from NBT via {@link #deserializeNbt}. */
     public static GrantBlockOfProgressReward emptyForDeserializing(
             RewardType<? extends MCReward> rewardType,
             TownInterface townInterface

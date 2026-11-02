@@ -8,13 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/**
- * Posts the day-one "basics" quest batch (job board + store room) to the
- * quests UI. Applied when the welcome-mat gate quest completes
- * (.scratch/mat-gated-arrival, decision 3): the mat's completion hands the
- * player the initial-room quests that fill the evening until the first
- * villager arrives in the morning.
- */
+/** Posts the basics batch (job board and storeroom). */
 public class AddBasicsBatchReward extends MCReward {
 
     public static final String ID = "add_basics_batch";

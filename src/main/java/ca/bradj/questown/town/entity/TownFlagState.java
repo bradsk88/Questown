@@ -178,8 +178,7 @@ public class TownFlagState {
             return storedState;
         }
 
-        // Two timelines (ADR-0006): villager labour runs on the productive budget (stops at
-        // night); passive world processes (crop/furnace/tree warp rules) run on the wall-clock budget.
+        // Villagers work on the working budget; world processes run on the full clock.
         long wallClockTicks = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
         long productiveTicks = Signals.calculateProductiveTicks(dayTime, wallClockTicks);
         Signals.ProductiveWallClockTimeline timeline =
@@ -194,7 +193,7 @@ public class TownFlagState {
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
-        // Collect real room block positions for warp rules (walls too: JobBlockScan, r17)
+        // Room block positions for the warp rules, walls included.
         ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
         for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
             room.getSpaces().stream()
@@ -216,7 +215,7 @@ public class TownFlagState {
 
         MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
                 (town, tick, delta) -> {
-                    // Plantings during the upcoming villager steps record this tick as their plantTick.
+                    // Saplings planted in the coming steps record this tick.
                     warpWorld.setCurrentWarpTick(tick);
                     return WarpTickHook.run(
                             rules,
@@ -362,13 +361,7 @@ public class TownFlagState {
         };
     }
 
-    /**
-     * Grants the XP the warp recorded (per townie, {@code MCTownState.recordExperience}) once, after
-     * the townies are back, then consumes it. One {@code addExperience} call per townie, so a warp
-     * levels a townie at most once: {@code addExperience} keeps only the remainder past one level,
-     * and adds nothing while the townie holds an unspent Block of Progress (dev 2026-10-24: warp
-     * paid no XP before).
-     */
+    /** Grants the XP the warp recorded, once, after the villagers are back. One grant per villager, so a warp levels a villager at most once. */
     private static void grantWarpExperience(TownFlagBlockEntity e, MCTownState state) {
         Map<UUID, Integer> earned = state.recordedExperience();
         if (earned.isEmpty()) {
@@ -406,8 +399,7 @@ public class TownFlagState {
                 );
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
-                // Restore persisted proficiencies over any seed the register() call may have applied
-                // (loaded/relocated townies keep theirs — ADR-0010).
+                // Saved proficiencies win over the ones a register may have rolled.
                 if (!v.getProficiencies().isEmpty()) {
                     e.getVillagerHandle().setProficiencies(v.uuid, v.getProficiencies());
                 }
@@ -438,10 +430,7 @@ public class TownFlagState {
         long start = System.currentTimeMillis();
         long gt = level.getDayTime();
         if (!flagTag.contains(NBT_TIME_WARP_REFERENCE_TICK)) {
-            // First tick of a freshly placed flag: seed the reference tick. Treating the whole
-            // world age as a "genuine absence" would fire a catch-up warp against the expected
-            // missing town state and log a false "NBT had no town state" bug
-            // (2026-10-15 playtest, ERROR on flag placement).
+            // A new flag's first tick: start the clock here, rather than warping through the whole world age.
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
             this.initialized = true;
             this.lastTickWallMs = System.currentTimeMillis();
@@ -457,10 +446,7 @@ public class TownFlagState {
         this.initialized = true;
 
         long nowMs = System.currentTimeMillis();
-        // The flag ticks every game tick while a player is in radius, so a
-        // game-time jump detected on a tick that follows the previous one by
-        // moments of wall time means the town was awake: the jump is a sleep
-        // or a /time set, not a player absence, and must not produce.
+        // The flag was ticking a moment ago, so the town was awake: a time jump is a sleep or /time set, not an absence.
         boolean townAwake = lastTickWallMs != 0 && (nowMs - lastTickWallMs) < 5000;
         this.lastTickWallMs = nowMs;
 
@@ -468,8 +454,7 @@ public class TownFlagState {
             if (townAwake) {
                 flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
             } else {
-                // Genuine absence (the flag was not ticking): catch up, but
-                // only for the daytime portion - villagers sleep at night.
+                // A real absence: catch up the daytime only; villagers sleep at night.
                 long warpTicks = daytimeTicks(lastTick, gt);
                 if (warpTicks > 10) {
                     warp(e, flagTag, level, warpTicks, timeSinceWake);
@@ -498,23 +483,7 @@ public class TownFlagState {
         return changes;
     }
 
-    /**
-     * The town-wide container scan walks every recipe-matched room's contained blocks (twice — once
-     * for chests, once for block entities) and hashes each container's contents. Measured at 187us
-     * per call in a 16-room town and scaling roughly linearly with room count, it was previously
-     * paid on <em>every</em> game tick, above the flag-tick throttle — 44% of all tick time, and the
-     * one cost that grows as the player builds.
-     *
-     * <p>Skipping a scan only delays change <em>detection</em>: {@link #checkForContainerChanges}
-     * diffs against {@code listenedBlocks}, so a change made during a skipped tick is still caught
-     * by the next scan. The visible effect is that item quests and economics update up to
-     * {@code ContainerScanInterval} ticks later.
-     */
-    /**
-     * The morning pass (pending BOP job changes, morning rewards, arrivals) only runs from the
-     * ticker's MORNING detection, which a non-ticking flag never sees. After the catch-up warp
-     * (so it acts on the recovered villagers), run the one morning the absence skipped.
-     */
+    /** Runs the one morning a flag that wasn't ticking missed, after the catch-up warp. */
     private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now, long gameTime) {
         if (!ca.bradj.questown.town.MissedMorning.missedDuringAbsence(lastTick, now)) {
             return;
@@ -542,11 +511,8 @@ public class TownFlagState {
     }
 
     /**
-     * @param warpTicks the ticks of work to simulate (the natural-warp path
-     *                  passes only the daytime portion of the elapsed
-     *                  interval; the explicit dev warp passes the full amount)
-     * @param elapsedTicks the real elapsed ticks, used for the "while you
-     *                     were away" summary's day count
+     * @param warpTicks    the ticks of work to simulate
+     * @param elapsedTicks the real time passed, for the "while you were away" summary
      */
     MCTownState warp(
             TownFlagBlockEntity e,
@@ -564,13 +530,7 @@ public class TownFlagState {
         try {
             newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
-                // Warp-path LOOT parity: apply the non-empty extractions the warper
-                // recorded on the snapshot (same outcome as
-                // RealtimeWorldInteraction.onLootExtracted), then consume them so
-                // they are applied exactly once and never stored.
-                // Flip the hunter loot-guarantee once-bit if a raw-food extraction
-                // just closed the raw-food LOOT (ADR-0014's hunter equivalent).
-                // Capture the pre-settle state, then check if the settle closed it.
+                // Apply the LOOT extractions the warp recorded, once. If one closed the raw-food quest, mark the hunter guarantee used.
                 boolean rawLootActiveBefore = FirstHunterLootGuarantee.rawFoodLootQuestActive(e)
                         && !e.isFirstHunterLootGuaranteeFired();
                 boolean anyRawFoodExtract = newState.recordedLootExtractions().stream()
@@ -715,9 +675,7 @@ public class TownFlagState {
         }
     }
 
-    /** Ticks in {@code [from, to)} whose time-of-day falls in the working
-     * day {@code [0, 12000)}. Night ticks are excluded because villagers
-     * sleep then; a warp may only produce for daylight ticks. */
+    /** Ticks in {@code [from, to)} that fall in the working day, {@code [0, 12000)}. */
     static long daytimeTicks(long from, long to) {
         if (to <= from) {
             return 0;
