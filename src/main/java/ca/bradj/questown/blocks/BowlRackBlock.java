@@ -6,7 +6,9 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -23,11 +25,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -36,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlock {
+    public static final MapCodec<BowlRackBlock> CODEC = MapCodec.unit(BowlRackBlock::new);
+
     public static final String ITEM_ID = "bowl_rack";
 
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
@@ -48,10 +50,10 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
     public BowlRackBlock(
     ) {
         super(
-                Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noOcclusion()
+                        .noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
@@ -128,16 +130,14 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, p_60507_, p_60508_);
+        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
@@ -169,5 +169,20 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
             BlockState blockState
     ) {
         return new BowlRackBlockEntity(blockPos, blockState);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

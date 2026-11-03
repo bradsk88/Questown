@@ -5,6 +5,7 @@ import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
@@ -22,11 +23,9 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -45,10 +44,10 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
     public SmallSoupPotBlock(
     ) {
         super(
-                Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noOcclusion()
+                        .noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
@@ -90,20 +89,18 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
         // TODO: Implement?
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
             BlockPos blockPos,
             Player player,
-            InteractionHand hand,
             BlockHitResult p_60508_
     ) {
         if (level.isClientSide()) {
             return InteractionResult.CONSUME;
         }
 
-        return tryTakeSoup(level, blockPos, LEVEL, 1, player, hand);
+        return tryTakeSoup(level, blockPos, LEVEL, 1, player, net.minecraft.world.InteractionHand.MAIN_HAND);
     }
 
     public static InteractionResult tryTakeSoup(
@@ -147,5 +144,20 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
             State bs
     ) {
         Util.setProcessingStateOnProperty(sl, LEVEL, bs, pp);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

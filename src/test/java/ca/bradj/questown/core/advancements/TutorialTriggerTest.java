@@ -1,7 +1,6 @@
 package ca.bradj.questown.core.advancements;
 
 import com.google.gson.JsonPrimitive;
-import net.minecraft.advancements.critereon.EntityPredicate;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,14 +45,14 @@ class TutorialTriggerTest {
     @Test
     void instanceRejectsInvalidContext() {
         assertThrows(IllegalArgumentException.class, () ->
-                new TutorialTrigger.Instance(EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.Invalid)
+                new TutorialTrigger.Instance(net.minecraft.advancements.critereon.EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.Invalid)
         );
     }
 
     @Test
     void instanceMatchesCorrectTrigger() {
         TutorialTrigger.Instance instance = new TutorialTrigger.Instance(
-                EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
+                net.minecraft.advancements.critereon.EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
         );
         assertTrue(instance.matches(TutorialTrigger.Triggers.TutorialComplete));
     }
@@ -61,7 +60,7 @@ class TutorialTriggerTest {
     @Test
     void instanceDoesNotMatchDifferentTrigger() {
         TutorialTrigger.Instance instance = new TutorialTrigger.Instance(
-                EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
+                net.minecraft.advancements.critereon.EntityPredicate.Composite.ANY, TutorialTrigger.Triggers.TutorialComplete
         );
         assertFalse(instance.matches(TutorialTrigger.Triggers.SecondJobType));
     }

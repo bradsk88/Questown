@@ -6,8 +6,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -18,7 +16,7 @@ public class BlockOfProgress extends Block {
 
     public BlockOfProgress(
     ) {
-        super(Properties.of(Material.GLASS, MaterialColor.SNOW).strength(1.0F, 10.0F).noOcclusion());
+        super(Compat.P.of().mapColor(MapC.SNOW).strength(1.0F, 10.0F).noOcclusion().impl());
     }
 
     @Override

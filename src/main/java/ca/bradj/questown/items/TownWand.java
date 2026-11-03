@@ -114,9 +114,9 @@ public class TownWand extends Item {
             List<Component> p_41423_,
             TooltipFlag p_41424_
     ) {
-        super.appendHoverText(item, level, p_41423_, p_41424_);
+        super.appendHoverText(item, ctx, p_41423_, p_41424_);
         BlockPos parent = TownFlagBlock.GetParentPosFromNBT(item);
-        Style color = Style.EMPTY.withColor(TextColor.parseColor("GRAY"));
+        Style color = Style.EMPTY.withColor(net.minecraft.ChatFormatting.GRAY);
 
         if (parent == null) {
             String key = "tooltips.items.wand.inactive";

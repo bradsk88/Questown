@@ -23,11 +23,8 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.ToolAction;
-import net.minecraftforge.common.ToolActions;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -222,8 +219,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (be == null) {
             return null;
         }
-        LazyOptional<IItemHandler> cap = be.getCapability(ForgeCapabilities.ITEM_HANDLER);
-        return cap.resolve().orElse(null);
+        return Loader.handlerOf(be).orElse(null);
     }
 
     @Override
@@ -233,7 +229,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public int getContainerSlotCount(BlockPos pos) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler != null) {
             return handler.getSlots();
         }
@@ -246,7 +242,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public ItemStack getContainerSlot(BlockPos pos, int slot) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler != null) {
             return handler.getStackInSlot(slot);
         }

@@ -4,11 +4,10 @@ import ca.bradj.questown.blocks.entity.ItemAccepting;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncBlockItemMessage(
         BlockPos pos,
@@ -36,14 +35,13 @@ public record SyncBlockItemMessage(
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             if (Minecraft.getInstance().level.getBlockEntity(pos()) instanceof ItemAccepting be) {
                 be.setItem(index, MCTownItem.fromMCItemStack(item));
             }
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

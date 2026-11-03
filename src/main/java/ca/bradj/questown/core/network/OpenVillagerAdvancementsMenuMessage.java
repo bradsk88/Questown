@@ -3,13 +3,12 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Collection;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public final class OpenVillagerAdvancementsMenuMessage {
     private final BlockPos flagPos;
@@ -61,7 +60,7 @@ public final class OpenVillagerAdvancementsMenuMessage {
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(
                 ctx,

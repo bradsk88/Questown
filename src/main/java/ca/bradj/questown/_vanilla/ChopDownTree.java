@@ -4,6 +4,7 @@ import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.integration.jobs.BeforeExtractEvent;
 import ca.bradj.questown.integration.jobs.BeforeTickEvent;
 import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.jobs.QTNativeRule;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;

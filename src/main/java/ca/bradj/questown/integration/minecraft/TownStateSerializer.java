@@ -16,7 +16,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
@@ -165,8 +164,7 @@ public class TownStateSerializer {
             ListTag items = ccTag.getList("items", Tag.TAG_COMPOUND);
             for (Tag item : items) {
                 CompoundTag icTag = (CompoundTag) item;
-                ItemStack stack = ItemStack.of(icTag.getCompound("item"));
-                cItems.add(MCTownItem.fromMCItemStack(stack));
+                cItems.add(MCTownItem.of(icTag));
             }
 
             int x = ccTag.getInt("x");

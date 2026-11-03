@@ -1,13 +1,10 @@
 package ca.bradj.questown.core.init;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.gui.*;
-import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.inventory.MenuType;
-import net.minecraftforge.common.extensions.IForgeMenuType;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
 
 public class MenuTypesInit {
 

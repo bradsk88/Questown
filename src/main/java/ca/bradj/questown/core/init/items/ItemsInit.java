@@ -1,5 +1,9 @@
 package ca.bradj.questown.core.init.items;
 
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.HolderRegistry;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;

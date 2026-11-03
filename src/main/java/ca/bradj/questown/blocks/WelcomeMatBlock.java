@@ -1,5 +1,8 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -15,12 +18,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
@@ -31,16 +31,18 @@ import java.util.List;
 import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 
 public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
+    public static final MapCodec<WelcomeMatBlock> CODEC = MapCodec.unit(WelcomeMatBlock::new);
+
     public static final String ITEM_ID = "welcome_mat_block";
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 1.0D, 16.0D);
 
     public WelcomeMatBlock(
     ) {
         super(
-                BlockBehaviour.Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.COLOR_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noCollission(),
+                        .noCollission().impl(),
                 Entity::new,
                 Entity::tick
         );

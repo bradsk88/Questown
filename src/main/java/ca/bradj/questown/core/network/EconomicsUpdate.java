@@ -5,14 +5,12 @@ import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.gui.TownEconomicsScreen;
 import ca.bradj.questown.gui.VillagerEconomicsScreen;
 import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.loader.Channel;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 public record EconomicsUpdate(
         ImmutableList<ItemEconomicsData> data
@@ -36,16 +34,12 @@ public record EconomicsUpdate(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                Dist.CLIENT,
-                () -> () -> {
-                    VillagerEconomicsScreen.lastUpdate = this;
-                    TownEconomicsScreen.lastUpdate = this;
-                }
-        )).exceptionally(EconomicsUpdate::logError);
-        ctx.get().setPacketHandled(true);
+        ctx.enqueueWork(() -> Loader.runClient(() -> {
+            VillagerEconomicsScreen.lastUpdate = this;
+            TownEconomicsScreen.lastUpdate = this;
+        })).exceptionally(EconomicsUpdate::logError);
 
     }
 

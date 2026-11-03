@@ -1,6 +1,5 @@
 package ca.bradj.questown.items;
 
-import ca.bradj.questown.logic.TownCycle;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;

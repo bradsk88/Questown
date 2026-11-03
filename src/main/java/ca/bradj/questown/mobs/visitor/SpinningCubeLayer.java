@@ -39,7 +39,6 @@ public class SpinningCubeLayer<T extends LivingEntity, M extends EntityModel<T>>
         if (!(entity instanceof VisitorMobEntity vme)) {
             return;
         }
-
         if (!vme.hasBlockOfProgress()) {
             return;
         }

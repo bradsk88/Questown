@@ -3,10 +3,9 @@ package ca.bradj.questown.core.network;
 import ca.bradj.questown.gui.ClientAccess;
 import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record SyncWorkForCommandsMessage(
         ImmutableList<JobID> jobs
@@ -26,7 +25,7 @@ public record SyncWorkForCommandsMessage(
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }
