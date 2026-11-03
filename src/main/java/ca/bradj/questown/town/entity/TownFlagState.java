@@ -351,6 +351,10 @@ public class TownFlagState {
                 );
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
+                // Saved proficiencies win over the ones a register may have rolled.
+                if (!v.getProficiencies().isEmpty()) {
+                    e.getVillagerHandle().setProficiencies(v.uuid, v.getProficiencies());
+                }
             }
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
         }

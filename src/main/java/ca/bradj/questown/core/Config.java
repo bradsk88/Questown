@@ -16,89 +16,11 @@ public class Config {
 
     public static final String FILENAME = "questown-server.toml";
 
-    public static final ForgeConfigSpec.ConfigValue<Integer> DOOR_SEARCH_RADIUS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> TOWN_TICK_RADIUS;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> CAMPFIRE_SEARCH_RADIUS;
-
-    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_QUEST_BATCH_GENERATION;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> IDEAL_QUEST_THRESHOLD_TICKS;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_GENERATION_MAX_TICKS;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> DEFAULT_ITEM_WEIGHT;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> FARM_ACTION_INTERVAL;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> BAKING_TIME_REQUIRED_BASELINE;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> TICK_SAMPLING_RATE;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> MIN_WEIGHT_PER_QUEST_BATCH;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> QUEST_BATCH_VILLAGER_BOOST_FACTOR;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> BIOME_SCAN_RADIUS;
-
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_DOWNTIME_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_BETWEEN_DOWNTIME;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> WANDER_GIVEUP_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_DURATION;
-    public static final ForgeConfigSpec.ConfigValue<Long> VILLAGER_DISTRACT_COOLDOWN;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> FARMER_WEEDS_RARITY;
-
-    public static final ForgeConfigSpec.ConfigValue<Integer> SMELTER_WORK_REQUIRED;
-
-    public static final ForgeConfigSpec.ConfigValue<Boolean> SCAN_FOR_DOORS;
-
-    public static final ForgeConfigSpec.ConfigValue<Double> DUPLICATE_QUEST_COST_FACTOR;
-
-    public static final ForgeConfigSpec.ConfigValue<Boolean> INFINITE_TOWN_DOORS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_RETENTION_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_REMOVED_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> FLAG_SUB_BLOCK_DETECTION_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> META_ROOM_DIAMETER;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_TIME_REQUIRED_BASELINE;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_QUARTER_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_HALF_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> GATHERER_FULL_DAY_LOOT_AMOUNT;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> JOB_BOARD_ENABLED;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORK_SEEKER_COOLDOWN;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORKED_RECENTLY_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Double> MIN_JOB_ACCEPTANCE;
-    public static final ForgeConfigSpec.ConfigValue<Double> PREFERRED_JOB_ACCEPTANCE;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_INVALID_JOBS;
-    public static final ForgeConfigSpec.ConfigValue<Long> WORK_PRECOMPUTE_FREQUENCY;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> CRASH_ON_FAILED_WARP;
-    public static final ForgeConfigSpec.ConfigValue<Integer> TIME_WARP_MAX_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> LOG_WARP_RESULT;
-    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_MAX_LOOP;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_INITIAL_TICKS_WITHOUT_SUPPLIES;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_SUPPLIES;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_STICK_TICKS_WITH_TARGET;
-    public static final ForgeConfigSpec.ConfigValue<Integer> BASE_FULLNESS;
-    public static final ForgeConfigSpec.ConfigValue<Boolean> HUNGER_ENABLED;
-    public static final ForgeConfigSpec.ConfigValue<Long> BLOCK_CLAIMS_TICK_LIMIT;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_DINING_TABLE;
-    public static final ForgeConfigSpec.ConfigValue<Long> MAX_TICKS_WITHOUT_FOOD;
-    public static final ForgeConfigSpec.ConfigValue<Long> BUFFER_TICKS_AFTER_FOOD_ATTEMPT;
-    public static final ForgeConfigSpec.ConfigValue<Long> DAMAGE_TICKS;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_TICK_INTERVAL;
-    public static final ForgeConfigSpec.ConfigValue<Integer> NEUTRAL_MOOD;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY;
-    public static final ForgeConfigSpec.ConfigValue<Long> MOOD_EFFECT_DURATION_ATE_COMFORTABLY;
-    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_DIMENSION;
-    public static final ForgeConfigSpec.ConfigValue<Integer> MAX_ROOM_SCAN_ITERATIONS;
-    public static final ForgeConfigSpec.ConfigValue<Integer> EXPERIENCE_REQUIRED_AT_LEVEL_1;
-    public static final ForgeConfigSpec.ConfigValue<Double> EXPERIENCE_RAMP_FACTOR;
-    public static final ForgeConfigSpec.ConfigValue<Long> FLAG_TICK_INTERVAL;
-    public static final ForgeConfigSpec.ConfigValue<Integer> ECONOMIC_RECORDS_DEPTH;
-    public static final ForgeConfigSpec.ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
-    public static final ForgeConfigSpec.ConfigValue<Integer> JOB_TREE_GROWTH;
+    public static final ConfigValue<Double> PROFICIENCY_MIN_MULTIPLIER;
+    public static final ConfigValue<Double> PROFICIENCY_MAX_MULTIPLIER;
+    public static final ConfigValue<Integer> PROFICIENCY_SEED_COUNT;
+    public static final ConfigValue<Double> PROFICIENCY_GAIN_PER_TICK;
+    public static final ConfigValue<Double> PROFICIENCY_DECAY_PER_TICK;
 
     static {
         // Scanning Config
@@ -171,6 +93,24 @@ public class Config {
         ).comment(
                 "will become available for unlocking."
         ).defineInRange("JobTreeGrowth", 2, 1, 10);
+
+        BUILDER.push("Proficiency");
+        PROFICIENCY_MIN_MULTIPLIER = BUILDER.comment(
+                "The work-speed multiplier applied to a townie with proficiency level 0 in their current job's proficiency-id"
+        ).defineInRange("ProficiencyMinMultiplier", 0.5, 0.0, 100.0);
+        PROFICIENCY_MAX_MULTIPLIER = BUILDER.comment(
+                "The work-speed multiplier applied to a townie with proficiency level 1 (maxed) in their current job's proficiency-id. NOTE: the scaled speed is clamped to 1-10 (State.decrWork's contract), so values above 1 have no effect on a well-fed townie."
+        ).defineInRange("ProficiencyMaxMultiplier", 2.0, 0.0, 100.0);
+        PROFICIENCY_SEED_COUNT = BUILDER.comment(
+                "The number of distinct proficiencies a freshly-spawned townie is seeded with (drawn from the union of declared proficiency-ids)"
+        ).defineInRange("ProficiencySeedCount", 3, 0, 100);
+        PROFICIENCY_GAIN_PER_TICK = BUILDER.comment(
+                "Proficiency gained per tick of action duration when a townie completes a work action of that proficiency-id"
+        ).defineInRange("ProficiencyGainPerTick", 0.001, 0.0, 1.0);
+        PROFICIENCY_DECAY_PER_TICK = BUILDER.comment(
+                "Proficiency lost per tick of action duration (from every OTHER held proficiency) when a townie completes a work action"
+        ).defineInRange("ProficiencyDecayPerTick", 0.0001, 0.0, 1.0);
+        BUILDER.pop();
         MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
         ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);
@@ -199,8 +139,6 @@ public class Config {
                 "The number of items generated by gatherer when they return after 1/4 day way"
         ).defineInRange("GathererQuarterDayLootAmount", 1, 1, 6);
         GATHERER_HALF_DAY_LOOT_AMOUNT = BUILDER.comment(
-                "The number of items generated by gatherer when they return after 1/4 day way"
-        ).defineInRange("GathererHalfDayLootAmount", 3, 1, 6);
         GATHERER_FULL_DAY_LOOT_AMOUNT = BUILDER.comment(
                 "The number of items generated by gatherer when they return after 1/4 day way"
         ).defineInRange("GathererFullDayLootAmount", 6, 1, 6);
@@ -231,19 +169,19 @@ public class Config {
         BUILDER.push("Villagers");
         MAX_DOWNTIME_TICKS = BUILDER.comment(
                 "The number of ticks that a villager will spend on downtime before they decide to go back to work"
-        ).defineInRange("MaxDowntimeTicks", 1000L, 1, 24000);
+        ).defineInRange("MaxDowntimeTicks", 1000L, 1L, 24000L);
         MAX_TICKS_BETWEEN_DOWNTIME = BUILDER.comment(
                 "The minimum number of ticks that a villager may work constantly before stopping to relax"
-        ).defineInRange("MaxTicksBetweenDowntime", 4000L, 1, 24000);
+        ).defineInRange("MaxTicksBetweenDowntime", 4000L, 1L, 24000L);
         WANDER_GIVEUP_TICKS = BUILDER.comment(
                 "The limit of time that villagers will spend trying to reach their next destination"
         ).defineInRange("WanderGiveUpTicks", 2000, 1, 24000);
         VILLAGER_DISTRACT_DURATION = BUILDER.comment(
                 "The number of ticks that a villager will be distracted by (i.e. look at) a nearby entity"
-        ).defineInRange("VillagerDistractDurationV0.2", 100L, 1, 24000);
+        ).defineInRange("VillagerDistractDurationV0.2", 100L, 1L, 24000L);
         VILLAGER_DISTRACT_COOLDOWN = BUILDER.comment(
                 "The number of ticks that a villager will avoid being re-distracted by the same entity"
-        ).defineInRange("VillagerDistractCooldownV0.1", 200L, 1, 24000);
+        ).defineInRange("VillagerDistractCooldownV0.1", 200L, 1L, 24000L);
         BASE_FULLNESS = BUILDER.comment(
                 "The amount of fullness that a typical villager starts with. Fullness ticks down throughout the day. " +
                         "When it reaches zero, the villager will seek out food."
@@ -312,11 +250,11 @@ public class Config {
 
         NORMAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
                 "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
-        ).defineInRange("HospitalBedHealMultiplier", 1.5, 0.5, 100);
+        ).defineInRange("HospitalBedHealMultiplier", 1.5, 0.5, 100D);
 
         HOSPITAL_BED_HEAL_MULTIPLIER = BUILDER.comment(
                 "How much faster a villager will heal damage from sleeping in a hospital bed instead of standing/walking/working"
-        ).defineInRange("HospitalBedHealMultiplier", 2.0, 0.5, 100);
+        ).defineInRange("HospitalBedHealMultiplier", 2.0, 0.5, 100D);
 
         // End Blocks Config
         BUILDER.pop();
@@ -344,13 +282,13 @@ public class Config {
         ).defineInRange("MetaRoomDiameter", 2, 1, 100);
         BLOCK_CLAIMS_TICK_LIMIT = BUILDER.comment(
                 "If a job claims a block. It will hold that claim for this many ticks. (Or until they finish their work, whatever happens first)"
-        ).defineInRange("BlockClaimsTickLimit", 1000L, 1, 24000);
+        ).defineInRange("BlockClaimsTickLimit", 1000L, 1L, 24000L);
         FLAG_TICK_INTERVAL = BUILDER.comment(
                 "The number of game ticks that pass for every tick that the town flag does"
-        ).defineInRange("FlagTickInterval", 10L, 1L, 24000L);
+        ).defineInRange("FlagTickIntervalV2", 10L, 1L, 24000L);
         ECONOMIC_RECORDS_DEPTH = BUILDER.comment(
                 "This essentially controls how \"far back\" the data goes on the \"Economics\" screens."
-        ).defineInRange("FlagTickInterval", 100, 1, 24000);
+        ).defineInRange("EconomicRecordsDepth", 100, 1, 24000);
 
         // Time Warp
         BUILDER.push("TimeWarp").comment(

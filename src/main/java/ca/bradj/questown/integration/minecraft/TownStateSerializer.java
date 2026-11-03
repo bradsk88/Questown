@@ -72,6 +72,28 @@ public class TownStateSerializer {
         return tag;
     }
 
+    public static CompoundTag storeVillager(TownState.VillagerData<MCHeldItem> e) {
+        CompoundTag vTag = new CompoundTag();
+        vTag.putDouble("x", e.xPosition);
+        vTag.putDouble("y", e.yPosition);
+        vTag.putDouble("z", e.zPosition);
+        vTag.putString("journal_status", e.journal.statusStringValue());
+        ListTag journalItems = new ListTag();
+        if (e.journal.items().size() != e.getCapacity()) {
+            throw new IllegalStateException("Journal items do not match capacity");
+        }
+        for (MCHeldItem item : e.journal.items()) {
+            journalItems.add(item.serializeNBT());
+        }
+        vTag.put("journal_items", journalItems);
+        vTag.putUUID("UUID", e.uuid);
+        vTag.putString("job", ServerJobsRegistry.getStringValue(e.journal.jobId()));
+        CompoundTag profTag = new CompoundTag();
+        e.getProficiencies().forEach(profTag::putFloat);
+        vTag.put("proficiencies", profTag);
+        return vTag;
+    }
+
     public interface GatesGetter {
         boolean isGateValid(BlockPos bp);
     }
@@ -148,6 +170,18 @@ public class TownStateSerializer {
             ));
         }
 
+        return b.build();
+    }
+
+    private static ImmutableMap<String, Float> loadProficiencies(CompoundTag vcTag) {
+        if (!vcTag.contains("proficiencies")) {
+            return ImmutableMap.of();
+        }
+        CompoundTag profTag = vcTag.getCompound("proficiencies");
+        ImmutableMap.Builder<String, Float> b = ImmutableMap.builder();
+        for (String key : profTag.getAllKeys()) {
+            b.put(key, profTag.getFloat(key));
+        }
         return b.build();
     }
 

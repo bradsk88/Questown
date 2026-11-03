@@ -17,14 +17,14 @@ import java.util.List;
 
 public class Ingredients {
     public static Component getName(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return Compat.translatable("#" + tag);
+            return Compat.translatableWithFallback("#" + tag, tagFallbackName(tag));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return i.getName(i.getDefaultInstance());
             }
@@ -32,15 +32,32 @@ public class Ingredients {
         return Compat.translatable("this");
     }
 
+    /** A tag's name when the lang file has none: its path in words, never the raw id. */
+    static String tagFallbackName(String tag) {
+        String path = tag.substring(tag.indexOf(':') + 1);
+        path = path.substring(path.lastIndexOf('/') + 1);
+        StringBuilder b = new StringBuilder();
+        for (String word : path.split("_")) {
+            if (word.isEmpty()) {
+                continue;
+            }
+            if (!b.isEmpty()) {
+                b.append(' ');
+            }
+            b.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        return b.toString();
+    }
+
     public static WorkRequest asWorkRequest(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
-            return WorkRequest.of(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(tag)));
+            return WorkRequest.of(Compat.itemTag(new ResourceLocation(tag)));
         }
         if (j.isJsonObject() && j.getAsJsonObject().has("item")) {
             String tKey = j.getAsJsonObject().get("item").getAsString();
-            Item i = ForgeRegistries.ITEMS.getValue(new ResourceLocation(tKey));
+            Item i = Loader.itemFromId(new ResourceLocation(tKey));
             if (i != null) {
                 return WorkRequest.of(i);
             }
@@ -50,16 +67,13 @@ public class Ingredients {
 
     public static Ingredient fromString(String block) {
         if (block.startsWith("#")) {
-            return Ingredient.of(TagKey.create(
-                    Registry.ITEM_REGISTRY,
-                    new ResourceLocation(block.replace("#", ""))
-            ));
+            return Ingredient.of(Compat.itemTag(new ResourceLocation(block.replace("#", ""))));
         }
-        return Ingredient.of(ForgeRegistries.ITEMS.getValue(new ResourceLocation(block)));
+        return Ingredient.of(Loader.itemFromId(new ResourceLocation(block)));
     }
 
     public static String toString(Ingredient item) {
-        JsonElement j = item.toJson();
+        JsonElement j = toJson(item);
         String tag = getTag(j);
         if (tag != null) {
             String tKey = "#" + tag;
@@ -73,7 +87,7 @@ public class Ingredients {
     }
 
     public static @Nullable String getTag(Ingredient ing) {
-        JsonElement j = ing.toJson();
+        JsonElement j = toJson(ing);
         return getTag(j);
     }
 
@@ -88,19 +102,14 @@ public class Ingredients {
     }
 
     public static @Nullable ItemStack render(
-            ItemRenderer itemRenderer,
+            RenderContext ctx,
             Ingredient ing,
             int iconX,
             int y
     ) {
-        int curSeconds = (int) (System.currentTimeMillis() / 1000);
-        ItemStack[] matchingStacks = ing.getItems();
-        if (matchingStacks.length > 0) {
-            ItemStack itemStack = matchingStacks[curSeconds % matchingStacks.length];
-            itemRenderer.renderAndDecorateItem(itemStack, iconX, y + 1);
-            return itemStack;
         }
-        return null;
+        Compat.renderItemAndDecorations(ctx.gui(), itemStack, iconX, y + 1);
+        return itemStack;
     }
 
     // This one is better than Minecraft's, because it preserves the tag ID
@@ -118,7 +127,7 @@ public class Ingredients {
     }
 
     public static Ingredient fromRL(ResourceLocation value) {
-        @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
+        @Nullable Item l = Loader.itemFromId(value);
         return Ingredient.of(l);
     }
 

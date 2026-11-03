@@ -90,23 +90,20 @@ public class RealtimeWorldInteraction extends
         this.townFlagPos = townFlagPos;
     }
 
-    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
-        return b.build();
-    }
-
-    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
-        return b.build();
+    @Override
+    protected int getWorkSpeedOf10(MCExtra mcExtra) {
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        int base = mcExtra.town().getVillagerHandle().getWorkSpeed(uuid);
+        float mult = proficiencyMultiplier(
+                getProficiencyId(),
+                id -> mcExtra.town().getVillagerHandle().getProficiency(uuid, id)
+        );
+        return applyProficiencyToWorkSpeed(base, mult);
     }
 
     @Override
-    protected int getWorkSpeedOf10(MCExtra mcExtra) {
-        return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
+    protected @Nullable String getProficiencyId() {
+        return ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
     }
 
     @Override
@@ -115,6 +112,21 @@ public class RealtimeWorldInteraction extends
             Integer timeToAugment
     ) {
         return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
+    }
+
+    @Override
+    protected Boolean onWorkActionCompleted(
+            MCExtra mcExtra,
+            Boolean town
+    ) {
+        String profId = getProficiencyId();
+        if (profId == null) {
+            return town;
+        }
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        var handle = mcExtra.town().getVillagerHandle();
+        handle.setProficiencies(uuid, levelProficiencies(handle.getProficiencies(uuid), profId));
+        return town;
     }
 
     @Override

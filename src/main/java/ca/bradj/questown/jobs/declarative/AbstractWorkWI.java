@@ -65,15 +65,26 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
 
 
+        boolean actionCompleted = false;
         if (!bs.hasWorkLeft()) {
             this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
+            actionCompleted = true;
         }
-        if (nextStepTime <= 0) {
-            return setJobBlockState(extra, bp, bs);
-        } else {
-            return setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
+                ? setJobBlockState(extra, bp, bs)
+                : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
+        if (actionCompleted) {
+            return onWorkActionCompleted(extra, result);
         }
+        return result;
+    }
+
+    /** Called once per completed work action, in real time and during a warp; where proficiency levels up. May return an updated {@code town}. */
+    protected TOWN onWorkActionCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected abstract TOWN setJobBlockStateWithTimer(

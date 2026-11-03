@@ -155,6 +155,15 @@ public abstract class AbstractWorldInteraction<
             protected int getWorkSpeedOf10(EXTRA extra) {
                 return self.getWorkSpeedOf10(extra);
             }
+
+            @Override
+            protected TOWN onWorkActionCompleted(
+                    EXTRA extra,
+                    TOWN town
+            ) {
+                countProficiencyBearingActionForTest(self.getProficiencyId());
+                return self.onWorkActionCompleted(extra, town);
+            }
         };
         this.claimSpots = claimSpots;
     }
@@ -295,6 +304,41 @@ public abstract class AbstractWorldInteraction<
             return ts;
         };
         return reset;
+    }
+
+    protected JobID getJobId() {
+        return jobId;
+    }
+
+    /** For autotests: completed work actions of jobs with a proficiency, counted on both paths. Global, so only a one-worker test can read it. */
+    private static long proficiencyBearingActionsForTest = 0;
+
+    private static void countProficiencyBearingActionForTest(@Nullable String proficiencyId) {
+        if (proficiencyId == null) {
+            return;
+        }
+        proficiencyBearingActionsForTest++;
+    }
+
+    /** The job's proficiency id, or null. Both real paths must override this; the null default makes a new subclass level nothing. */
+    protected @Nullable String getProficiencyId() {
+        return null;
+    }
+
+    public static long getProficiencyBearingActionsForTest() {
+        return proficiencyBearingActionsForTest;
+    }
+
+    public static void resetProficiencyBearingActionsForTest() {
+        proficiencyBearingActionsForTest = 0;
+    }
+
+    /** Called once per completed work action; the default leaves {@code town} unchanged. */
+    protected TOWN onWorkActionCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -487,6 +531,13 @@ public abstract class AbstractWorldInteraction<
             @Nullable Integer orDefault
     ) {
         return checks.getQuantityForStep(state, 0);
+    }
+
+    protected TOWN onJobCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected TOWN tryExtractProduct(

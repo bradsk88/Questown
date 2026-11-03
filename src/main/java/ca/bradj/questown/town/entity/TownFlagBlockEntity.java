@@ -827,6 +827,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         workHandle.openMenuRequested(sender, skipStraightToAdd);
     }
 
+    /** For tests: saves the live town state now, so a warp runs on current data. */
+    public void publishStateToTileForTest() {
+        CompoundTag tag = Compat.getBlockStoredTagData(this);
+        writeTownData(tag);
+        state.putStateOnTile(tag, getUUID(), getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES));
+    }
+
     public MCTownState warpTime(int ticks) {
         return state.warp(this, Compat.getBlockStoredTagData(this), getServerLevel(), ticks);
     }

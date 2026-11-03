@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
@@ -540,8 +541,28 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
                     UtilClean.truncateMiddle(uuid),
                     newLvl
             );
+            broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
+    }
+
+    private void broadcastLevelUp(
+            UUID uuid,
+            int newLvl
+    ) {
+        JobID job = getVillagerJobs().get(uuid);
+        if (job == null) {
+            delegator.broadcastMessage("message.villager.leveled_up", chatName(uuid), newLvl);
+            return;
+        }
+        delegator.broadcastMessage(
+                "message.villager.leveled_up_job", chatName(uuid), Jobs.getRootNameComponent(job), newLvl
+        );
+    }
+
+    /** The villager's name for chat: "Villager 1", or a shortened UUID. */
+    private String chatName(UUID villagerUUID) {
+        return label.isEmpty() ? UtilClean.truncateMiddle(villagerUUID) : label;
     }
 
     public boolean hasBlockOfProgress(UUID uuid) {
@@ -570,6 +591,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             changeJobRootNow(e, currentTick);
             return;
         }
+        delegator.broadcastMessage("message.questown.villager.change_job_in_morning", chatName(villagerUUID));
 
         jobChangesPending.put(delegator.getUUID(e), true);
         delegator.broadcastMessage(

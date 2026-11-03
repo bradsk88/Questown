@@ -261,6 +261,8 @@ public abstract class TownState<
         public final double xPosition, yPosition, zPosition;
         public final ImmutableSnapshot<I, ?> journal;
         private final List<Effect> effects = new ArrayList<>();
+        // Each villager's proficiency levels, 0 to 1, during a warp.
+        private final ImmutableMap<String, Float> proficiencies;
 
         public VillagerData(
                 double xPosition,
@@ -269,11 +271,23 @@ public abstract class TownState<
                 ImmutableSnapshot<I, ?> journal,
                 UUID uuid
         ) {
+            this(xPosition, yPosition, zPosition, journal, uuid, ImmutableMap.of());
+        }
+
+        public VillagerData(
+                double xPosition,
+                double yPosition,
+                double zPosition,
+                ImmutableSnapshot<I, ?> journal,
+                UUID uuid,
+                ImmutableMap<String, Float> proficiencies
+        ) {
             this.xPosition = xPosition;
             this.yPosition = yPosition;
             this.zPosition = zPosition;
             this.journal = journal;
             this.uuid = uuid;
+            this.proficiencies = proficiencies;
         }
 
         @Override
@@ -284,7 +298,31 @@ public abstract class TownState<
                     ",\n\tyPosition=" + yPosition +
                     ",\n\tzPosition=" + zPosition +
                     ",\n\tjournal=" + journal +
+                    ",\n\tproficiencies=" + proficiencies +
                     "\n}";
+        }
+
+        public ImmutableMap<String, Float> getProficiencies() {
+            return proficiencies;
+        }
+
+        public float getProficiencyLevel(String proficiencyId) {
+            return proficiencies.getOrDefault(proficiencyId, 0f);
+        }
+
+        public VillagerData<I> withProficiencies(Map<String, Float> levels) {
+            return new VillagerData<>(
+                    xPosition, yPosition, zPosition, journal, uuid, ImmutableMap.copyOf(levels)
+            );
+        }
+
+        public VillagerData<I> withProficiencyLevel(
+                String proficiencyId,
+                float level
+        ) {
+            Map<String, Float> m = new HashMap<>(proficiencies);
+            m.put(proficiencyId, level);
+            return withProficiencies(m);
         }
 
         public int getCapacity() {
@@ -298,7 +336,7 @@ public abstract class TownState<
 
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid
+                    (ImmutableSnapshot) journal.withSetItem(itemIndex, item), uuid, proficiencies
             );
         }
 
@@ -310,14 +348,14 @@ public abstract class TownState<
             int idx = journal.items().indexOf(first.get());
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid
+                    (ImmutableSnapshot) journal.withSetItem(idx, value), uuid, proficiencies
             );
         }
 
         public VillagerData<I> withItems(ImmutableList<I> items) {
             return new VillagerData<>(
                     xPosition, yPosition, zPosition,
-                    (ImmutableSnapshot) journal.withItems(items), uuid
+                    (ImmutableSnapshot) journal.withItems(items), uuid, proficiencies
             );
         }
 

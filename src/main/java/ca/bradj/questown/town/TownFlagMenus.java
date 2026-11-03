@@ -111,6 +111,9 @@ public class TownFlagMenus {
         Runnable runnable = showers.get(type);
         if (runnable == null) {
             throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+            // The type comes from the client: reject an unknown one.
+            QT.GUI_LOGGER.error("Unexpected menu type: \"{}\"", type);
+            return;
         }
         runnable.run();
     }

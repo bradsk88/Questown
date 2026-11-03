@@ -41,6 +41,9 @@ public class Work {
     private Overrides overrides;
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
+    private @Nullable String proficiencyId;
+    /** XP per completion, or null for the formula. */
+    private @Nullable Integer experience;
 
     public Work(
             JobID id,
@@ -83,8 +86,31 @@ public class Work {
         return specialGlobalRules;
     }
 
+    /** The job's proficiency id, or null when proficiency does not apply (no speed-up, no leveling). Jobs can share one. */
+    public @Nullable String getProficiencyId() {
+        return proficiencyId;
+    }
+
+    public Work withProficiencyId(@Nullable String proficiencyId) {
+        this.proficiencyId = proficiencyId;
+        return this;
+    }
+
+    public Work withExperience(@Nullable Integer experience) {
+        this.experience = experience;
+        return this;
+    }
+
+    /** XP for one completion: the declared {@code experience}, else {@code formula}. */
+    public int experienceEarned(int formula) {
+        if (experience == null) {
+            return formula;
+        }
+        return experience;
+    }
+
     public Work withPriority(int priority) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,
@@ -102,12 +128,15 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
+        work.experience = experience;
+        return work;
     }
 
     public Work withNeeds(
             Function<List<MCHeldItem>, Collection<Ingredient>> needz
     ) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,
@@ -125,10 +154,12 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
+        work.experience = experience;
+        return work;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
-        return overrides.statusTextures().get(status);
     }
 
     public @Nullable Pair<String, String> applyStatusTextOverride(IStatus<?> status) {
@@ -157,6 +188,8 @@ public class Work {
                 specialGlobalRules
         );
         work.overrides = overrides;
+        work.proficiencyId = proficiencyId;
+        work.experience = experience;
         return work;
     }
 
@@ -168,6 +201,8 @@ public class Work {
         );
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
+        work.proficiencyId = proficiencyId;
+        work.experience = experience;
         return work;
     }
 

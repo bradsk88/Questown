@@ -12,6 +12,7 @@ import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.special.SpecialQuests;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.Blocks;
@@ -109,12 +110,15 @@ public class DowntimeWork {
                 ImmutableMap.of(
                         ProductionStatus.NO_JOBSITE,
                         StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
+                        ProductionStatus.NO_JOBSITE, idle,
+                        ProductionStatus.NO_SUPPLIES, idle
                 ),
                 ImmutableMap.of(ProductionStatus.NO_JOBSITE, new Pair<>(
                         "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
                         "questown.tooltips.villagers.job_common.click_to_learn"
                 ))
         ));
+                idle
     }
 
     public static JobID getIdFor(JobID rootId) {

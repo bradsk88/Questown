@@ -328,6 +328,17 @@ public class TownFlagBlock extends BaseEntityBlock {
             if (heldItemId.equals(q.getWantedId())) {
                 return true;
             }
+
+    /**
+     * A flag-linked block placed from an item with no (or a dead) flag link drops back as an item.
+     * Tell the placer why instead of failing silently.
+     */
+    public static void tellPlacerNotLinked(
+            net.minecraft.world.item.context.BlockPlaceContext ctx,
+            String msgKey
+    ) {
+        if (ctx.getPlayer() instanceof ServerPlayer sp) {
+            ca.bradj.questown.mc.Util.onScreenText(() -> sp, msgKey);
         }
         return false;
     }
