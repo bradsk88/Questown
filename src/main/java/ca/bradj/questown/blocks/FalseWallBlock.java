@@ -5,8 +5,8 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.CompatBlockColor;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -16,8 +16,7 @@ public class FalseWallBlock extends Block {
 
 
     public FalseWallBlock() {
-        super(Properties
-                .of(Material.WOOL, MaterialColor.COLOR_BROWN)
+        super(Compat.blockProps(CompatBlockColor.COLOR_BROWN)
                 .noCollission());
     }
     @Override

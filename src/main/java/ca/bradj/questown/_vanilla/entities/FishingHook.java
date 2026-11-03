@@ -100,7 +100,7 @@ public class FishingHook extends Projectile {
             int p_37108_,
             int p_37109_
     ) {
-        this(EntitiesInit.FISHIN_HOOK.get(), p_37107_, p_37108_, p_37109_);
+        this((EntityType<FishingHook>) EntitiesInit.FISHIN_HOOK.get(), p_37107_, p_37108_, p_37109_);
         this.setOwner(p_37106_);
         float f = p_37106_.getXRot();
         float f1 = p_37106_.getYRot();

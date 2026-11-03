@@ -1,6 +1,9 @@
 package ca.bradj.questown.blocks;
 
-import ca.bradj.questown.core.init.items.ItemsInit;
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
+import com.mojang.serialization.MapCodec;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,22 +14,24 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
 
 public class BlacksmithsTableBlock extends Block {
+
+    public static final MapCodec<BlacksmithsTableBlock> CODEC =
+            MapCodec.unit(BlacksmithsTableBlock::new);
+
     public static final String ITEM_ID = "blacksmiths_table";
 
     public BlacksmithsTableBlock(
     ) {
         super(
-                Properties
-                        .of(Material.WOOL, MaterialColor.COLOR_BROWN)
-                        .strength(1.0F, 10.0F)
+                Compat.P
+                        .of().mapColor(MapC.COLOR_BROWN)
+                        .strength(1.0F, 10.0F).impl()
         );
     }
 
@@ -47,8 +52,7 @@ public class BlacksmithsTableBlock extends Block {
             Level level,
             BlockPos pos,
             Player player,
-            InteractionHand p_60507_,
-            BlockHitResult p_60508_
+            BlockHitResult hitResult
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(level.isClientSide);

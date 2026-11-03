@@ -4,6 +4,8 @@ import ca.bradj.questown.commands.test.TestBlueprint;
 import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.loader.forge.TestTickListener;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
@@ -89,7 +91,7 @@ public class TestCommand {
         TestExecutor executor = new TestExecutor(level, output, origin, jobId, warpAmount, blueprint);
 
         TestTickListener listener = new TestTickListener(executor);
-        MinecraftForge.EVENT_BUS.register(listener);
+        Loader.registerCommonHandlers(listener);
 
         Compat.sendMessage(player, Component.literal(
                 "[qt test] Starting test for " + jobId.rootId() + ":" + jobId.jobId() +
@@ -97,23 +99,5 @@ public class TestCommand {
         ));
 
         return 1;
-    }
-
-    static class TestTickListener {
-        private final TestExecutor executor;
-
-        TestTickListener(TestExecutor executor) {
-            this.executor = executor;
-        }
-
-        @SubscribeEvent
-        public void onTick(TickEvent.ServerTickEvent event) {
-            if (event.phase != TickEvent.Phase.END) {
-                return;
-            }
-            if (executor.tick()) {
-                MinecraftForge.EVENT_BUS.unregister(this);
-            }
-        }
     }
 }

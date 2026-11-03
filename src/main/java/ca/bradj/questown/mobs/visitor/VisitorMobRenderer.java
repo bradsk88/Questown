@@ -15,16 +15,6 @@ import java.util.UUID;
 
 public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, PlayerModel<VisitorMobEntity>> {
 
-    // TODO: Just scan the directory for files
-    static ImmutableList<ResourceLocation> customSkins = ImmutableList.of(
-            Questown.ResourceLocation("textures/entity/1.png"),
-            Questown.ResourceLocation("textures/entity/2.png"),
-            Questown.ResourceLocation("textures/entity/3.png"),
-            Questown.ResourceLocation("textures/entity/4.png"),
-            Questown.ResourceLocation("textures/entity/5.png"),
-            Questown.ResourceLocation("textures/entity/6.png")
-    );
-
     public VisitorMobRenderer(
             EntityRendererProvider.Context ctx
     ) {

@@ -1,4 +1,5 @@
 package ca.bradj.questown.blocks;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -40,7 +41,6 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
@@ -105,27 +105,31 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         int x, y, z;
         String xTag = String.format("%s.parent_pos_x", Questown.MODID);
-        if (!itemInHand.getTag().contains(xTag)) {
-            QT.ITEM_LOGGER.error("Missing X tag from {}", itemInHand.getTag());
+        if (!data.contains(xTag)) {
+            QT.ITEM_LOGGER.error("Missing X tag from {}", data);
             return null;
         }
         String yTag = String.format("%s.parent_pos_y", Questown.MODID);
-        if (!itemInHand.getTag().contains(yTag)) {
-            QT.ITEM_LOGGER.error("Missing Y tag from {}", itemInHand.getTag());
+        if (!data.contains(yTag)) {
+            QT.ITEM_LOGGER.error("Missing Y tag from {}", data);
             return null;
         }
         String zTag = String.format("%s.parent_pos_z", Questown.MODID);
-        if (!itemInHand.getTag().contains(zTag)) {
-            QT.ITEM_LOGGER.error("Missing Z tag from {}", itemInHand.getTag());
+        if (!data.contains(zTag)) {
+            QT.ITEM_LOGGER.error("Missing Z tag from {}", data);
             return null;
         }
-        x = itemInHand.getOrCreateTag().getInt(xTag);
-        y = itemInHand.getOrCreateTag().getInt(yTag);
-        z = itemInHand.getOrCreateTag().getInt(zTag);
+        x = data.getInt(xTag);
+        y = data.getInt(yTag);
+        z = data.getInt(zTag);
 
 
         BlockPos bp = new BlockPos(x, y, z);
         return bp;
+    }
+
+    private static net.minecraft.nbt.CompoundTag customData(ItemStack stack) {
+        return Compat.itemDataTag(stack);
     }
 
     public static void CopyParentFromNBT(
@@ -354,14 +358,16 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static @Nullable ItemStack GetFlagInputFromItemNBT(
+            net.minecraft.core.RegistryAccess ctx,
             ItemStack item
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
-        CompoundTag serialized = item.getOrCreateTag().getCompound(key);
+        CompoundTag serialized = Compat.itemDataTag(item).getCompound(key);
         if (serialized.isEmpty()) {
             return null;
         }
-        return ItemStack.of(serialized);
+        ItemStack parsed = ItemStack.of(serialized);
+        return parsed.isEmpty() ? null : parsed;
     }
 
     @Override

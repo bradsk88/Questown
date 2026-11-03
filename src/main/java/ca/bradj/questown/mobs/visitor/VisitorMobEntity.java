@@ -61,7 +61,6 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
-import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -146,12 +145,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     private static final float runSpeed = 0.4f;
     private final ArrayList<Integer> tickTimes = new ArrayList<>();
     private final ArrayList<Integer> targetTimes = new ArrayList<>();
-    private boolean jobChangePending;
     boolean sitting = true;
     TownInterface town;
     Supplier<Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>>> job = this::getInitialJob;
     private int ticksWithoutJobTarget;
-    private int ticksStuckWithTarget;
     private final List<Consumer<ImmutableList<Ingredient>>> ingrListeners = new ArrayList<>();
     private final List<Consumer<VillagerSleptEvent>> sleepListeners = new ArrayList<>();
     private Signals.DayTime lastBedTime = new Signals.DayTime(Signals.NIGHT_START_TICK);
@@ -272,8 +269,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (inventoryFullStrategy.equals(InventoryFullStrategy.REMOVE_FROM_WORLD)) {
             return false;
         }
-        ItemEntity item = new ItemEntity(level, getX(), getY(), getZ(), v.get().toMCItemStack());
-        level.addFreshEntity(item);
+        ItemEntity item = new ItemEntity(getLevel(), getX(), getY(), getZ(), v.get().toMCItemStack());
+        getLevel().addFreshEntity(item);
         return false;
     }
 
@@ -806,7 +803,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
         // Copied from superclass
         if (!list.isEmpty()) {
-            int i = this.level.getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
+            int i = this.getLevel().getGameRules().getInt(GameRules.RULE_MAX_ENTITY_CRAMMING);
             if (i > 0 && list.size() > i - 1 && this.random.nextInt(4) == 0) {
                 int j = 0;
 
@@ -817,7 +814,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 }
 
                 if (j > i - 1) {
-                    this.hurt(DamageSource.CRAMMING, 6.0F);
+                    this.hurt(net.minecraft.world.damagesource.DamageSource.CRAMMING, 6.0F);
                 }
             }
 
@@ -1018,13 +1015,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public void stopSleeping() {
         Optional<BlockPos> sleepingPos = getOutOfBed();
-        long curTime = this.level.getGameTime();
+        long curTime = this.getLevel().getGameTime();
         this.brain.setMemory(MemoryModuleType.LAST_WOKEN, curTime);
 
         sleepingPos.ifPresent(
                 bed -> {
                     long nightSleepTicks = lastBedTime.ticksBeforeMidnight();
-                    long ticksSlept = Util.getDayTime(level).dayTime() + nightSleepTicks;
+                    long ticksSlept = Util.getDayTime(getLevel()).dayTime() + nightSleepTicks;
                     sleepListeners.forEach(l -> l.accept(new VillagerSleptEvent(ticksSlept, bed)));
                 }
         );
@@ -1077,12 +1074,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void customServerAiStep() {
-        this.level.getProfiler()
+        this.getLevel().getProfiler()
                   .push(String.format("%s_%s", Questown.MODID, "visitorBrain"));
         //noinspection unchecked
         Brain<VisitorMobEntity> brain1 = (Brain<VisitorMobEntity>) this.getBrain();
-        brain1.tick((ServerLevel) this.level, this);
-        this.level.getProfiler()
+        brain1.tick((ServerLevel) this.getLevel(), this);
+        this.getLevel().getProfiler()
                   .pop();
         super.customServerAiStep();
 
@@ -1213,7 +1210,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             Vec3 p_19981_,
             InteractionHand hand
     ) {
-        boolean isClientSide = player.level.isClientSide();
+        boolean isClientSide = player.getLevel().isClientSide();
         if (!(player instanceof ServerPlayer sp)) {
             return InteractionResult.sidedSuccess(isClientSide);
         }

@@ -5,11 +5,10 @@ import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.UIJob;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 public record ShowItemJobsMessage(
         Ingredient requestedItem,
@@ -26,7 +25,7 @@ public record ShowItemJobsMessage(
             s = Ingredients.toString(msg.requestedItem);
         }
         buffer.writeUtf(s);
-        buffer.writeCollection(msg.jobs, UIJob::toNetwork);
+        buffer.writeCollection(msg.jobs, (buf, v) -> UIJob.toNetwork((net.minecraft.network.FriendlyByteBuf) buf, v));
         buffer.writeBlockPos(msg.flagPos);
     }
 
@@ -38,13 +37,13 @@ public record ShowItemJobsMessage(
         }
         return new ShowItemJobsMessage(
                 requestedItem,
-                ImmutableList.copyOf(buffer.readList(UIJob::fromNetwork)),
+                ImmutableList.copyOf(buffer.readList(b -> UIJob.fromNetwork((net.minecraft.network.FriendlyByteBuf) b))),
                 buffer.readBlockPos()
         );
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
         ToClientMessage.handle(ctx, this);
     }

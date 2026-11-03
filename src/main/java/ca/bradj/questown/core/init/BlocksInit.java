@@ -1,14 +1,14 @@
 package ca.bradj.questown.core.init;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.HolderRegistry;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown._vanilla.blocks.SaplingTesterBlock;
 import ca.bradj.questown.blocks.*;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.materials.WallType;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
 public class BlocksInit {
 

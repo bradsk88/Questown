@@ -11,7 +11,6 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 public record ChangeVillagerJobMessage(
         int flagX, int flagY, int flagZ, UUID villagerUUID, JobID newJob, boolean announce

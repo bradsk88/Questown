@@ -59,7 +59,7 @@ public class RoomRecipes {
 
     @NotNull
     public static List<RoomRecipe> getAllRecipes(Level level) {
-        return level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM);
+        return RecipeRef.recipesOf(level.getRecipeManager(), RecipesInit.ROOM);
     }
 
     public static Component getName(ResourceLocation id) {

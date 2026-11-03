@@ -4,22 +4,16 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.gui.Ingredients;
-import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
+import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Objects;
-import java.util.function.Supplier;
 
-/**
- */
 public final class AddWorkFromUIMessage {
     private final Ingredient requested;
     private final BlockPos flagPos;

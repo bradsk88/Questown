@@ -1,4 +1,5 @@
 package ca.bradj.questown.integration.minecraft;
+import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.HeldItem;
@@ -6,9 +7,9 @@ import ca.bradj.questown.jobs.gatherer.GathererTools;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.mc.Compat;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,11 +52,12 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         if (item.isEmpty()) {
             return MCHeldItem.Air();
         }
+        CompoundTag data = Compat.itemDataTag(item);
         return new MCHeldItem(
                 MCTownItem.fromMCItemStack(item),
                 false,
-                QTNBT.getString(item.getOrCreateTag(), "prefix"),
-                QTNBT.getString(item.getOrCreateTag(), "biome")
+                QTNBT.getString(data, "prefix"),
+                QTNBT.getString(data, "biome")
         );
     }
 
@@ -110,7 +112,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     @Override
     public String getShortName() {
         String name = "[unknown]";
-        ResourceLocation registryName = ForgeRegistries.ITEMS.getKey(delegate.get());
+        ResourceLocation registryName = Loader.itemIdOf(delegate.get());
         if (registryName != null) {
             name = registryName.toString();
         }
@@ -171,7 +173,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
         if (v.contains("prefix")) {
             prefix = v.getString("prefix");
         }
-        return new MCHeldItem(MCTownItem.fromMCItemStack(del), locked, prefix, biome);
+        return new MCHeldItem(ti, locked, prefix, biome);
     }
 
     public MCTownItem toItem() {
@@ -189,7 +191,7 @@ public class MCHeldItem implements HeldItem<MCHeldItem, MCTownItem> {
     }
 
     public String toShortString() {
-        String itemName = ForgeRegistries.ITEMS.getKey(delegate.get()).toString();
+        String itemName = Loader.itemIdOf(delegate.get()).toString();
         return String.format("{item=%s, prefix=%s, biome=%s}", itemName, prefix, biome);
     }
 

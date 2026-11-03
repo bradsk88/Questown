@@ -1,5 +1,8 @@
 package ca.bradj.questown.blocks;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
+
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.MCExtra;
@@ -14,11 +17,9 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
@@ -36,10 +37,10 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
     public SoupPotBlock(
     ) {
         super(
-                Properties
-                        .of(Material.GLASS, MaterialColor.TERRACOTTA_BROWN)
+                Compat.P
+                        .of().mapColor(MapC.TERRACOTTA_BROWN)
                         .strength(1.0F, 10.0F)
-                        .noOcclusion()
+                        .noOcclusion().impl()
         );
         this.registerDefaultState(this.stateDefinition.any()
                                                       .setValue(LEVEL, 0)
@@ -97,19 +98,32 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
             BlockPos p_60505_,
             Player p_60506_,
-            InteractionHand p_60507_,
             BlockHitResult p_60508_
     ) {
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
 
-        return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, p_60507_);
+        return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

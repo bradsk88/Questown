@@ -1,25 +1,20 @@
 package ca.bradj.questown.core.init;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.loader.Holder;
+import ca.bradj.questown.loader.HolderRegistry;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.mc.Compat;
+
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.world.entity.schedule.Schedule;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
 public class ScheduleInit {
 
-    public static final DeferredRegister<Schedule> SCHEDULES = DeferredRegister.create(
-            ForgeRegistries.SCHEDULES,
-            Questown.MODID
-    );
+    public static final HolderRegistry<Schedule> SCHEDULES = Loader.registry(Compat.scheduleRegistry());
 
-    public static final RegistryObject<Schedule> VISITOR_SCHEDULE = SCHEDULES.register(
+    public static final Holder<Schedule> VISITOR_SCHEDULE = SCHEDULES.register(
             VisitorMobEntity.DEFAULT_SCHEDULE_ID, () -> VisitorMobEntity.DEFAULT_SCHEDULE
     );
 
-    public static void register(IEventBus bus) {
-        SCHEDULES.register(bus);
-    }
+    public static void boot() {}
 }

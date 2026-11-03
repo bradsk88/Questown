@@ -1,12 +1,13 @@
-package ca.bradj.questown.mobs.visitor;
+package ca.bradj.questown.loader.forge;
 
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.EntitiesInit;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = Questown.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Questown.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class VisitorMobEntityEvents {
 
     @SubscribeEvent

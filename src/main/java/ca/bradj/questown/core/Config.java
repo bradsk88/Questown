@@ -1,11 +1,16 @@
 package ca.bradj.questown.core;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import ca.bradj.questown.loader.ConfigBuilder;
+import ca.bradj.questown.loader.ConfigSpec;
+import ca.bradj.questown.loader.ConfigValue;
+import ca.bradj.questown.loader.Loader;
+
+
 
 public class Config {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ConfigBuilder BUILDER = Loader.configBuilder();
+    public static final ConfigSpec SPEC;
 
     public static final String VILLAGE_START_QUESTS = "Village start quests";
 
