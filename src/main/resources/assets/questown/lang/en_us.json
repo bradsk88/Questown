@@ -19,8 +19,6 @@
   "messages.town_flag.quest_batch_removed_1": "Quests were declined by a player.",
   "messages.town_flag.quest_batch_removed_2": "A new batch will be added in the morning.",
   "messages.town_flag.quest_batch_added": "A new batch of quests was added to the town flag.",
-  "messages.town_flag.first_visit_journal": "You find an old journal on the ground",
-  "messages.town_flag.journal_page": "A page was unlocked in the old journal",
   "messages.town_flag.damaged": "WARNING: Removing the town flag will corrupt the flag's village. Only do this if you don't care about the village.",
   "messages.town_flag.loading": "Town Flag needs a moment to start up. Try again shortly.",
   "message.baker.bread_still_baking": "Bread will be ready in %d ticks",
