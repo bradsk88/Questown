@@ -6,7 +6,6 @@ import ca.bradj.questown.core.advancements.VisitorTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
-import ca.bradj.questown.items.EffectMetaItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -402,6 +401,11 @@ public class RealtimeWorldInteraction extends
                 },
                 (in, up) -> {
                     inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                },
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
+                    inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
+                    return in;
                     return in;
                 }
         );

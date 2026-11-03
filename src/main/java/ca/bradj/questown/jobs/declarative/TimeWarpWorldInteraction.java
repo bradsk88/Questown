@@ -309,6 +309,13 @@ public class TimeWarpWorldInteraction extends
                     itemData.forEach(t::putInt);
                     return ctx;
                 }, (in, up) -> in
+                }, (in, up) -> in,
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.level) + durationTicks;
+                    return in.withVillagerData(
+                            villagerIndex,
+                            in.getVillager(villagerIndex).withEffect(new Effect(effect, expiry))
+                    );
         );
     }
 
