@@ -3,6 +3,7 @@ package ca.bradj.questown.integration.jobs;
 import ca.bradj.questown.world.QTWorldAccess;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.BiFunction;
 
@@ -11,6 +12,11 @@ public record AfterExtractEvent<CONTEXT>(
         BlockPos workSpot,
         BlockPos townFlagPos,
         BiFunction<CONTEXT, ImmutableMap<String, Integer>, CONTEXT> itemDataApplier,
-        BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater
+        BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater,
 ) {
+    /** Gives the working villager a mood effect for {@code durationTicks}. */
+    @FunctionalInterface
+    public interface MoodApplier<CONTEXT> {
+        CONTEXT apply(CONTEXT ctx, ResourceLocation effect, long durationTicks);
+    }
 }

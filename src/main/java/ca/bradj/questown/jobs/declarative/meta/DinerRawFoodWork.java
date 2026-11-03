@@ -80,7 +80,7 @@ public class DinerRawFoodWork {
                                     ServerLevel level,
                                     Collection<MCHeldItem> heldItems
                             ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                                return ImmutableList.of();
                             }
 
                             @Override
@@ -92,7 +92,11 @@ public class DinerRawFoodWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.HUNGER_FILL_HALF)
+                                ImmutableList.of(
+                                        SpecialRules.HUNGER_FILL_HALF,
+                                        SpecialRules.APPLY_UNCOMFORTABLE_EATING,
+                                        SpecialRules.APPLY_ATE_RAW_FOOD
+                                )
                         ), // No stage rules
                         ImmutableList.of(
                                 SpecialRules.WORK_IN_EVENING,

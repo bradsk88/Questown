@@ -77,7 +77,7 @@ public class DinerNoTableWork {
                                     ServerLevel level,
                                     Collection<MCHeldItem> heldItems
                             ) {
-                                return MCHeldItem.fromMCItemStacks(RESULTS);
+                                return ImmutableList.of();
                             }
 
                             @Override
@@ -89,7 +89,10 @@ public class DinerNoTableWork {
                 new WorkSpecialRules(
                         ImmutableMap.of(
                                 ProductionStatus.EXTRACTING_PRODUCT,
-                                ImmutableList.of(SpecialRules.HUNGER_FILL)
+                                ImmutableList.of(
+                                        SpecialRules.HUNGER_FILL,
+                                        SpecialRules.APPLY_UNCOMFORTABLE_EATING
+                                )
                         ),
                         ImmutableList.of(
                                 SpecialRules.WORK_IN_EVENING,

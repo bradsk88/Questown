@@ -25,6 +25,9 @@ public class TownVillagerMoods {
         b.put(EffectMetaItem.MoodEffects.COMFORTABLE_EATING, 5);
         b.put(EffectMetaItem.MoodEffects.UNCOMFORTABLE_EATING, -5);
         b.put(EffectMetaItem.MoodEffects.ATE_RAW_FOOD, -10);
+        b.put(MoodEffects.COMFORTABLE_EATING, 5);
+        b.put(MoodEffects.UNCOMFORTABLE_EATING, -5);
+        b.put(MoodEffects.ATE_RAW_FOOD, -10);
 
         buffs = b.build();
         staticInitialized = true;
