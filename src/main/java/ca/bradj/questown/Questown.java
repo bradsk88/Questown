@@ -6,31 +6,12 @@ import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
 import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
-import ca.bradj.questown.core.init.*;
-import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.gui.*;
-import ca.bradj.questown.gui.town.status.MultiStatusScreen;
-import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
-import ca.bradj.questown.render.FishingHookRenderer;
-import net.minecraft.client.gui.screens.MenuScreens;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.client.renderer.entity.EntityRenderers;
+import ca.bradj.questown.loader.Loader;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.Logger;
 
-// The value here should match an entry in the META-INF/mods.toml file
-@Mod(Questown.MODID)
+/** The mod's shared setup: its id, logging, and the setup steps each loader calls. */
 public class Questown {
     public static final String MODID = "questown";
 
@@ -39,37 +20,8 @@ public class Questown {
      * @deprecated Use QT.LOGGER
      */
     public static final Logger LOGGER = QT.LOGGER;
-    public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties().
-            tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Item.Properties DEFAULT_ITEM_PROPS = new Item.Properties();
     public static ResourceLocation ResourceLocationError = ResourceLocation("error");
-
-    public Questown() {
-        // Register the setup method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-        // Register the doClientStuff method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
-
-        // Register ourselves for server and other game events we are interested in
-        MinecraftForge.EVENT_BUS.register(this);
-
-        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        BlocksInit.BLOCKS.register(bus);
-
-        TilesInit.TILES.register(bus);
-        ItemsInit.register(bus);
-        MenuTypesInit.register(bus);
-        EntitiesInit.register(bus);
-        RewardsInit.register(bus);
-        ScheduleInit.register(bus);
-        AdvancementsInit.register();
-        Compat.initCommands(bus);
-
-        ca.bradj.questown._vanilla.entities.EntitiesInit.register(bus);
-
-        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, Config.SPEC, Config.FILENAME);
-        ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, RecipeItemConfig.SPEC, RecipeItemConfig.FILENAME);
-    }
 
     public static ResourceLocation ResourceLocation(String id) {
         return new ResourceLocation(Questown.MODID, id);

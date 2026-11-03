@@ -1,7 +1,6 @@
 {
   "replace": false,
   "values": [
-    "#forge:seeds",
     "minecraft:salmon",
     "minecraft:rabbit",
     "minecraft:porkchop",
