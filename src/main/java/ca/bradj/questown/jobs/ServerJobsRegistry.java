@@ -384,6 +384,15 @@ public class ServerJobsRegistry {
         return ImmutableSet.copyOf(Works.ids().stream().filter(v -> !isSeekingWork(v)).collect(Collectors.toSet()));
     }
 
+    /** XP for one completion: the job's declared {@code experience}, else {@code formula}. */
+    public static int getExperienceEarned(JobID jobID, int formula) {
+        Work work = getWork(jobID, true);
+        if (work == null) {
+            return formula;
+        }
+        return work.experienceEarned(formula);
+    }
+
     public static ResourceLocation getRoomForJobRootId(
             ServerLevel rand,
             String rootId

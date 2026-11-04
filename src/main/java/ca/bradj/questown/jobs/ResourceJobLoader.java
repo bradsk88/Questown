@@ -170,6 +170,7 @@ public class ResourceJobLoader {
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
+                    cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
                     b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -373,6 +374,7 @@ public class ResourceJobLoader {
                 return wb.withOverrides(overrides);
             }
             return wb;
+            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
         }
 
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
@@ -473,6 +475,7 @@ public class ResourceJobLoader {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
                 return work;
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }
@@ -1064,6 +1067,11 @@ public class ResourceJobLoader {
             String k
     ) {
         return required(object, k, JsonElement::getAsInt);
+    }
+
+    /** {@code experience}: XP per completion, replacing the formula. */
+    private static @Nullable Integer experience(JsonObject object) {
+        return optional(object, "experience", JsonElement::getAsInt);
     }
 
     private static <X> X required(

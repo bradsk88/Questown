@@ -48,6 +48,7 @@ class SimpleVillagerHandleTest {
         List<JobID> jobChanges = new ArrayList<>();
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
+        Map<UUID, String> names = new HashMap<>();
         Map<UUID, Boolean> dining = new HashMap<>();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
 
@@ -177,6 +178,36 @@ class SimpleVillagerHandleTest {
         public ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId) {
             return ImmutableSet.of();
         }
+
+        @Override
+        public String displayNameFor(UUID vuid) {
+            return names.getOrDefault(vuid, "");
+        }
+        t.names.put(villager, "Villager 1");
+
+        handle.addExperience(villager, 1_000_000);
+
+        Assertions.assertTrue(
+                t.broadcast.stream().anyMatch(b -> b.startsWith("message.villager.leveled_up_job [Villager 1, ")),
+                t.broadcast.toString()
+        );
+    }
+
+    @Test
+    public void levelUp_chatNamesTheJob() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        t.names.put(villager, "Villager 1");
+
+        handle.addExperience(villager, 1_000_000);
+
+        String line = t.broadcast.stream().filter(b -> b.startsWith("message.villager.leveled_up_job")).findFirst().orElse("");
+        Assertions.assertTrue(line.contains("jobs.tester"), t.broadcast.toString());
+        Assertions.assertTrue(line.endsWith(", 2]"), line);
+
+        handle.addExperience(villager, 1_000_000);
+
+        handle.addExperience(villager, 1_000_000);
     }
 
     @Test
@@ -252,6 +283,66 @@ class SimpleVillagerHandleTest {
         handle.addHungryListener(hungryInformed::set);
         handle.tick(Signals.NOON);
         Assertions.assertNull(hungryInformed.get());
+    }
+
+    // Experience: it climbs until a level-up sets the Block of Progress latch, then holds until the latch clears.
+
+    private static SimpleVillagerHandle<String, UUID> newHandle(TestDelegator t) {
+        return new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(
+                        100,
+                        true,
+                        1,
+                        1,
+                        100,
+                        10,
+                        100,
+                        0.5f,
+                        100,
+                        100,
+                        23000
+                )
+        );
+    }
+
+    @Test
+    public void addExperience_increasesWhenNoBlockOfProgress() {
+        SimpleVillagerHandle<String, UUID> handle = newHandle(new TestDelegator());
+        UUID v = UUID.randomUUID();
+
+        handle.addExperience(v, 60);
+        Assertions.assertEquals(60, handle.getStats(v).experienceValue());
+
+        handle.addExperience(v, 20);
+        Assertions.assertEquals(
+                80, handle.getStats(v).experienceValue(),
+                "experience climbs while no block-of-progress latch is set"
+        );
+    }
+
+    @Test
+    public void addExperience_holdsFlatOnceBlockOfProgressLatchSet() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+
+        // Reaching the target levels up and sets the latch.
+        handle.addExperience(v, 100);
+        Assertions.assertEquals(1, t.broadcast.size(), "the level-up fired exactly once");
+        int frozen = handle.getStats(v).experienceValue();
+
+        // With the latch set, more experience does nothing.
+        handle.addExperience(v, 50);
+        handle.addExperience(v, 50);
+        Assertions.assertEquals(
+                frozen, handle.getStats(v).experienceValue(),
+                "experience is frozen (holds flat) while the block-of-progress latch is set"
+        );
+        Assertions.assertEquals(
+                1, t.broadcast.size(),
+                "no further level-up while the latch is set"
+        );
     }
 
 }
