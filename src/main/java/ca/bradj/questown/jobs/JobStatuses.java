@@ -10,23 +10,26 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class JobStatuses {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JobStatuses.class);
-    private static final java.util.concurrent.ConcurrentHashMap<String, Long> whyLast = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Logger log = LoggerFactory.getLogger(JobStatuses.class);
+    // With dev commands on, a leaver's status decision is logged with the checks behind it, at
+    // most once every WHY_INTERVAL_MS per job.
+    private static final boolean LOG_WHY = System.getenv("ENABLE_DEV_COMMANDS") != null;
     private static final long WHY_INTERVAL_MS = 4000;
-    // Dev diagnostics: when set, logs the gates behind this leaver's status decision, at most once
-    // per WHY_INTERVAL_MS per label.
-    public static volatile String whyDebugJobId = null;
+    private static final Map<String, Long> whyLast = new ConcurrentHashMap<>();
 
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
@@ -90,55 +93,87 @@ public class JobStatuses {
         LZCD<STATUS> root = usualRoutineRoot(ctx);
         root.initializeAll();
         STATUS resolved = root.resolve();
-        maybeLogWhy(ctx.currentStatus, resolved, root);
+        maybeLogWhy(ctx.jobId(), ctx.currentStatus, resolved, root);
         return nullIfUnchanged(ctx.currentStatus, resolved);
     }
 
-    private static <STATUS extends IStatus<STATUS>, SUP_CAT> void maybeLogWhy(
-            STATUS current, STATUS resolved, LZCD<STATUS> root) {
-        String label = whyDebugJobId;
-        if (label == null) return;
-        if (!(label.startsWith("gatherer:") || label.startsWith("hunter:") || label.startsWith("miner:"))) return;
+    private static <STATUS extends IStatus<STATUS>> void maybeLogWhy(
+            JobID jobId,
+            STATUS current,
+            STATUS resolved,
+            LZCD<STATUS> root
+    ) {
+        if (!LOG_WHY || !isLeaverRoot(jobId.rootId())) {
+            return;
+        }
+        String label = jobId.toNiceString();
         long now = System.currentTimeMillis();
         Long last = whyLast.get(label);
-        if (last != null && now - last < WHY_INTERVAL_MS) return;
+        if (last != null && now - last < WHY_INTERVAL_MS) {
+            return;
+        }
         whyLast.put(label, now);
         try {
             StringBuilder gates = new StringBuilder();
             collectWhy(root.populate(), gates, 0);
-            log.warn("[WHY] job={} current={} → {}\n{}", label, current, resolved, gates);
-        } catch (Throwable t) {
-            log.warn("[WHY] job={} current={} → {} (dump failed: {})", label, current, resolved, t.toString());
+            log.info("[WHY] job={} current={} → {}\n{}", label, current, resolved, gates);
+        } catch (RuntimeException e) {
+            log.warn("[WHY] job={} current={} → {} (dump failed)", label, current, resolved, e);
         }
     }
 
-    private static void collectWhy(Populated<?> pop, StringBuilder out, int depth) {
-        if (pop == null || depth > 60) return;
-        for (java.util.Map.Entry<String, Object> e : pop.conditions().entrySet()) {
-            Object val = e.getValue();
-            if (val instanceof Populated<?> cp) {
-                Object wrObj = cp.value();
-                if (wrObj instanceof WithReason<?> wr) {
-                    out.append("  gate[").append(e.getKey()).append("=").append(wr.value()).append("] (").append(wr.reason()).append(")\n");
-                } else {
-                    out.append("  gate[").append(e.getKey()).append("=").append(wrObj).append("]\n");
-                }
-                for (java.util.Map.Entry<String, Object> d : cp.conditions().entrySet()) {
-                    if (d.getValue() instanceof Populated<?> nested) {
-                        out.append("    ").append(d.getKey()).append(":\n");
-                        collectWhy(nested, out, depth + 1);
-                    } else {
-                        out.append("    ").append(d.getKey()).append(" = ").append(d.getValue()).append("\n");
-                    }
-                }
-            } else {
-                out.append("  gate[").append(e.getKey()).append("=").append(val).append("]\n");
-            }
+    private static boolean isLeaverRoot(String rootId) {
+        return "gatherer".equals(rootId) || "hunter".equals(rootId) || "miner".equals(rootId);
+    }
+
+    private static void collectWhy(
+            Populated<?> pop,
+            StringBuilder out,
+            int depth
+    ) {
+        if (pop == null || depth > 60) {
+            return;
+        }
+        for (Map.Entry<String, Object> e : pop.conditions().entrySet()) {
+            appendGate(e.getKey(), e.getValue(), out, depth);
         }
         Populated<?> fb = pop.ifCondFailOrNull();
         if (fb != null) {
             out.append("  else →\n");
             collectWhy(fb, out, depth + 1);
+        }
+    }
+
+    private static void appendGate(
+            String key,
+            Object val,
+            StringBuilder out,
+            int depth
+    ) {
+        if (!(val instanceof Populated<?> cp)) {
+            out.append(String.format("  gate[%s=%s]%n", key, val));
+            return;
+        }
+        if (cp.value() instanceof WithReason<?> wr) {
+            out.append(String.format("  gate[%s=%s] (%s)%n", key, wr.value(), wr.reason()));
+        } else {
+            out.append(String.format("  gate[%s=%s]%n", key, cp.value()));
+        }
+        appendDetails(cp, out, depth);
+    }
+
+    private static void appendDetails(
+            Populated<?> cp,
+            StringBuilder out,
+            int depth
+    ) {
+        for (Map.Entry<String, Object> d : cp.conditions().entrySet()) {
+            if (d.getValue() instanceof Populated<?> nested) {
+                out.append(String.format("    %s:%n", d.getKey()));
+                collectWhy(nested, out, depth + 1);
+                continue;
+            }
+            out.append(String.format("    %s = %s%n", d.getKey(), d.getValue()));
         }
     }
 
@@ -382,13 +417,30 @@ public class JobStatuses {
             IProductionJob<STATUS> job,
             IProductionStatusFactory<STATUS> factory
     ) {
+        return productionRoutine(
+                new JobID("unknown", "unknown"),
+                currentStatus, prioritizeExtraction, inventory, entity, town, job, factory
+        );
+    }
+
+    /** As above, for the job with the given id. */
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+            JobID jobId,
+            STATUS currentStatus,
+            boolean prioritizeExtraction,
+            EntityInvStateProvider<Integer> inventory,
+            EntityLocStateProvider<ROOM> entity,
+            JobTownProvider<ROOM> town,
+            IProductionJob<STATUS> job,
+            IProductionStatusFactory<STATUS> factory
+    ) {
         if (factory.waitingForTimedState().equals(currentStatus)) {
             if (town.isUnfinishedTimeWorkPresent()) {
                 return null;
             }
         }
-        STATUS status = usualRoutine(
-                currentStatus, prioritizeExtraction, inventory,
+        STATUS status = usualRoutine(new UsualRoutineContext<>(
+                jobId, currentStatus, prioritizeExtraction, inventory,
                 JobTownStates.forTown(town),
                 new Job<>() {
                     @Override
@@ -484,7 +536,7 @@ public class JobStatuses {
                         return job.tryUsingSupplies(supplyItemStatus);
                     }
                 }, factory
-        );
+        ));
         // TODO: For "no supplies" status, ignore rooms that only need tools
         // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
         if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {

@@ -8,7 +8,7 @@ import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
-import ca.bradj.questown.integration.jobs.JobPhaseModifier;
+import ca.bradj.questown.integration.SpecialRulesRegistry;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.declarative.SoundInfo;
 import ca.bradj.questown.jobs.declarative.WorkWorldInteractions;
@@ -1018,18 +1018,11 @@ public class ResourceJobLoader {
             JobBlockTestContext ctx,
             WorkSpecialRules special
     ) {
-        // Gather all global and per-status rules
-        ImmutableList<String> allRules = ImmutableList.<String>builder().addAll(special.specialGlobalRules()).build();
-        java.util.List<Boolean> ruleResults = new java.util.ArrayList<>();
-        for (JobPhaseModifier rule : ca.bradj.questown.integration.SpecialRulesRegistry.getRuleAppliers(allRules)) {
-            boolean passed = rule.postJobBlockCheckPassed(ctx);
-            ruleResults.add(passed);
-            if (!passed) {
-                break;
-            }
-        }
-        boolean result = UtilClean.specialRulesAllPass(ruleResults);
-        return result;
+        ImmutableList<String> allRules = ImmutableList.copyOf(special.specialGlobalRules());
+        return UtilClean.allPass(
+                SpecialRulesRegistry.getRuleAppliers(allRules),
+                rule -> rule.postJobBlockCheckPassed(ctx)
+        );
     }
 
     private static Optional<BlockStateComparator> getStateComparator(JsonObject block) {

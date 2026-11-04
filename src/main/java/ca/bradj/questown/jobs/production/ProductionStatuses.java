@@ -8,6 +8,7 @@ import org.jetbrains.annotations.Nullable;
 public class ProductionStatuses {
 
     public static @Nullable <ROOM extends Room> ProductionStatus getNewStatusFromSignal(
+            JobID jobId,
             ProductionStatus currentStatus,
             Signals signal,
             EntityInvStateProvider<Integer> inventory,
@@ -18,7 +19,7 @@ public class ProductionStatuses {
     ) {
         switch (signal) {
             case MORNING, NOON -> {
-                return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction);
+                return getMorningStatus(jobId, currentStatus, inventory, town, entity, factory, prioritizeExtraction);
             }
             case NIGHT, EVENING -> {
                 return getEveningStatus(currentStatus, inventory, town, factory, factory);
@@ -28,6 +29,7 @@ public class ProductionStatuses {
     }
 
     public static <ROOM extends Room> @Nullable ProductionStatus getMorningStatus(
+            JobID jobId,
             ProductionStatus currentStatus,
             EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
@@ -36,7 +38,7 @@ public class ProductionStatuses {
             boolean prioritizeExtraction
     ) {
         ProductionStatus newStatus = JobStatuses.productionRoutine(
-                currentStatus, prioritizeExtraction, inventory, entity, town,
+                jobId, currentStatus, prioritizeExtraction, inventory, entity, town,
                 // TODO: Allow preferences to be provided/serialized
                 new TypicalProductionJob<>(ImmutableList.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
                 factory

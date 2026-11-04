@@ -45,8 +45,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     int curIdx = 0;
 
-    /** A job block left in a non-fresh state, with no timer, for this many ticks is stuck and is reset to fresh. Any write restarts the count. */
-    public static final long STUCK_RESET_TICKS = 20_000L;
+    /**
+     * A job block left in a non-fresh state, with no timer, for this many ticks is stuck and is
+     * reset to fresh. Any write restarts the count.
+     */
+    static final long STUCK_RESET_TICKS = 20_000L;
 
     public AbstractWorkStatusStore(
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
@@ -90,12 +93,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<POS, State, State> mutator
     ) {
         State newV = jobStatuses.compute(pos, mutator);
-        if (newV != null) {
-            this.stuckTicks.remove(pos);
+        if (newV == null) {
+            debugLogger.log("Job state removed at {}", pos);
+            return;
         }
-        if (newV != null && newV.processingState() > 0) {
-            boolean capAll = newV.processingState() >= 2;
-        }
+        this.stuckTicks.remove(pos);
         debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
@@ -201,15 +203,18 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         for (Map.Entry<POS, State> e : new ArrayList<>(this.jobStatuses.entrySet())) {
             POS pos = e.getKey();
             State state = e.getValue();
-            if (state.processingState() == 0 || this.timeJobStatuses.containsKey(pos) || isRestingState(tickSource, pos, state)) {
+            boolean notStuck = state.processingState() == 0
+                    || this.timeJobStatuses.containsKey(pos)
+                    || isRestingState(tickSource, pos, state);
+            if (notStuck) {
                 this.stuckTicks.remove(pos);
                 continue;
             }
             long accumulated = this.stuckTicks.getOrDefault(pos, 0L) + ticksSinceLast;
             if (accumulated >= STUCK_RESET_TICKS) {
-                QT.FLAG_LOGGER.warn(
-                        "Work block at {} stuck in state {} for {} ticks with no timer; reseeding to fresh",
-                        pos, state.toShortString(), accumulated
+                QT.logBug(
+                        "Work block stuck in state {} for {} ticks with no timer; reseeding to fresh",
+                        state.toShortString(), accumulated, pos
                 );
                 this.setJobBlockState(pos, State.fresh());
             } else {

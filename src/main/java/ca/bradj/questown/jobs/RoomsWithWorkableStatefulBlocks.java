@@ -88,7 +88,6 @@ public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependen
 
     @Override
     public String describe() {
-        // An unevaluated branch has no value yet.
         if (value == null) {
             return "RoomsContainWorkState=<not populated>";
         }

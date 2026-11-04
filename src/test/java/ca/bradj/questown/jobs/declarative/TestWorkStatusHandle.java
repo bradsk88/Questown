@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.roomrecipes.core.Room;
@@ -27,7 +28,7 @@ public class TestWorkStatusHandle extends AbstractWorkStatusStore<Position, Gath
                 (tickSource, pos) -> false,
                 // The welcome mat is always seeded, as in production.
                 (tickSource, pos) -> pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS)
-                        ? ca.bradj.questown.town.workstatus.State.welcomeMatSeedState()
+                        ? State.fresh()
                         : null,
                 // cascadingBlockRevealer - no cascading
                 (tickSource, pos) -> null

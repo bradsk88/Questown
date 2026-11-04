@@ -3,6 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.blocks.StatefulJobBlock;
+import ca.bradj.questown.blocks.WelcomeMatBlock;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -36,10 +37,10 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
                     }
                     BlockState mbs = level.getBlockState(pos);
                     Block b = mbs.getBlock();
-                    if (State.isWelcomeMat(b.toString())) {
-                        // A welcome mat is always a trip work spot, whether or not a job has registered interest in it.
-                        boolean init = ServerJobsRegistry.shouldInitializeWithState(Util.info(level), pos);
-                        return State.welcomeMatSeedState();
+                    if (b instanceof WelcomeMatBlock) {
+                        // A welcome mat is always a leaver's work spot, whether or not a job has
+                        // registered interest in it.
+                        return State.fresh();
                     }
                     if (ServerJobsRegistry.shouldInitializeWithState(Util.info(level), pos)) {
                         return ServerJobsRegistry.getDefaultJobBlockState(b);

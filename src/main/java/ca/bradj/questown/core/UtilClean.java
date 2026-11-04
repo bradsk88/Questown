@@ -37,10 +37,13 @@ public class UtilClean {
         };
     }
 
-    /** Whether every special rule passed. No rules means nothing blocks. */
-    public static boolean specialRulesAllPass(List<Boolean> ruleResults) {
-        for (Boolean rule : ruleResults) {
-            if (!Boolean.TRUE.equals(rule)) {
+    /** Whether every rule passes, stopping at the first that fails. No rules means nothing blocks. */
+    public static <R> boolean allPass(
+            Iterable<R> rules,
+            Predicate<R> passes
+    ) {
+        for (R rule : rules) {
+            if (!passes.test(rule)) {
                 return false;
             }
         }

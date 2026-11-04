@@ -486,12 +486,12 @@ the same root, not a separate room bug).
 The fix: after the workable-state pass, if both requirement lists are empty
 **and** at least one state exists, re-collect from **all** states (full
 requirement set). The hand-off side was verified clean, not part of the fix:
-`computeRoomsNeedingInput` already normalizes a terminal mat
+`DeclarativeJobTicker.stateForJob` already normalizes a terminal mat
 (`processingState == maxState && !hasWorkLeft() && timeToNextState == null`)
 to `State.fresh()` (see the section above), so the gate room still reports the
 tool as a need and `DeclarativeJob.setupForGetSupplies` (closest-chest scan
 via `cleanRooms()` predicates) can hand it over. Pinned by
-`TownHasSuppliesNoWorkableStateTest` (the no-workable-state case was red on
+`TownHasSuppliesTest` (the no-workable-state case was red on
 pre-fix code with the live dump's exact failure signature).
 
 ## `SpecialRules.CLAIM_SPOT` constant matched no job data (2026-10-14)
@@ -748,7 +748,7 @@ job-agnostic:
    furnace that could not take it (no furnace passes cook/fuel's empty-fuel-slot precondition). The
    fallback now applies only when the town has at least one job block for the job
    (`TickTownProvider` passes `townHasAnyJobBlock`). Pinned by
-   `TownHasSuppliesNoWorkableStateTest.tool_does_not_count_when_the_town_has_no_job_block_at_all`.
+   `TownHasSuppliesTest.tool_does_not_count_when_the_town_has_no_job_block_at_all`.
 2. **Work-only rooms** (`DeclarativeJobs.rooms`): rooms in the `dueToWorkOnly` bucket were filtered
    out ("TODO: Validate that this is actually needed"). A job whose state needs neither tool nor
    ingredient (`cook/extract`: work 0.1) gets its rooms only from that bucket, so "town has workable
@@ -1304,7 +1304,7 @@ remaining ties keep the rotation. A longer trip still beats a higher level. `Job
 
 `ServerJobsRegistry.canFit` looks up the job's duration and asks `Signals.fitsInWorkday(start,
 duration)`: work fits when it ends in the same morning or noon. The window is pure, so
-`DayWindowTest` tests `fitsInWorkday` itself instead of a restated copy, and the disabled
+`SignalsTest` tests `fitsInWorkday` itself instead of a restated copy, and the disabled
 `ServerJobsRegistryCanFitTest` placeholder is gone. The declared-producer lookup is
 `rootsThatCanMake` (was `staticProducerRootsForItem`/`staticProducerRootsFor`); its two
 tag-membership cases were disabled (tag contents need a loaded data pack) and are removed.

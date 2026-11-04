@@ -90,7 +90,8 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
 
         // ...but only while there is a job block to resume at.
         if (neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty() && townHasAnyJobBlock.get()) {
-            // With no workable block right now, ask for the full set, so the town can get what it needs to resume.
+            // With no workable block right now, ask for the full set, so the town can get what it
+            // needs to resume.
             for (Integer state : needs.keySet()) {
                 collectStateNeeds(state, neededIngredients, neededTools);
             }

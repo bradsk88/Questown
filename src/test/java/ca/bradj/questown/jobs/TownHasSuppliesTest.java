@@ -17,8 +17,7 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** With no workable state, the town still needs the full set of tools and ingredients, so it can resume. */
-class TownHasSuppliesNoWorkableStateTest {
+class TownHasSuppliesTest {
 
     record FakeItem(String name) implements Item<FakeItem> {
         @Override
@@ -218,7 +217,6 @@ class TownHasSuppliesNoWorkableStateTest {
 
     @Test
     void tool_still_counts_when_no_state_is_workable() {
-        // The mat is in its final state; the sword in the chest still counts.
         TownHasSupplies<FakeItem, FakeItem, ContainerTarget<ContainerTarget.Container<FakeItem>, FakeItem>> h =
                 hasSupplies(false);
         WithReason<Boolean> r = h.apply(() -> null);
@@ -227,7 +225,7 @@ class TownHasSuppliesNoWorkableStateTest {
 
     @Test
     void tool_does_not_count_when_the_town_has_no_job_block_at_all() {
-        // Every furnace fuelled: no cycle to resume, so the coal doesn't count.
+        // No state is workable and no job block exists, so the coal is not needed.
         ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<?>> states =
                 ImmutableMap.of(0, notWorkable(0), 1, notWorkable(1));
         @SuppressWarnings("unchecked")

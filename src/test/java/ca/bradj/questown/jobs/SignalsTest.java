@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static ca.bradj.questown.jobs.Signals.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -163,5 +165,46 @@ class SignalsTest {
         assertEquals(0, t.productiveTotal());
         assertEquals(0, t.wallClockTotal());
         assertEquals(0, t.wallClockOffsetAt(0));
+    }
+
+    @ParameterizedTest(name = "tick {0} is {1}")
+    @CsvSource({
+            "5999, MORNING", "6000, NOON", "11499, NOON", "11500, EVENING",
+            "21999, EVENING", "22000, NIGHT", "23999, NIGHT", "24000, MORNING", "30000, NOON",
+    })
+    void fromDayTime_switchesSegmentAtEachBoundaryAndWrapsAtFullDay(
+            long tick,
+            Signals expected
+    ) {
+        assertEquals(expected, fromDayTime(new DayTime(tick)));
+    }
+
+    @Test
+    void swordHunt_acceptsStartsOnlyBefore9500_soTheHuntEndsBeforeEvening() {
+        // A 2000-tick hunt started at 9500 would end at 11500, which is evening.
+        for (long t = 0; t < FULL_DAY_TICKS; t++) {
+            assertEquals(t < 9500, fitsInWorkday(new DayTime(t), 2000), "start " + t);
+        }
+    }
+
+    @ParameterizedTest(name = "start {0}, {1} ticks -> fits={2}")
+    @CsvSource({
+            "9499, 2000, true", "9500, 2000, false", "1000, 2000, true", "5000, 2000, true",
+            "12000, 2000, false", "22500, 2000, false", "23500, 2000, false",
+            "7499, 4000, true", "7500, 4000, false", "3499, 8000, true", "3500, 8000, false",
+    })
+    void fitsInWorkday_onlyWhenTheWorkEndsBeforeEvening(
+            long start,
+            long duration,
+            boolean fits
+    ) {
+        assertEquals(fits, fitsInWorkday(new DayTime(start), duration));
+    }
+
+    @Test
+    void instantWork_fitsAnyStartBeforeEvening() {
+        for (long t = 0; t < FULL_DAY_TICKS; t++) {
+            assertEquals(t < 11500, fitsInWorkday(new DayTime(t), 0), "start " + t);
+        }
     }
 }

@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import net.minecraft.core.BlockPos;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +25,11 @@ public class TownFlags {
 
     public static java.util.Collection<TownFlagBlockEntity> all() {
         return java.util.Collections.unmodifiableCollection(flags.values());
+    }
+
+    /** Whether a loaded flag owns the welcome mat at {@code pos}. */
+    public static boolean ownsWelcomeMat(BlockPos pos) {
+        return flags.values().stream().anyMatch(f -> f.getWelcomeMats().contains(pos));
     }
 
     /** The morning after a sleep. {@code newTime} is only logged: the morning runs on game time. */

@@ -1,7 +1,6 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
-
 import ca.bradj.questown.jobs.declarative.TestRoomMatch;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.town.workstatus.State;
@@ -15,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-/** A villager's work-status store seeds the welcome mat only on a tick whose room list includes the mat's room. */
+/** A work-status store seeds the welcome mat only on a tick that includes the mat's room. */
 class WorkStatusStoreMatSeedTest {
 
     private static final Position MAT = new Position(1, 1);
@@ -27,7 +26,7 @@ class WorkStatusStoreMatSeedTest {
             super(
                     (room, pos) -> ImmutableList.of(pos),
                     (ts, pos) -> false,
-                    (ts, pos) -> MAT.equals(pos) ? State.welcomeMatSeedState() : null,
+                    (ts, pos) -> MAT.equals(pos) ? State.fresh() : null,
                     (ts, pos) -> null
             );
         }
@@ -38,27 +37,21 @@ class WorkStatusStoreMatSeedTest {
     }
 
     @Test
-    void storeThatNeverSeesGateRoom_inRoomList_neverSeedsMat() {
+    void storeNeverTickedOverTheGateRoom_neverSeedsTheWelcomeMat() {
         MatStore store = new MatStore();
         tickWith(store, List.of(OTHER_ROOM));
         tickWith(store, List.of(OTHER_ROOM));
         tickWith(store, List.of(OTHER_ROOM));
-        Assertions.assertNull(store.getJobBlockState(MAT),
-                "a gate mat outside every scanned room must not exist in the store (this is the per-owner 'mat missing' state)");
-
+        Assertions.assertNull(store.getJobBlockState(MAT));
     }
 
     @Test
-    void storeThatIsTicked_withGateRoom_inRoomList_doesSeedTheMat() {
+    void tickOverTheGateRoom_seedsTheWelcomeMatAtState0() {
         MatStore store = new MatStore();
         tickWith(store, List.of());
         Assertions.assertNull(store.getJobBlockState(MAT));
-        // Once a tick includes the mat's room, it seeds.
         tickWith(store, List.of(OTHER_ROOM, MAT_ROOM));
-        Assertions.assertEquals(State.welcomeMatSeedState(), store.getJobBlockState(MAT),
-                "a tick over the gate room seeds the mat (real store behavior)");
-        Assertions.assertEquals(0, store.getJobBlockState(MAT).processingState(),
-                "the seeded state is state 0, the 'needs the leaver's supplies' state");
+        Assertions.assertEquals(State.fresh(), store.getJobBlockState(MAT));
     }
 
     private RoomsNeedingVillagerInput<Room, String, Position> matNvi() {
@@ -73,39 +66,17 @@ class WorkStatusStoreMatSeedTest {
     }
 
     @Test
-    void jobsCleanRooms_readPath_treatsMatMissingState_asWorkableSpot_afterFix() {
+    void unseededWelcomeMat_readsAsWorkableAtState0_soTheLeaverCanStart() {
         MatStore store = new MatStore();
-        Assertions.assertNull(store.getJobBlockState(MAT), "precondition: the owner store lacks the mat");
+        Assertions.assertNull(store.getJobBlockState(MAT));
 
-        // An unseeded mat reads as fresh state 0, workable.
         var workable = DeclarativeJobs.rooms(
-                () -> com.google.common.collect.ImmutableList.copyOf(matNvi().get().get(0)),
+                () -> ImmutableList.copyOf(matNvi().get().get(0)),
                 store::getJobBlockState,
                 pos -> true,
                 pos -> pos.toString(),
                 3
         );
-        Assertions.assertTrue(workable.get(0).populate().value().value(),
-                "a leaver's unseeded mat must read as workable at state 0 (NO_JOBSITE stall fixed)");
+        Assertions.assertTrue(workable.get(0).populate().value().value());
     }
-
-    @Test
-    void jobsCleanRooms_readPath_withNullAsFresh_supplier_seesWorkableSpot() {
-        MatStore store = new MatStore();
-        Assertions.assertNull(store.getJobBlockState(MAT), "precondition: the owner store lacks the mat");
-
-        var workable = DeclarativeJobs.rooms(
-                () -> com.google.common.collect.ImmutableList.copyOf(matNvi().get().get(0)),
-                pos -> {
-                    State s = store.getJobBlockState(pos);
-                    return s == null ? State.fresh() : s;
-                },
-                pos -> true,
-                pos -> pos.toString(),
-                3
-        );
-        Assertions.assertTrue(workable.get(0).populate().value().value(),
-                "null-treated-as-fresh must make the mat workable (validates the read-side fix)");
-    }
-
 }

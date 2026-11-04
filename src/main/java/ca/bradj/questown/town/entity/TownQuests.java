@@ -155,7 +155,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         markOnboarding(qb);
         questBatches.add(qb);
         t.messages.broadcastMessage("New quest is available: build a small room and register its door.");
-        QT.QUESTS_LOGGER.info("Empty-room batch posted (onboarding beat between gate and basics)");
+        QT.QUESTS_LOGGER.info("Posted the empty-room quest batch");
     }
 
     /** The basics batch (job board and storeroom). Its reward brings the second villager and the next batch. */
@@ -1496,7 +1496,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     @Override
     public void questCompleted(MCQuest quest) {
         if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
-            QT.QUESTS_LOGGER.warn("[DEV-DIAG:quest-done] {} {}", quest.getType(), quest.getWantedId());
+            QT.QUESTS_LOGGER.info("Quest completed: {} {}", quest.getType(), quest.getWantedId());
         }
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         t.messages.questCompleted(quest);
@@ -1815,65 +1815,73 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         };
     }
 
-    /** Completes open room and item quests the town already satisfies. Covers quests posted after the room or items were already there. */
+    /**
+     * Completes open room and item quests the town already satisfies. Covers quests posted after
+     * the room or items were already there.
+     */
     private void backfillSatisfiedQuests(TownInterface town) {
-        ServerLevel level = town.getServerLevel();
         if (questBatches.isEmpty()) {
             return;
         }
-        // Walk the quests without copying them.
-        final boolean[] openItems = {false};
-        final boolean[] openLevels = {false};
-        List<MCQuest> openRooms = new ArrayList<>();
-        questBatches.getAllBatches().stream()
-            .flatMap(b -> QuestBatch.stream(b))
-            .forEach(q -> {
-                if (q.isComplete()) {
-                    return;
-                }
-                switch (q.getType()) {
-                    case ROOM -> openRooms.add(q);
-                    case ITEM -> openItems[0] = true;
-                    case VILLAGER_LEVEL -> openLevels[0] = true;
-                    default -> { }
-                }
-            });
-        if (openLevels[0]) {
+        OpenQuests open = openQuests();
+        if (open.levels()) {
             markVillagerLevelsReached(this.town.getUnsafe().highestLevelByRoot());
         }
-        if (openRooms.isEmpty() && !openItems[0]) {
-            return;
+        completeSatisfiedRoomQuests(town, open.rooms());
+        if (open.items()) {
+            processItemQuests(TownContainers.getAllStacks(this.town.getUnsafe(), town.getServerLevel()));
         }
+    }
+
+    private record OpenQuests(List<MCQuest> rooms, boolean items, boolean levels) {}
+
+    private OpenQuests openQuests() {
+        List<MCQuest> rooms = new ArrayList<>();
+        boolean items = false;
+        boolean levels = false;
+        for (MCQuest q : questBatches.getAllBatches().stream().flatMap(QuestBatch::stream).toList()) {
+            if (q.isComplete()) {
+                continue;
+            }
+            switch (q.getType()) {
+                case ROOM -> rooms.add(q);
+                case ITEM -> items = true;
+                case VILLAGER_LEVEL -> levels = true;
+                default -> { }
+            }
+        }
+        return new OpenQuests(rooms, items, levels);
+    }
+
+    private void completeSatisfiedRoomQuests(
+            TownInterface town,
+            List<MCQuest> openRooms
+    ) {
         for (MCQuest q : openRooms) {
-            Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle().getRoomsMatching(q.getWantedId());
-            Optional<MCRoom> eligible = rooms.stream()
+            Optional<MCRoom> eligible = town.getRoomHandle().getRoomsMatching(q.getWantedId()).stream()
                     .map(RoomRecipeMatch::getRoom)
                     .filter(r -> !isClaimedFor(r, q.getWantedId()))
                     .findFirst();
-            if (eligible.isPresent()) {
-                markQuestAsComplete(eligible.get(), q.getWantedId());
-            } else {
-                probeNoRoomMatch(q);
+            if (eligible.isEmpty()) {
+                logRoomQuestWaiting(q);
+                continue;
             }
-        }
-        if (openItems[0]) {
-            processItemQuests(TownContainers.getAllStacks(this.town.getUnsafe(), level));
+            markQuestAsComplete(eligible.get(), q.getWantedId());
         }
     }
-    private static final Object BackfillProbeLock = new Object();
-    private static long BackfillProbeLastNanos = 0L;
-    private void probeNoRoomMatch(MCQuest q) {
+
+    private static long lastRoomQuestWaitingLog = 0L;
+
+    private static void logRoomQuestWaiting(MCQuest q) {
         if (System.getenv("ENABLE_DEV_COMMANDS") == null) {
             return;
         }
-        synchronized (BackfillProbeLock) {
-            long now = System.nanoTime();
-            if (now - BackfillProbeLastNanos <= 10_000_000_000L) {
-                return;
-            }
-            BackfillProbeLastNanos = now;
+        long now = System.nanoTime();
+        if (now - lastRoomQuestWaitingLog <= 10_000_000_000L) {
+            return;
         }
-        QT.QUESTS_LOGGER.warn("[DEV-DIAG:backfill] open ROOM quest {} has no matching registered room", q.getWantedId());
+        lastRoomQuestWaitingLog = now;
+        QT.QUESTS_LOGGER.debug("Room quest {} is still open: no registered room matches it yet", q.getWantedId());
     }
 
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {

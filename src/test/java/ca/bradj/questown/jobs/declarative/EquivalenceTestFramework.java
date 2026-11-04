@@ -169,8 +169,11 @@ public class EquivalenceTestFramework {
         }
     }
 
-    /** Ticks the job and the work-status store together, as the flag does, for jobs that end in a timed wait. Use it to check that a job actually finishes and extracts. */
-    public static void runTickerWithStore(TickerSetup setup, int ticks) {
+    /**
+     * Ticks the job and the work-status store together, as the flag does, for jobs that end in a
+     * timed wait. Use it to check that a job actually finishes and extracts.
+     */
+    static void runTickerWithStore(TickerSetup setup, int ticks) {
         for (int i = 0; i < ticks; i++) {
             setup.deps.syncJournalWithInventory();
             setup.ticker.tick(setup.deps, (msg, args) -> {});

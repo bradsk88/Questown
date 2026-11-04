@@ -134,27 +134,15 @@ class WorkStatusStoreTest {
     }
 
     @Test
-    void Test_ClaimHoldsTheSpotUntilItsTtlRunsOut() {
-        TestWorkStatusStore s = new TestWorkStatusStore();
-        Position pos = new Position(1, 2);
-        UUID other = UUID.randomUUID();
-        s.claimSpot(pos, new Claim(UUID.randomUUID(), 3));
-        tick(s); // 3 -> 2
-        tick(s); // 2 -> 1
-        // Still held while ticks remain: another owner cannot claim the spot.
-        Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
-    }
-
-    @Test
     void Test_ClaimExpiryReleasesTheSpot() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         UUID other = UUID.randomUUID();
         s.claimSpot(pos, new Claim(UUID.randomUUID(), 3));
-        tick(s); // 3 -> 2
-        tick(s); // 2 -> 1
+        tick(s);
+        tick(s);
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
-        tick(s); // 1 -> 0, expired and released
+        tick(s);
         Assertions.assertTrue(s.canClaim(pos, () -> new Claim(other, 100)));
     }
 
@@ -164,9 +152,9 @@ class WorkStatusStoreTest {
         Position pos = new Position(1, 2);
         UUID other = UUID.randomUUID();
         s.claimSpot(pos, new Claim(UUID.randomUUID(), 10));
-        s.tick(null, ImmutableList.of(arbitaryRoom), 5); // 10 -> 5
+        s.tick(null, ImmutableList.of(arbitaryRoom), 5);
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
-        s.tick(null, ImmutableList.of(arbitaryRoom), 5); // 5 -> 0, expired
+        s.tick(null, ImmutableList.of(arbitaryRoom), 5);
         Assertions.assertTrue(s.canClaim(pos, () -> new Claim(other, 100)));
     }
 
@@ -177,16 +165,15 @@ class WorkStatusStoreTest {
         UUID owner = UUID.randomUUID();
         UUID other = UUID.randomUUID();
         s.claimSpot(pos, new Claim(owner, 3));
-        tick(s); // 3 -> 2
+        tick(s);
         // The same owner re-claiming renews it.
         Assertions.assertTrue(s.claimSpot(pos, new Claim(owner, 3)));
-        tick(s); // would have reached 1; the refresh put it back to 3 -> 2
+        tick(s);
         Assertions.assertFalse(s.canClaim(pos, () -> new Claim(other, 100)));
     }
 
     @Test
     void Test_StuckBlockWithNoTimerReseedsToFreshAfterThreshold() {
-        // A block in a non-fresh state with no timer is reset to fresh.
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
@@ -198,7 +185,6 @@ class WorkStatusStoreTest {
 
     @Test
     void Test_RestingStateBlockIsNotReseeded() {
-        // A job board at state 1 is at rest, not stuck.
         Position board = new Position(1, 2);
         TestWorkStatusStore s = new TestWorkStatusStore(board);
         s.setJobBlockState(board, State.freshAtState(1));
@@ -223,10 +209,10 @@ class WorkStatusStoreTest {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
-        tick(s, 19_000);
-        // A write restarts the stuck count.
+        int almostStuck = (int) AbstractWorkStatusStore.STUCK_RESET_TICKS - 1000;
+        tick(s, almostStuck);
         s.setJobBlockState(pos, State.freshAtState(1).setCount(2));
-        tick(s, 19_000);
+        tick(s, almostStuck);
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
     }
 
@@ -234,8 +220,9 @@ class WorkStatusStoreTest {
     void Test_BlockWithActiveTimerIsNotReseeded() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        s.setJobBlockStateWithTimer(pos, State.freshAtState(1), 30_000);
-        tick(s, 20_000);
+        int stuckTicks = (int) AbstractWorkStatusStore.STUCK_RESET_TICKS;
+        s.setJobBlockStateWithTimer(pos, State.freshAtState(1), stuckTicks + 10_000);
+        tick(s, stuckTicks);
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
         Assertions.assertNotNull(s.getTimeToNextState(pos));
     }

@@ -508,7 +508,7 @@ able to say, for every leaver, "for me, the welcome mat is **state 0** (needs my
 supplies)". Two sides, both pinned:
 
 - **Seed side** — `TownWorkStatusStore.defaultStateFactory` seeds
-  `State.welcomeMatSeedState()` (state 0) for the mat **unconditionally**. The old
+  `State.fresh()` (state 0) for any `WelcomeMatBlock` **unconditionally**. The old
   path asked `ServerJobsRegistry.shouldInitializeWithState` — which carries a static
   false-cache that outlives late job registration — and that left ~half the leavers'
   ledgers without the mat's state-0. That was the NO_JOBSITE / COLLECTING_SUPPLIES
@@ -519,18 +519,18 @@ supplies)". Two sides, both pinned:
   matching the ticker's `getJobBlockState` upstream. Skipping nulls deadlocked the
   supply path (`shouldTakeItem REJECT needed-empty`, empty `cleanRooms()`).
 
-Pinned by `WelcomeMatSeedStateTest`, `StateFreshIfNullTest`, and the
+Pinned by `StateTest`, `WorkStatusStoreMatSeedTest`, and the
 `unseededMat` case in `TickerAdvancerEquivalenceTest` (the test stand must present
 the leaver's held items as a room container — `ContainersClean.get` skips the job
 block itself; a stand with no container at all was the 855 red spec).
 
-Companion guard: `WelcomeMatBlock` c3 — a mat in a slot no live flag has
-registered in its POIs is a misplacement (placement via the flag item is the only
-owner path); after a 6s post-load grace it reverts to air + drops, rather than
-persisting a flagless work spot. And `UtilClean.specialRulesAllPass`: "no global
+Companion guard: `WelcomeMatBlock.Entity.removedIfUnowned` — a mat that no loaded
+flag owns (`TownFlags.ownsWelcomeMat`) is a misplacement (placement via the flag
+item is the only owner path); after a 6s post-load wait it reverts to air + drops,
+rather than persisting a flagless work spot. And `UtilClean.allPass`: "no global
 special rules" is *no restriction*, not "denied" — an empty rule set passes the
 fresh-block gate (`ResourceJobLoader.trySpecialRuleIsJobBlock` delegates to it;
-pinned by `JobBlockFreshGateTest`).
+pinned by `UtilCleanAllPassTest`).
 
 # Post-downtime warp work-block assignment (`PostDowntimeWarper.findAssignedWorkBlock`, 2026-10-10)
 

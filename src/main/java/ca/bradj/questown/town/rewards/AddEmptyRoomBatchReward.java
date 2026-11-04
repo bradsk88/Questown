@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
 
-/** Posts the first day's empty-room batch. */
+/** Posts the empty-room quests, which lead the player to build and register a first room. */
 public class AddEmptyRoomBatchReward extends MCReward {
 
     public static final String ID = "add_empty_room_batch";

@@ -1,15 +1,22 @@
 package ca.bradj.questown.town.special;
 
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
-import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,9 +29,12 @@ class EmptyRoomRecipeTest {
         Bootstrap.bootStrap();
     }
 
+    private static final Path RECIPE = Path.of("src/main/resources/data/questown/recipes/empty_room.json");
+
     // Not a static field: it must load after the vanilla bootstrap.
-    private RoomRecipe emptyRoomRecipe() {
-        return new RoomRecipe(new ResourceLocation("questown", "empty_room"), NonNullList.create(), 1, false);
+    private RoomRecipe emptyRoomRecipe() throws IOException {
+        JsonObject json = JsonParser.parseString(Files.readString(RECIPE)).getAsJsonObject();
+        return new RoomRecipe.Serializer().codec().codec().parse(JsonOps.INSTANCE, json).getOrThrow();
     }
 
     private static Container of(ItemStack... items) {
@@ -63,7 +73,7 @@ class EmptyRoomRecipeTest {
             }
 
             @Override
-            public boolean stillValid(net.minecraft.world.entity.player.Player player) {
+            public boolean stillValid(Player player) {
                 return true;
             }
 
@@ -74,20 +84,17 @@ class EmptyRoomRecipeTest {
     }
 
     @Test
-    void zeroIngredientRecipeMatchesAnEmptyRoom() {
-        assertTrue(emptyRoomRecipe().matches(of(), null),
-                "a zero-ingredient room recipe must match a room with no contents (vacuous superset)");
+    void emptyRoomRecipe_matchesARoomWithNothingInIt() throws IOException {
+        assertTrue(emptyRoomRecipe().matches(of(), null));
     }
 
     @Test
-    void zeroIngredientRecipeMatchesAFullRoom() {
-        assertTrue(emptyRoomRecipe().matches(of(new ItemStack(Items.STONE)), null),
-                "the empty-room recipe must also match a room that later gains contents");
+    void emptyRoomRecipe_stillMatchesOnceTheRoomHasContents() throws IOException {
+        assertTrue(emptyRoomRecipe().matches(of(new ItemStack(Items.STONE)), null));
     }
 
     @Test
-    void emptyRoomRecipeIdMatchesTheQuestId() {
-        assertTrue(SpecialQuests.EMPTY_ROOM.equals(new ResourceLocation("questown", "empty_room")),
-                "the quest's wanted id must equal the room recipe's id for getRoomsMatching to find it");
+    void questId_isTheRecipeFileId_soTheQuestFindsTheRoom() {
+        assertTrue(SpecialQuests.EMPTY_ROOM.equals(new ResourceLocation("questown", "empty_room")));
     }
 }

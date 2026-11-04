@@ -126,10 +126,9 @@ public class ProductionJournal<
         if (status == null || status.isUnset()) {
             throw new IllegalStateException("Must initialize status");
         }
-        ca.bradj.questown.jobs.JobStatuses.whyDebugJobId = this.jobId.toNiceString();
         Signals sig = sigs.getSignal(townState.getDayTime());
         @Nullable ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
-                status, sig, inventory, townState, entityState, factory, prioritizeExtraction
+                jobId, status, sig, inventory, townState, entityState, factory, prioritizeExtraction
         );
         if (newStatus != null) {
             changeStatus(newStatus);

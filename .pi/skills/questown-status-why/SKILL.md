@@ -46,11 +46,11 @@ fallback; `root.resolve()` picks the status.
 
 ## Fire / read the WHY dump
 
-The decision inputs are already logged (a WARN, dev-visible):
+The decision inputs are already logged at INFO when the server runs with `ENABLE_DEV_COMMANDS` set (the playtest `restart.sh` sets it):
 
 - `JobStatuses.maybeLogWhy` / `JobStatuses.collectWhy` — dumps every gate (boolean + reason) plus the nested `spots={…} rooms={…} job_blocks={…}` maps.
-- `JobStatuses.whyDebugJobId` is set each recompute by `ProductionJournal` (L129) so the dump attributes to the **real** leaver.
-- It gates to `gatherer:`/`hunter:` and throttles at `WHY_INTERVAL_MS` (4000 ms).
+- The job id comes down the production path (`ProductionJournal` → `ProductionStatuses.getNewStatusFromSignal(jobId, …)` → `JobStatuses.productionRoutine(jobId, …)` → the `UsualRoutineContext`), so the dump attributes to the **real** leaver. The warp passes its own job id the same way.
+- It gates to the leaver roots (`gatherer`, `hunter`, `miner`) and throttles at `WHY_INTERVAL_MS` (4000 ms) per job.
 
 Read it from the world log:
 
@@ -64,17 +64,16 @@ A populated `spots={pos=state}` whose state isn't the leaver's ⇒ state mismatc
 
 **Widen / unthrottle** if you need more jobs or faster cadence: lower
 `WHY_INTERVAL_MS` in `JobStatuses`, or widen the root gate in
-`JobStatuses.maybeLogWhy` (currently `label.startsWith("gatherer:|hunter:")`).
+`JobStatuses.isLeaverRoot`.
 
 ## Traps that cost real time here
 
-1. **The jobId is `"unknown"/"unknown"` in the resolver.** The 6-arg
-   `usualRoutine` builds its context with `new JobID("unknown","unknown")`. A
-   gate on `ctx.jobId().rootId()` never matches a real leaver — the probe
-   compiles but **never fires** (WHY=0 despite 16 non-WAITING ticks). That is why
-   `whyDebugJobId` is threaded from `ProductionJournal` instead. Before spending a
-   world on a new probe, confirm its gate compares against the **live** value, not
-   a constant.
+1. **The jobId is `"unknown"/"unknown"` on the convenience overloads.** The 6-arg
+   `usualRoutine` and the 7-arg `productionRoutine` build their context with
+   `new JobID("unknown","unknown")`, so a probe reached through them never fires.
+   Production calls go through the job-id overloads; a new call site must too.
+   Before spending a world on a new probe, confirm its gate compares against the
+   **live** value, not a constant.
 2. **Read *nested* detail, not just the top gate.** The first dump version printed
    each gate's boolean but not its `spots/rooms/job_blocks` maps — the decisive
    "no spots found" was the *detail*, not the gate's value. `Populated` carries the

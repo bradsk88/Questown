@@ -755,7 +755,7 @@ public class ServerJobsRegistry {
         if (isSeekingWork(p)) {
             return false;
         }
-        // Upkeep jobs (downtime, rest, eating, deposit) are not registered work.
+        // Special jobs (downtime, rest, eating, deposit) are not registered work.
         if (specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
             return false;
         }
@@ -863,7 +863,7 @@ public class ServerJobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID) || DinerRawFoodWork.isDining(jobID);
     }
 
-    /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Upkeep jobs always fit. */
+    /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Special jobs always fit. */
     public static boolean fitsInDay(
             UUID villagerID,
             JobID p,

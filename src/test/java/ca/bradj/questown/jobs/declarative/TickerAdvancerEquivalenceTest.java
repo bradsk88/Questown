@@ -221,7 +221,7 @@ class TickerAdvancerEquivalenceTest {
                 + ".\n" + comparison.diffMessage());
     }
 
-    // Trip villagers: each must actually produce, not just match between real time and warp.
+    // Leavers: each must actually produce, not just match between real time and warp.
 
     static Stream<Arguments> notoolExtractVariants() {
         String food = "#questown:villager_food";
@@ -251,8 +251,6 @@ class TickerAdvancerEquivalenceTest {
                         + " inventory=" + result.inventoryItems());
     }
 
-    // A fresh mat at state 0 is startable when its room is visible and the food is accepted.
-
     @Test
     void gatherer_notool_freshMat_shouldStartAndLeaveState0() {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_med.json");
@@ -264,14 +262,11 @@ class TickerAdvancerEquivalenceTest {
         EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
 
         Assertions.assertTrue(result.jobBlockState() > 0,
-                "Gatherer at a FRESH gate mat should start (advance past the state-0 food state) "
-                        + "once it has villager_food. Stuck at state=" + result.jobBlockState()
-                        + " = the gate room/job block is not visible (9f476c37 gate-room regression) "
-                        + "or the food is not being accepted as the state-0 input. inventory="
-                        + result.inventoryItems());
+                "A gatherer at a fresh welcome mat with villager_food should get past state 0. "
+                        + "Stuck at state=" + result.jobBlockState()
+                        + ": the gate room or its job block is not visible, or the food is not accepted. "
+                        + "inventory=" + result.inventoryItems());
     }
-
-    // A villager whose store never seeded the mat still starts and finishes.
 
     @Test
     void gatherer_notool_unseededMat_shouldStillStartAndExtract() {
@@ -285,11 +280,9 @@ class TickerAdvancerEquivalenceTest {
         EquivalenceTestFramework.SimulationResult startResult = EquivalenceTestFramework.captureResult(setup);
 
         Assertions.assertTrue(startResult.jobBlockState() > 0,
-                "A GATHERER whose per-owner store has a NULL (unseeded) gate-mat state should still "
-                        + "start (Fix A null->fresh). Stuck at state=" + startResult.jobBlockState()
-                        + " = the null state is not startable (canInsertItem/insert gated on "
-                        + "jobStatuses.containsKey) — the held-run COLLECTING_SUPPLIES soft-lock. "
-                        + "inventory=" + startResult.inventoryItems());
+                "A gatherer whose store has no state for its welcome mat should still start, "
+                        + "reading the mat as fresh. Stuck at state=" + startResult.jobBlockState()
+                        + ". inventory=" + startResult.inventoryItems());
 
         // Long enough for the timed wait; finishing shows as the extraction.
         EquivalenceTestFramework.runTickerWithStore(setup, 5800);

@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-/** {@link RoomsWithWorkableStatefulBlocks#describe()} on an unevaluated node doesn't throw. */
 class RoomsWithWorkableStatefulBlocksTest {
 
     private static RoomsWithWorkableStatefulBlocks<Position> dep(
@@ -21,7 +20,7 @@ class RoomsWithWorkableStatefulBlocksTest {
     }
 
     @Test
-    void describeSafeBeforePopulate() {
+    void describe_beforePopulate_reportsNotPopulatedInsteadOfThrowing() {
         RoomsWithWorkableStatefulBlocks<Position> d = dep(1, Map.of(), Map.of());
         Assertions.assertTrue(
                 d.describe().contains("not populated"),
@@ -30,7 +29,7 @@ class RoomsWithWorkableStatefulBlocksTest {
     }
 
     @Test
-    void describeAfterPopulateNoMatch() {
+    void populate_withNoSpots_isFalseAndSaysNoSpotsFound() {
         RoomsWithWorkableStatefulBlocks<Position> d = dep(1, Map.of(), Map.of());
         Populated<WithReason<Boolean>> p = d.populate();
         Assertions.assertFalse(p.value().value(), "no spots -> false");
@@ -38,7 +37,7 @@ class RoomsWithWorkableStatefulBlocksTest {
     }
 
     @Test
-    void describeAfterPopulateWithMatch() {
+    void populate_withAWorkableBlock_isTrue() {
         Position pos = new Position(0, 0);
         RoomsWithWorkableStatefulBlocks<Position> d =
                 dep(1, Map.of(pos, 1), Map.of(pos, true));

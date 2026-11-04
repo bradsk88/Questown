@@ -76,7 +76,6 @@ class RoomsStatusLogic {
                     stateQty,
                     getContainedBlocks
             );
-
             UtilClean.addAllOrInitializeList(b, state, rwwcbd.stream().map(v -> maker.apply(v, false)).toList());
         }
 

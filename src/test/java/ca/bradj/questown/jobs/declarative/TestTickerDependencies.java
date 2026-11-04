@@ -120,7 +120,7 @@ public class TestTickerDependencies implements
                 return pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
             }
 
-            // The villager's held items count as town storage, as a trip villager arrives carrying its starting request.
+            // The villager's held items count as town storage, as a leaver arrives carrying its starting request.
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asContainer() {
                 return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
@@ -133,7 +133,7 @@ public class TestTickerDependencies implements
         };
     }
 
-    public static final Position HELD_ITEMS_STORE_POS = new Position(3, 3);
+    static final Position HELD_ITEMS_STORE_POS = new Position(3, 3);
 
     private ContainerTarget<ContainerTarget.Container<GathererJournalTest.TestItem>, GathererJournalTest.TestItem> heldItemsContainer() {
         ContainerTarget.Container<GathererJournalTest.TestItem> container = new ContainerTarget.Container<>() {
@@ -312,22 +312,11 @@ public class TestTickerDependencies implements
     }
 
     private RoomsNeedingVillagerInput<Room, String, Position> recomputeRoomsNeedingInput() {
-        // Matches DeclarativeJobTicker.computeRoomsNeedingInput.
-        AbstractWorkStatusStore<Position, GathererJournalTest.TestItem, Room, ?> store = workStatusHandle;
         int maxState = getMaxState();
+        Function<Position, State> stateForJob = pos -> DeclarativeJobTicker.stateForJob(workStatusHandle, pos, maxState);
         return RoomsStatusLogic.<String, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room, TestRoomMatch>compute(
                 getJobSites(),
-                pos -> {
-                    State s = store.getJobBlockState(pos);
-                    if (s == null) {
-                        return State.fresh();
-                    }
-                    if (s.processingState() > maxState
-                            || (s.processingState() == maxState && !s.hasWorkLeft() && store.getTimeToNextState(pos) == null)) {
-                        return State.fresh();
-                    }
-                    return s;
-                },
+                stateForJob,
                 this::canClaim,
                 this::isJobBlock,
                 this::item,

@@ -307,23 +307,33 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         QT.JOB_LOGGER.info(sb.toString());
     }
 
+    /**
+     * A block's work state as this job reads it. A block with no state yet is fresh, and so is a
+     * final state with no timer, since it will never move on for this job.
+     */
+    static <POS> State stateForJob(
+            WorkStatusHandle<POS, ?> work,
+            POS pos,
+            int maxState
+    ) {
+        State s = work.getJobBlockState(pos);
+        if (s == null) {
+            return State.fresh();
+        }
+        boolean finishedWithNoTimer = s.processingState() == maxState
+                && !s.hasWorkLeft()
+                && work.getTimeToNextState(pos) == null;
+        if (s.processingState() > maxState || finishedWithNoTimer) {
+            return State.fresh();
+        }
+        return s;
+    }
+
     private <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> RoomsNeedingVillagerInput<ROOM, RECIPE, POS> computeRoomsNeedingInput(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work
     ) {
-        Function<POS, State> getJobBlockState = pos -> {
-            State s = work.getJobBlockState((POS) pos);
-            // A block with no work state yet is fresh.
-            if (s == null) {
-                return State.fresh();
-            }
-            // A final state with no timer will never move on for this job; read it as fresh.
-            if (s.processingState() > maxState
-                    || (s.processingState() == maxState && !s.hasWorkLeft() && work.getTimeToNextState((POS) pos) == null)) {
-                return State.fresh();
-            }
-            return s;
-        };
+        Function<POS, State> getJobBlockState = pos -> stateForJob(work, pos, maxState);
         Predicate<POS> canClaim = pos -> deps.canClaim((POS) pos);
         Predicate<POS> isJobBlock = pos -> deps.isJobBlock((POS) pos);
         Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients = state -> deps.item((Integer) state);

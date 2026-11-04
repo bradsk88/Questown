@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
+
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
+import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.adapter.IRoomRecipeMatch;
@@ -8,9 +10,12 @@ import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,7 +80,7 @@ class RoomsStatusLogicTest {
     }
 
     @Test
-    void compute_emptyJobSites_yieldsEmptyNeededInput() {
+    void compute_noJobSites_asksForNothing() {
         RoomsNeedingVillagerInput<String, String, Position> foundRooms = RoomsStatusLogic.compute(
                 ImmutableList.of(),
                 pos -> State.freshAtState(0),
@@ -95,14 +100,14 @@ class RoomsStatusLogicTest {
         );
         assertTrue(foundRooms.getMatches().isEmpty());
         assertTrue(foundRooms.cleanFns(
-                s -> ca.bradj.questown.mc.PredicateCollections.fromSimpleEqualityCheck("bread"),
-                s -> ca.bradj.questown.mc.PredicateCollections.fromSimpleEqualityCheck("bread"),
-                x -> null).isEmpty(),
-            "no sites -> no needed ingredients (the shouldTakeItem 'needed-empty' reject)");
+                s -> PredicateCollections.fromSimpleEqualityCheck("bread"),
+                s -> PredicateCollections.fromSimpleEqualityCheck("bread"),
+                x -> null
+        ).isEmpty());
     }
 
     @Test
-    void compute_gateMatRoom_present_state0_yieldsNeededIngredient() {
+    void compute_welcomeMatAtState0_needsInput() {
         Position matPos = new Position(-13, 64);
         Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
             public String getRecipeID() {
@@ -146,14 +151,7 @@ class RoomsStatusLogicTest {
                 m -> m.getRoom().equals("gate") ? ImmutableList.of(matPos) : ImmutableList.of(),
                 2
         );
-        org.junit.jupiter.api.Assertions.assertFalse(foundRooms.getMatches().isEmpty(),
-                "gate mat room at state 0 must be a needed-input site");
-    }
-
-    // A mat at state 0 waiting for food.
-
-    private static RoomsNeedingVillagerInput<String, String, Position> receptiveMat() {
-        return matAt(0);
+        assertFalse(foundRooms.getMatches().isEmpty());
     }
 
     private static final Position MAT_POS = new Position(-13, 64);
@@ -164,33 +162,33 @@ class RoomsStatusLogicTest {
 
     private static RoomsNeedingVillagerInput<String, String, Position> matAt(
             int state,
-            java.util.function.Predicate<Position> canClaim,
-            java.util.function.Predicate<Position> isJobBlock
+            Predicate<Position> canClaim,
+            Predicate<Position> isJobBlock
     ) {
-        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(new IRoomRecipeMatch<String, String, Position, String>() {
-            public String getRecipeID() {
-                return "town_gate";
-            }
+        Collection<IRoomRecipeMatch<String, String, Position, String>> jobRooms = ImmutableList.of(
+                new IRoomRecipeMatch<String, String, Position, String>() {
+                    public String getRecipeID() {
+                        return "town_gate";
+                    }
 
-            @Override
-            public ImmutableList<String> getRecipeIDs() {
-                return ImmutableList.of(getRecipeID());
-            }
+                    @Override
+                    public ImmutableList<String> getRecipeIDs() {
+                        return ImmutableList.of(getRecipeID());
+                    }
 
-            @Override
-            public String getRoom() {
-                return "gate";
-            }
+                    @Override
+                    public String getRoom() {
+                        return "gate";
+                    }
 
-            @Override
-            public ImmutableMap<Position, String> getContainedBlocks() {
-                return ImmutableMap.of(MAT_POS, "welcome_mat");
-            }
-        });
-
-        Map<Position, State> jobStates = ImmutableMap.of(
-                MAT_POS, State.freshAtState(state)
+                    @Override
+                    public ImmutableMap<Position, String> getContainedBlocks() {
+                        return ImmutableMap.of(MAT_POS, "welcome_mat");
+                    }
+                }
         );
+
+        Map<Position, State> jobStates = ImmutableMap.of(MAT_POS, State.freshAtState(state));
 
         return RoomsStatusLogic.compute(
                 jobRooms,
@@ -211,126 +209,70 @@ class RoomsStatusLogicTest {
         );
     }
 
-    @Test
-    void cleanFns_state0Receptive_nonEmptyAndAcceptsFood() {
-        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
-
-        var fns = rni.cleanFns(
+    /** The items the rooms ask for, with food wanted at state 0. */
+    private static ImmutableList<PredicateCollection<String, ?>> neededItems(
+            RoomsNeedingVillagerInput<String, String, Position> rni
+    ) {
+        return rni.cleanFns(
                 s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
                 s -> null,
-                x -> x);
+                x -> x
+        );
+    }
 
-        org.junit.jupiter.api.Assertions.assertFalse(fns.isEmpty(),
-                "a state-0 receptive mat must yield a non-empty needed-item set on the leaver ACCEPT path");
-
-        boolean accepts = false;
-        for (var pc : fns) {
-            if (pc != null && pc.test("villager_food")) {
-                accepts = true;
-                break;
-            }
-        }
-        assertTrue(accepts, "the needed-item predicates must accept the leaver's food item");
+    private static boolean asksForFood(RoomsNeedingVillagerInput<String, String, Position> rni) {
+        return neededItems(rni).stream().anyMatch(pc -> pc != null && pc.test("villager_food"));
     }
 
     @Test
-    void copyConstructor_preservesReceptiveState0Bucket() {
-        // A state-0 bucket survives the cache's copy.
-        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
-        RoomsNeedingVillagerInput<String, String, Position> copy = new RoomsNeedingVillagerInput<>(rni.get());
+    void matWaitingAtState0_asksForTheLeaversFood() {
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(0);
 
-        assertFalse(copy.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x).isEmpty(),
-                "copy of a receptive rni must still yield needed items");
+        assertFalse(neededItems(rni).isEmpty());
+        assertTrue(asksForFood(rni));
     }
 
     @Test
-    void floor_preservesReceptiveState0Bucket() {
-        RoomsNeedingVillagerInput<String, String, Position> rni = receptiveMat();
-        RoomsNeedingVillagerInput<String, String, Position> floored = rni.floor();
+    void copyOfAWaitingMat_stillAsksForItems() {
+        RoomsNeedingVillagerInput<String, String, Position> copy = new RoomsNeedingVillagerInput<>(matAt(0).get());
 
-        assertTrue(floored.containsKey(0), "floor() must keep a state-0 bucket that had rooms");
-        assertFalse(floored.get(0).isEmpty(), "floor() must not empty the state-0 room list");
+        assertFalse(neededItems(copy).isEmpty());
     }
 
     @Test
-    void matAtWorkState1_notFoodReceptive() {
-        // At state 1 the mat needs work, not food, so a villager rightly refuses to bring food.
-        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(1);
-        var fns = rni.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x);
-        boolean needsFood = false;
-        for (var pc : fns) {
-            if (pc != null && pc.test("villager_food")) {
-                needsFood = true;
-                break;
-            }
-        }
-        assertFalse(needsFood, "a mat in its work phase must not request the leaver's food");
+    void floor_keepsTheWaitingMatsState0Rooms() {
+        RoomsNeedingVillagerInput<String, String, Position> floored = matAt(0).floor();
+
+        assertTrue(floored.containsKey(0));
+        assertFalse(floored.get(0).isEmpty());
     }
 
     @Test
-    void cleanFns_allBucketsEmpty_yieldsEmptyNeededSet() {
-        // All buckets empty: nothing is taken.
-        RoomsNeedingVillagerInput<String, String, Position> empty = new RoomsNeedingVillagerInput<>(ImmutableMap.of());
-
-        assertTrue(empty.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x).isEmpty(),
-                "empty rni must yield an empty needed set (REJECT branch)");
-    }
-
-    // A state's bucket fills only when the mat is a job block and claimable.
-
-    @Test
-    void matExcludedByIsJobBlock_yieldsEmptyNeededSet_neededEmptyReject() {
-        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
-                0,
-                p -> true,   // canClaim: fine
-                p -> false);
-
-        assertTrue(rni.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x).isEmpty(),
-                "an isJobBlock-excluded mat must yield an empty needed set (the leaver's needed-empty REJECT)");
+    void matAtState1_needsWorkNotFood_soItDoesNotAskForFood() {
+        assertFalse(asksForFood(matAt(1)));
     }
 
     @Test
-    void matExcludedByCanClaim_yieldsEmptyNeededSet_neededEmptyReject() {
-        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
-                0,
-                p -> false,  // canClaim: dropped
-                MAT_POS::equals);                                       // isJobBlock: fine
-
-        assertTrue(rni.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x).isEmpty(),
-                "a canClaim-excluded mat must yield an empty needed set (the leaver's needed-empty REJECT)");
+    void noRooms_askForNothing() {
+        assertTrue(neededItems(new RoomsNeedingVillagerInput<>(ImmutableMap.of())).isEmpty());
     }
 
-    @Test
-    void matAvailable_isJobBlockAndCanClaim_yieldsNonEmptyNeededSet_accepts() {
-        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(
-                0,
-                p -> true,   // canClaim: fine
-                MAT_POS::equals);                                       // isJobBlock: fine
+    @ParameterizedTest(name = "jobBlock={0} claimable={1} -> asks={2}")
+    @CsvSource({
+            "false, true,  false",
+            "true,  false, false",
+            "true,  true,  true",
+    })
+    void mat_asksForItemsOnlyWhenItIsAJobBlockAndClaimable(
+            boolean isJobBlock,
+            boolean canClaim,
+            boolean asks
+    ) {
+        RoomsNeedingVillagerInput<String, String, Position> rni = matAt(0, p -> canClaim, p -> isJobBlock);
 
-        var fns = rni.cleanFns(
-                s -> Integer.valueOf(0).equals(s) ? PredicateCollections.fromSimpleEqualityCheck("villager_food") : null,
-                s -> null,
-                x -> x);
-
-        assertFalse(fns.isEmpty(), "a fully-available receptive mat must yield a non-empty needed set (ACCEPT)");
+        assertEquals(asks, !neededItems(rni).isEmpty());
     }
 
-    // A state 0 that only needs work sees a fresh block.
     @Test
     void compute_workOnlyState0_freshBlock_yieldsWorkOnlyBucket() {
         Position furnacePos = new Position(0, 0);
@@ -365,11 +307,11 @@ class RoomsStatusLogicTest {
                 p -> true,
                 furnacePos::equals,
                 new DeclarativeJobChecks<Void, String, String, RoomRecipeMatch<String>, Position>(
-                        ImmutableMap.of(),      // no ingredients
-                        ImmutableMap.of(),       // no quantities
-                        ImmutableMap.of(),       // no tools
+                        ImmutableMap.of(),
+                        ImmutableMap.of(),
+                        ImmutableMap.of(),
                         ImmutableMap.of(0, 0),
-                        ImmutableMap.of(),       // no time
+                        ImmutableMap.of(),
                         room -> true,
                         furnacePos::equals
                 ),
@@ -377,7 +319,7 @@ class RoomsStatusLogicTest {
                 1
         );
 
-        java.util.Collection<RoomsNeedingVillagerInput.NVIRoom<String, String, Position>> rooms0 = foundRooms.get(0);
+        Collection<RoomsNeedingVillagerInput.NVIRoom<String, String, Position>> rooms0 = foundRooms.get(0);
         assertFalse(rooms0.isEmpty(),
                 "a work-only state-0 room with a fresh block must be visible in the work bucket");
         assertTrue(rooms0.stream().allMatch(RoomsNeedingVillagerInput.NVIRoom::dueToWorkOnly),

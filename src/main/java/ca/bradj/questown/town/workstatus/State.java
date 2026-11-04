@@ -1,5 +1,7 @@
 package ca.bradj.questown.town.workstatus;
 
+import ca.bradj.questown.QT;
+
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -30,19 +32,16 @@ public class State {
     }
 
     /** The block's work state, or a fresh state 0 when this villager hasn't seeded it yet. */
-    public static <POS> State freshIfNull(Function<POS, State> getJobBlockState, POS pos) {
+    public static <POS> State freshIfNull(
+            Function<POS, State> getJobBlockState,
+            POS pos
+    ) {
         State s = getJobBlockState.apply(pos);
-        return (s == null) ? freshAtState(0) : s;
-    }
-
-    /** Whether the block id is a welcome mat. */
-    public static boolean isWelcomeMat(String blockId) {
-        return blockId != null && blockId.contains("welcome_mat");
-    }
-
-    /** A welcome mat's starting state for each trip villager: 0, needing its supplies. */
-    public static State welcomeMatSeedState() {
-        return fresh();
+        if (s != null) {
+            return s;
+        }
+        QT.JOB_LOGGER.debug("No work state stored at {}; reading it as fresh", pos);
+        return freshAtState(0);
     }
 
     public State setProcessing(int s) {
