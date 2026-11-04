@@ -1816,7 +1816,7 @@ public class TestBlueprintRegistry {
     }
 
     /**
-     * Proficiency leveling parity (#269) — the feature's acceptance gate. The same work
+     * Proficiency leveling parity, the feature's acceptance check. The same work
      * must move a townie's proficiency by the same amount whether it happened live or offline; a
      * warp path that credited "once per important tick" instead of once per completed action would
      * drift a townie's skill away from its realtime self while the player was away.

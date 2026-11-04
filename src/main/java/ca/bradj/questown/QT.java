@@ -10,6 +10,11 @@ import java.util.List;
 @SuppressWarnings("removal")
 public class QT {
 
+    /** Dev-diagnostic logs are on with dev commands (the playtest scripts set it) and in autotests. */
+    public static final boolean DEV_LOGS = System.getenv("ENABLE_DEV_COMMANDS") != null
+            || System.getProperty("questown.autotest") != null
+            || System.getProperty("questown.autotest.hold") != null;
+
     public interface QTLogger {
         void error(
                 String s,
@@ -36,6 +41,16 @@ public class QT {
         );
 
         Logger unwrap();
+
+        /** Logs at INFO, only when {@link #DEV_LOGS} is on. */
+        default void dev(
+                String s,
+                Object... args
+        ) {
+            if (DEV_LOGS) {
+                info(s, args);
+            }
+        }
     }
 
     /**

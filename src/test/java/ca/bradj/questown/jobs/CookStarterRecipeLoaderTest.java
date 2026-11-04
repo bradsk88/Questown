@@ -25,8 +25,7 @@ class CookStarterRecipeLoaderTest {
         JsonArray starters = raw.getAsJsonArray("starter_recipes");
         List<String> starterNames = starters.asList().stream().map(JsonElement::getAsString).toList();
         Assertions.assertNotNull(starters,
-                "cook_simple_furnace_food.json must carry a starter_recipes list "
-                        + "(the 2026-10-12 playtest: every cook needs a starter recipe at staff)");
+                "cook_simple_furnace_food.json must carry a starter_recipes list: every cook needs a starter recipe");
         Assertions.assertTrue(starterNames.size() >= 1, "starter_recipes must be non-empty");
         Assertions.assertTrue(starterNames.contains("mutton"),
                 "mutton is the starter recipe (the first hunter's guaranteed simple-furnace food)");

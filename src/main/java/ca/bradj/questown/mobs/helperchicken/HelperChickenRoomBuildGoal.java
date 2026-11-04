@@ -165,7 +165,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
                     p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D,
                     10, 0.3D, 0.3D, 0.3D, 0.02D
             );
-            QT.JOB_LOGGER.info("[chicken-arc] room build: laid {}", p.toShortString());
+            QT.JOB_LOGGER.dev("[chicken-arc] room build: laid {}", p.toShortString());
         }
         this.laid.add(p);
         this.targetPos = null; // force re-plan on next canUse
@@ -224,7 +224,7 @@ public class HelperChickenRoomBuildGoal extends Goal {
             return;
         }
         lastStoodDownLogTick = tick;
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] room build goal stood down: {} (doors={} rooms={})",
                 reason,
                 flag.getRoomHandle().getAllRegisteredDoors().size(),

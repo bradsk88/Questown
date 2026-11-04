@@ -676,7 +676,7 @@ public class DeclarativeJob extends
                 journal.getItems(),
                 (item) -> {
                     SUPPLY_TOOK_CNT.incrementAndGet();
-                    QT.JOB_LOGGER.warn("[PROBE:supplies] job={} TOOK item={} (totalTakes={})", jobId, item, SUPPLY_TOOK_CNT.get());
+                    QT.JOB_LOGGER.dev("[PROBE:supplies] job={} TOOK item={} (totalTakes={})", jobId, item, SUPPLY_TOOK_CNT.get());
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
                 },

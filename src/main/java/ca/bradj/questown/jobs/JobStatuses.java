@@ -1,5 +1,6 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.jobs.declarative.WithReason;
 import ca.bradj.questown.jobs.production.IProductionJob;
@@ -25,9 +26,8 @@ import java.util.stream.Stream;
 public class JobStatuses {
 
     private static final Logger log = LoggerFactory.getLogger(JobStatuses.class);
-    // With dev commands on, a leaver's status decision is logged with the checks behind it, at
-    // most once every WHY_INTERVAL_MS per job.
-    private static final boolean LOG_WHY = System.getenv("ENABLE_DEV_COMMANDS") != null;
+    // With dev commands on (QT.DEV_LOGS), a leaver's status decision is logged with the checks
+    // behind it, at most once every WHY_INTERVAL_MS per job.
     private static final long WHY_INTERVAL_MS = 4000;
     private static final Map<String, Long> whyLast = new ConcurrentHashMap<>();
 
@@ -103,7 +103,7 @@ public class JobStatuses {
             STATUS resolved,
             LZCD<STATUS> root
     ) {
-        if (!LOG_WHY || !isLeaverRoot(jobId.rootId())) {
+        if (!QT.DEV_LOGS || !isLeaverRoot(jobId.rootId())) {
             return;
         }
         String label = jobId.toNiceString();

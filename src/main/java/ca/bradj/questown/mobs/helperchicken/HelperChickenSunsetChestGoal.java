@@ -94,7 +94,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
             return;
         }
         lastCanUseFailureLogTick = tick;
-        QT.JOB_LOGGER.info("[chicken-arc] storeroom chest goal stood down: {}", reason);
+        QT.JOB_LOGGER.dev("[chicken-arc] storeroom chest goal stood down: {}", reason);
     }
 
     @Override
@@ -215,7 +215,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
             // Couldn't place it: count it as done so the lesson doesn't stall.
             this.spawned = true;
             persistChestSpawned(flag);
-            QT.JOB_LOGGER.info(
+            QT.JOB_LOGGER.dev(
                     "[chicken-arc] chest: no valid chest position in {}, advancing without chest",
                     this.targetPos
             );
@@ -233,7 +233,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
         );
         this.spawned = true;
         persistChestSpawned(flag);
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] chest: spawned map+axe chest at {}", chestPos
         );
     }
@@ -252,14 +252,14 @@ public class HelperChickenSunsetChestGoal extends Goal {
         }
         Collection<MCRoom> rooms = flag.getRoomHandle().getRegisteredRooms().getAllRooms();
         if (rooms.isEmpty()) {
-            QT.JOB_LOGGER.info("[chicken-arc] storeroom chest: no registered rooms");
+            QT.JOB_LOGGER.dev("[chicken-arc] storeroom chest: no registered rooms");
             return null;
         }
         MCRoom shell = largestRoom(rooms);
         int chickenY = this.chicken.blockPosition().getY();
         // Try the room's floor levels first, then the chicken's own.
         int[] levels = { shell.yCoord, shell.yCoord + 1, chickenY };
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] storeroom chest: shell yCoord={} spaces={} chickenY={}",
                 shell.yCoord, shell.getSpaces().size(), chickenY
         );
@@ -271,7 +271,7 @@ public class HelperChickenSunsetChestGoal extends Goal {
                 }
             }
         }
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] storeroom chest: no passable cell for shell yCoord={} spaces={}",
                 shell.yCoord, shell.getSpaces().size()
         );

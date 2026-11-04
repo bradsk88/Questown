@@ -16,7 +16,7 @@ public class TownFlags {
             TownFlagBlockEntity entity
     ) {
         flags.put(uuid, entity);
-        QT.FLAG_LOGGER.info(
+        QT.FLAG_LOGGER.dev(
                 "[findflag] flag {} registered at {}",
                 uuid,
                 entity.getBlockPos()
@@ -35,7 +35,7 @@ public class TownFlags {
     /** The morning after a sleep. {@code newTime} is only logged: the morning runs on game time. */
     public static void onSleepFinished(long newTime) {
         // Dev diagnostics: confirms the morning came.
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[campfire-sleep] SleepFinishedTimeEvent (morning) newTime={}",
                 newTime
         );

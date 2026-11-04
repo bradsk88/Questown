@@ -29,7 +29,7 @@ public final class ChickenArcController {
             if (gt - lastTickDiagTick >= 200L) {
                 lastTickDiagTick = gt;
                 Player nearest = ChickenArcConditions.findNearestPlayerForFlag(flag);
-                QT.JOB_LOGGER.info(
+                QT.JOB_LOGGER.dev(
                         "[chicken-arc] tick diag: spawned={} forfeit={} state={} initialized={} level={} nearest={} nearestHasWand={}",
                         flag.getChickenEverSpawned(), flag.getChickenArcForfeit(),
                         flag.getChickenBeatState(), flag.isInitialized(), diagLevel != null,
@@ -55,7 +55,7 @@ public final class ChickenArcController {
         ChickenArcTransitions.Observed observed = ChickenArcConditions.observe(flag);
         ChickenBeatState advanced = ChickenArcTransitions.advance(current, observed);
         if (advanced != current) {
-            ca.bradj.questown.QT.JOB_LOGGER.info(
+            ca.bradj.questown.QT.JOB_LOGGER.dev(
                     "[chicken-arc] beat advanced {} -> {} (playerHasWand={}, campfireLit={}, sleepHappenedToday={}, signPlacedAsJobBoard={}, chestPlaced={})",
                     current, advanced,
                     observed.playerHasWand(), observed.campfireLit(),
@@ -140,7 +140,7 @@ public final class ChickenArcController {
         chicken.setBubbleTexturePath(newTexture);
         chicken.setHintKey(newHintKey);
         if (changed) {
-            QT.JOB_LOGGER.info(
+            QT.JOB_LOGGER.dev(
                     "[chicken-arc] bubble updated: state={} hasItem={} iconA={} iconB={} throughWalls={}",
                     state, hasItem, bubble.iconA(), bubble.iconB(), bubble.throughWalls()
             );
@@ -156,7 +156,7 @@ public final class ChickenArcController {
             return;
         }
         lastChickenNotFoundLogTick = tick;
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] no chicken matches flag at {} (state={}); ownerFlagPos likely null after chunk reload",
                 flag.getTownFlagBasePos(), state
         );
@@ -187,7 +187,7 @@ public final class ChickenArcController {
         }
         HelperChickenEntity adopted = orphans.get(0);
         adopted.setOwnerFlagPos(flagPos);
-        QT.JOB_LOGGER.info(
+        QT.JOB_LOGGER.dev(
                 "[chicken-arc] adopted orphan chicken {} for flag at {}",
                 adopted.getUUID(), flagPos
         );
@@ -212,7 +212,7 @@ public final class ChickenArcController {
         boolean chestSpawned = flag.getChickenSunsetChestSpawned();
         boolean hasPressurePlate = ChickenArcConditions.playerHoldsPressurePlate(player);
         int clickCount = recordClick(player.getUUID(), state);
-        ca.bradj.questown.QT.JOB_LOGGER.info(
+        ca.bradj.questown.QT.JOB_LOGGER.dev(
                 "[chicken-arc] click handler: state={} hasMatchingItem={} hasWandInInv={} clickCount={}",
                 state, hasItem, hasWand, clickCount
         );

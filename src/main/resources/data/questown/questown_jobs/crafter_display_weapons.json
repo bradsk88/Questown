@@ -6,7 +6,7 @@
   "parent": "crafter/stone_sword",
   "icon": "minecraft:item_frame",
   "initial_request": "#questown:swords",
-  "note": "Dev 2026-10-28: \"Same for blacksmith and item frames\". Like crafter/display_armor: a villager puts a sword from storage in an empty item frame in a Weapon Display or bigger smithy.",
+  "note": "Like crafter/display_armor, for weapons: a villager puts a sword from storage in an empty item frame in a Weapon Display or bigger smithy.",
   "result": {
     "type": "uses_special_rules"
   },

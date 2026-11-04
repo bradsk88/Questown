@@ -1495,9 +1495,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questCompleted(MCQuest quest) {
-        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
-            QT.QUESTS_LOGGER.info("Quest completed: {} {}", quest.getType(), quest.getWantedId());
-        }
+        QT.QUESTS_LOGGER.dev("Quest completed: {} {}", quest.getType(), quest.getWantedId());
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         t.messages.questCompleted(quest);
         t.setChanged();
@@ -1873,7 +1871,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static long lastRoomQuestWaitingLog = 0L;
 
     private static void logRoomQuestWaiting(MCQuest q) {
-        if (System.getenv("ENABLE_DEV_COMMANDS") == null) {
+        if (!QT.DEV_LOGS) {
             return;
         }
         long now = System.nanoTime();
@@ -2013,7 +2011,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     /** LOOT quests count items brought back: each matching extraction adds to every matching open quest, which completes at its count. */
     public void processLootQuests(MCTownItem extracted) {
         if (extracted == null || extracted.isEmpty()) {
-            QT.QUESTS_LOGGER.info("[LOOTTRACE] processLootQuests: extracted is null/empty; skipping");
+            QT.QUESTS_LOGGER.dev("[LOOTTRACE] processLootQuests: extracted is null/empty; skipping");
             return;
         }
         ItemStack stack = extracted.toQTItemStack();
@@ -2025,7 +2023,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             lootQuestsSeen++;
             boolean match = quest.getWantedId() != null
                     && Ingredients.asIngredient(quest.getWantedId()).test(stack);
-            QT.QUESTS_LOGGER.info("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {} (extracted {}/{})",
+            QT.QUESTS_LOGGER.dev("[LOOTTRACE] extract '{}' vs LOOT quest {} -> {} (extracted {}/{})",
                     stack.getItem() != null ? stack.getItem().getName(stack).getString() : "?",
                     quest.getWantedId(), match, quest.getExtracted() + stack.getCount(), quest.getCountNeeded());
             if (match) {
@@ -2036,7 +2034,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             }
         }
         if (lootQuestsSeen == 0) {
-            QT.QUESTS_LOGGER.info("[LOOTTRACE] extracted '{}' but no open LOOT quests exist", stack);
+            QT.QUESTS_LOGGER.dev("[LOOTTRACE] extracted '{}' but no open LOOT quests exist", stack);
         }
     }
 }

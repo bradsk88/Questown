@@ -279,7 +279,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             MCHeldItem v,
             InventoryFullStrategy inventoryFullStrategy
     ) {
-        QT.VILLAGER_LOGGER.info("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
+        QT.VILLAGER_LOGGER.dev("[LOOTTRACE] tryGiveItem: item={} strategy={} uuid={}",
                 v == null ? "null" : v.get().toString(),
                 inventoryFullStrategy,
                 UtilClean.truncateMiddle(getUUID()));

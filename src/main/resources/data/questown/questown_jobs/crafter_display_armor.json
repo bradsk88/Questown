@@ -6,7 +6,7 @@
   "parent": "crafter/leather_boots",
   "icon": "minecraft:armor_stand",
   "initial_request": "#questown:displayable_armor",
-  "note": "Dev 2026-10-28: putting armor on a stand is its own job; the villager works at the stand. Selected like cook/fuel: it answers armor requests, and scores only where a stand has an empty slot that stored armor fits. The armor comes from storage (displays are never a source).",
+  "note": "Putting armor on a stand is its own job; the villager works at the stand. Selected like cook/fuel: it answers armor requests, and scores only where a stand has an empty slot that stored armor fits. The armor comes from storage (displays are never a source).",
   "result": {
     "type": "uses_special_rules"
   },

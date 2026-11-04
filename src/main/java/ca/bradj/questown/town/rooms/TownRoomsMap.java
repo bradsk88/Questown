@@ -561,7 +561,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         }
         Collection<RoomRecipeMatch<MCRoom>> out = b.build();
         // Dev diagnostics: why few kitchens match. Sampled.
-        if (System.getenv("ENABLE_DEV_COMMANDS") != null && recipeId.toString().contains("kitchen")) {
+        if (QT.DEV_LOGS && recipeId.toString().contains("kitchen")) {
             if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
                 int doors = registeredDoors.size() + registeredFenceGates.size();
                 int doorsWithRoom = 0;
@@ -584,7 +584,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         }
                     }
                 }
-                Questown.LOGGER.warn("[DEV-DIAG:kitchen] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
+                QT.FLAG_LOGGER.dev("[kitchen-rooms] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
                         recipeId, out.size(), doors, doorsWithRoom, totalRooms, roomsMatchingRecipe);
             }
         }

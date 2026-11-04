@@ -131,19 +131,16 @@ command group (since 1.20.3 / snapshot `23w43a`): `query`, **`rate <float>`**
   (a gradle-launched server does NOT inherit your shell's env for dev
   gates — `ENABLE_DEV_COMMANDS` was absent on this box's held servers,
   which killed a whole probe cycle, 2026-10-09). Gate new probes on a
-  forwarded sysprop, not an env var. **An existing env-gated probe can be
-  opened the same way**: add `|| System.getProperty("questown.devdiag") != null`
-  to its gate check plus a TEMP-marked forward entry in `build.gradle`'s
-  server block (the shape used 2026-10-10 to open `DEV-DIAG:kitchen` /
-  `DEV-DIAG:backfill` for the kitchen_stocked wall); revert both when the
-  probe's work is done. **Before designing a new probe, grep
-  the tree for existing ones (`grep -rn 'DEV-DIAG\|PROBE:' src/main/java`)**:
+  forwarded sysprop, not an env var. The tree's probes and traces go through
+  `QTLogger.dev(...)`, gated by `QT.DEV_LOGS`: on with `ENABLE_DEV_COMMANDS` **or** the
+  `questown.autotest` / `questown.autotest.hold` sysprops, so they print in held runs and
+  autotests and stay silent in normal play. **Before designing a new probe, grep
+  the tree for existing ones (`grep -rn '\.dev(' src/main/java`)**:
   the tree carries past probes, and one may already dump exactly the
-  breakdown you need — e.g. `DEV-DIAG:kitchen` in
-  `TownRoomsMap.getRoomsMatching` (added 2026-10-06 for the cook-soft-lock)
-  prints doors/doorsWithRoom/totalRooms/roomsMatchingRecipe for any
-  kitchen-recipe lookup (it is env-gated, so it is silent on this box's
-  held servers — open the gate to use it).
+  breakdown you need — e.g. `[kitchen-rooms]` in
+  `TownRoomsMap.getRoomsMatching` prints doors/doorsWithRoom/totalRooms/roomsMatchingRecipe
+  for any kitchen-recipe lookup, and `[cook] NO_JOBSITE` in `DeclarativeJobTicker` samples a
+  stuck cook's gates.
 - **Heavy flag work is throttled to `FlagTickIntervalV2` (default 10
   world-ticks, `Config.java:397`):** the villager-handle tick (beds
   assignment, hunger, the SLEEPLESS ledger edge) runs every Nth tick, not

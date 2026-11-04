@@ -771,9 +771,9 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void handleMorning(long tick) {
         forEach(delegator.getSleepModule()::stopSleeping);
-        if (System.getenv("ENABLE_DEV_COMMANDS") != null) {
+        if (QT.DEV_LOGS) {
             forEach(v
-                    -> QT.FLAG_LOGGER.warn("[DEV-DIAG:morning] wake-broadcast reached {} sleeping={}",
+                    -> QT.FLAG_LOGGER.dev("[morning] wake-broadcast reached {} sleeping={}",
                                    delegator.getUUID(v),
                                    delegator.getSleepModule().isSleeping(v)));
         }

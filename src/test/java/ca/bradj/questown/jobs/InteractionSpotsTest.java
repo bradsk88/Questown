@@ -24,7 +24,7 @@ class InteractionSpotsTest {
     );
 
     @Test
-    void doorDirectionForThePlaytestRoomIsNorth_soTheOldStepLandsInTheWall() {
+    void storeRoomDoorFacesNorth_soAStepTowardTheDoorLandsInTheWall() {
         assertEquals(Direction.NORTH, InteractionSpots.doorDirectionFromCenter(STORE_ROOM));
         assertEquals(new BlockPos(105, FLOOR_Y, -61), CHEST.relative(Direction.NORTH));
     }

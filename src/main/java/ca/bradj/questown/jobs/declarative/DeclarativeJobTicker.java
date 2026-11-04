@@ -304,7 +304,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             return;
         }
         lastCompletedProductViewLogMs = now;
-        QT.JOB_LOGGER.info(sb.toString());
+        QT.JOB_LOGGER.dev(sb.toString());
     }
 
     /**
@@ -463,12 +463,12 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
             ProductionStatus now = journal.getStatus();
             // Dev diagnostics: a cook stuck at NO_JOBSITE logs why. Sampled.
-            if (System.getenv("ENABLE_DEV_COMMANDS") != null
+            if (QT.DEV_LOGS
                     && deps.getJobId().rootId().contains("cook")
                     && now == ProductionStatus.NO_JOBSITE
                     && (cookNoJoBSiteN++ % 200) < 1L) {
                 ca.bradj.questown.jobs.TownStateProvider tps = ca.bradj.questown.jobs.JobTownStates.forTown(jtp);
-                ca.bradj.questown.Questown.LOGGER.warn("[DEV-DIAG:cook] NO_JOBSITE job={} hasSupplies={!} hasSpace={!} workable={!} invFull={} hasItems={}",
+                QT.JOB_LOGGER.dev("[cook] NO_JOBSITE job={} hasSupplies={!} hasSpace={!} workable={!} invFull={} hasItems={}",
                         deps.getJobId(),
                         tps.hasSupplies().describe(),
                         tps.hasSpace().describe(),
