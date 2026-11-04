@@ -374,7 +374,6 @@ public class ResourceJobLoader {
                 return wb.withOverrides(overrides);
             }
             return wb;
-            wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
         }
 
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
@@ -475,7 +474,6 @@ public class ResourceJobLoader {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
                 return work;
-                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }

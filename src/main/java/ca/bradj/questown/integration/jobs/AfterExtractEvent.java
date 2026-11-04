@@ -12,7 +12,7 @@ public record AfterExtractEvent<CONTEXT>(
         BlockPos workSpot,
         BlockPos townFlagPos,
         BiFunction<CONTEXT, ImmutableMap<String, Integer>, CONTEXT> itemDataApplier,
-        BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater,
+        BiFunction<CONTEXT, Float, CONTEXT> hungerUpdater
 ) {
     /** Gives the working villager a mood effect for {@code durationTicks}. */
     @FunctionalInterface

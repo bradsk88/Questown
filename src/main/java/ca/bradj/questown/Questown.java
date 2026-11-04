@@ -1,9 +1,5 @@
 package ca.bradj.questown;
 
-import ca.bradj.questown.blocks.entity.renderer.AxeRackBlockEntityRenderer;
-import ca.bradj.questown.blocks.entity.renderer.FoodDisplayEntityRenderer;
-import ca.bradj.questown.blocks.entity.renderer.HospitalBedEntityRenderer;
-import ca.bradj.questown.blocks.entity.renderer.PlateBlockEntityRenderer;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.loader.Loader;

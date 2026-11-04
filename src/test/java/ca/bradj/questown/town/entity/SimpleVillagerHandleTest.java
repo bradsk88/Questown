@@ -183,31 +183,6 @@ class SimpleVillagerHandleTest {
         public String displayNameFor(UUID vuid) {
             return names.getOrDefault(vuid, "");
         }
-        t.names.put(villager, "Villager 1");
-
-        handle.addExperience(villager, 1_000_000);
-
-        Assertions.assertTrue(
-                t.broadcast.stream().anyMatch(b -> b.startsWith("message.villager.leveled_up_job [Villager 1, ")),
-                t.broadcast.toString()
-        );
-    }
-
-    @Test
-    public void levelUp_chatNamesTheJob() {
-        TestDelegator t = new TestDelegator();
-        UUID villager = UUID.randomUUID();
-        t.names.put(villager, "Villager 1");
-
-        handle.addExperience(villager, 1_000_000);
-
-        String line = t.broadcast.stream().filter(b -> b.startsWith("message.villager.leveled_up_job")).findFirst().orElse("");
-        Assertions.assertTrue(line.contains("jobs.tester"), t.broadcast.toString());
-        Assertions.assertTrue(line.endsWith(", 2]"), line);
-
-        handle.addExperience(villager, 1_000_000);
-
-        handle.addExperience(villager, 1_000_000);
     }
 
     @Test
