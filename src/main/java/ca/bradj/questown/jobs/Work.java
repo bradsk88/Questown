@@ -41,6 +41,8 @@ public class Work {
     private Overrides overrides;
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
+    /** XP per completion, or null for the formula. */
+    private @Nullable Integer experience;
 
     public Work(
             JobID id,
@@ -83,6 +85,19 @@ public class Work {
         return specialGlobalRules;
     }
 
+    public Work withExperience(@Nullable Integer experience) {
+        this.experience = experience;
+        return this;
+    }
+
+    /** XP for one completion: the declared {@code experience}, else {@code formula}. */
+    public int experienceEarned(int formula) {
+        if (experience == null) {
+            return formula;
+        }
+        return experience;
+    }
+
     public Work withPriority(int priority) {
         return new Work(
                 id,
@@ -102,6 +117,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.experience = experience;
     }
 
     public Work withNeeds(
@@ -125,6 +141,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.experience = experience;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
@@ -157,6 +174,7 @@ public class Work {
                 specialGlobalRules
         );
         work.overrides = overrides;
+        work.experience = experience;
         return work;
     }
 
@@ -168,6 +186,7 @@ public class Work {
         );
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
+        work.experience = experience;
         return work;
     }
 
