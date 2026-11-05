@@ -1,19 +1,16 @@
-plugins {
-    id 'java-library'
-    id 'eclipse'
-    id 'maven-publish'
-    id 'net.neoforged.gradle.userdev' version '7.1.39'
-}
-
-group = 'ca.bradj.questown' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'questown'
-
-// Minecraft 1.20.6 requires Java 21 (Mojang ships Java 21 to end users).
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
     }
 }
+apply plugin: 'net.minecraftforge.gradle'
+// Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
 
 // Load .env file if present (gitignored — store secrets like MODRINTH_TOKEN here)
 def dotEnv = new Properties()
@@ -23,101 +20,167 @@ if (dotEnvFile.exists()) {
     dotEnv.each { k, v -> ext.set(k as String, v as String) }
 }
 
+group = 'ca.bradj.questown' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = 'questown'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
 repositories {
     mavenLocal()
-    maven { url = 'https://maven.neoforged.net/releases' }
     maven {
+        // location of the maven that hosts JEI files
         name = "Progwml6 maven"
         url = "https://dvs1.progwml6.com/files/maven/"
     }
     maven { url 'https://maven.blamejared.com' }
-    mavenCentral()
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
 }
 
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
+minecraft {
+    // The mappings can be changed at any time, and must be in the following format.
+    // Channel:   Version:
+    // snapshot   YYYYMMDD   Snapshot are built nightly.
+    // stable     #          Stables are built at the discretion of the MCP team.
+    // official   MCVersion  Official field/method names from Mojang mapping files
+    //
+    // You must be aware of the Mojang license when using the 'official' mappings.
+    // See more information here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
+    //
+    // Use non-default mappings at your own risk. they may not always work.
+    // Simply re-run your setup task after changing the mappings to update your workspace.
+    mappings channel: 'official', version: '1.20.1'
+    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
+    
+     accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
 
-accessTransformers {
-    file 'src/main/resources/META-INF/accesstransformer.cfg'
-}
-
-runs {
-    configureEach {
-        // Server keeps run/, the client run-client/: two JVMs sharing log4j files wedge the join.
-        workingDirectory (it.name == 'client' ? project.file('run-client') : project.file('run'))
-        modSource project.sourceSets.main
-            // Netty's epoll transport can stall the handshake; use the pure-Java one.
-            jvmArgument '-Dio.netty.transport.noNative=true'
-            // Netty (NeoForge networking) reflects into jdk.internal.misc on JDK 21.
-            jvmArgument '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
-            jvmArgument '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
-            systemProperty 'neoForge.logging.markers', 'REGISTRIES'
-            systemProperty 'neoForge.logging.console.level', 'info'
-            // Port-test hook (QtDiagClient): inert unless the server whispers the
-            // [qtdiag] chat tokens; see tools/porttest/PORTTEST.md.
-            systemProperty 'questown.diag', 'true'
-        }
-
+    // Default run configurations.
+    // These can be tweaked, removed, or duplicated as needed.
+    runs {
         client {
-            // Port-test canvas: pin the window size so pixel diffs between MC
-            // versions are on an identical grid.
-            arguments '--width', '1280', '--height', '720'
+            // Client owns run-client/ (server keeps run/; shared log4j files
+            // wedge the client join otherwise).
+            workingDirectory project.file('run-client')
+
+            // Netty (Forge networking) reflects into jdk.internal.misc on JDK 17+.
+            jvmArg '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED'
+            jvmArg '--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED'
+            // Netty's epoll transport can stall the handshake; use the pure-Java one.
+            jvmArg '-Dio.netty.transport.noNative=true'
+
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'info'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            // Port-test hook (QtDiagClient); inert without the [qtdiag] command file.
+            property 'questown.diag', 'true'
             // Dev-only: -Pautojoin makes the client skip the title screen and
             // connect straight to a local (hold-mode autotest) server.
-            // (Vanilla 1.20.6 dropped the old --server/--port client args;
-            // --quickPlayMultiplayer is the supported form.)
-            // -Pautoport=<port> picks another server (tools/porttest/capture.sh passes it; a
-            // second server, e.g. a worktree's, listens on its own port).
             if (project.hasProperty('autojoin')) {
-                arguments '--quickPlayMultiplayer', 'localhost:' + (project.findProperty('autoport') ?: '25565')
+                def port = System.getProperty('questown.diag.port',
+                        project.findProperty('autoport') ?: '25565')
+                args '--server', 'localhost', '--port', port
+            }
+
+            mods {
+                questown {
+                    source sourceSets.main
+                }
             }
         }
 
         server {
-            // No Swing server GUI: it steals focus.
-            argument '--nogui'
-            systemProperty 'neoForge.logging.console.level', 'info'
+            workingDirectory project.file('run')
 
-            jvmArgument '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
-            jvmArgument '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
-            jvmArgument '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
+            // Netty's epoll transport can stall the handshake; use the pure-Java one.
+            jvmArg '-Dio.netty.transport.noNative=true'
+
+            // No Swing server GUI: it steals focus.
+            args '--nogui'
+
+            // Recommended logging data for a userdev environment
+            // The markers can be changed as needed.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'info'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
+            jvmArg '-Dquestown.autotest=' + System.getProperty('questown.autotest', 'false')
+            jvmArg '-Dquestown.autotest.warp=' + System.getProperty('questown.autotest.warp', '24000')
+            jvmArg '-Dquestown.autotest.hold=' + System.getProperty('questown.autotest.hold', 'false')
             // Forward the category/scenario filters to the forked server JVM
             // (AutoTestRunner.parseCategory).
             if (System.getProperty('QUESTOWN_AUTOTEST_CATEGORY') != null) {
-                jvmArgument '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
+                jvmArg '-DQUESTOWN_AUTOTEST_CATEGORY=' + System.getProperty('QUESTOWN_AUTOTEST_CATEGORY')
             }
             if (System.getProperty('questown.autotest.only') != null) {
-                jvmArgument '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
+                jvmArg '-Dquestown.autotest.only=' + System.getProperty('questown.autotest.only')
             }
             if (System.getProperty('questown.autotest.shard') != null) {
-                jvmArgument '-Dquestown.autotest.shard=' + System.getProperty('questown.autotest.shard')
+                jvmArg '-Dquestown.autotest.shard=' + System.getProperty('questown.autotest.shard')
             }
+            // Accepted for parity with the 1.20.6 branch; 1.19.2 has no tick-rate lever, so the
+            // server logs that it stays at 20 t/s (Compat.setServerTickRate).
             if (System.getProperty('questown.autotest.tickrate') != null) {
-                jvmArgument '-Dquestown.autotest.tickrate=' + System.getProperty('questown.autotest.tickrate')
+                jvmArg '-Dquestown.autotest.tickrate=' + System.getProperty('questown.autotest.tickrate')
             }
             if (System.getProperty('questown.village.agentDrive') != null) {
-                jvmArgument '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
+                jvmArg '-Dquestown.village.agentDrive=' + System.getProperty('questown.village.agentDrive')
             }
-            // Village-scenario tuning knobs (VillageSelfSufficiencyExecutor reads
-            // them as system properties in the forked server JVM).
-            if (System.getProperty('questown.village.selfsuff.days') != null) {
-                jvmArgument '-Dquestown.village.selfsuff.days=' + System.getProperty('questown.village.selfsuff.days')
+            ['days', 'coal', 'mat_coal', 'skipnight'].each { knob ->
+                def v = System.getProperty('questown.village.selfsuff.' + knob)
+                if (v != null) {
+                    jvmArg '-Dquestown.village.selfsuff.' + knob + '=' + v
+                }
             }
-            if (System.getProperty('questown.village.selfsuff.coal') != null) {
-                jvmArgument '-Dquestown.village.selfsuff.coal=' + System.getProperty('questown.village.selfsuff.coal')
-            }
-            if (System.getProperty('questown.village.selfsuff.mat_coal') != null) {
-                jvmArgument '-Dquestown.village.selfsuff.mat_coal=' + System.getProperty('questown.village.selfsuff.mat_coal')
-            }
-            if (System.getProperty('questown.village.selfsuff.skipnight') != null) {
-                jvmArgument '-Dquestown.village.selfsuff.skipnight=' + System.getProperty('questown.village.selfsuff.skipnight')
-            }
-            // Optional: point the forked server JVM at a custom log4j2 config so a
-            // held run can bump a single logger (e.g. Questown:Quests) to DEBUG while
-            // everything else stays at the vanilla level.
             if (System.getProperty('questown.log4j.config') != null) {
-                jvmArgument '-Dlog4j2.configurationFile=' + System.getProperty('questown.log4j.config')
+                jvmArg '-Dlog4j2.configurationFile=' + System.getProperty('questown.log4j.config')
+            }
+
+            mods {
+                questown {
+                    source sourceSets.main
+                }
             }
         }
+
+        data {
+            workingDirectory project.file('run')
+
+            // Recommended logging data for a userdev environment
+            // The markers can be changed as needed.
+            // "SCAN": For mods scan.
+            // "REGISTRIES": For firing of registry events.
+            // "REGISTRYDUMP": For getting the contents of all registries.
+            property 'forge.logging.markers', 'REGISTRIES'
+
+            // Recommended logging level for the console
+            // You can set various levels here.
+            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+            property 'forge.logging.console.level', 'info'
+
+            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+            args '--mod', 'questown', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+
+            mods {
+                questown {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
 }
 
 // Include resources generated by data generators.
@@ -128,12 +191,11 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:3.12.4'
     testImplementation 'junit:junit:4.13.1'
 
-    // NeoForge — the userdev plugin detects this and builds the dev runtime from it.
-    implementation 'net.neoforged:neoforge:20.6.141'
+    minecraft 'net.minecraftforge:forge:1.20.1-47.1.3'
 
-    implementation 'mezz.jei:jei-1.20.6-neoforge:18.0.0.66'
+    implementation fg.deobf("mezz.jei:jei-1.20.1-forge:15.0.0.16")
 
-    implementation 'ca.bradj:roomrecipes:1.20.6-neoforge'
+    implementation fg.deobf("ca.bradj:roomrecipes:1.20.1-1.0.0-alpha.1")
 }
 
 test {
@@ -155,12 +217,13 @@ def getVersion() {
 
 version = getVersion();
 
+// Example for how to get properties into the manifest for reading by the runtime..
 jar {
     manifest {
         attributes([
             "Specification-Title": "questown",
             "Specification-Vendor": "questown",
-            "Specification-Version": "1",
+            "Specification-Version": "1", // We are version 1 of ourselves
             "Implementation-Title": project.name,
             "Implementation-Version": "${getVersion()}",
             "Implementation-Vendor" :"ca.bradj",
@@ -174,16 +237,20 @@ publish {
         attributes([
             "Specification-Title": "questown",
             "Specification-Vendor": "questown",
-            "Specification-Version": "1",
+            "Specification-Version": "1", // We are version 1 of ourselves
             "Implementation-Title": project.name,
             "Implementation-Version": "${version}",
-            "Implementation-Vendor" :"ca.bradj",
+            "Implementation-Vendor" :"questown",
             "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }
 
-publish.dependsOn('reobfJar')
+// Example configuration to allow publishing using the maven-publish task
+// This is the preferred method to reobfuscate your jar file
+jar.finalizedBy('reobfJar')
+publish.finalizedBy('reobfJar')
+// However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
 
 publishing {
     publications {
@@ -210,35 +277,24 @@ task publishModrinth(dependsOn: 'reobfJar') {
         def cleanVersion = "git rev-parse --abbrev-ref HEAD".execute().text.trim()
         def versionType = cleanVersion.contains("alpha") ? "alpha" : cleanVersion.contains("beta") ? "beta" : "release"
         def projectId = project.findProperty("MODRINTH_PROJECT_ID") ?: System.getenv("MODRINTH_PROJECT_ID") ?: "QY0XuBVZ"
-        def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.20.6"],"loaders":["neoforge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[],"file_parts":["file"],"primary_file":"file"}"""
-        // curl truncates an inline -F "data=${data}" field at ~270 chars, 400ing a long
-        // changelog with "EOF while parsing a string at column 270" (the version string
-        // alone pushes the skeleton past 270). Send the data from a file instead.
-        def dataFile = new File(buildDir, 'modrinth-data.json')
-        dataFile.text = data
+        def data = """{"name":"Questown ${cleanVersion}","version_number":"${cleanVersion}","version_type":"${versionType}","featured":false,"game_versions":["1.20.1"],"loaders":["forge"],"project_id":"${projectId}","changelog":"${changelog}","dependencies":[{"project_id":"mvnAaWca","dependency_type":"required"}],"file_parts":["file"],"primary_file":"file"}"""
         exec {
             commandLine 'curl', '--fail', '-s', '-X', 'POST',
                     'https://api.modrinth.com/v2/version',
                     '-H', "Authorization: ${token}",
-                    '-F', "data=@${dataFile}",
+                    '-F', "data=${data}",
                     '-F', "file=@${jarPath}"
         }
     }
 }
 
-// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so console commands can
-// be driven headlessly. Gated ONLY on -Dquestown.tp.fifo (plain dev servers get a console too).
-// The `server` run forwards only a whitelist of -D properties to the forked JVM; a knob missing
-// from it is silently ignored.
+// Dev console via FIFO: feeds the server's stdin from run/server-cmd.fifo so
+// console commands can be driven headlessly. Gated ONLY on -Dquestown.tp.fifo
+// (independent of autotest, so plain dev servers get a console too).
 if (System.getProperty('questown.tp.fifo') != null) {
     tasks.matching { it.name == 'runServer' }.configureEach {
         standardInput = new java.io.FileInputStream(project.file('run/server-cmd.fifo'))
     }
-} else if (System.getProperty('questown.autotest', 'false') == 'true') {
-    // An autotest without the console silently drops every FIFO feed (e.g. `/tick rate 200`).
-    logger.warn("[questown] autotest run WITHOUT -Dquestown.tp.fifo: the " +
-            "run/server-cmd.fifo console is disabled (see build.gradle). Command " +
-            "feeds (tick rate, TP, ...) will be SILENTLY DROPPED. Add -Dquestown.tp.fifo=true to enable.")
 }
 
 // Autotest suites start from a clean world: residue from prior runs makes results run-count
@@ -259,7 +315,7 @@ if (System.getProperty('questown.autotest', 'false') == 'true') {
 // is not installed.
 task importCheck {
     group = 'verification'
-    description = 'Fail if any Java source has unused imports. Fix: import-clean apply src/main/java src/test/java'
+    description = 'Fail if any Java source has unused imports.'
     doLast {
         def cleaner = '/home/retro/.local/bin/import-clean'
         if (!new File(cleaner).canExecute()) {
@@ -278,23 +334,5 @@ task importCheck {
 }
 check.dependsOn importCheck
 
-// stranglerCheck: version-API gate (see tools/strangler-check). Fails when a
-// file outside the seam family (mc/, gui/RenderUtil, gui/RenderContext,
-// loader/, core/network/) touches a 1.20+-only API and is not in the
-// grandfather list. The grandfather list (tools/strangler-grandfather.txt,
-// 124 files from the 1.19.2 probe report) is expected to shrink to zero as
-// clusters are routed through seams.
-task stranglerCheck {
-    group = 'verification'
-    description = 'Fail if a non-seam, non-grandfathered file uses a version-specific (1.20+) MC API. Fix: route through a seam, or add the path to tools/strangler-grandfather.txt if tracked in the probe report.'
-    doLast {
-        def proc = new ProcessBuilder(project.file('tools/strangler-check').absolutePath).redirectErrorStream(true).start()
-        def output = proc.inputStream.text
-        def code = proc.waitFor()
-        if (code != 0) {
-            logger.lifecycle(output)
-            throw new GradleException("stranglerCheck: version-specific API outside the seam (see output)")
-        }
-    }
-}
-check.dependsOn stranglerCheck
+
+tasks.withType(JavaCompile).configureEach { options.compilerArgs << '-Xmaxerrs' << '10000' }

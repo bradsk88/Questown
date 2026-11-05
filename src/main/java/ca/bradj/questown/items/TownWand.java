@@ -147,7 +147,7 @@ public class TownWand extends Item {
     @Override
     public void appendHoverText(
             ItemStack item,
-            Item.TooltipContext ctx,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level ctx,
             List<Component> p_41423_,
             TooltipFlag p_41424_
     ) {

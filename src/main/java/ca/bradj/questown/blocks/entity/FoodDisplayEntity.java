@@ -29,19 +29,19 @@ public class FoodDisplayEntity extends BlockEntity implements MCContainerInterfa
     }
 
     @Override
-    protected void loadAdditional(CompoundTag p_155349_, net.minecraft.core.HolderLookup.Provider provider) {
-        super.loadAdditional(p_155349_, provider);
+    public void load(CompoundTag p_155349_) {
+        super.load(p_155349_);
         this.items = NonNullList.withSize(4, ItemStack.EMPTY);
-        ContainerHelper.loadAllItems(p_155349_, this.items, provider);
+        ContainerHelper.loadAllItems(p_155349_, this.items);
         for (int i = 0; i < this.items.size(); i++) {
             SyncBlockItemMessage message = new SyncBlockItemMessage(getBlockPos(), this.items.get(i), i);
             QuestownNetwork.sendToAll(level, message);
         }
     }
 
-    protected void saveAdditional(CompoundTag p_187489_, net.minecraft.core.HolderLookup.Provider provider) {
-        super.saveAdditional(p_187489_, provider);
-        ContainerHelper.saveAllItems(p_187489_, this.items, provider);
+    protected void saveAdditional(CompoundTag p_187489_) {
+        super.saveAdditional(p_187489_);
+        ContainerHelper.saveAllItems(p_187489_, this.items);
     }
 
     public Collection<ItemStack> getItems() {

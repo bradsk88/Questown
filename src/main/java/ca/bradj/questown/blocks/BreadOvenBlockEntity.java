@@ -101,17 +101,48 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         return 3;
     }
 
-    @Override
     protected @NotNull NonNullList<ItemStack> getItems() {
         return items;
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> newItems) {
-        this.items.clear();
-        for (int i = 0; i < newItems.size() && i < items.size(); i++) {
-            this.items.set(i, newItems.get(i));
+    public boolean isEmpty() {
+        return items.stream().allMatch(ItemStack::isEmpty);
+    }
+
+    @Override
+    public @NotNull ItemStack getItem(int slot) {
+        return items.get(slot);
+    }
+
+    @Override
+    public @NotNull ItemStack removeItem(int slot, int amount) {
+        ItemStack out = ContainerHelper.removeItem(items, slot, amount);
+        if (!out.isEmpty()) {
+            setChanged();
         }
+        return out;
+    }
+
+    @Override
+    public @NotNull ItemStack removeItemNoUpdate(int slot) {
+        return ContainerHelper.takeItem(items, slot);
+    }
+
+    @Override
+    public void setItem(int slot, @NotNull ItemStack stack) {
+        items.set(slot, stack);
+        setChanged();
+    }
+
+    @Override
+    public boolean stillValid(@NotNull net.minecraft.world.entity.player.Player player) {
+        return false;
+    }
+
+    @Override
+    public void clearContent() {
+        items.clear();
     }
 
     @Override
@@ -138,19 +169,17 @@ public class BreadOvenBlockEntity extends BaseContainerBlockEntity {
         return net.minecraft.network.chat.Component.literal("Bread Oven");
     }
 
-    // --- NBT ---
-
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         tag.putInt("bake_progress", bake.progress());
-        ContainerHelper.saveAllItems(tag, items, registries);
+        ContainerHelper.saveAllItems(tag, items);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         bake.loadProgress(tag.getInt("bake_progress"));
-        ContainerHelper.loadAllItems(tag, items, registries);
+        ContainerHelper.loadAllItems(tag, items);
     }
 }

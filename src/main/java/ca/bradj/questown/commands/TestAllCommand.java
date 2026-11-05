@@ -3,7 +3,7 @@ package ca.bradj.questown.commands;
 import ca.bradj.questown.commands.test.TestAllExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
 import ca.bradj.questown.loader.Loader;
-import ca.bradj.questown.loader.neo.TestAllTickListener;
+import ca.bradj.questown.loader.forge.TestAllTickListener;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;

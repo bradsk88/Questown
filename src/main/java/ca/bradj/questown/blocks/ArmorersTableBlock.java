@@ -10,7 +10,6 @@ public class ArmorersTableBlock extends BlacksmithsTableBlock {
 
     public static final String ITEM_ID = "armorers_table";
 
-    @Override
     public MapCodec<ArmorersTableBlock> codec() {
         return CODEC;
     }

@@ -12,7 +12,13 @@ public class Registry {
                 = key("reward_types");
     }
 
-    public static net.minecraft.core.Registry<RewardType<?>> REWARD_TYPES;
+    public static RewardTypes REWARD_TYPES;
+
+    public record RewardTypes(net.minecraftforge.registries.IForgeRegistry<RewardType<?>> forge) {
+        public RewardType<?> get(ResourceLocation id) {
+            return forge.getValue(id);
+        }
+    }
 
     private static <T> ResourceKey<net.minecraft.core.Registry<T>> key(String name) {
         return ResourceKey.createRegistryKey(new ResourceLocation(Questown.MODID, name));

@@ -13,7 +13,7 @@
   "room": "questown:soup_kitchen_small",
   "work_states": [
     {
-      "ingredients": "#c:mushrooms",
+      "ingredients": "#forge:mushrooms",
       "quantity": 1
     },
     {

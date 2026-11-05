@@ -62,7 +62,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
@@ -150,7 +150,7 @@ public class TownVillagerUIs {
 
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         // Only jobs the town knows.
@@ -198,7 +198,7 @@ public class TownVillagerUIs {
     private static ImmutableMap<ResourceLocation, RoomRecipe> roomRecipes(ServerPlayer sender) {
         ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
-        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
+        sender.level().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         return rMapB.build();
     }
 
@@ -495,8 +495,11 @@ public class TownVillagerUIs {
 
     /** The flag's Blocks of Progress, for a panel opened from the flag. */
     private static JobChangeConfirmMenu.FlagBop flagBop(ServerPlayer sender, VisitorMobEntity e) {
-        if (e.getFlagPos() == null
-                || !(TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos()) instanceof TownFlagBlockEntity flag)) {
+        if (e.getFlagPos() == null) {
+            return JobChangeConfirmMenu.FlagBop.NONE;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
+        if (flag == null) {
             return JobChangeConfirmMenu.FlagBop.NONE;
         }
         return new JobChangeConfirmMenu.FlagBop(flag.getBopCount());

@@ -5,7 +5,9 @@
       "conditions": {
         "items": [
           {
-            "items": "questown:block_of_progress"
+            "items": [
+              "questown:block_of_progress"
+            ]
           }
         ]
       },

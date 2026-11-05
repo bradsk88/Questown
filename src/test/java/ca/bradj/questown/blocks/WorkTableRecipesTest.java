@@ -38,8 +38,8 @@ class WorkTableRecipesTest {
                 items(read("grand_armory.json"))
         );
         Assertions.assertEquals(List.of("questown:armorers_table"), tiers.get(0));
-        Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests"), tiers.get(1));
-        Assertions.assertEquals(List.of("questown:armorers_table", "#c:chests", "minecraft:armor_stand"), tiers.get(2));
+        Assertions.assertEquals(List.of("questown:armorers_table", "#forge:chests"), tiers.get(1));
+        Assertions.assertEquals(List.of("questown:armorers_table", "#forge:chests", "minecraft:armor_stand"), tiers.get(2));
         Assertions.assertEquals(4, tiers.get(3).stream().filter("minecraft:armor_stand"::equals).count());
         assertNested(tiers);
     }
@@ -97,7 +97,7 @@ class WorkTableRecipesTest {
         JsonObject key = r.getAsJsonObject("key");
         Assertions.assertEquals("questown:block_of_progress", key.getAsJsonObject("B").get("item").getAsString());
         Assertions.assertEquals("minecraft:crafting_table", key.getAsJsonObject("C").get("item").getAsString());
-        Assertions.assertEquals(result, r.getAsJsonObject("result").get("id").getAsString());
+        Assertions.assertEquals(result, r.getAsJsonObject("result").get("item").getAsString());
     }
 
     private static List<String> items(JsonObject roomRecipe) {

@@ -155,7 +155,7 @@ public class UIQuest implements Comparable<UIQuest> {
             RoomBlock vv = v.get();
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
-        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.id(), v.value()));
+        level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         // The job board quest's card shows the job board itself, not the sign in its room recipe.
         rMapB.put(SpecialQuests.JOB_BOARD, RoomRecipes.standard(
                 SpecialQuests.JOB_BOARD,

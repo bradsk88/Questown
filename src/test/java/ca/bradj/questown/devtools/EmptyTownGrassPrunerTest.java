@@ -52,8 +52,8 @@ class EmptyTownGrassPrunerTest {
     void pruneDistantGrass_keepsNearGrassAndRemovesFarGrass() {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState())); // idx 0
-        palette.add(flagBasePaletteEntry()); // idx 1
+        palette.add(NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState()));
+        palette.add(flagBasePaletteEntry());
         tag.put("palette", palette);
 
         int fx = 10, fy = 64, fz = 20;
@@ -94,7 +94,7 @@ class EmptyTownGrassPrunerTest {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
         palette.add(tallGrassPaletteEntry());
-        palette.add(flagBasePaletteEntry()); // idx 1
+        palette.add(flagBasePaletteEntry());
         tag.put("palette", palette);
         ListTag blocks = new ListTag();
         blocks.add(blockEntry(1, 0, 64, 0));
@@ -144,7 +144,7 @@ class EmptyTownGrassPrunerTest {
     private static CompoundTag sampleTag() {
         CompoundTag tag = new CompoundTag();
         ListTag palette = new ListTag();
-        palette.add(NbtUtils.writeBlockState(Blocks.SHORT_GRASS.defaultBlockState()));
+        palette.add(NbtUtils.writeBlockState(Blocks.GRASS.defaultBlockState()));
         palette.add(flagBasePaletteEntry());
         tag.put("palette", palette);
         ListTag blocks = new ListTag();

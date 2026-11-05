@@ -100,9 +100,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 import java.util.Optional;
-import net.neoforged.neoforge.event.entity.EntityEvent;
+import net.minecraftforge.event.entity.EntityEvent;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -221,8 +221,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
-        super.handleUpdateTag(tag, provider);
+    public void handleUpdateTag(CompoundTag tag) {
+        super.handleUpdateTag(tag);
         readDeadDoors(tag);
         readAttention(tag);
     }
@@ -638,8 +638,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    protected void saveAdditional(@NotNull CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
-        super.saveAdditional(tag, provider);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         //////////////////////////
         //       WARNING        //
         //////////////////////////
@@ -650,8 +650,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    protected void loadAdditional(@NotNull CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
-        super.loadAdditional(tag, provider);
+    public void load(@NotNull CompoundTag tag) {
+        super.load(tag);
 
         ////////////////////////
         /////// WARNING ////////
@@ -708,8 +708,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     /** Only what the client reads (dead doors and the bubbles). The town data would outgrow the packet limit. */
     @Override
-    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider provider) {
-        CompoundTag tag = super.getUpdateTag(provider);
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = super.getUpdateTag();
         writeDeadDoors(tag);
         writeAttention(tag);
         return tag;
@@ -905,7 +905,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     private void grantAdvancementOnApproach() {
-        NeoForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
+        MinecraftForge.EVENT_BUS.addListener((EntityEvent.EnteringSection event) -> {
             if (event.getEntity() instanceof ServerPlayer sp) {
                 double v = event.getEntity().distanceToSqr(
                         this.worldPosition.getX() + 0.5D,

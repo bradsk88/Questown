@@ -96,7 +96,7 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.id(), h.value()));
+        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.getId(), h));
         return rMapB.build();
     }
 
@@ -193,7 +193,7 @@ public class RoomRecipes {
         for (Map.Entry<K, ? extends Collection<List<String>>> e : allRecipes.entrySet()) {
             Collection<List<String>> toIng = e.getValue();
             if (toIng.equals(fromIng)) {
-                continue; // Perfect overlap. So not an upgrade.
+                continue;
             }
             if (containsAllTags(fromIng, toIng)) {
                 b.add(e.getKey());

@@ -272,7 +272,7 @@ class ChickenScaffoldingNbtEditorTest {
 
         CompoundTag reloaded;
         try (var in = Files.newInputStream(structure)) {
-            reloaded = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+            reloaded = NbtIo.readCompressed(in);
         }
         List<ChickenScaffoldingLayout.BlockPlacement> plan =
                 ChickenScaffoldingLayout.forRotation(Rotation.NONE);
@@ -304,8 +304,6 @@ class ChickenScaffoldingNbtEditorTest {
                 structure, ChickenScaffoldingNbtEditor.Mode.CHECK, false);
         Assertions.assertEquals(0, exit);
     }
-
-    /** Applies the editor to the real {@code empty_town.nbt}. Disabled; enable it, run it, commit the file, disable it again. */
 
     /** Applies the editor to the real {@code empty_town.nbt}. Disabled; enable it, run it, commit the file, disable it again. */
     @Test

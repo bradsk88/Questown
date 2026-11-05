@@ -32,8 +32,6 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
@@ -45,8 +43,8 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import net.neoforged.neoforge.common.ToolAction;
-import net.neoforged.neoforge.common.ToolActions;
+import net.minecraftforge.common.ToolAction;
+import net.minecraftforge.common.ToolActions;
 
 /**
  * Compat executes the "strangler" pattern. Putting all code that changes
@@ -179,13 +177,11 @@ public class Compat {
     }
 
     public static void writeIngredient(net.minecraft.network.FriendlyByteBuf buf, net.minecraft.world.item.crafting.Ingredient i) {
-        net.minecraft.world.item.crafting.Ingredient.CONTENTS_STREAM_CODEC.encode(
-                (net.minecraft.network.RegistryFriendlyByteBuf) buf, i);
+        i.toNetwork(buf);
     }
 
     public static net.minecraft.world.item.crafting.Ingredient readIngredient(net.minecraft.network.FriendlyByteBuf buf) {
-        return net.minecraft.world.item.crafting.Ingredient.CONTENTS_STREAM_CODEC.decode(
-                (net.minecraft.network.RegistryFriendlyByteBuf) buf);
+        return net.minecraft.world.item.crafting.Ingredient.fromNetwork(buf);
     }
 
     /**
@@ -193,33 +189,29 @@ public class Compat {
      * buffer the network stack hands every message; 1.19.2 uses the buffer's own read/write.
      */
     public static void writeItem(FriendlyByteBuf buf, ItemStack stack) {
-        ItemStack.OPTIONAL_STREAM_CODEC.encode((net.minecraft.network.RegistryFriendlyByteBuf) buf, stack);
+        buf.writeItem(stack);
     }
 
     public static ItemStack readItem(FriendlyByteBuf buf) {
-        return ItemStack.OPTIONAL_STREAM_CODEC.decode((net.minecraft.network.RegistryFriendlyByteBuf) buf);
+        return buf.readItem();
     }
 
     /** An ingredient as JSON (1.20.5: the non-empty codec; 1.19.2: Ingredient#toJson). */
     public static com.google.gson.JsonElement ingredientToJson(net.minecraft.world.item.crafting.Ingredient i) {
-        return net.minecraft.world.item.crafting.Ingredient.CODEC_NONEMPTY
-                .encode(i, com.mojang.serialization.JsonOps.INSTANCE, com.mojang.serialization.JsonOps.INSTANCE.empty())
-                .getOrThrow();
+        return i.toJson();
     }
 
     public static net.minecraft.world.item.crafting.Ingredient ingredientFromJson(com.google.gson.JsonElement json) {
-        return net.minecraft.world.item.crafting.Ingredient.CODEC_NONEMPTY
-                .parse(com.mojang.serialization.JsonOps.INSTANCE, json)
-                .getOrThrow();
+        return net.minecraft.world.item.crafting.Ingredient.fromJson(json);
     }
 
     /** An item stack as NBT; 1.20.5 needs the level's registries (1.19.2 doesn't). */
     public static CompoundTag saveItem(net.minecraft.world.level.Level level, ItemStack stack) {
-        return (CompoundTag) stack.save(level.registryAccess(), new CompoundTag());
+        return stack.save(new CompoundTag());
     }
 
     public static ItemStack loadItem(net.minecraft.world.level.Level level, CompoundTag tag) {
-        return ItemStack.parseOptional(level.registryAccess(), tag);
+        return ItemStack.of(tag);
     }
 
     /**
@@ -245,11 +237,7 @@ public class Compat {
             ServerPlayer sender,
             MenuProvider menuProvider,
             Consumer<FriendlyByteBuf> writer) {
-        sender.openMenu(menuProvider, buf -> {
-            if (writer != null) {
-                writer.accept(buf);
-            }
-        });
+        net.minecraftforge.network.NetworkHooks.openScreen(sender, menuProvider, writer == null ? buf -> {} : writer);
     }
 
     public static void enqueueOrLog(Runnable staticInitialize) {
@@ -272,10 +260,10 @@ public class Compat {
             ItemStack inserted,
             int targetSize
     ) {
-        if (!inserted.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
+        if (!inserted.hasTag()) {
             for (int i = 0; i < iItemHandler.getSlots(); i++) {
                 ItemStack stackInSlot = iItemHandler.getStackInSlot(i);
-                if (!stackInSlot.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA) && ItemStack.isSameItem(stackInSlot, inserted)) {
+                if (!stackInSlot.hasTag() && stackInSlot.getItem() == inserted.getItem()) {
                     if (stackInSlot.getCount() < targetSize) {
                         iItemHandler.insertItem(i, inserted, false);
                         return true;
@@ -501,11 +489,7 @@ public class Compat {
             net.minecraft.world.item.ItemStack stack,
             java.util.function.Consumer<net.minecraft.nbt.CompoundTag> mutate
     ) {
-        net.minecraft.world.item.component.CustomData.update(
-                net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                stack,
-                mutate
-        );
+        mutate.accept(stack.getOrCreateTag());
     }
 
     public static void renderItemAndDecorations(
@@ -582,7 +566,8 @@ public class Compat {
      * one: note the helpers are named {@code itemDataTag}/{@code setItemDataTag}, not *CustomData*.
      */
     public static CompoundTag itemDataTag(ItemStack stack) {
-        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        CompoundTag tag = stack.getTag();
+        return tag == null ? new CompoundTag() : tag.copy();
     }
 
     /**
@@ -590,7 +575,7 @@ public class Compat {
      * component.
      */
     public static void setItemDataTag(ItemStack stack, CompoundTag t) {
-        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
+        stack.setTag(t);
     }
 
     private static ToolAction forgeToolAction(QTToolAction toolAction) {
@@ -656,9 +641,7 @@ public class Compat {
             ServerLevel level,
             ResourceLocation id
     ) {
-        return level.getServer()
-                .reloadableRegistries()
-                .getLootTable(net.minecraft.resources.ResourceKey.create(Registries.LOOT_TABLE, id));
+        return level.getServer().getLootData().getLootTable(id);
     }
 
     /** Whether a loot table with the given id exists on the server (loot-table registry keys). */
@@ -666,10 +649,7 @@ public class Compat {
             ServerLevel level,
             ResourceLocation id
     ) {
-        return level.getServer()
-                .reloadableRegistries()
-                .getKeys(Registries.LOOT_TABLE)
-                .contains(id);
+        return level.getServer().getLootData().getKeys(net.minecraft.world.level.storage.loot.LootDataType.TABLE).contains(id);
     }
 
     /**
@@ -754,14 +734,9 @@ public class Compat {
      */
     public static ItemStack resolvablePlayerHead(java.util.UUID uuid) {
         ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
-        head.set(
-                net.minecraft.core.component.DataComponents.PROFILE,
-                new net.minecraft.world.item.component.ResolvableProfile(
-                        java.util.Optional.empty(),
-                        java.util.Optional.of(uuid),
-                        new com.mojang.authlib.properties.PropertyMap()
-                )
-        );
+        CompoundTag owner = net.minecraft.nbt.NbtUtils.writeGameProfile(
+                new CompoundTag(), new com.mojang.authlib.GameProfile(uuid, null));
+        head.getOrCreateTag().put("SkullOwner", owner);
         return head;
     }
 
@@ -772,7 +747,10 @@ public class Compat {
      * fraction of the wall time; 1.19.2 has a fixed 20 t/s with no lever.
      */
     public static void setServerTickRate(MinecraftServer server, float tps) {
-        server.tickRateManager().setTickRate(tps);
+        if (tps != 20.0f) {
+            ca.bradj.questown.QT.LOGGER.warn(
+                    "Tick rate adjustment is not available before Minecraft 1.20.6: asked for {} t/s, running at 20 t/s", tps);
+        }
     }
 
     /**
@@ -780,7 +758,9 @@ public class Compat {
      * autotest origin sits in them). village/day1 sets it to 0 so the flag's chunk can unload.
      */
     public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
-        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SPAWN_CHUNK_RADIUS).set(radius, server);
+        // No spawnChunkRadius gamerule before 1.20.5: spawn chunks stay loaded.
+        ca.bradj.questown.QT.LOGGER.warn(
+                "The spawn chunk radius can't be changed before Minecraft 1.20.5 (asked for {}); spawn chunks stay loaded", radius);
     }
 
     /**
@@ -789,8 +769,7 @@ public class Compat {
      */
     public static @Nullable ca.bradj.roomrecipes.recipes.RoomRecipe findRoomRecipe(ServerLevel level, ResourceLocation id) {
         return level.getRecipeManager().getAllRecipesFor(ca.bradj.roomrecipes.recipes.RecipesInit.ROOM).stream()
-                .filter(h -> h.id().equals(id))
-                .map(net.minecraft.world.item.crafting.RecipeHolder::value)
+                .filter(r -> r.getId().equals(id))
                 .findFirst()
                 .orElse(null);
     }
@@ -801,10 +780,15 @@ public class Compat {
      * {@code Advancement}). An unknown id reads as not completed.
      */
     public static boolean hasCompletedAdvancement(ServerPlayer player, ResourceLocation advancementId) {
-        net.minecraft.advancements.AdvancementHolder adv = player.getServer().getAdvancements().get(advancementId);
+        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advancementId);
         if (adv == null) {
             return false;
         }
         return player.getAdvancements().getOrStartProgress(adv).isDone();
+    }
+
+    /** Whether the state is solid. */
+    public static boolean isSolid(net.minecraft.world.level.block.state.BlockState state) {
+        return state.isSolid();
     }
 }

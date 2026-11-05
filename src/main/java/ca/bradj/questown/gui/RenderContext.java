@@ -132,20 +132,13 @@ public record RenderContext(
 
     // Vanilla's own checkbox art (1.20.6 sprite atlas), so a toggle looks like a vanilla control
     // (docs/ui-principles.md 1). Vanilla itself draws the 20x20 sprite scaled to its box size.
-    private static final ResourceLocation CHECKBOX = new ResourceLocation("widget/checkbox");
-    private static final ResourceLocation CHECKBOX_SELECTED = new ResourceLocation("widget/checkbox_selected");
-    private static final ResourceLocation CHECKBOX_HIGHLIGHTED = new ResourceLocation("widget/checkbox_highlighted");
-    private static final ResourceLocation CHECKBOX_SELECTED_HIGHLIGHTED =
-            new ResourceLocation("widget/checkbox_selected_highlighted");
+    // 1.20.1 has no GUI sprite atlas: the 64x64 checkbox sheet holds 20x20 cells, u 0/20 =
+    // plain/highlighted, v 0/20 = off/on.
+    private static final ResourceLocation CHECKBOX = new ResourceLocation("textures/gui/checkbox.png");
 
     public void checkbox(int x, int y, int size, boolean checked, boolean hovered) {
-        ResourceLocation sprite;
-        if (checked) {
-            sprite = hovered ? CHECKBOX_SELECTED_HIGHLIGHTED : CHECKBOX_SELECTED;
-        } else {
-            sprite = hovered ? CHECKBOX_HIGHLIGHTED : CHECKBOX;
-        }
-        gui.blitSprite(sprite, x, y, size, size);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        gui.blit(CHECKBOX, x, y, size, size, hovered ? 20 : 0, checked ? 20 : 0, 20, 20, 64, 64);
     }
 
     // -- textures

@@ -47,7 +47,7 @@ public record CreateStockRequestFromUIMessage(
                 return;
             }
             ItemStack toGive = ItemsInit.STOCK_REQUEST.get().getDefaultInstance();
-            net.minecraft.world.item.component.CustomData.update(net.minecraft.core.component.DataComponents.CUSTOM_DATA, toGive, tag -> StockRequestItem.writeToNBT(tag, item));
+            Compat.updateItemDataTag(toGive, tag -> StockRequestItem.writeToNBT(tag, item));
             ItemStack given = new ItemStack(toGive.getItem(), toGive.getCount());
             sender.getInventory().add(toGive);
             QuestownNetwork.sendToPlayer(sender, new CloseScreensMessage());

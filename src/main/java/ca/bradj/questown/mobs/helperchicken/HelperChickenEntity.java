@@ -74,13 +74,13 @@ public class HelperChickenEntity extends Chicken {
     }
 
     @Override
-    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
-        super.defineSynchedData(builder);
-        builder.define(BUBBLE_ICON_A, ItemStack.EMPTY);
-        builder.define(BUBBLE_ICON_B, ItemStack.EMPTY);
-        builder.define(THROUGH_WALLS, false);
-        builder.define(BUBBLE_TEXTURE_PATH, "");
-        builder.define(HINT_KEY, "");
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(BUBBLE_ICON_A, ItemStack.EMPTY);
+        this.entityData.define(BUBBLE_ICON_B, ItemStack.EMPTY);
+        this.entityData.define(THROUGH_WALLS, false);
+        this.entityData.define(BUBBLE_TEXTURE_PATH, "");
+        this.entityData.define(HINT_KEY, "");
     }
 
     @Override
@@ -216,7 +216,7 @@ public class HelperChickenEntity extends Chicken {
     public void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         if (tag.contains(NBT_OWNER_FLAG_POS)) {
-            this.ownerFlagPos = net.minecraft.nbt.NbtUtils.readBlockPos(tag, NBT_OWNER_FLAG_POS).orElse(null);
+            this.ownerFlagPos = tag.contains(NBT_OWNER_FLAG_POS) ? net.minecraft.nbt.NbtUtils.readBlockPos(tag.getCompound(NBT_OWNER_FLAG_POS)) : null;
         }
     }
 

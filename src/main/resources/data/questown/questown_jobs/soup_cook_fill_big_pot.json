@@ -16,7 +16,7 @@
   "room": "questown:soup_kitchen_big",
   "work_states": [
     {
-      "ingredients": "#c:mushrooms"
+      "ingredients": "#forge:mushrooms"
     }
   ],
   "cooldown_ticks": 10,

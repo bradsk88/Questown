@@ -3,7 +3,6 @@ package ca.bradj.questown.town.special;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
@@ -34,7 +33,7 @@ class EmptyRoomRecipeTest {
     // Not a static field: it must load after the vanilla bootstrap.
     private RoomRecipe emptyRoomRecipe() throws IOException {
         JsonObject json = JsonParser.parseString(Files.readString(RECIPE)).getAsJsonObject();
-        return new RoomRecipe.Serializer().codec().codec().parse(JsonOps.INSTANCE, json).getOrThrow();
+        return new RoomRecipe.Serializer().fromJson(SpecialQuests.EMPTY_ROOM, json);
     }
 
     private static Container of(ItemStack... items) {

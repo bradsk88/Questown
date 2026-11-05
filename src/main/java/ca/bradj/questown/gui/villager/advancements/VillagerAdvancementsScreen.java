@@ -10,7 +10,7 @@ import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.advancements.AdvancementType;
+import net.minecraft.advancements.FrameType;
 import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -20,7 +20,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.UUID;
 
 public class VillagerAdvancementsScreen extends CompatScreen implements ScrollableScreen {
@@ -51,8 +50,8 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
                 Items.CREEPER_HEAD.getDefaultInstance(),
                 Compat.translatable("menu.jobs.root.title"),
                 Compat.translatable("menu.jobs.root.description"),
-                Optional.of(new ResourceLocation("textures/gui/advancements/backgrounds/stone.png")),
-                AdvancementType.TASK,
+                new ResourceLocation("textures/gui/advancements/backgrounds/stone.png"),
+                FrameType.TASK,
                 false,
                 false,
                 false
@@ -113,7 +112,7 @@ public class VillagerAdvancementsScreen extends CompatScreen implements Scrollab
             int mouseY,
             float partialTicks
     ) {
-        this.renderBlurredBackground(partialTicks);
+        this.renderBackground(ctx.gui());
     }
 
     @Override

@@ -81,7 +81,7 @@ public class VillagerAdvancementsContent {
                             Jobs.getVariantNameComponent(adv.id()),
                             Compat.literal(""),
                             display.getBackground(),
-                            display.getType(),
+                            display.getFrame(),
                             false,
                             false,
                             false
@@ -116,7 +116,7 @@ public class VillagerAdvancementsContent {
                     Jobs.getVariantNameComponent(allJobs.id()),
                     Compat.literal(""),
                     display.getBackground(),
-                    display.getType(),
+                    display.getFrame(),
                     false,
                     false,
                     false
@@ -196,7 +196,7 @@ public class VillagerAdvancementsContent {
         }
         ctx.pose().pushPose();
         ctx.fill(234, 113, 0, 0, -16777216);
-        net.minecraft.resources.ResourceLocation resourcelocation = this.display.getBackground().orElse(null);
+        net.minecraft.resources.ResourceLocation resourcelocation = this.display.getBackground();
         if (resourcelocation != null) {
             int i = Mth.floor(this.scrollX);
             int j = Mth.floor(this.scrollY);

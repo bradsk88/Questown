@@ -27,7 +27,7 @@ class FlagRecipeTest {
         JsonObject key = r.getAsJsonObject("key");
         Assertions.assertEquals("minecraft:cobblestone", key.getAsJsonObject("C").get("item").getAsString());
         Assertions.assertEquals("minecraft:saplings", key.getAsJsonObject("S").get("tag").getAsString());
-        Assertions.assertEquals("questown:flag_base", r.getAsJsonObject("result").get("id").getAsString());
+        Assertions.assertEquals("questown:flag_base", r.getAsJsonObject("result").get("item").getAsString());
     }
 
     @Test

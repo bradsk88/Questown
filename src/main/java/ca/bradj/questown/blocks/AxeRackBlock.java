@@ -36,9 +36,6 @@ import org.jetbrains.annotations.Nullable;
 public class AxeRackBlock extends Block implements InsertedItemAware, EntityBlock {
     public static final MapCodec<AxeRackBlock> CODEC = MapCodec.unit(AxeRackBlock::new);
 
-    @Override
-    public MapCodec<AxeRackBlock> codec() { return CODEC; }
-
     public static final String ITEM_ID = "axe_rack_block";
 
     public static final int MAX = 1;
@@ -122,7 +119,6 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
         rack.addItem(item);
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
@@ -192,5 +188,20 @@ public class AxeRackBlock extends Block implements InsertedItemAware, EntityBloc
     @Override
     public RenderShape getRenderShape(BlockState p_60550_) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

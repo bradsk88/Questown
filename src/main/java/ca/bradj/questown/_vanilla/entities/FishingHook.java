@@ -126,12 +126,12 @@ public class FishingHook extends Projectile {
         this.xRotO = this.getXRot();
     }
 
-    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
-        builder.define(DATA_HOOKED_ENTITY, 0);
-        builder.define(DATA_BITING, false);
-        builder.define(DATA_ATTACH_POINT_X, 0f);
-        builder.define(DATA_ATTACH_POINT_Y, 0f);
-        builder.define(DATA_ATTACH_POINT_Z, 0f);
+    protected void defineSynchedData() {
+        this.entityData.define(DATA_HOOKED_ENTITY, 0);
+        this.entityData.define(DATA_BITING, false);
+        this.entityData.define(DATA_ATTACH_POINT_X, 0f);
+        this.entityData.define(DATA_ATTACH_POINT_Y, 0f);
+        this.entityData.define(DATA_ATTACH_POINT_Z, 0f);
     }
 
     public void onSyncedDataUpdated(EntityDataAccessor<?> p_37153_) {

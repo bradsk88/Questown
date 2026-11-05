@@ -17,9 +17,6 @@ import net.minecraft.world.phys.BlockHitResult;
 public class MineshaftBlock extends RoomBlock {
     public static final MapCodec<MineshaftBlock> CODEC = MapCodec.unit(MineshaftBlock::new);
 
-    @Override
-    public MapCodec<MineshaftBlock> codec() { return CODEC; }
-
     public static final String ITEM_ID = "mineshaft";
 
     public MineshaftBlock(
@@ -27,7 +24,6 @@ public class MineshaftBlock extends RoomBlock {
         super(Compat.blockProps(CompatBlockColor.STONE).strength(1.0F, 10.0F).noOcclusion().lightLevel(b -> 15));
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
@@ -49,5 +45,20 @@ public class MineshaftBlock extends RoomBlock {
     @Override
     public String getId() {
         return ITEM_ID;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

@@ -34,7 +34,7 @@ public final class TestTagResolver {
     public static boolean matches(GathererJournalTest.TestItem item, String itemOrTagKey) {
         String itemValue = item.value;
         if (item.isEmpty() || itemValue.isEmpty()) {
-            return false; // an empty slot matches nothing, whatever the gate
+            return false;
         }
         if (!itemOrTagKey.startsWith("#")) {
             if (itemOrTagKey.equals(itemValue)) {
@@ -43,7 +43,7 @@ public final class TestTagResolver {
             return itemValue.startsWith("#") && members(itemValue).contains(itemOrTagKey);
         }
         if (itemOrTagKey.equals(itemValue)) {
-            return true; // "tag-as-item" convention: the inventory carries this very tag's items
+            return true;
         }
         Set<String> gate = members(itemOrTagKey);
         if (itemValue.startsWith("#")) {

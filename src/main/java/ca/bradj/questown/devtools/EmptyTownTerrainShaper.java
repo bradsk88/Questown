@@ -50,7 +50,7 @@ public final class EmptyTownTerrainShaper {
         }
         CompoundTag tag;
         try (var in = Files.newInputStream(path)) {
-            tag = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+            tag = NbtIo.readCompressed(in);
         }
         CompoundTag updated = shape(tag);
         if (writeBak) {

@@ -483,7 +483,7 @@ public final class ChickenArcTestExecutor {
             return;
         }
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(flagPos), Direction.UP, flagPos, false);
-        level.getBlockState(flagPos).useWithoutItem(level, fakePlayer, hit);
+        level.getBlockState(flagPos).use(level, fakePlayer, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
     }
 
     private void handleRightClickChicken(ChickenArcScriptedAction.RightClickChickenWithHand a) {

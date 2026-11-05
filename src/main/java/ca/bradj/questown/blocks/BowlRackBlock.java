@@ -38,9 +38,6 @@ import java.util.List;
 public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlock {
     public static final MapCodec<BowlRackBlock> CODEC = MapCodec.unit(BowlRackBlock::new);
 
-    @Override
-    public MapCodec<BowlRackBlock> codec() { return CODEC; }
-
     public static final String ITEM_ID = "bowl_rack";
 
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 4.0D, 16.0D);
@@ -133,7 +130,6 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
@@ -141,7 +137,7 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
             Player p_60506_,
             BlockHitResult p_60508_
     ) {
-        InteractionResult r = super.useWithoutItem(p_60503_, p_60504_, p_60505_, p_60506_, p_60508_);
+        InteractionResult r = super.use(p_60503_, p_60504_, p_60505_, p_60506_, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         if (p_60504_.isClientSide()) {
             return InteractionResult.CONSUME;
         }
@@ -173,5 +169,20 @@ public class BowlRackBlock extends Block implements InsertedItemAware, EntityBlo
             BlockState blockState
     ) {
         return new BowlRackBlockEntity(blockPos, blockState);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

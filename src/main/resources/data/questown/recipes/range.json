@@ -7,7 +7,7 @@
       "item": "minecraft:target"
     },
     {
-      "tag": "c:chests"
+      "tag": "forge:chests"
     }
   ]
 }

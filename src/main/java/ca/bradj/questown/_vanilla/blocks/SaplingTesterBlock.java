@@ -32,7 +32,6 @@ public class SaplingTesterBlock extends Block {
         super(Compat.blockProps(CompatBlockColor.SNOW).strength(1.0F, 10.0F).noOcclusion());
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
@@ -46,10 +45,10 @@ public class SaplingTesterBlock extends Block {
 
         ItemStack itemInHand = player.getItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (!(itemInHand.getItem() instanceof BlockItem bi)) {
-            return super.useWithoutItem(p_60503_, level, blockPos, player, p_60508_);
+            return super.use(p_60503_, level, blockPos, player, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         }
         if (!(bi.getBlock() instanceof SaplingBlock)) {
-            return super.useWithoutItem(p_60503_, level, blockPos, player, p_60508_);
+            return super.use(p_60503_, level, blockPos, player, net.minecraft.world.InteractionHand.MAIN_HAND, p_60508_);
         }
         boolean allowed = new CheckTreePlantable().postJobBlockCheckPassed(new JobBlockTestContext(
                 new MinecraftWorldAccess(sl), new WorkLocation.BlockInfo() {
@@ -73,5 +72,20 @@ public class SaplingTesterBlock extends Block {
     @Override
     protected boolean isAir(BlockState state) {
         return true;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

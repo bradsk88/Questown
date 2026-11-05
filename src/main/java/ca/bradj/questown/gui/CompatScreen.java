@@ -28,13 +28,10 @@ public abstract class CompatScreen extends Screen {
     @Override
     public final void render(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
         this.renderPrologue(this.renderContext(gui), mouseX, mouseY, partialTicks);
+        // 1.20.1's Screen.render does not draw a background; the screen draws its surface first.
+        this.renderScreenSurface(this.renderContext(gui), mouseX, mouseY, partialTicks);
         super.render(gui, mouseX, mouseY, partialTicks);
         this.renderScreenContent(this.renderContext(gui), mouseX, mouseY, partialTicks);
-    }
-
-    @Override
-    public void renderBackground(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-        this.renderScreenSurface(this.renderContext(gui), mouseX, mouseY, partialTicks);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package ca.bradj.questown.commands.test;
 
 import ca.bradj.questown.mc.Compat;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
-import net.neoforged.neoforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.common.util.FakePlayer;
 import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.QT;
@@ -3032,11 +3032,11 @@ public class TestBlueprintRegistry {
             for (net.minecraft.world.item.Item item : openRequests) {
                 town.getWorkHandle().requestWork(WorkRequest.of(item));
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
-                @net.neoforged.bus.api.SubscribeEvent
-                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_testbl1(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                     if (town.isRemoved()) {
-                        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
                         return;
                     }
                     for (LivingEntity e : town.getVillagerHandle().entities()) {
@@ -4218,7 +4218,7 @@ public class TestBlueprintRegistry {
     private static TestBlueprint bopDepositBlueprint(long levelUpAt) {
         return bopStallBase((int) (levelUpAt - 1000) + 3000)
                 .withPostSpawnAction((level, flagPos, town, output) -> {
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new LevelUpAt(levelUpAt, level, town, output));
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new LevelUpAt(levelUpAt, level, town, output));
                     return true;
                 })
                 .withCustomAssertion((level, flagPos, town, output) -> {
@@ -4343,7 +4343,7 @@ public class TestBlueprintRegistry {
                     output.msg("[rest_then_eat] cook starts in downtime");
                 }
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new StarveAt(restFirst ? 1600 : 1900, restFirst, level, town, output));
             return true;
         });
     }
@@ -4371,9 +4371,9 @@ public class TestBlueprintRegistry {
                     if (base.postSpawnAction() != null && !base.postSpawnAction().run(level, flagPos, town, output)) {
                         return false;
                     }
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
-                        @net.neoforged.bus.api.SubscribeEvent
-                        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                        @net.minecraftforge.eventbus.api.SubscribeEvent
+                        public void onTick_testbl2(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                             for (var e : town.getVillagerHandle().entities()) {
                                 ResourceLocation room = ((VisitorMobEntity) e).getUnreachableRoom();
                                 if (room != null && named[0] == null) {
@@ -4407,9 +4407,9 @@ public class TestBlueprintRegistry {
                         return false;
                     }
                     BlockPos door = flagPos.offset(doorOffset);
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
-                        @net.neoforged.bus.api.SubscribeEvent
-                        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                        @net.minecraftforge.eventbus.api.SubscribeEvent
+                        public void onTick_testbl3(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(door);
                             if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
                                 return;
@@ -4450,12 +4450,12 @@ public class TestBlueprintRegistry {
             this.output = output;
         }
 
-        @net.neoforged.bus.api.SubscribeEvent
-        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_testbl4(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
             if (level.getDayTime() % 24000 < at) {
                 return;
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
             for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
                 UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
                 if (leaveDowntimeRecord) {
@@ -4491,7 +4491,7 @@ public class TestBlueprintRegistry {
             watcher.start(town, output);
             return true;
         }).withCustomAssertion((level, flagPos, town, output) -> {
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(watcher);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(watcher);
             output.msg("[switch] requested=" + watcher.requested + " jobRightAfter=" + watcher.jobRightAfter
                     + " sawNewJob=" + watcher.sawNewJob);
             if (!watcher.requested || !watcher.sawNewJob) {
@@ -4526,14 +4526,14 @@ public class TestBlueprintRegistry {
                 town.getVillagerHandle().changeJobForVillager(vuid,
                         ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("hunter", "sword")), false);
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
-                @net.neoforged.bus.api.SubscribeEvent
-                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_testbl5(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                     for (LivingEntity e : town.getVillagerHandle().entities()) {
                         if (firstTrip[0] == null && e instanceof VisitorMobEntity v && v.isAwayOnTrip()) {
                             firstTrip[0] = v.getJobId();
                             output.msg("[longest_trip] first trip: " + firstTrip[0]);
-                            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
                         }
                     }
                 }
@@ -4570,14 +4570,14 @@ public class TestBlueprintRegistry {
                 town.getVillagerHandle().changeJobForVillager(vuid,
                         ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.getIDForRoot(new JobID("cook", "mutton")), false);
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
-                @net.neoforged.bus.api.SubscribeEvent
-                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_testbl6(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                     for (LivingEntity e : town.getVillagerHandle().entities()) {
                         if (seen[0] == null && e instanceof VisitorMobEntity v && v.getMissingRoom() != null) {
                             seen[0] = v.getMissingRoom().toString();
                             output.msg("[no_kitchen] need=" + v.getNeed() + " room=" + seen[0]);
-                            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
                         }
                     }
                 }
@@ -4611,11 +4611,11 @@ public class TestBlueprintRegistry {
             town.getWorkHandle().requestWork(bread);
             town.getWorkHandle().setRequestLimit(bread, 4);
             long start = level.getGameTime();
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(new Object() {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new Object() {
                 int step = 0;
 
-                @net.neoforged.bus.api.SubscribeEvent
-                public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+                @net.minecraftforge.eventbus.api.SubscribeEvent
+                public void onTick_testbl7(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                     long t = level.getGameTime() - start;
                     boolean paused = town.getWorkHandle().getBoardRequests().paused().contains(bread);
                     if (step == 0 && t >= 100) {
@@ -4624,7 +4624,7 @@ public class TestBlueprintRegistry {
                         step = 1;
                     } else if (step == 1 && t >= 200) {
                         seen.add("limit6 paused=" + paused);
-                        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+                        net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
                         step = 2;
                     }
                 }
@@ -4657,11 +4657,11 @@ public class TestBlueprintRegistry {
         void start(TownFlagBlockEntity town, TestOutput output) {
             this.town = town;
             this.output = output;
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(this);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
         }
 
-        @net.neoforged.bus.api.SubscribeEvent
-        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_testbl8(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
             for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
                 UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(vuid));
                 VisitorMobEntity v = town.getVillagerHandle().entities().stream()
@@ -4699,12 +4699,12 @@ public class TestBlueprintRegistry {
             this.output = output;
         }
 
-        @net.neoforged.bus.api.SubscribeEvent
-        public void onTick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) {
+        @net.minecraftforge.eventbus.api.SubscribeEvent
+        public void onTick_testbl9(net.minecraftforge.event.TickEvent.ServerTickEvent event) { if (event.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
             if (level.getDayTime() % 24000 < at) {
                 return;
             }
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(this);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
             bopForceLevelUp().run(level, flagPos(), town, output);
             output.msg("[bop-deposit] leveled up at daytime " + level.getDayTime() % 24000);
         }
@@ -4924,8 +4924,8 @@ public class TestBlueprintRegistry {
                             }
                         });
                     }
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                                 if (slept[0]) {
                                     // Where each villager is and what it walks to, every 500 ticks after
                                     // the sleep: a failing run's hunter sat in GOING_TO_JOB with no nav log.
@@ -5213,8 +5213,8 @@ public class TestBlueprintRegistry {
         )
                 .withPostSpawnAction((level, flagPos, town, output) -> {
                     output.msg("eat storage-full: filled " + fillEmptyTownSlots(level, town) + " empty slots");
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                                 for (VillagerUUID v : town.getVillagerHandle().getVillagerJobs().keySet()) {
                                     float f = town.getVillagerHandle().getStats(VillagerUUID.get(v)).fullnessPercent();
                                     maxFullness[0] = Math.max(maxFullness[0], f);
@@ -5358,8 +5358,8 @@ public class TestBlueprintRegistry {
             // The realtime monitor pins the clock to 1000 (TestExecutor.startMonitor); move it to
             // night once that has happened, so the fed diner has no work to go back to.
             boolean[] moved = {false};
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                    (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                    (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                         if (!moved[0] && level.getDayTime() % 24000 == 1000) {
                             moved[0] = true;
                             level.setDayTime(level.getDayTime() - 1000 + 14000);
@@ -5392,8 +5392,8 @@ public class TestBlueprintRegistry {
                     long[] rawSince = {-1};
                     boolean[] delivered = {false};
                     boolean[] moved = {false};
-                    net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                            (net.neoforged.neoforge.event.tick.ServerTickEvent.Post ev) -> {
+                    net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                            (net.minecraftforge.event.TickEvent.ServerTickEvent ev) -> { if (ev.phase != net.minecraftforge.event.TickEvent.Phase.END) { return; }
                                 // The realtime monitor pins the clock to 1000 (see no_raw_meal_after_eating).
                                 if (!moved[0] && level.getDayTime() % 24000 == 1000) {
                                     moved[0] = true;

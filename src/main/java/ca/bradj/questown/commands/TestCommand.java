@@ -5,7 +5,7 @@ import ca.bradj.questown.commands.test.TestBlueprintRegistry;
 import ca.bradj.questown.commands.test.TestExecutor;
 import ca.bradj.questown.commands.test.PlayerTestOutput;
 import ca.bradj.questown.loader.Loader;
-import ca.bradj.questown.loader.neo.TestTickListener;
+import ca.bradj.questown.loader.forge.TestTickListener;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import com.mojang.brigadier.CommandDispatcher;

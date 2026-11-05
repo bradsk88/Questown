@@ -78,7 +78,7 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
             .uv((float)texU, (float)texV)
             .overlayCoords(OverlayTexture.NO_OVERLAY)
             .uv2(packedLight)
-            .normal(lastPose, 0.0F, 1.0F, 0.0F)
+            .normal(lastPose.normal(), 0.0F, 1.0F, 0.0F)
             .endVertex();
     }
 
@@ -95,7 +95,7 @@ public class FishingHookRenderer extends EntityRenderer<FishingHook> {
         z1 /= length;
         consumer.vertex(pose.pose(), x0, y0, z0)
             .color(0, 0, 0, 255)
-            .normal(pose, x1, y1, z1)
+            .normal(pose.normal(), x1, y1, z1)
             .endVertex();
     }
 

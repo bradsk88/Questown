@@ -158,12 +158,7 @@ public class RealtimeWorldInteraction extends
         if (foundTool.isPresent()) {
             int idx = journal.getItems().indexOf(foundTool.get());
             ItemStack is = foundTool.get().get().toQTItemStack();
-            is.hurtAndBreak(
-                    1,
-                    mcExtra.entity().level().getRandom(),
-                    mcExtra.entity(),
-                    () -> {}
-            );
+            is.hurtAndBreak(1, mcExtra.entity(), e -> {});
             journal.setItem(idx, MCHeldItem.fromMCItemStack(is));
             return true;
         }

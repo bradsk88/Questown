@@ -11,7 +11,7 @@
     "type": "uses_special_rules"
   },
   "block": {
-    "id": "#c:chests"
+    "id": "#forge:chests"
   },
   "room": "questown:breadmaker_stocked",
   "work_states": [

@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.level.gameevent.GameEvent;
@@ -136,7 +136,7 @@ public class VoidLevel implements WorldGenLevel {
 
     @Override
     public void gameEvent(
-            net.minecraft.core.Holder<GameEvent> p_220404_,
+            GameEvent p_220404_,
             Vec3 p_220405_,
             GameEvent.Context p_220406_
     ) {

@@ -37,11 +37,6 @@ public class BreadOvenBlock extends BaseEntityBlock {
 
     public static final MapCodec<BreadOvenBlock> CODEC = MapCodec.unit(BreadOvenBlock::new);
 
-    @Override
-    public MapCodec<BreadOvenBlock> codec() {
-        return CODEC;
-    }
-
     public static final String ITEM_ID = "bread_oven_block";
 
     public static final IntegerProperty BAKE_STATE = IntegerProperty.create(
@@ -72,7 +67,7 @@ public class BreadOvenBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState state) {
+    public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
     }
 
@@ -148,7 +143,6 @@ public class BreadOvenBlock extends BaseEntityBlock {
         }
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,
@@ -183,5 +177,20 @@ public class BreadOvenBlock extends BaseEntityBlock {
         return level.isClientSide ? null : createTickerHelper(
                 entityType, TilesInit.BREAD_OVEN.get(), BreadOvenBlockEntity::tick
         );
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

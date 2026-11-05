@@ -4,9 +4,10 @@ import ca.bradj.questown.Questown;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.gson.JsonElement;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.google.gson.JsonObject;
+import net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance;
 import net.minecraft.advancements.critereon.ContextAwarePredicate;
+import net.minecraft.advancements.critereon.DeserializationContext;
 import net.minecraft.advancements.critereon.EntityPredicate;
 import net.minecraft.advancements.critereon.SimpleCriterionTrigger;
 import net.minecraft.core.BlockPos;
@@ -15,7 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.Optional;
+import java.util.function.Predicate;
 
 public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instance> {
 
@@ -60,17 +61,6 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
                 Triggers.FirstUnmetNeeds, "first_unmet_needs"
         );
 
-                public static final Codec<Triggers> CODEC = Codec.STRING.xmap(
-                key -> {
-                    Triggers t = stringVals.inverse().get(key);
-                    if (t == null) {
-                        throw new IllegalArgumentException(String.format("Trigger string is unexpected: %s", key));
-                    }
-                    return t;
-                },
-                Triggers::getID
-        );
-
         public static Triggers fromJSON(JsonElement trick_id) {
             String key = trick_id.getAsString();
             if (!stringVals.inverse().containsKey(key)) {
@@ -87,8 +77,32 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
     }
 
     @Override
-    public Codec<Instance> codec() {
-        return Instance.CODEC;
+    public ResourceLocation getId() {
+        return ID;
+    }
+
+    @Override
+    public Instance createInstance(
+            JsonObject json,
+            ContextAwarePredicate predicate,
+            DeserializationContext parser
+    ) {
+        if (!json.has("context")) {
+            throw new IllegalStateException(String.format(
+                    "Trigger of type %s is missing context [ID: %s]",
+                    ID, parser.getAdvancementId()
+            ));
+        }
+
+        return new VisitorTrigger.Instance(predicate, Triggers.fromJSON(json.get("context")));
+    }
+
+    @Override
+    protected void trigger(
+            ServerPlayer p_235959_1_,
+            Predicate<Instance> p_235959_2_
+    ) {
+        super.trigger(p_235959_1_, p_235959_2_);
     }
 
     public void trigger(
@@ -98,22 +112,24 @@ public class VisitorTrigger extends SimpleCriterionTrigger<VisitorTrigger.Instan
         super.trigger(player, instance -> instance.matches(trickID));
     }
 
-    public record Instance(Optional<ContextAwarePredicate> player, Triggers context) implements SimpleCriterionTrigger.SimpleInstance {
-        public Instance {
+    public static class Instance extends AbstractCriterionTriggerInstance {
+        private final Triggers context;
+
+        public Instance(
+                ContextAwarePredicate p_i231464_2_,
+                Triggers context
+        ) {
+            super(VisitorTrigger.ID, p_i231464_2_);
             if (Triggers.Invalid.equals(context)) {
                 throw new IllegalArgumentException("context must not be invalid");
             }
+            this.context = context;
         }
 
-        public boolean matches(Triggers triggerID) {
-            return this.context.equals(triggerID);
+        public boolean matches(
+                Triggers trickID
+        ) {
+            return this.context.equals(trickID);
         }
-
-        public static final Codec<Instance> CODEC = RecordCodecBuilder.create(
-                instance -> instance.group(
-                        EntityPredicate.ADVANCEMENT_CODEC.optionalFieldOf("player").forGetter(Instance::player),
-                        Triggers.CODEC.fieldOf("context").forGetter(Instance::context)
-                ).apply(instance, Instance::new)
-        );
     }
 }

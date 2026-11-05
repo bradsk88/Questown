@@ -1,10 +1,9 @@
 package ca.bradj.questown.loader;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.loader.neo.NeoConfigBuilder;
-import ca.bradj.questown.loader.neo.NeoItemHandler;
+import ca.bradj.questown.loader.forge.ForgeConfigBuilder;
+import ca.bradj.questown.loader.forge.ForgeItemHandler;
 import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -22,8 +21,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
+import net.minecraftforge.common.extensions.IForgeMenuType;
+import net.minecraftforge.items.wrapper.InvWrapper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -61,7 +60,7 @@ public final class TestLoader implements LoaderApi {
     // ---- Config -----------------------------------------------------------
     @Override
     public ConfigBuilder configBuilder() {
-        return new NeoConfigBuilder();
+        return new ForgeConfigBuilder();
     }
 
     @Override
@@ -97,7 +96,7 @@ public final class TestLoader implements LoaderApi {
     @Override
     public <T extends AbstractContainerMenu>
     Holder<MenuType<T>> registerMenu(String name, MenuFactory<T> factory) {
-        MenuType<T> type = IMenuTypeExtension.create(factory::create);
+        MenuType<T> type = IForgeMenuType.create(factory::create);
         return new Fixed<>(type, new ResourceLocation(Questown.MODID, name));
     }
 
@@ -115,27 +114,27 @@ public final class TestLoader implements LoaderApi {
     @Override
     public net.minecraft.world.item.@Nullable Item itemFromId(ResourceLocation id) {
         // The item registry is defaulted: .get() returns AIR for a missing key, not null.
-        return BuiltInRegistries.ITEM.containsKey(id) ? BuiltInRegistries.ITEM.get(id) : null;
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(id) ? net.minecraft.core.registries.BuiltInRegistries.ITEM.get(id) : null;
     }
 
     @Override
     public net.minecraft.resources.@Nullable ResourceLocation itemIdOf(Item item) {
-        return BuiltInRegistries.ITEM.getKey(item);
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item);
     }
 
     @Override
     public SoundEvent soundFromId(ResourceLocation id) {
-        return BuiltInRegistries.SOUND_EVENT.get(id);
+        return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(id);
     }
 
     @Override
     public net.minecraft.resources.@Nullable ResourceLocation blockIdOf(Block block) {
-        return BuiltInRegistries.BLOCK.getKey(block);
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
     }
 
     @Override
     public net.minecraft.world.level.block.@Nullable Block blockFromId(ResourceLocation id) {
-        return BuiltInRegistries.BLOCK.containsKey(id) ? BuiltInRegistries.BLOCK.get(id) : null;
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(id) ? net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(id) : null;
     }
 
     @Override
@@ -156,7 +155,7 @@ public final class TestLoader implements LoaderApi {
 
     @Override
     public ItemHandler handlerForInventory(Container inv) {
-        return new NeoItemHandler(new InvWrapper(inv));
+        return new ForgeItemHandler(new InvWrapper(inv));
     }
 
     // ---- Open screen ------------------------------------------------------

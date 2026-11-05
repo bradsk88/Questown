@@ -28,9 +28,6 @@ import org.jetbrains.annotations.Nullable;
 public class FoodDisplayBlock extends HorizontalDirectionalBlock implements InsertedItemAware, EntityBlock {
     public static final MapCodec<FoodDisplayBlock> CODEC = MapCodec.unit(FoodDisplayBlock::new);
 
-    @Override
-    public MapCodec<FoodDisplayBlock> codec() { return CODEC; }
-
     public static final String ITEM_ID = "food_display";
 
     public FoodDisplayBlock(
@@ -97,7 +94,6 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
@@ -146,5 +142,20 @@ public class FoodDisplayBlock extends HorizontalDirectionalBlock implements Inse
     @Override
     public RenderShape getRenderShape(BlockState blockState) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

@@ -35,9 +35,6 @@ import static net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
 public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
     public static final MapCodec<WelcomeMatBlock> CODEC = MapCodec.unit(WelcomeMatBlock::new);
 
-    @Override
-    public MapCodec<WelcomeMatBlock> codec() { return CODEC; }
-
     public static final String ITEM_ID = "welcome_mat_block";
     protected static final VoxelShape SHAPE = Block.box(0.0D, 0.0D, 0.0D, 16.0D, 1.0D, 16.0D);
 

@@ -63,8 +63,8 @@ class TestTagResolverTest {
 
     @Test
     void externalNamespaceTags_resolveFromDependencyJars() {
-        // The c: and forge: tags ship in the NeoForge jar on the test classpath.
-        Set<String> mushrooms = TestTagResolver.members("#c:mushrooms");
+        // The forge tags ship in the Forge jar on the test classpath.
+        Set<String> mushrooms = TestTagResolver.members("#forge:mushrooms");
         Assertions.assertTrue(mushrooms.contains("minecraft:brown_mushroom"));
         Assertions.assertTrue(mushrooms.contains("minecraft:red_mushroom"));
     }

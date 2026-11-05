@@ -7,7 +7,7 @@
       "item": "minecraft:furnace"
     },
     {
-      "tag": "c:chests"
+      "tag": "forge:chests"
     }
   ]
 }

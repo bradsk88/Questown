@@ -91,7 +91,7 @@ import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
@@ -412,16 +412,16 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        super.defineSynchedData(builder);
-        builder.define(visible, true);
-        builder.define(hasBOP, true);
-        builder.define(status, ProductionStatus.IDLE.name());
-        builder.define(jobName, "jobs.gatherer");
-        builder.define(heldItem, ItemStack.EMPTY);
-        builder.define(lastHeldItem, ItemStack.EMPTY);
-        builder.define(need, TownieNeed.NONE.name());
-        builder.define(unmetItem, "");
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(visible, true);
+        this.entityData.define(hasBOP, true);
+        this.entityData.define(status, ProductionStatus.IDLE.name());
+        this.entityData.define(jobName, "jobs.gatherer");
+        this.entityData.define(heldItem, ItemStack.EMPTY);
+        this.entityData.define(lastHeldItem, ItemStack.EMPTY);
+        this.entityData.define(need, TownieNeed.NONE.name());
+        this.entityData.define(unmetItem, "");
     }
 
     /** A villager stopped for lack of storage gets the bubble at once. It wins over a missing item, and clears only itself. */

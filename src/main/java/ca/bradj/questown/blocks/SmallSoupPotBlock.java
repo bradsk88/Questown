@@ -89,7 +89,6 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
         // TODO: Implement?
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level level,
@@ -145,5 +144,20 @@ public class SmallSoupPotBlock extends Block implements InsertedItemAware, State
             State bs
     ) {
         Util.setProcessingStateOnProperty(sl, LEVEL, bs, pp);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

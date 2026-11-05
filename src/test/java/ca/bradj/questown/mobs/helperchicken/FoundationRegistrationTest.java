@@ -139,7 +139,7 @@ class FoundationRegistrationTest {
                 () -> Class.forName("ca.bradj.questown.mobs.helperchicken.HelperChickenEntity")
         );
         Assertions.assertDoesNotThrow(
-                () -> Class.forName("ca.bradj.questown.loader.neo.HelperChickenEntityEvents")
+                () -> Class.forName("ca.bradj.questown.loader.forge.HelperChickenEntityEvents")
         );
         Assertions.assertDoesNotThrow(
                 () -> Class.forName("ca.bradj.questown.blocks.StoneChickenStatue")

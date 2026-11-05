@@ -26,10 +26,7 @@ public final class RecipeRef {
             RecipeManager rm,
             RecipeType<T> type
     ) {
-        return rm.getAllRecipesFor(type)
-                 .stream()
-                 .map(net.minecraft.world.item.crafting.RecipeHolder::value)
-                 .collect(Collectors.toList());
+        return new java.util.ArrayList<>(rm.getAllRecipesFor(type));
     }
 
     /** The recipe value whose holder-id matches, or empty. */
@@ -43,8 +40,7 @@ public final class RecipeRef {
     ) {
         return rm.getAllRecipesFor(type)
                  .stream()
-                 .filter(h -> id.equals(h.id()))
-                 .map(net.minecraft.world.item.crafting.RecipeHolder::value)
+                 .filter(r -> id.equals(r.getId()))
                  .findFirst();
     }
 
@@ -62,7 +58,7 @@ public final class RecipeRef {
             Level level
     ) {
         return rm.getRecipeFor(type, ingredients, level)
-                 .map(h -> h.value().assemble(ingredients, level.registryAccess()))
+                 .map(r -> r.assemble(ingredients, level.registryAccess()))
                  .orElse(ItemStack.EMPTY);
     }
 
@@ -77,7 +73,7 @@ public final class RecipeRef {
     ) {
         return rm.getAllRecipesFor(type)
                  .stream()
-                 .filter(h -> id.equals(h.id()))
+                 .filter(r -> id.equals(r.getId()))
                  .findFirst()
                  .map(RecipePair::of)
                  .orElse(null);
@@ -107,7 +103,7 @@ public final class RecipeRef {
     ) {
         return rm.getAllRecipesFor(type)
                  .stream()
-                 .map(net.minecraft.world.item.crafting.RecipeHolder::id)
+                 .map(net.minecraft.world.item.crafting.Recipe::getId)
                  .collect(Collectors.toList());
     }
 
@@ -122,9 +118,8 @@ public final class RecipeRef {
             this.value = value;
         }
 
-        private static <T extends net.minecraft.world.item.crafting.Recipe<?>> RecipePair<T> of(
-                net.minecraft.world.item.crafting.RecipeHolder<T> h) {
-            return new RecipePair<>(h.id(), h.value());
+        private static <T extends net.minecraft.world.item.crafting.Recipe<?>> RecipePair<T> of(T r) {
+            return new RecipePair<>(r.getId(), r);
         }
 
         public ResourceLocation id() {

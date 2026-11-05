@@ -108,7 +108,7 @@ public class RelocationDeedItem extends Item {
     @Override
     public void appendHoverText(
             ItemStack stack,
-            net.minecraft.world.item.Item.TooltipContext ctx,
+            @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level ctx,
             List<Component> tooltip,
             TooltipFlag flag
     ) {

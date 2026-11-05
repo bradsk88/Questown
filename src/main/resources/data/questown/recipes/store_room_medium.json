@@ -4,10 +4,10 @@
   "farm": false,
   "ingredients": [
     {
-      "tag": "c:chests"
+      "tag": "forge:chests"
     },
     {
-      "tag": "c:chests"
+      "tag": "forge:chests"
     }
   ]
 }

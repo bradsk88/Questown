@@ -15,8 +15,8 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
-import net.minecraft.world.level.pathfinder.PathType;
-import net.minecraft.world.level.pathfinder.PathfindingContext;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,7 +48,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
 
     /** A target under a stack of blocks: stand beside it, at its level, rather than on top. A single block keeps vanilla's lift. */
     private @Nullable BlockPos besideSolidStack(BlockPos pos) {
-        if (!level.getBlockState(pos).isSolid() || !level.getBlockState(pos.above()).isSolid()) {
+        if (!ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos)) || !ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos.above()))) {
             return null;
         }
         for (Direction d : Direction.Plane.HORIZONTAL) {
@@ -67,7 +67,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         if (isDoor(pos)) {
             return lowerHalf(pos);
         }
-        if (!level.getBlockState(pos).isSolid()) {
+        if (!ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos))) {
             return null;
         }
         BlockPos above = pos.above();
@@ -90,48 +90,48 @@ public class VillagerPathNavigation extends GroundPathNavigation {
     protected PathFinder createPathFinder(int maxVisitedNodes) {
         this.nodeEvaluator = new WalkNodeEvaluator() {
             @Override
-            public PathType getPathType(PathfindingContext context, int x, int y, int z) {
+            public BlockPathTypes getBlockPathType(BlockGetter context, int x, int y, int z) {
                 BlockPos pos = new BlockPos(x, y, z);
-                return overridePathType(context, pos, super.getPathType(context, x, y, z));
+                return overridePathType(context, pos, super.getBlockPathType(context, x, y, z));
             }
         };
         this.nodeEvaluator.setCanPassDoors(true);
         return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
     }
 
-    private PathType overridePathType(PathfindingContext context, BlockPos pos, PathType type) {
+    private BlockPathTypes overridePathType(BlockGetter context, BlockPos pos, BlockPathTypes type) {
         // A lit campfire burns villagers that walk through it, so block it.
         BlockState state = context.getBlockState(pos);
         if (CampfireBlock.isLitCampfire(state)) {
-            return PathType.BLOCKED;
+            return BlockPathTypes.BLOCKED;
         }
 
-        FluidState fs = context.level().getFluidState(pos);
+        FluidState fs = context.getFluidState(pos);
         if (!fs.isEmpty()) {
             BlockState above = context.getBlockState(pos.above());
             if (above.isAir()) {
                 BlockState roof = context.getBlockState(pos.above()
                                                         .above());
                 if (!roof.isAir()) {
-                    return PathType.BLOCKED;
+                    return BlockPathTypes.BLOCKED;
                 }
             }
         }
 
         if (state.is(BlockTags.FENCE_GATES)) {
-            return PathType.DOOR_WOOD_CLOSED;
+            return BlockPathTypes.DOOR_WOOD_CLOSED;
         }
 
         if (state.is(BlockTags.FENCES)) {
-            return PathType.BLOCKED;
+            return BlockPathTypes.BLOCKED;
         }
         if (context.getBlockState(pos.below()).is(BlockTags.FENCES)) {
-            return PathType.BLOCKED;
+            return BlockPathTypes.BLOCKED;
         }
 
         // A fence gate can be opened.
-        if (type == PathType.FENCE && state.getBlock() instanceof FenceGateBlock) {
-            return PathType.DOOR_OPEN;
+        if (type == BlockPathTypes.FENCE && state.getBlock() instanceof FenceGateBlock) {
+            return BlockPathTypes.DOOR_OPEN;
         }
 
         return type;

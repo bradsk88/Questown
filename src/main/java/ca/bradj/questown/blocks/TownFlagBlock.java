@@ -68,12 +68,6 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final com.mojang.serialization.MapCodec<TownFlagBlock> CODEC =
             com.mojang.serialization.MapCodec.unit(TownFlagBlock::new);
 
-    @Override
-    public com.mojang.serialization.MapCodec<TownFlagBlock> codec() {
-        return CODEC;
-    }
-
-
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
@@ -194,7 +188,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
         // Pre-select BOP tab if the player hasn't viewed it yet
         ResourceLocation advId = new ResourceLocation(Questown.MODID, "first_bop_view");
-        net.minecraft.advancements.AdvancementHolder adv = player.getServer().getAdvancements().get(advId);
+        net.minecraft.advancements.Advancement adv = player.getServer().getAdvancements().getAdvancement(advId);
         if (adv == null) {
             return true;
         }
@@ -234,7 +228,7 @@ public class TownFlagBlock extends BaseEntityBlock {
 
 
     public static @Nullable ItemStack GetFlagInputFromItemNBT(
-            net.minecraft.core.HolderLookup.Provider ctx,
+            net.minecraft.core.RegistryAccess ctx,
             ItemStack item
     ) {
         String key = String.format("%s.flag_input_itemstack", Questown.MODID);
@@ -242,7 +236,8 @@ public class TownFlagBlock extends BaseEntityBlock {
         if (serialized.isEmpty()) {
             return null;
         }
-        return ItemStack.parse(ctx, serialized).orElse(null);
+        ItemStack parsed = ItemStack.of(serialized);
+        return parsed.isEmpty() ? null : parsed;
     }
 
     @Override
@@ -320,7 +315,6 @@ public class TownFlagBlock extends BaseEntityBlock {
         }
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,
@@ -332,8 +326,7 @@ public class TownFlagBlock extends BaseEntityBlock {
         return useFlag(level, pos, player, hand);
     }
 
-    @Override
-    public net.minecraft.world.ItemInteractionResult useItemOn(
+    public ca.bradj.questown.mc.ItemInteractionResult useItemOn(
             ItemStack stack,
             BlockState blockState,
             Level level,
@@ -348,13 +341,13 @@ public class TownFlagBlock extends BaseEntityBlock {
                     && level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
                 flag.returnBopFromPlayer(sp, stack);
             }
-            return net.minecraft.world.ItemInteractionResult.sidedSuccess(level.isClientSide());
+            return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(level.isClientSide());
         }
         InteractionResult r = useFlag(level, pos, player, hand);
         if (r == InteractionResult.PASS) {
-            return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        return net.minecraft.world.ItemInteractionResult.sidedSuccess(true);
+        return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(true);
     }
 
     private InteractionResult useFlag(
@@ -407,4 +400,25 @@ public class TownFlagBlock extends BaseEntityBlock {
         return InteractionResult.sidedSuccess(false);
     }
 
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        ca.bradj.questown.mc.ItemInteractionResult qtItem = useItemOn(qtPlayer.getItemInHand(qtHand), qtState, qtLevel, qtPos, qtPlayer, qtHand, qtHit);
+        if (qtItem.consumesAction()) {
+            return qtItem.result();
+        }
+        if (qtItem != ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
+    }
 }

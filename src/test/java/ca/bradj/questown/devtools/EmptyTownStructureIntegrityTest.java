@@ -33,7 +33,7 @@ class EmptyTownStructureIntegrityTest {
 
     @Test
     void emptyTownHasTerrainShaperLayersBaked() throws IOException {
-        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
 
@@ -63,7 +63,7 @@ class EmptyTownStructureIntegrityTest {
 
     @Test
     void emptyTownHasExactlyOneCampfireAtFlagPlusCampfireOffset() throws IOException {
-        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE));
         ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
         ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
 

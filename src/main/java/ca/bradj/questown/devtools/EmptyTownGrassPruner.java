@@ -29,8 +29,6 @@ public final class EmptyTownGrassPruner {
 
     private static final String GRASS = "minecraft:grass";
     private static final String TALL_GRASS = "minecraft:tall_grass";
-    // The short grass plant is short_grass.
-    private static final String SHORT_GRASS = "minecraft:short_grass";
 
     private EmptyTownGrassPruner() {
     }
@@ -41,7 +39,7 @@ public final class EmptyTownGrassPruner {
         }
         CompoundTag tag;
         try (var in = Files.newInputStream(path)) {
-            tag = NbtIo.readCompressed(in, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+            tag = NbtIo.readCompressed(in);
         }
         CompoundTag updated = pruneDistantGrass(tag);
 
@@ -62,7 +60,7 @@ public final class EmptyTownGrassPruner {
         ListTag palette = root.getList(PALETTE_KEY, Tag.TAG_COMPOUND);
         ListTag blocks = root.getList(BLOCKS_KEY, Tag.TAG_COMPOUND);
 
-        Set<Integer> grassIdxs = paletteIndicesNamed(palette, GRASS, TALL_GRASS, SHORT_GRASS);
+        Set<Integer> grassIdxs = paletteIndicesNamed(palette, GRASS, TALL_GRASS);
         if (grassIdxs.isEmpty()) {
             return root;
         }

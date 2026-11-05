@@ -98,7 +98,6 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
         sl.setBlockAndUpdate(bp, bs);
     }
 
-    @Override
     public InteractionResult useWithoutItem(
             BlockState p_60503_,
             Level p_60504_,
@@ -111,5 +110,20 @@ public class SoupPotBlock extends Block implements InsertedItemAware, ExtractedI
         }
 
         return tryTakeSoup(p_60504_, p_60505_, LEVEL, 2, p_60506_, net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }
