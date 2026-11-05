@@ -507,15 +507,13 @@ A leaver's per-owner work-status ledger (this flag's `TownWorkStatusStore`) must
 able to say, for every leaver, "for me, the welcome mat is **state 0** (needs my
 supplies)". Two sides, both pinned:
 
-- **Seed side** — `TownWorkStatusStore.startingState` seeds `State.fresh()` (state 0)
-  **unconditionally** for the job block of any job that declares the `seed_job_block` global
-  rule (`ServerJobsRegistry.seedsJobBlock`; the 13 welcome-mat gatherer/hunter JSONs and
-  `NewLeaverWork.standardRules()` declare it, pinned by `LeaverJobRulesTest`). The old
-  path asked `ServerJobsRegistry.shouldInitializeWithState` — which carries a static
-  false-cache that outlives late job registration — and that left ~half the leavers'
-  ledgers without the mat's state-0. That was the NO_JOBSITE / COLLECTING_SUPPLIES
-  soft-lock (`.scratch/cook-soft-lock/STATE.md` Round 4, 2026-10-07;
-  `.scratch/village-self-sufficiency/unseededMat-test-defect-map.md`).
+- **Seed side** — `TownWorkStatusStore.startingState` seeds the mat like any job block: the
+  gatherer/hunter jobs name it as their block, so `ServerJobsRegistry.shouldInitializeWithState`
+  is true and it starts at `State.fresh()` (state 0). From 2026-10-09 to 2026-11-05 the mat was
+  also seeded unconditionally, for a soft-lock whose cause turned out to be villagers outside the
+  autotest's force-loaded chunk not ticking (`480760a6`;
+  `.scratch/village-self-sufficiency/gatherer-leaver-softlock-811.md` "Resolution"); that bypass
+  is gone.
 - **Read side** — a block with *no* state in the ledger is **unstarted work, not
   "no state"**: `State.seededOrFresh` / `State.freshAtState(0)` map it to fresh,
   matching the ticker's `getJobBlockState` upstream. Skipping nulls deadlocked the

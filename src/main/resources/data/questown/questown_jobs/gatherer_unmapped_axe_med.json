@@ -31,7 +31,7 @@
   "special": [
     {
       "type": "global",
-      "rules": ["log_status_reasons", "seed_job_block"]
+      "rules": ["log_status_reasons"]
     },
     {
       "type": "processing_state",

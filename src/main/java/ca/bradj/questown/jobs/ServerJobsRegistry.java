@@ -460,29 +460,6 @@ public class ServerJobsRegistry {
     /** Clears the cache, for when the job registry is rebuilt. */
     public static void forgetWhichBlocksJobsCareAbout() {
         jobInterestByBlock.clear();
-        jobsThatSeedTheirBlock = null;
-    }
-
-    private static @Nullable List<Work> jobsThatSeedTheirBlock;
-
-    public static boolean seedsJobBlock(
-            WorkLocation.BlockInfo info,
-            BlockPos pos
-    ) {
-        if (!Works.isInitialized()) {
-            return false;
-        }
-        if (jobsThatSeedTheirBlock == null) {
-            jobsThatSeedTheirBlock = jobsWithGlobalRule(SpecialRules.SEED_JOB_BLOCK);
-        }
-        return jobsThatSeedTheirBlock.stream().anyMatch(w -> w.isJobBlockAt(info, pos));
-    }
-
-    private static List<Work> jobsWithGlobalRule(String rule) {
-        return Works.values().stream()
-                    .map(Supplier::get)
-                    .filter(w -> w.getSpecialGlobalRules().contains(rule))
-                    .toList();
     }
 
     public static boolean hasGlobalRule(

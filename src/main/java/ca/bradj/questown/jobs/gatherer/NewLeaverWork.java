@@ -42,7 +42,6 @@ public class NewLeaverWork {
                 SpecialRules.PRIORITIZE_EXTRACTION,
                 // Gatherers cannot "carry more results home" than their inventory can hold
                 SpecialRules.NULLIFY_EXCESS_RESULTS,
-                SpecialRules.SEED_JOB_BLOCK,
                 SpecialRules.LOG_STATUS_REASONS
         );
     }

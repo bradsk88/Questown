@@ -52,9 +52,6 @@ public class TownWorkStatusStore extends AbstractWorkStatusStore<BlockPos, MCHel
         if (level.isEmptyBlock(pos)) {
             return DisplaySlots.at(level, pos) == null ? null : State.fresh();
         }
-        if (ServerJobsRegistry.seedsJobBlock(Util.info(level), pos)) {
-            return State.fresh();
-        }
         if (ServerJobsRegistry.shouldInitializeWithState(Util.info(level), pos)) {
             return ServerJobsRegistry.getDefaultJobBlockState(level.getBlockState(pos).getBlock());
         }
