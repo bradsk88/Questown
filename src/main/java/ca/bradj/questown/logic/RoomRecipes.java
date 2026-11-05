@@ -81,8 +81,7 @@ public class RoomRecipes {
         } else {
             rMapB.put(SpecialQuests.FARM, SpecialQuests.SPECIAL_QUESTS.get(SpecialQuests.FARM));
         }
-        List<RoomRecipe> allRecipesFor = recipes.getAllRecipesFor(RecipesInit.ROOM);
-        allRecipesFor.forEach(v -> rMapB.put(v.getId(), v));
+        recipes.getAllRecipesFor(RecipesInit.ROOM).forEach(h -> rMapB.put(h.getId(), h));
         return rMapB.build();
     }
 
