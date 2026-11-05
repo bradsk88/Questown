@@ -165,7 +165,7 @@ class RoomsStatusLogic {
                 (Collection) rooms,
                 isJobBlock,
                 (bp) -> {
-                    State jbs = State.freshIfNull(getJobBlockState, (POS) bp);
+                    State jbs = State.seededOrFresh(getJobBlockState, (POS) bp);
                     return state.equals(jbs.processingState()) && extraCheck.test((POS) bp, jbs);
                 }
         );
@@ -182,7 +182,7 @@ class RoomsStatusLogic {
                 .stream()
                 .filter(room -> {
                     for (POS e : getContainedBlocks.apply(room)) {
-                        State jobBlockState = State.freshIfNull(work, e);
+                        State jobBlockState = State.seededOrFresh(work, e);
                         if (!canClaim.test(e)) {
                             continue;
                         }

@@ -88,7 +88,7 @@ relights the campfire", which the Acting section already said.
   text (no PIL on this box). Use it for quest cards, tooltips, bars and bubbles.
 - Chat history is in the client log (`grep '\[CHAT\]'`); on screen only the newest line shows.
 - Status truth is the server log: `[WHY] job=<root>:<job>` dumps (gatherer, hunter and miner
-  only, `JobStatuses.maybeLogWhy`; throttled to one per 4 s, so a flip can fall between dumps),
+  only: the jobs with the `log_status_reasons` rule, `JobStatuses.logStatusReasons`; throttled to one per 4 s, so a flip can fall between dumps),
   `Job changed to`, `[Experience] +N` (one per finished trip), `[PROBE:supplies] TOOK`.
   Console `data get entity @e[type=questown:visitor,name="Villager 1",limit=1] Pos` and `data get
   block <x y z> Items` read world state. `_qtdev villagers` is **not** registered on a plain

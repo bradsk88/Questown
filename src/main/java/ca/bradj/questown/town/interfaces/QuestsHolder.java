@@ -33,7 +33,6 @@ public interface QuestsHolder {
 
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
-    /** Posts the first day's empty-room quest batch. */
     void addEmptyRoomBatch();
 
     /** Discards a batch as the remove button does. False when there is no such open batch. */

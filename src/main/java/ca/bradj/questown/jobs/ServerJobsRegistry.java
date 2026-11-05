@@ -51,6 +51,7 @@ import ca.bradj.questown.loader.TriPredicate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -338,7 +339,8 @@ public class ServerJobsRegistry {
             TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
             TriPredicate<JobID, Supplier<BlockState>, JobBlockTestContext> jobBlockTest,
             TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
-            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
+            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs,
+            BiPredicate<BlockState, Integer> restsAt
     ) {
 
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob(JobID job, VillagerUUID owner) {
@@ -391,7 +393,8 @@ public class ServerJobsRegistry {
                                 }
                             }, bp.b()
                     ),
-                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items))
+                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items)),
+                    (bs, state) -> false
             );
         }
     }
@@ -414,7 +417,9 @@ public class ServerJobsRegistry {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
                 },
-                (id, items) -> ImmutableList.of()
+                (id, items) -> ImmutableList.of(),
+                (bs, state) -> state == ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE
+                        && bs.getBlock() instanceof JobBoardBlock
         ));
 
         b.add(SpecialJob.fromWork(DinerWork::isDining, id -> DinerWork.asWork(id.rootId())));
@@ -455,6 +460,48 @@ public class ServerJobsRegistry {
     /** Clears the cache, for when the job registry is rebuilt. */
     public static void forgetWhichBlocksJobsCareAbout() {
         jobInterestByBlock.clear();
+        jobsThatSeedTheirBlock = null;
+    }
+
+    private static @Nullable List<Work> jobsThatSeedTheirBlock;
+
+    public static boolean seedsJobBlock(
+            WorkLocation.BlockInfo info,
+            BlockPos pos
+    ) {
+        if (!Works.isInitialized()) {
+            return false;
+        }
+        if (jobsThatSeedTheirBlock == null) {
+            jobsThatSeedTheirBlock = jobsWithGlobalRule(SpecialRules.SEED_JOB_BLOCK);
+        }
+        return jobsThatSeedTheirBlock.stream().anyMatch(w -> w.isJobBlockAt(info, pos));
+    }
+
+    private static List<Work> jobsWithGlobalRule(String rule) {
+        return Works.values().stream()
+                    .map(Supplier::get)
+                    .filter(w -> w.getSpecialGlobalRules().contains(rule))
+                    .toList();
+    }
+
+    public static boolean hasGlobalRule(
+            JobID job,
+            String rule
+    ) {
+        if (!Works.isInitialized()) {
+            return false;
+        }
+        return Works.regularJobs().stream()
+                    .filter(e -> e.getKey().equals(job))
+                    .anyMatch(e -> e.getValue().get().getSpecialGlobalRules().contains(rule));
+    }
+
+    public static boolean isRestingState(
+            BlockState block,
+            int processingState
+    ) {
+        return specialJobs.stream().anyMatch(sj -> sj.restsAt().test(block, processingState));
     }
 
     private static boolean computeShouldInitializeWithState(
@@ -747,6 +794,10 @@ public class ServerJobsRegistry {
         return requests.paused().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
     }
 
+    private static boolean isSpecialJob(JobID p) {
+        return specialJobs.stream().anyMatch(sj -> sj.idTest().test(p));
+    }
+
     public static boolean canSatisfy(
             WorksBehaviour.TownData town,
             JobID p,
@@ -755,8 +806,7 @@ public class ServerJobsRegistry {
         if (isSeekingWork(p)) {
             return false;
         }
-        // Special jobs (downtime, rest, eating, deposit) are not registered work.
-        if (specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
+        if (isSpecialJob(p)) {
             return false;
         }
 

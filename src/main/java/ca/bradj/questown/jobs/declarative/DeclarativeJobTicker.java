@@ -307,10 +307,6 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         QT.JOB_LOGGER.dev(sb.toString());
     }
 
-    /**
-     * A block's work state as this job reads it. A block with no state yet is fresh, and so is a
-     * final state with no timer, since it will never move on for this job.
-     */
     static <POS> State stateForJob(
             WorkStatusHandle<POS, ?> work,
             POS pos,
@@ -320,10 +316,11 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         if (s == null) {
             return State.fresh();
         }
-        boolean finishedWithNoTimer = s.processingState() == maxState
+        boolean pastThisJobsLastState = s.processingState() > maxState;
+        boolean willNeverMoveOn = s.processingState() == maxState
                 && !s.hasWorkLeft()
                 && work.getTimeToNextState(pos) == null;
-        if (s.processingState() > maxState || finishedWithNoTimer) {
+        if (pastThisJobsLastState || willNeverMoveOn) {
             return State.fresh();
         }
         return s;

@@ -126,9 +126,7 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
 
         private final List<Runnable> tickListeners = new ArrayList<>();
 
-        // A welcome mat must belong to a flag. It is checked once, after a short wait so that a
-        // flag loading at the same time has registered its mats.
-        private static final int OWNER_CHECK_WAIT_TICKS = 120;
+        private static final int TICKS_FOR_LOADING_FLAGS_TO_REGISTER_THEIR_MATS = 120;
         private int ownerCheckTicks = 0;
         private boolean ownerChecked = false;
 
@@ -167,19 +165,18 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
                 BlockState blockState,
                 Entity entity
         ) {
-            if (level instanceof ServerLevel sl && removedIfUnowned(sl, pos, entity)) {
+            if (level instanceof ServerLevel sl && revertedToItemBecauseNoFlagOwnsIt(sl, pos, entity)) {
                 return;
             }
             entity.tickListeners.forEach(Runnable::run);
         }
 
-        /** Turns a mat that no flag owns back into an item. True when it did. */
-        private static boolean removedIfUnowned(
+        private static boolean revertedToItemBecauseNoFlagOwnsIt(
                 ServerLevel sl,
                 BlockPos pos,
                 Entity entity
         ) {
-            if (entity.ownerCheckTicks < OWNER_CHECK_WAIT_TICKS) {
+            if (entity.ownerCheckTicks < TICKS_FOR_LOADING_FLAGS_TO_REGISTER_THEIR_MATS) {
                 entity.ownerCheckTicks++;
                 return false;
             }

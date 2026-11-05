@@ -26,10 +26,8 @@ import java.util.stream.Stream;
 public class JobStatuses {
 
     private static final Logger log = LoggerFactory.getLogger(JobStatuses.class);
-    // With dev commands on (QT.DEV_LOGS), a leaver's status decision is logged with the checks
-    // behind it, at most once every WHY_INTERVAL_MS per job.
-    private static final long WHY_INTERVAL_MS = 4000;
-    private static final Map<String, Long> whyLast = new ConcurrentHashMap<>();
+    private static final long STATUS_REASONS_LOG_INTERVAL_MS = 4000;
+    private static final Map<String, Long> lastStatusReasonsLog = new ConcurrentHashMap<>();
 
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
@@ -93,40 +91,36 @@ public class JobStatuses {
         LZCD<STATUS> root = usualRoutineRoot(ctx);
         root.initializeAll();
         STATUS resolved = root.resolve();
-        maybeLogWhy(ctx.jobId(), ctx.currentStatus, resolved, root);
+        logStatusReasons(ctx.jobId(), ctx.currentStatus, resolved, root);
         return nullIfUnchanged(ctx.currentStatus, resolved);
     }
 
-    private static <STATUS extends IStatus<STATUS>> void maybeLogWhy(
+    private static <STATUS extends IStatus<STATUS>> void logStatusReasons(
             JobID jobId,
             STATUS current,
             STATUS resolved,
             LZCD<STATUS> root
     ) {
-        if (!QT.DEV_LOGS || !isLeaverRoot(jobId.rootId())) {
+        if (!QT.DEV_LOGS || !ServerJobsRegistry.hasGlobalRule(jobId, SpecialRules.LOG_STATUS_REASONS)) {
             return;
         }
         String label = jobId.toNiceString();
         long now = System.currentTimeMillis();
-        Long last = whyLast.get(label);
-        if (last != null && now - last < WHY_INTERVAL_MS) {
+        Long last = lastStatusReasonsLog.get(label);
+        if (last != null && now - last < STATUS_REASONS_LOG_INTERVAL_MS) {
             return;
         }
-        whyLast.put(label, now);
+        lastStatusReasonsLog.put(label, now);
         try {
-            StringBuilder gates = new StringBuilder();
-            collectWhy(root.populate(), gates, 0);
-            log.info("[WHY] job={} current={} → {}\n{}", label, current, resolved, gates);
+            StringBuilder reasons = new StringBuilder();
+            collectReasons(root.populate(), reasons, 0);
+            log.info("[WHY] job={} current={} → {}\n{}", label, current, resolved, reasons);
         } catch (RuntimeException e) {
             log.warn("[WHY] job={} current={} → {} (dump failed)", label, current, resolved, e);
         }
     }
 
-    private static boolean isLeaverRoot(String rootId) {
-        return "gatherer".equals(rootId) || "hunter".equals(rootId) || "miner".equals(rootId);
-    }
-
-    private static void collectWhy(
+    private static void collectReasons(
             Populated<?> pop,
             StringBuilder out,
             int depth
@@ -135,29 +129,29 @@ public class JobStatuses {
             return;
         }
         for (Map.Entry<String, Object> e : pop.conditions().entrySet()) {
-            appendGate(e.getKey(), e.getValue(), out, depth);
+            appendCondition(e.getKey(), e.getValue(), out, depth);
         }
         Populated<?> fb = pop.ifCondFailOrNull();
         if (fb != null) {
             out.append("  else →\n");
-            collectWhy(fb, out, depth + 1);
+            collectReasons(fb, out, depth + 1);
         }
     }
 
-    private static void appendGate(
+    private static void appendCondition(
             String key,
             Object val,
             StringBuilder out,
             int depth
     ) {
         if (!(val instanceof Populated<?> cp)) {
-            out.append(String.format("  gate[%s=%s]%n", key, val));
+            out.append(String.format("  %s = %s%n", key, val));
             return;
         }
         if (cp.value() instanceof WithReason<?> wr) {
-            out.append(String.format("  gate[%s=%s] (%s)%n", key, wr.value(), wr.reason()));
+            out.append(String.format("  %s = %s (%s)%n", key, wr.value(), wr.reason()));
         } else {
-            out.append(String.format("  gate[%s=%s]%n", key, cp.value()));
+            out.append(String.format("  %s = %s%n", key, cp.value()));
         }
         appendDetails(cp, out, depth);
     }
@@ -170,7 +164,7 @@ public class JobStatuses {
         for (Map.Entry<String, Object> d : cp.conditions().entrySet()) {
             if (d.getValue() instanceof Populated<?> nested) {
                 out.append(String.format("    %s:%n", d.getKey()));
-                collectWhy(nested, out, depth + 1);
+                collectReasons(nested, out, depth + 1);
                 continue;
             }
             out.append(String.format("    %s = %s%n", d.getKey(), d.getValue()));
@@ -423,7 +417,6 @@ public class JobStatuses {
         );
     }
 
-    /** As above, for the job with the given id. */
     public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
             JobID jobId,
             STATUS currentStatus,

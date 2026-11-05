@@ -177,7 +177,7 @@ class WorkStatusStoreTest {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
-        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS - 1);
+        tick(s, (int) AbstractWorkStatusStore.TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET - 1);
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());
         tick(s, 1);
         Assertions.assertEquals(0, s.getJobBlockState(pos).processingState());
@@ -188,7 +188,7 @@ class WorkStatusStoreTest {
         Position board = new Position(1, 2);
         TestWorkStatusStore s = new TestWorkStatusStore(board);
         s.setJobBlockState(board, State.freshAtState(1));
-        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS * 3);
+        tick(s, (int) AbstractWorkStatusStore.TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET * 3);
         Assertions.assertEquals(1, s.getJobBlockState(board).processingState());
     }
 
@@ -199,7 +199,7 @@ class WorkStatusStoreTest {
         TestWorkStatusStore s = new TestWorkStatusStore(board);
         s.setJobBlockState(board, State.freshAtState(1));
         s.setJobBlockState(mat, State.freshAtState(3));
-        tick(s, (int) AbstractWorkStatusStore.STUCK_RESET_TICKS);
+        tick(s, (int) AbstractWorkStatusStore.TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET);
         Assertions.assertEquals(1, s.getJobBlockState(board).processingState());
         Assertions.assertEquals(0, s.getJobBlockState(mat).processingState());
     }
@@ -209,7 +209,7 @@ class WorkStatusStoreTest {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
         s.setJobBlockState(pos, State.freshAtState(1));
-        int almostStuck = (int) AbstractWorkStatusStore.STUCK_RESET_TICKS - 1000;
+        int almostStuck = (int) AbstractWorkStatusStore.TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET - 1000;
         tick(s, almostStuck);
         s.setJobBlockState(pos, State.freshAtState(1).setCount(2));
         tick(s, almostStuck);
@@ -220,7 +220,7 @@ class WorkStatusStoreTest {
     void Test_BlockWithActiveTimerIsNotReseeded() {
         TestWorkStatusStore s = new TestWorkStatusStore();
         Position pos = new Position(1, 2);
-        int stuckTicks = (int) AbstractWorkStatusStore.STUCK_RESET_TICKS;
+        int stuckTicks = (int) AbstractWorkStatusStore.TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET;
         s.setJobBlockStateWithTimer(pos, State.freshAtState(1), stuckTicks + 10_000);
         tick(s, stuckTicks);
         Assertions.assertEquals(1, s.getJobBlockState(pos).processingState());

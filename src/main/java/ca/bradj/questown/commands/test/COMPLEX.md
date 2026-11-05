@@ -187,7 +187,7 @@ wired; completion is exact-match on the top match, and only re-detection makes i
 fire. Verified run: `store_room`/`job_board`/`town_gate` all stayed open after
 initial detection, completed on re-detection/re-placement, and the roster then
 went 1→2 via `SpawnVisitorReward`. Note: `TownQuests.tick` also runs
-`backfillSatisfiedQuests` every tick — open ROOM quests are re-evaluated against
+`QuestBackfiller.backfill` every tick — open ROOM quests are re-evaluated against
 `getRoomsMatching(wantedId)`, which consults *every* recipe in the room's match
 (`getRecipeIDs()`), not just the top one. So a quest posted after its room
 already matches (or whose top match is a *different* recipe in the same room)
@@ -226,7 +226,7 @@ moment, `totalTakes=222`). Two further traps compound it: (a) the village's
 looting townies fill the 27-slot chests with biome loot within hours of game
 time, so late deposits *silently fail* on a full container — the deposited
 items vanish without any log; (b) `processItemQuests` runs every flag tick
-while an ITEM quest is open (via `backfillSatisfiedQuests`), so a quest closes
+while an ITEM quest is open (via `QuestBackfiller.backfill`), so a quest closes
 on the tick the 4th sword lands *if it lands* — the race is against the
 townie's supply walk, not against the flag tick. Agent-driven drives: empty
 the target chest first (`data modify block <x> <y> <z> Items set value []`),
@@ -864,7 +864,7 @@ NO_SPACE with the NO_STORAGE need. Its timeline matches the live log: a same-job
 max-ticks reset every 3000 ticks (`JobLogic`, workSpot null and not on a timer) while it stays
 NO_SPACE. The run ends at 8000 ticks, before dusk, because at nightfall the villager leaves
 NO_SPACE for its drop-loot-before-bed path and the bubble clears.
-To get status dumps for these runs, `JobStatuses.maybeLogWhy` now also allows `miner:` labels.
+To get status dumps for these runs, the miner jobs declare the `log_status_reasons` global rule (`JobStatuses.logStatusReasons`).
 Ticket: `.scratch/playtest-2026-10-21/miner-stops-cycling.md`.
 
 ## A bed is two blocks: flag/bed_is_two_blocks (2026-10-22)

@@ -589,7 +589,7 @@ town frozen at the job board).
 
 ```mermaid
 flowchart TD
-    Tick["TownQuests.tick (every tick)"] --> Gather["backfillSatisfiedQuests:\ncollect open ROOM / ITEM quests"]
+    Tick["TownQuests.tick (every tick)"] --> Gather["QuestBackfiller.backfill:\ncollect open ROOM / ITEM quests"]
     Gather --> Any{"any open?"}
     Any -- no --> Ret["return (steady state = one list scan)"]
     Any -- yes --> Rooms["per open ROOM quest:\ngetRoomHandle().getRoomsMatching(wantedId)"]
@@ -1536,7 +1536,7 @@ day1 ×3 in parallel: zero ERRORs, the duplicate path taken in 2 of 3.
 The cook batch brings villager 3, so it adds `MCQuest.upgrade(bedroom -> big_bedroom)` (2 -> 4
 beds; no flavor text, the standard upgrade tooltip). Dev rule, now in CONTEXT.md "Onboarding
 arrival": a batch that brings a villager carries the bed that villager sleeps in (the gate batch
-is the exception). A second plain BEDROOM quest would not work: `backfillSatisfiedQuests` closes an
+is the exception). A second plain BEDROOM quest would not work: `QuestBackfiller.backfill` closes an
 open ROOM quest that any existing room already satisfies. Pinned by `TutorialPhaseGateTest`
 (red without the quest) and `TownQuestsHunterGathererOnboardingTest.hunterGathererBatch_
 carriesTheBedForTheVillagerItBrings`.
@@ -1547,7 +1547,7 @@ Dev ruling: a batch of two "empty room" quests comes after the hunter-gatherer b
 and before the cook batch. `tryPhase2_4_emptyRooms` posts it once the hunter-gatherer batch is
 fully complete; the cook batch (phase 2.5) waits for it; a town whose cook batch is already out
 skips it. Reward: `PHASE_EMPTY_ROOMS` (no villager — bed rule, CONTEXT.md "Onboarding arrival").
-An EMPTY_ROOM quest matches any registered room, so `backfillSatisfiedQuests` would have closed
+An EMPTY_ROOM quest matches any registered room, so `QuestBackfiller.backfill` would have closed
 both at once on rooms the town already had. `TownQuests.isClaimedByACompletedQuest`: an
 empty-room quest only completes on a room no completed quest has claimed (`Quest.completedOn`),
 in both the room-created path (`markQuestAsComplete`) and the backfill (picks the first unclaimed

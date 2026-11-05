@@ -45,11 +45,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
 
     int curIdx = 0;
 
-    /**
-     * A job block left in a non-fresh state, with no timer, for this many ticks is stuck and is
-     * reset to fresh. Any write restarts the count.
-     */
-    static final long STUCK_RESET_TICKS = 20_000L;
+    static final long TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET = 20_000L;
 
     public AbstractWorkStatusStore(
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
@@ -97,7 +93,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             debugLogger.log("Job state removed at {}", pos);
             return;
         }
-        this.stuckTicks.remove(pos);
+        restartStuckCount(pos);
         debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
@@ -131,7 +127,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
-        this.stuckTicks.remove(bp);
+        restartStuckCount(bp);
         debugLogger.log("Removed state from {}", bp);
         return true;
     }
@@ -207,11 +203,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                     || this.timeJobStatuses.containsKey(pos)
                     || isRestingState(tickSource, pos, state);
             if (notStuck) {
-                this.stuckTicks.remove(pos);
+                restartStuckCount(pos);
                 continue;
             }
             long accumulated = this.stuckTicks.getOrDefault(pos, 0L) + ticksSinceLast;
-            if (accumulated >= STUCK_RESET_TICKS) {
+            if (accumulated >= TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET) {
                 QT.logBug(
                         "Work block stuck in state {} for {} ticks with no timer; reseeding to fresh",
                         state.toShortString(), accumulated, pos
@@ -221,6 +217,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
                 this.stuckTicks.put(pos, accumulated);
             }
         }
+    }
+
+    private void restartStuckCount(POS pos) {
+        this.stuckTicks.remove(pos);
     }
 
     private Collection<ROOM> registerNewRooms(Collection<ROOM> allRooms) {

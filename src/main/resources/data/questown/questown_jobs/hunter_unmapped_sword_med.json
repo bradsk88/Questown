@@ -32,7 +32,7 @@
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": ["log_status_reasons", "seed_job_block"]
     },
     {
       "type": "processing_state",

@@ -28,8 +28,6 @@ public class SpecialQuests {
     public static final ResourceLocation BEDROOM = new ResourceLocation(MOD, "bedroom");
     public static final ResourceLocation JOB_BOARD = new ResourceLocation(MOD, "job_board");
     public static final ResourceLocation STORE_ROOM_SMALL = new ResourceLocation(MOD, "store_room");
-    // The empty-room quest: a recipe with no required contents, so any room with a registered
-    // door matches.
     public static final ResourceLocation EMPTY_ROOM = new ResourceLocation(MOD, "empty_room");
     // Day 2's quest: done when the town's first work request is posted.
     public static final ResourceLocation FIRST_WORK_REQUEST = new ResourceLocation(MOD, "special_quest.first_work_request");

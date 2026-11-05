@@ -37,7 +37,6 @@ public class UtilClean {
         };
     }
 
-    /** Whether every rule passes, stopping at the first that fails. No rules means nothing blocks. */
     public static <R> boolean allPass(
             Iterable<R> rules,
             Predicate<R> passes

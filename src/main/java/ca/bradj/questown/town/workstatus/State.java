@@ -31,8 +31,7 @@ public class State {
         return new State(s, 0, 0);
     }
 
-    /** The block's work state, or a fresh state 0 when this villager hasn't seeded it yet. */
-    public static <POS> State freshIfNull(
+    public static <POS> State seededOrFresh(
             Function<POS, State> getJobBlockState,
             POS pos
     ) {

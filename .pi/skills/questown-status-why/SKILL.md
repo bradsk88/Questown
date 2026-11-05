@@ -48,9 +48,9 @@ fallback; `root.resolve()` picks the status.
 
 The decision inputs are already logged at INFO when the server runs with `ENABLE_DEV_COMMANDS` set (the playtest `restart.sh` sets it):
 
-- `JobStatuses.maybeLogWhy` / `JobStatuses.collectWhy` — dumps every gate (boolean + reason) plus the nested `spots={…} rooms={…} job_blocks={…}` maps.
+- `JobStatuses.logStatusReasons` / `JobStatuses.collectReasons` — dumps every condition (value + reason) plus the nested `spots={…} rooms={…} job_blocks={…}` maps.
 - The job id comes down the production path (`ProductionJournal` → `ProductionStatuses.getNewStatusFromSignal(jobId, …)` → `JobStatuses.productionRoutine(jobId, …)` → the `UsualRoutineContext`), so the dump attributes to the **real** leaver. The warp passes its own job id the same way.
-- It gates to the leaver roots (`gatherer`, `hunter`, `miner`) and throttles at `WHY_INTERVAL_MS` (4000 ms) per job.
+- It runs for jobs that declare the `log_status_reasons` global rule (the gatherer, hunter and miner JSONs and `NewLeaverWork.standardRules()`) and throttles at `STATUS_REASONS_LOG_INTERVAL_MS` (4000 ms) per job.
 
 Read it from the world log:
 
@@ -63,8 +63,8 @@ The decisive line is the `town has workable blocks for ANY WorkState{…}` gate 
 A populated `spots={pos=state}` whose state isn't the leaver's ⇒ state mismatch.
 
 **Widen / unthrottle** if you need more jobs or faster cadence: lower
-`WHY_INTERVAL_MS` in `JobStatuses`, or widen the root gate in
-`JobStatuses.isLeaverRoot`.
+`STATUS_REASONS_LOG_INTERVAL_MS` in `JobStatuses`, or add `log_status_reasons` to the
+job's `special` global rules.
 
 ## Traps that cost real time here
 
@@ -113,7 +113,7 @@ A green test, `javap` showing a call, `BUILD SUCCESSFUL` — none of these prove
 
 > Trace the predicate/field the failure actually reads back to the input that supplies it, and confirm the failing case hits your patch — before reporting "fixed."
 
-Worked case (bittern, 2026-10-13): `State.freshIfNull` added to the `RoomsStatusLogic` null-skips, reported "applied + verified on 812." It **did not fix the flake** and was never on the live path: the stalling `cleanRooms()` (DeclarativeJob:391) reads a field set by `cacheRoomsNeedingIngredientsOrTools` (DeclarativeJobTickerDependencies:302), from the ticker compute whose `getJobBlockState` (DeclarativeJobTicker:272, `if (s == null) return State.fresh();` at 278) already maps null→fresh. So `freshIfNull(work, pos)` always took the `!= null` branch — dead. 812 still stalled (TOOK=0), identical to 811. The real cause is a deeper per-leaver, per-moment room-set race, not one gate: `PROBE-J` shows the `gather` job `inner=[0=0,1=0,2=0]` with **no sites at all** (its `getJobSites()`/`getRoomsMatching` empty), while the same leaver's `seeking_work` job sees the site but still gets `inner[0]=0`. Left open.
+Worked case (bittern, 2026-10-13): `State.seededOrFresh` (then `freshIfNull`) added to the `RoomsStatusLogic` null-skips, reported "applied + verified on 812." It **did not fix the flake** and was never on the live path: the stalling `cleanRooms()` (DeclarativeJob:391) reads a field set by `cacheRoomsNeedingIngredientsOrTools` (DeclarativeJobTickerDependencies:302), from the ticker compute whose `getJobBlockState` (DeclarativeJobTicker:272, `if (s == null) return State.fresh();` at 278) already maps null→fresh. So `freshIfNull(work, pos)` always took the `!= null` branch — dead. 812 still stalled (TOOK=0), identical to 811. The real cause is a deeper per-leaver, per-moment room-set race, not one gate: `PROBE-J` shows the `gather` job `inner=[0=0,1=0,2=0]` with **no sites at all** (its `getJobSites()`/`getRoomsMatching` empty), while the same leaver's `seeking_work` job sees the site but still gets `inner[0]=0`. Left open.
 
 ## Ordered loop
 

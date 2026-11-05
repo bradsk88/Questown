@@ -507,15 +507,17 @@ A leaver's per-owner work-status ledger (this flag's `TownWorkStatusStore`) must
 able to say, for every leaver, "for me, the welcome mat is **state 0** (needs my
 supplies)". Two sides, both pinned:
 
-- **Seed side** — `TownWorkStatusStore.defaultStateFactory` seeds
-  `State.fresh()` (state 0) for any `WelcomeMatBlock` **unconditionally**. The old
+- **Seed side** — `TownWorkStatusStore.startingState` seeds `State.fresh()` (state 0)
+  **unconditionally** for the job block of any job that declares the `seed_job_block` global
+  rule (`ServerJobsRegistry.seedsJobBlock`; the 13 welcome-mat gatherer/hunter JSONs and
+  `NewLeaverWork.standardRules()` declare it, pinned by `LeaverJobRulesTest`). The old
   path asked `ServerJobsRegistry.shouldInitializeWithState` — which carries a static
   false-cache that outlives late job registration — and that left ~half the leavers'
   ledgers without the mat's state-0. That was the NO_JOBSITE / COLLECTING_SUPPLIES
   soft-lock (`.scratch/cook-soft-lock/STATE.md` Round 4, 2026-10-07;
   `.scratch/village-self-sufficiency/unseededMat-test-defect-map.md`).
 - **Read side** — a block with *no* state in the ledger is **unstarted work, not
-  "no state"**: `State.freshIfNull` / `State.freshAtState(0)` map it to fresh,
+  "no state"**: `State.seededOrFresh` / `State.freshAtState(0)` map it to fresh,
   matching the ticker's `getJobBlockState` upstream. Skipping nulls deadlocked the
   supply path (`shouldTakeItem REJECT needed-empty`, empty `cleanRooms()`).
 
@@ -524,7 +526,7 @@ Pinned by `StateTest`, `WorkStatusStoreMatSeedTest`, and the
 the leaver's held items as a room container — `ContainersClean.get` skips the job
 block itself; a stand with no container at all was the 855 red spec).
 
-Companion guard: `WelcomeMatBlock.Entity.removedIfUnowned` — a mat that no loaded
+Companion guard: `WelcomeMatBlock.Entity.revertedToItemBecauseNoFlagOwnsIt` — a mat that no loaded
 flag owns (`TownFlags.ownsWelcomeMat`) is a misplacement (placement via the flag
 item is the only owner path); after a 6s post-load wait it reverts to air + drops,
 rather than persisting a flagless work spot. And `UtilClean.allPass`: "no global
@@ -675,7 +677,7 @@ state write (`modifyJobBlockState`) and on `clearState`, so an actively
 progressing block (p1 work writes, timer-driven advances) never accumulates.
 `reseedStuckBlocks`, run once per `tick()` after the store-global timer
 decay, reseeds to `State.fresh()` with a WARN when the window reaches
-`STUCK_RESET_TICKS` (20000 - ~16.7 in-game minutes; above the longest
+`TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET` (20000 - ~16.7 in-game minutes; above the longest
 declared time state of 6000 and any legitimate leaver round-trip).
 State-0 blocks never accumulate (fresh is the only valid state-0 value, so
 a reseed is a no-op anyway). Cost: one snapshot pass over the (small)

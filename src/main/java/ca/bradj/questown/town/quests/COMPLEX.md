@@ -526,7 +526,7 @@ them.
   (`VillagerLevelQuests.path` / `target`, `MCQuest.villagerLevel`). Count stays 1; the level lives in
   the id so the card and chat can name it without the quest object.
 - Completes when any villager whose job root is `<root>` is at the level or higher
-  (`VillagerLevelQuests.met`). `TownQuests.backfillSatisfiedQuests` notes an open one and calls
+  (`VillagerLevelQuests.met`). `QuestBackfiller.backfill` notes an open one and calls
   `markVillagerLevelsReached(TownFlagBlockEntity.highestLevelByRoot())` each tick, so a quest posted
   after the level was already reached closes on the next tick. `highestLevelByRoot` is the same
   per-root max `lockedSkillQuestLevels` uses.

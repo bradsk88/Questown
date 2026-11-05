@@ -139,6 +139,14 @@ public class SpecialRules {
 
     public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
 
+    // A job with this rule always has its job block start at state 0, as soon as the block is in a
+    // room. For jobs whose villagers leave town from a shared block, like the welcome mat.
+    public static final String SEED_JOB_BLOCK = "seed_job_block";
+
+    // With dev logs on, the villager's status decisions for this job are logged with the reasons
+    // behind them.
+    public static final String LOG_STATUS_REASONS = "log_status_reasons";
+
     // During a warp, moves a requested item from another chest into the chest that holds its stock request.
     public static final String RELOCATE_REQUESTED_ITEM_WARP =
             "relocate_requested_item_warp";
