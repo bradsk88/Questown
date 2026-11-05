@@ -84,7 +84,7 @@ minecraft {
             if (project.hasProperty('autojoin')) {
                 def port = System.getProperty('questown.diag.port',
                         project.findProperty('autoport') ?: '25565')
-                args '--server', 'localhost', '--port', port
+                args '--quickPlayMultiplayer', "localhost:${port}"
             }
 
             mods {
