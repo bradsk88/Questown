@@ -153,7 +153,7 @@ class CookEquivalenceTest {
 
         EquivalenceTestFramework.TickerSetup tickerSetup =
                 EquivalenceTestFramework.createTickerSetup(definition, world);
-        tickerSetup.inventory().set(0, new GathererJournalTest.TestItem("minecraft:stick"));
+        // No stick: a held item no state uses would be dropped first.
 
         EquivalenceTestFramework.runTicker(tickerSetup, 50);
         EquivalenceTestFramework.SimulationResult tickerResult =

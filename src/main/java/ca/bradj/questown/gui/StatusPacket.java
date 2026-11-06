@@ -13,22 +13,49 @@ import java.util.Objects;
 public record StatusPacket(
         JobID jobId,
         ImmutableList<Component> texts,
-        ResourceLocation image
+        ResourceLocation image,
+        /** The server tick when the villager's trip ends, or 0 when it is not away. */
+        long leaverReturnTick,
+        /** The trip's total ticks. */
+        int leaverReturnTotal,
+        float workProgress
 ) {
+    public StatusPacket(
+            JobID jobId,
+            ImmutableList<Component> texts,
+            ResourceLocation image,
+            long leaverReturnTick,
+            int leaverReturnTotal
+    ) {
+        this(jobId, texts, image, leaverReturnTick, leaverReturnTotal, -1);
+    }
+    /** For screens without trip info. */
+    public StatusPacket(
+            JobID jobId,
+            ImmutableList<Component> texts,
+            ResourceLocation image
+    ) {
+        this(jobId, texts, image, 0L, 0);
+    }
     public static void toNetwork(
             FriendlyByteBuf b,
             StatusPacket statusPacket
     ) {
         Jobs.writeIdToNetwork(b, statusPacket.jobId);
-        b.writeCollection(statusPacket.texts, FriendlyByteBuf::writeComponent);
+        b.writeCollection(statusPacket.texts, (buf, c) -> buf.writeUtf(c.getString()));
         b.writeResourceLocation(statusPacket.image);
+        b.writeVarLong(statusPacket.leaverReturnTick);
+        b.writeVarInt(statusPacket.leaverReturnTotal);
     }
 
     public static StatusPacket fromNetwork(FriendlyByteBuf b) {
         JobID j = Jobs.getIdFromNetwork(b);
-        List<Component> textKeys = b.readList(FriendlyByteBuf::readComponent);
+        List<Component> textKeys = b.readList(buf -> net.minecraft.network.chat.Component.literal(buf.readUtf()));
         ResourceLocation img = b.readResourceLocation();
-        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img);
+        long leaverReturnTick = b.readVarLong();
+        int leaverReturnTotal = b.readVarInt();
+        float workProgress = b.readFloat();
+        return new StatusPacket(j, ImmutableList.copyOf(textKeys), img, leaverReturnTick, leaverReturnTotal, workProgress);
     }
 
     @Override

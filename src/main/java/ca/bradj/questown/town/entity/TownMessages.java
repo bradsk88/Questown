@@ -50,10 +50,8 @@ public class TownMessages {
             return;
         }
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> p),
-                    new ShowTutorialToastMessage(titleKey, descriptionKey)
-            );
+            QuestownNetwork.sendToPlayer(p,
+                    new ShowTutorialToastMessage(titleKey, descriptionKey));
         }
     }
 
@@ -64,8 +62,7 @@ public class TownMessages {
         broadcastMessage(
                 "messages.building.recipe_created",
                 RoomRecipes.getName(match),
-                roomDoorPos.getDoorPos()
-                           .getUIString()
+                where.getUIString()
         );
     }
 
@@ -96,24 +93,40 @@ public class TownMessages {
     }
 
     public void questCompleted(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_completed",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 
+    /** The quest's name for chat, worded like its card. */
+    static Component questName(
+            Quest.QuestType type,
+            ResourceLocation wantedId,
+            int countNeeded
+    ) {
+        return switch (type) {
+            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), countNeeded);
+            case LOOT -> ca.bradj.questown.gui.UIQuest.lootName(wantedId);
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", jobName(wantedId));
+            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", jobName(wantedId));
+            case SKILL_UNLOCK -> MCQuest.namedSkill(wantedId)
+                    .map(s -> Compat.translatable("menu.quests.skill_unlock.named", Jobs.getVariantNameComponent(s)))
+                    .orElseGet(() -> Compat.translatable("menu.quests.skill_unlock",
+                            Compat.translatable("jobs." + MCQuest.skillTreeRoot(wantedId))));
+            case VILLAGER_LEVEL -> ca.bradj.questown.gui.UIQuest.villagerLevelName(wantedId, null);
+            default -> RoomRecipes.getName(wantedId);
+        };
+    }
+
+    private static Component jobName(ResourceLocation jobQuestId) {
+        return Compat.translatable("jobs." + JobID.fromRL(jobQuestId).rootId());
+    }
+
     public void questLost(MCQuest quest) {
-        Component name = RoomRecipes.getName(quest.getWantedId());
-        if (quest.getType() == Quest.QuestType.ITEM) {
-            name = Compat.translatable("menu.common.quantity", Compat.getItemName(quest.getWantedId()), quest.getCountNeeded());
-        }
         broadcastMessage(
                 "messages.town_flag.quest_lost",
-                name
+                questName(quest.getType(), quest.getWantedId(), quest.getCountNeeded())
         );
     }
 
@@ -121,7 +134,14 @@ public class TownMessages {
             JobID jobID,
             UUID visitorUUID
     ) {
-        broadcastMessage("messages.jobs.changed", jobID.toNiceString(), UtilClean.truncateMiddle(visitorUUID));
+        jobChanged(jobID, UtilClean.truncateMiddle(visitorUUID));
+    }
+
+    public void jobChanged(
+            JobID jobID,
+            String villagerLabel
+    ) {
+        broadcastMessage("messages.jobs.changed", ca.bradj.questown.jobs.Jobs.getRootNameComponent(jobID), villagerLabel);
     }
 
     public void startDebugFailed() {

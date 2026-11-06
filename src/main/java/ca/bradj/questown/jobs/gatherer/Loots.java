@@ -36,8 +36,8 @@ public class Loots {
             GathererTools.LootTableParameters lt
     ) {
         final ResourceLocation biome = finalizeBiome(items);
-        int maxAmount = items.size();
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        int amount = items.size();
+        return getFromLootTables(level, amount, amount, lt, biome);
     }
 
     @NotNull
@@ -47,7 +47,7 @@ public class Loots {
             int maxAmount,
             GathererTools.LootTableParameters lt
     ) {
-        return getFromLootTables(level, Math.max(1, maxAmount / 2), maxAmount, lt, finalizeBiome(items));
+        return getFromLootTables(level, maxAmount, maxAmount, lt, finalizeBiome(items));
     }
 
     @NotNull
@@ -57,7 +57,7 @@ public class Loots {
             GathererTools.LootTableParameters lt,
             ResourceLocation biome
     ) {
-        return getFromLootTables(level, maxAmount / 2, maxAmount, lt, biome);
+        return getFromLootTables(level, maxAmount, maxAmount, lt, biome);
     }
 
     @NotNull

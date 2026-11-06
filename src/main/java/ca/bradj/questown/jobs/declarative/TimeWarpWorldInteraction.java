@@ -389,7 +389,15 @@ public class TimeWarpWorldInteraction extends
             Inputs inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.level, mcHeldItems);
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = flagBlockEntityAt(inputs.level(), townPos);
+        return withLootGuarantees(
+                flag,
+                withRequestedLootPreference(
+                        flag, inputs.level(),
+                        resultGenerator.apply(inputs.level(), mcHeldItems),
+                        () -> resultGenerator.apply(inputs.level(), mcHeldItems)
+                )
+        );
     }
 
     @Override

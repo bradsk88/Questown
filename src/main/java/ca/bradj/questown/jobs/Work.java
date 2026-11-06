@@ -44,6 +44,8 @@ public class Work {
     private @Nullable SlotPrecondition slotPrecondition;
     /** XP per completion, or null for the formula. */
     private @Nullable Integer experience;
+    /** {@code prefer_requested}: a full-day trip rolls twice and keeps requested items. */
+    private boolean prefersRequestedLoot;
 
     public Work(
             JobID id,
@@ -101,6 +103,15 @@ public class Work {
         return candidates.stream().findFirst();
     }
 
+    public boolean prefersRequestedLoot() {
+        return prefersRequestedLoot;
+    }
+
+    public Work withPrefersRequestedLoot(boolean prefersRequestedLoot) {
+        this.prefersRequestedLoot = prefersRequestedLoot;
+        return this;
+    }
+
     public Work withExperience(@Nullable Integer experience) {
         this.experience = experience;
         return this;
@@ -134,6 +145,7 @@ public class Work {
                 specialGlobalRules
         );
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
     }
 
     public Work withNeeds(
@@ -158,6 +170,7 @@ public class Work {
                 specialGlobalRules
         );
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
@@ -191,6 +204,7 @@ public class Work {
         );
         work.overrides = overrides;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 
@@ -203,6 +217,7 @@ public class Work {
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
         work.experience = experience;
+        work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
     }
 

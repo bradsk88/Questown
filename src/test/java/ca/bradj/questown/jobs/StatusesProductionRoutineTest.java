@@ -946,4 +946,76 @@ public class StatusesProductionRoutineTest {
         Assertions.assertEquals(PTestStatus.WAITING, s);
     }
 
+    private static RoomsNeedingVillagerInput<Room, String, Position> noWork() {
+        return new RoomsNeedingVillagerInput<>(ImmutableMap.of());
+    }
+
+    private static @Nullable PTestStatus evening(
+            PTestStatus current,
+            boolean hasNonSupplyItems,
+            boolean unfinishedTimedWork
+    ) {
+        return ca.bradj.questown.jobs.production.ProductionStatuses.getEveningStatus(
+                current,
+                new TestInventory(false, hasNonSupplyItems, ImmutableMap.of()),
+                new TestJobTownWithTime(
+                        false, true,
+                        ImmutableList.of(),
+                        noWork(),
+                        unfinishedTimedWork
+                ),
+                PTestStatus.FACTORY,
+                PTestStatus.FACTORY
+        );
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsHeldOut_WhenTimedWorkUnfinished() {
+        // A villager on a timed trip isn't recalled at evening while its timer runs.
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, false, true);
+        Assertions.assertNull(s, "expected no status change (held out) while timed work is unfinished");
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsHeldOut_EvenWhenCarrying() {
+        // The trip outranks dropping loot.
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, true, true);
+        Assertions.assertNull(s, "expected no status change (held out) even when carrying items");
+    }
+
+    @Test
+    void InEvening_WaitingForTimedState_IsRecalled_WhenTimerDone() {
+        @Nullable PTestStatus s = evening(PTestStatus.WAITING, false, false);
+        Assertions.assertEquals(PTestStatus.RELAXING, s);
+    }
+
+    @Test
+    void InEvening_NotWaiting_IsRecalled_EvenWhenTimedWorkUnfinished() {
+        // A villager not on a trip is unaffected.
+        @Nullable PTestStatus s = evening(PTestStatus.IDLE, false, true);
+        Assertions.assertEquals(PTestStatus.RELAXING, s);
+    }
+
+    @Test
+    void InEvening_StatusShouldBe_DroppingLoot_IfInventoryHasNonSupplyItems() {
+        // The evening recall drops carried loot first.
+        @Nullable PTestStatus s = evening(PTestStatus.IDLE, true, false);
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
+    @Test
+    void InEvening_StatusShouldBe_DroppingLoot_IfInventoryHasSupplyItems() {
+        // Holding a work supply at evening drops it too.
+        @Nullable PTestStatus s = ca.bradj.questown.jobs.production.ProductionStatuses.getEveningStatus(
+                PTestStatus.IDLE,
+                new TestInventory(false, false, ImmutableMap.of(
+                        BLOCK_READY_FOR_INGREDIENTS, true
+                )),
+                new TestJobTownWithTime(false, true, ImmutableList.of(), noWork(), false),
+                PTestStatus.FACTORY,
+                PTestStatus.FACTORY
+        );
+        Assertions.assertEquals(PTestStatus.DROPPING_LOOT, s);
+    }
+
 }

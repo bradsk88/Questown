@@ -117,7 +117,7 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             Collection<Ingredient> ingredientz = getIngredients(v, rMap);
             return new UIQuest(
-                    v.getBatchUUID(),
+                    removableBatch(v),
                     v.getWantedId(),
                     v.getType(),
                     ingredientz,
@@ -209,8 +209,8 @@ public class UIQuest implements Comparable<UIQuest> {
         return flavorText;
     }
 
-    private String extractJobName() {
-        return JobID.fromRL(wantedId).jobId();
+    private Component extractRootJobName() {
+        return Compat.translatable("jobs." + JobID.fromRL(wantedId).rootId());
     }
 
     public String jobName() {
@@ -219,6 +219,11 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public String villagerUUID() {
         return VillagerUUID.getStringUUID(villagerUUID);
+    }
+
+    /** The batch the card's remove button discards, or null when the quest can't be removed. */
+    public static @Nullable UUID removableBatch(Quest<?, ?> quest) {
+        return quest.isDiscardable() ? quest.getBatchUUID() : null;
     }
 
     public UUID getBatchUUID() {

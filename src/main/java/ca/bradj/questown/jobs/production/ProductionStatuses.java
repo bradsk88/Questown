@@ -19,10 +19,10 @@ public class ProductionStatuses {
     ) {
         switch (signal) {
             case MORNING, NOON -> {
-                return getMorningStatus(currentStatus, inventory, town, entity, factory, prioritizeExtraction);
+                return getMorningStatus(jobId, currentStatus, inventory, town, entity, factory, prioritizeExtraction);
             }
             case NIGHT, EVENING -> {
-                return getEveningStatus(currentStatus, inventory, town, factory);
+                return getEveningStatus(currentStatus, inventory, town, factory, factory);
             }
             default -> throw new IllegalArgumentException(String.format("Unrecognized signal %s", signal));
         }
@@ -46,12 +46,18 @@ public class ProductionStatuses {
         return nullIfUnchanged(currentStatus, newStatus);
     }
 
-    public static <ROOM extends Room> @Nullable ProductionStatus getEveningStatus(
-            ProductionStatus currentStatus,
+    /** The evening and night statuses. */
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> @Nullable STATUS getEveningStatus(
+            STATUS currentStatus,
             EntityInvStateProvider<Integer> inventory,
             JobTownProvider<ROOM> town,
-            IStatusFactory<ProductionStatus> factory
+            IProductionStatusFactory<STATUS> waitingFactory,
+            IStatusFactory<STATUS> factory
     ) {
+        // A villager on a timed trip stays out until its timer ends.
+        if (waitingFactory.waitingForTimedState().equals(currentStatus) && town.isUnfinishedTimeWorkPresent()) {
+            return null;
+        }
         if (JobStatuses.hasItems(inventory)) {
             return nullIfUnchanged(currentStatus, factory.droppingLoot());
         }
@@ -59,9 +65,9 @@ public class ProductionStatuses {
         return nullIfUnchanged(currentStatus, factory.relaxing());
     }
 
-    private static ProductionStatus nullIfUnchanged(
-            ProductionStatus oldStatus,
-            ProductionStatus newStatus
+    private static <STATUS extends IStatus<STATUS>> STATUS nullIfUnchanged(
+            STATUS oldStatus,
+            STATUS newStatus
     ) {
         if (oldStatus.equals(newStatus)) {
             return null;

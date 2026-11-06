@@ -31,6 +31,7 @@ import ca.bradj.questown.mc.PredicateCollections;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.interfaces.WorkStatusHandle;
@@ -244,7 +245,7 @@ public class DeclarativeJob extends
     private boolean isJobBlock(
             JobBlockTestContext ctx
     ) {
-        return location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
+        boolean r = location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
                                              .withJobAlreadyStarted(true));
     }
 
@@ -330,6 +331,64 @@ public class DeclarativeJob extends
         this.ticker.tick(deps, (p, a) -> town.getDebugLogger(QT.JOB_LOGGER, DebugLogArgument.JOB_LOGIC).log(p, a));
     }
 
+    /** The trip this job is on while its timer runs: when it ends and how long it is. Null otherwise. */
+    public @Nullable LeaverReturn getLeaverReturn(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        Integer remaining = work.getTimeToNextState(bp);
+        if (remaining == null || remaining <= 0) {
+            return null;
+        }
+        State state = work.getJobBlockState(bp);
+        if (state == null) {
+            return null;
+        }
+        int total = checks.getTimeForStep(null, state.processingState(), 0);
+        if (total <= 0) {
+            return null;
+        }
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        return new LeaverReturn(level.getGameTime() + remaining, Math.max(total, remaining));
+    }
+
+    public @Nullable String getWorkProgressDebug(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return null;
+        }
+        BlockPos bp = spot.jobBlock();
+        AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> work =
+                ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                        specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+                );
+        State state = work.getJobBlockState(bp);
+        Integer timeToNext = work.getTimeToNextState(bp);
+        StringBuilder sb = new StringBuilder();
+        sb.append("job block ").append(bp.getX()).append(',').append(bp.getY()).append(',').append(bp.getZ());
+        if (state == null) {
+            sb.append(" (no state yet)");
+        } else {
+            sb.append(" state=").append(state.processingState());
+            if (state.hasWorkLeft()) {
+                sb.append(" work-left=").append(state.workLeft());
+            }
+        }
+        if (timeToNext != null && timeToNext > 0) {
+            sb.append(" time-left=").append(timeToNext);
+        }
+        return sb.toString();
+    }
+
 
     @Override
     protected boolean grabbedSuppliesRecently(Predicate<Long> isTickRecent) {
@@ -343,7 +402,7 @@ public class DeclarativeJob extends
 
     @Override
     protected Collection<? extends Predicate<MCTownItem>> cleanRooms() {
-        return roomsNeedingIngredientsOrTools.cleanFns(
+        Collection<? extends Predicate<MCTownItem>> r = roomsNeedingIngredientsOrTools.cleanFns(
                 checks::getIngredientsForStep,
                 checks::getToolsForStep,
                 MCHeldItem::fromTown
@@ -558,7 +617,7 @@ public class DeclarativeJob extends
         if (suppliesTarget == null) {
             return;
         }
-        JobsClean.SuppliesTarget<BlockPos, MCTownItem> st = new JobsClean.SuppliesTarget<>() {
+        SupplyItems.SuppliesTarget<BlockPos, MCTownItem> st = new SupplyItems.SuppliesTarget<>() {
             @Override
             public boolean isCloseTo() {
                 return Jobs.isCloseTo(entityBlockPos, suppliesTarget.getBlockPos());
@@ -628,10 +687,11 @@ public class DeclarativeJob extends
         };
 
         Map<Integer, List<WorkPosition<BlockPos>>> b = new HashMap<>();
-        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(town, bp, b, is, isJobBlock);
+        Function<BlockPos, State> states = DeclarativeJobs.inRange(town, getMaxState());
+        Consumer<BlockPos> tryAdd = bp -> tryAddSpot(states, bp, b, is, isJobBlock);
 
         jobSite.room().getSpaces().stream()
-               .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY)
+               .flatMap(space -> InclusiveSpaces.getPositions(space, JobBlockScan.CELLS)
                                                 .stream())
                .forEach(v -> {
                    BlockPos pos = Positions.ToBlock(v, jobSite.room().yCoord);
@@ -692,20 +752,7 @@ public class DeclarativeJob extends
             Room jobSite,
             Predicate<BlockPos> isEmpty
     ) {
-        Direction d = getDoorDirectionFromCenter(jobSite);
-        if (isEmpty.test(bp.relative(d))) {
-            return bp.relative(d);
-        }
-        for (Direction dd : Direction.Plane.HORIZONTAL) {
-            if (isEmpty.test(bp.relative(dd))) {
-                return bp.relative(dd);
-            }
-        }
-        if (InclusiveSpaces.calculateArea(jobSite.getSpaces()) == 9) {
-            // 1x1 room (plus walls)
-            return Positions.ToBlock(jobSite.getDoorPos(), bp.getY());
-        }
-        return null;
+        return InteractionSpots.find(bp, jobSite, isEmpty);
     }
 
     public static Direction getDoorDirectionFromCenter(Room jobSite) {

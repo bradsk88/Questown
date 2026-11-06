@@ -425,7 +425,7 @@ public abstract class ProductionJob<
             BlockPos pos,
             Long currentTick
     ) {
-        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> JobsClean.shouldTakeItem(
+        ContainerTarget.CheckFn<MCTownItem> checkFn = item -> SupplyItems.shouldTakeItem(
                 journal.getCapacity(), cleanRooms(),
                 journal.getItems(), item
         );
@@ -443,10 +443,12 @@ public abstract class ProductionJob<
                     .sorted(Comparator.comparingDouble(a -> TownContainers.comparison(pos, a)))
                     .toList();
             for (ContainerTarget<MCContainer, MCTownItem> chest : closeChests) {
-                if (!chest.hasItem(checkFn)) {
+                boolean hasIt = chest.hasItem(checkFn);
+                if (!hasIt) {
                     continue;
                 }
-                if (!shouldUseBlockForSupplies(currentTick, chest.getBlockPos())) {
+                boolean useGate = shouldUseBlockForSupplies(currentTick, chest.getBlockPos());
+                if (!useGate) {
                     continue;
                 }
                 return chest;
@@ -493,6 +495,11 @@ public abstract class ProductionJob<
     protected abstract boolean shouldCheckContainerForSupplies(RoomRecipeMatch<MCRoom> mcRoom);
 
     protected abstract Collection<? extends Predicate<MCTownItem>> cleanRooms();
+
+    @Override
+    public boolean leavesTown() {
+        return specialRules.values().stream().anyMatch(rules -> rules.contains(SpecialRules.REMOVE_FROM_WORLD));
+    }
 
     @Override
     public boolean shouldDisappear(
