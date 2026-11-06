@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
@@ -36,6 +37,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -155,6 +158,7 @@ public class RealtimeWorldInteraction extends
         return extra.work();
     }
 
+    /** A display job tries the fullest display first. */
     @Override
     protected ArrayList<WorkPosition<BlockPos>> shuffle(
             MCExtra mcExtra,

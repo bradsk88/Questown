@@ -392,7 +392,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra,
             Preferred<WorkPosition<POS>> workSpots
     ) {
-        ArrayList<WorkPosition<POS>> shuffled = shuffle(extra, workSpots.alternates());
+        ArrayList<WorkPosition<POS>> shuffled = orderSpots(extra, workSpots.alternates());
         if (workSpots.preferredValue() != null) {
             shuffled.removeIf(v -> v.equals(workSpots.preferredValue()));
             shuffled.add(0, workSpots.preferredValue());

@@ -13,6 +13,7 @@ public interface TutorialTownView {
 
     String PHASE_KICKOFF = "kickoff";
     String PHASE_HUNTER_GATHERER = "hunterGatherer";
+    String PHASE_EMPTY_ROOMS = "emptyRooms";
     String PHASE_JOB_CHANGE_FOOD = "jobChangeAndFood";
     String PHASE_COOK_JOB = "cookJob";
     String PHASE_MINER = "miner";
@@ -22,6 +23,9 @@ public interface TutorialTownView {
     String PHASE_5 = "phase5";
 
     int villagerCount();
+
+    /** Whether a villager's current job is on {@code rootId}. */
+    boolean anyVillagerOnRoot(String rootId);
 
     boolean tutorialBopGranted();
 
@@ -42,4 +46,7 @@ public interface TutorialTownView {
 
     /** Adds the bed and storage quests a villager-bringing {@code reward} needs. */
     void provisionArrival(MCReward reward, Collection<ResourceLocation> wanted, Consumer<ResourceLocation> addRoomQuest);
+
+    /** Reveals {@code skill} so the skills tab can offer it once its level and parent allow. */
+    void revealSkill(JobID skill);
 }

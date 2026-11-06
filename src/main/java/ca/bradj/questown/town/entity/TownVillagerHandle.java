@@ -416,6 +416,13 @@ public final class TownVillagerHandle {
         return ImmutableMap.copyOf(delegate.levels);
     }
 
+    public void revealSkill(JobID skill) {
+        JobID parent = ServerJobsRegistry.getParentOf(skill);
+        if (parent != null) {
+            learning.registerAsKnownForAll(parent, skill);
+        }
+    }
+
     ImmutableMap<UUID, Map<JobID, ? extends Collection<JobID>>> getJobsKnownToExist() {
         return ImmutableMap.copyOf(learning.jobsKnownToExist);
     }

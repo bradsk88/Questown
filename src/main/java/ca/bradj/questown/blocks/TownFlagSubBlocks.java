@@ -28,9 +28,15 @@ public final class TownFlagSubBlocks {
     private final Map<BlockPos, Integer> ticksWithoutChild = new HashMap<>();
     private final Map<BlockPos, OnOrphaned> runOnOrphaned = new HashMap<>();
     private final BlockPos flagPos;
+    // Set when the flag's chunk unloads. The reloaded flag tracks its sub-blocks itself, so this one stops.
+    private boolean retired;
 
     public TownFlagSubBlocks(BlockPos blockPos) {
         this.flagPos = blockPos;
+    }
+
+    public void retire() {
+        this.retired = true;
     }
 
     public void parentTick(ServerLevel sl,
@@ -76,6 +82,14 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pos
     ) {
+        if (retired) {
+            return;
+        }
+        if (!sl.shouldTickBlocksAt(flagPos)) {
+            // The flag is unloaded, not gone: its job boards stay.
+            ticksWithoutParent.put(pos, 0);
+            return;
+        }
         BlockState flagState = sl.getBlockState(flagPos);
         if (!flagState.hasProperty(TownFlagBlock.INACTIVE)) {
             return;
@@ -92,7 +106,7 @@ public final class TownFlagSubBlocks {
         }
         ticksWithoutParent.put(pos, twop + 1);
         if (twop >= Compat.configGet(Config.FLAG_SUB_BLOCK_RETENTION_TICKS).get()) {
-            QT.BLOCK_LOGGER.debug("Parent has stopped ticking. Entity removed at {} on tick {}", pos, Util.getTick(sl));
+            QT.BLOCK_LOGGER.info("Parent has stopped ticking. Entity removed at {} on tick {}", pos, Util.getTick(sl));
             sl.removeBlock(pos, true);
             OnOrphaned remove = runOnOrphaned.remove(pos);
             if (remove != null) {
@@ -117,6 +131,10 @@ public final class TownFlagSubBlocks {
             ServerLevel sl,
             BlockPos pop
     ) {
+        if (!sl.isLoaded(pop)) {
+            QT.FLAG_LOGGER.debug("Sub block at {} is in an unloaded chunk; waiting", pop);
+            return false;
+        }
         BlockEntity e = sl.getBlockEntity(pop);
         if (e instanceof TownFlagSubEntity s) {
             ticksWithoutParent.put(pop, 0);

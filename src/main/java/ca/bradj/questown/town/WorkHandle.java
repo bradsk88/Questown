@@ -11,6 +11,8 @@ public interface WorkHandle {
 
     void removeWorkRequest(WorkRequest requested);
 
+    void setRequestLimit(WorkRequest request, int limit);
+
     void adjustRequestLimit(WorkRequest request, int delta);
 
     boolean hasAtLeastOneBoard();
