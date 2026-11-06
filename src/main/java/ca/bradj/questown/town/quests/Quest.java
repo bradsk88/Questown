@@ -27,8 +27,11 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     @Nullable
     private String flavorText;
 
+    // Onboarding quests complete on any room that contains the wanted recipe; others need an exact match.
+    private boolean onboarding;
     // Only procedural batches can be discarded.
     private boolean discardable;
+
     Quest() {
         this(null, null, null, null, null, 1);
     }
@@ -142,6 +145,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
     public void setFlavorText(@Nullable String flavorText) {
         this.flavorText = flavorText;
+    }
+
+    public boolean isOnboarding() {
+        return onboarding;
+    }
+
+    public void setOnboarding(boolean onboarding) {
+        this.onboarding = onboarding;
     }
 
     public boolean isDiscardable() {

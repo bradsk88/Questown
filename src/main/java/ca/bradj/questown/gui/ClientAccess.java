@@ -89,16 +89,34 @@ public class ClientAccess {
         Minecraft.getInstance().gui.setOverlayMessage(c, false);
     }
 
+    // Shown until the player sleeps.
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
 
     public static void showTutorialToast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
-        activeTutorialToast = new net.minecraft.client.gui.components.toasts.TutorialToast(
-                net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
-                title, description, false
-        );
-        mc.getToasts().addToast(activeTutorialToast);
+        dismissTutorialToast();
+        activeToastIsCampReady = title.getContents() instanceof TranslatableContents tc
+                && CampReadyToast.TITLE_KEY.equals(tc.getKey());
+        net.minecraft.client.gui.components.toasts.TutorialToast toast =
+                new net.minecraft.client.gui.components.toasts.TutorialToast(
+                        net.minecraft.client.gui.components.toasts.TutorialToast.Icons.RIGHT_CLICK,
+                        title, description, false
+                );
+        activeTutorialToast = toast;
+        mc.getToasts().addToast(toast);
+    }
+
+    /** Hides the camp-ready toast once the player is asleep. */
+    public static void tickTutorialToasts() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.player.isSleeping()) {
+            dismissTutorialToast();
+            return;
+        }
+        if (mc.level != null && CampReadyToast.hideNow(activeToastIsCampReady, mc.level.getDayTime())) {
+            dismissTutorialToast();
+        }
     }
 
     public static void dismissTutorialToast() {

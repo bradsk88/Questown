@@ -2,6 +2,7 @@ package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
+import ca.bradj.questown.core.network.ClaimFreeFoodMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
@@ -10,17 +11,21 @@ import com.google.common.collect.ImmutableList;
 import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static ca.bradj.questown.gui.PagedCardScreen.*;
 
 public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMenu, ItemEconomicsData> {
     private final FlagTabs tabs;
+
+    // The free food is claimed from the food card.
+    private static final String FOOD_NEED_KEY = "#questown:villager_food";
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
 
@@ -86,6 +91,14 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private boolean bonusFoodAvailable() {
+        return menu.getFlagInfo().bonusFoodAvailable();
+    }
+
+    private boolean isFoodCard(Card<ItemEconomicsData> card) {
+        return FOOD_NEED_KEY.equals(card.data().ingredientKey());
     }
 
     @Override
@@ -229,6 +242,13 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
     ) {
         for (Card<ItemEconomicsData> card : cards()) {
             CardCoordinates c = card.coords();
+            // While the free food is unclaimed, a click on the food card claims it.
+            if (bonusFoodAvailable() && isFoodCard(card)
+                    && p_97750_ == 0
+                    && UtilClean.isCoordInBox(mouseX, mouseY, c.leftX(), c.topY(), CARD_WIDTH, cardHeight)) {
+                QuestownNetwork.sendToServer(new ClaimFreeFoodMessage(menu.getFlagInfo().flagPos()));
+                return true;
+            }
             if (UtilClean.isCoordInBox(mouseX, mouseY, getIconX(c), getIconY(c), 16, 16)) {
                 Ingredient ing = Ingredients.fromString(card.data().ingredientKey());
                 AddWorkFromUIMessage.Action inquired = AddWorkFromUIMessage.Action.INQUIRED;

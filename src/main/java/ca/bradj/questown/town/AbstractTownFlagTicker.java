@@ -121,6 +121,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
 
     protected abstract void triggerFirstNightAdvancement(TICK_DATA data);
 
+    protected abstract void tickEvening(TICK_DATA data);
+
     protected abstract void tickPOIs(TICK_DATA data);
 
     protected abstract void tickASAPRewards(TICK_DATA data);

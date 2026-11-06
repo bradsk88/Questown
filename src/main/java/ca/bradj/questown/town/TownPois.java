@@ -54,7 +54,14 @@ public class TownPois {
                 return new Vec3(vs.getX(), vs.getY(), vs.getZ());
             }
         }
+        // Every try was blocked: use the first one.
+        BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
         return new Vec3(vs.getX(), vs.getY(), vs.getZ());
+    }
+
+    /** Whether {@code pos} is on or next to a campfire. */
+    private static boolean isWithinBurnRadius(BlockPos pos, Optional<BlockPos> campfire) {
+        return campfire.map(cf -> Math.max(Math.abs(cf.getX() - pos.getX()), Math.abs(cf.getZ() - pos.getZ())) <= 1).orElse(false);
     }
 
     public interface Filter<R extends Room> {
@@ -177,8 +184,9 @@ public class TownPois {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
         Optional<BlockPos> fire = Optional.empty();
-        if (visitorSpot == null && villagerCount <= 0) {
-            fire = TownCycle.findCampfire(flagPos, level);
+        if (campfireQuestOpen) {
+            // Only a lit campfire completes the Campfire quest; the player lights the scaffolding's campfire with the wand.
+            fire = TownCycle.findCampfire(flagPos, level, TownPois::isCampfireLit);
             fire.ifPresent((bp) -> listener.campfireFound(bp));
         }
         BlockPos welcomePos = getWelcomeMatPos(level);
@@ -194,6 +202,9 @@ public class TownPois {
         if (gate != null) {
             listener.townGateFound(gate);
             visitorSpot = gate;
+        } else {
+            // The mat is placed but its gate doesn't resolve yet: arrivals come to the mat.
+            visitorSpot = welcomePos;
         }
     }
 

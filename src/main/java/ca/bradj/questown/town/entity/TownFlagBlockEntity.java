@@ -40,15 +40,21 @@ import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.RoomRecipes;
+import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.*;
 import ca.bradj.questown.town.quests.*;
+import ca.bradj.questown.town.rewards.SpawnVisitorReward;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
@@ -84,16 +90,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
+import java.util.Optional;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.items.IItemHandler;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -503,8 +510,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownPois pois = new TownPois(subBlocks);
     final MCMorningRewards morningRewards = new MCMorningRewards(this);
     final MCAsapRewards asapRewards = new MCAsapRewards();
-    private final UUID uuid = UUID.randomUUID();
+    /** Players already shown the camp-ready toast this session. */
+    private final Set<UUID> campReadyToastShown = new HashSet<>();
+    private UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
+    final TownShutdownController shutdownController = new TownShutdownController();
     public long advancedTimeOnTick = -1;
     boolean isInitializedQuests = false;
     boolean changed = false;
@@ -582,15 +592,31 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
 
-    void morningTick(Long newTime) {
-        for (MCReward r : this.morningRewards.popChildren()) {
-            this.asapRewards.push(r);
+    /** @param gameTime game time, which the sleepless expiry and rest times are read against */
+    void morningTick(long gameTime) {
+        // The second villager arrives only once the raw-food quest is done.
+        TownQuests.ArrivalRelease<MCReward> release = quests.releaseArrivals(
+                ImmutableList.copyOf(morningRewards.popChildren()),
+                r -> r instanceof SpawnVisitorReward,
+                townVillagerCount()
+        );
+        // A stack: arrivals go last so they come out first.
+        release.others().forEach(this.asapRewards::push);
+        release.arrivals().forEach(this.asapRewards::push);
+        release.held().forEach(this.morningRewards::add);
+        if (!release.held().isEmpty()) {
+            QT.FLAG_LOGGER.info(
+                    "Holding {} queued villager arrival(s): raw-food (LOOT) quest not complete",
+                    release.held().size()
+            );
         }
         this.setChanged();
-        villagerHandle.handleMorning(newTime);
+        villagerHandle.handleMorning(gameTime);
+        // Show "Your camp is ready" again tonight.
+        campReadyToastShown.clear();
         roomsHandle.handleMorning();
         CompoundTag tag = Compat.getBlockStoredTagData(this);
-        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, newTime);
+        tag.putLong(NBT_TIME_WARP_REFERENCE_TICK, getServerLevel().getDayTime());
         TownInterface.DebugLogger loger = getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES);
         state.putStateOnTile(tag, getUUID(), loger);
 
@@ -610,17 +636,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        return super.serializeNBT();
-    }
-
-    @Override
-    public void deserializeNBT(CompoundTag nbt) {
-        super.deserializeNBT(nbt);
-    }
-
-    @Override
-    protected void saveAdditional(@NotNull CompoundTag tag) {
+    protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         //////////////////////////
         //       WARNING        //
@@ -632,7 +648,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
-    public void load(@NotNull CompoundTag tag) {
+    public void load(CompoundTag tag) {
         super.load(tag);
 
         ////////////////////////
@@ -688,6 +704,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         // TODO: Serialization for ASAPs
     }
 
+    /** Only what the client reads (dead doors and the bubbles). The town data would outgrow the packet limit. */
     @Override
     public CompoundTag getUpdateTag() {
         CompoundTag tag = super.getUpdateTag();
@@ -760,6 +777,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         initializers.add(t -> {
             if (!this.isInitializedQuests) {
                 t.setUpQuestsForNewlyPlacedFlag();
+                t.seedStartingTimber();
             }
             t.pois.setListener(t);
             t.workHandle.addChangeListener(c -> {
@@ -813,8 +831,69 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
+    public boolean hasShownCampReadyToast(UUID player) {
+        return campReadyToastShown.contains(player);
+    }
+
+    public boolean wantsJobChangeFrom(JobID villagerJob) {
+        return quests.wantsJobChangeFrom(villagerJob);
+    }
+
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        return quests.hidesJobChangeFrom(villagerJob);
+    }
+
+    /** A villager died: remove it from the saved roster. */
+    public void retireVillager(UUID villager) {
+        villagerHandle.retireDisplayNumber(villager);
+        setChanged();
+    }
+
+    public boolean hasVillagers() {
+        return townVillagerCount() > 0;
+    }
+
+    /** Arrived villagers: the live ones or the saved roster, whichever is larger. */
+    private long townVillagerCount() {
+        return Math.max(villagerHandle.size(), villagerHandle.knownVillagerCount());
+    }
+
     public boolean hasVillagerArrivingInMorning() {
-        return morningRewards.hasPendingSpawnVisitor();
+        // Show "one more in the morning" only when the arrival will happen.
+        return morningRewards.hasPendingSpawnVisitor() && quests.isArrivalGateOpen(townVillagerCount());
+    }
+
+    /** Shows a titled tutorial toast to every online player. */
+    public void broadcastTutorialToast(String titleKey, String descriptionKey) {
+        this.messages.broadcastTutorialToast(titleKey, descriptionKey);
+    }
+
+    /** Shows "Your camp is ready" once per session to each player who hasn't campfire-slept yet. */
+    public void showCampReadyToastIfDue() {
+        if (!(level instanceof ServerLevel sl)) {
+            return;
+        }
+        if (!quests.isCampfireQuestComplete()) {
+            return;
+        }
+        // Not until vanilla allows sleeping.
+        if (sl.isDay()) {
+            return;
+        }
+        ResourceLocation slept = Questown.ResourceLocation(TutorialTrigger.Triggers.FirstCampfireSleep.getID());
+        for (ServerPlayer p : sl.players()) {
+            if (p.isSleeping() || !campReadyToastShown.add(p.getUUID())) {
+                continue;
+            }
+            if (Compat.hasCompletedAdvancement(p, slept)) {
+                continue;
+            }
+            messages.sendTutorialToast(p, CampfireReadyReward.TOAST_TITLE_KEY, CampfireReadyReward.TOAST_DESCRIPTION_KEY);
+        }
+    }
+
+    public boolean hasPendingMorningReward() {
+        return morningRewards.hasPendingMorningReward();
     }
 
     public void addMorningReward(MCReward ev) {
@@ -858,6 +937,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return roomsHandle;
     }
 
+    @Override
+    public Optional<ResourceLocation> roomRecipeHolding(BlockPos pos) {
+        Collection<RoomRecipeMatch<MCRoom>> matches = roomsHandle.getMatches(m -> true);
+        Optional<MCRoom> room = ca.bradj.questown.town.rooms.RoomDoors.roomHolding(
+                matches.stream().map(RoomRecipeMatch::getRoom).toList(), pos);
+        return room.flatMap(r -> matches.stream()
+                                        .filter(m -> m.getRoom().equals(r))
+                                        .findFirst()
+                                        .flatMap(m -> getTopMatch(this::recipesFromLevel, m)));
+    }
+
     void setUpQuestsForNewlyPlacedFlag() {
         TownQuests.setUpQuestsForNewlyPlacedFlag(this, quests);
         this.isInitializedQuests = true;
@@ -868,14 +958,77 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return quests.getAll();
     }
 
+    /** A new town's starting wood: a line of fallen logs and two trees near the flag. Once, on a new flag's first tick. */
+    void seedStartingTimber() {
+        ServerLevel l = getServerLevel();
+        if (l == null || l.isClientSide()) {
+            return;
+        }
+        BlockPos flag = getBlockPos();
+        int placed = 0;
+        // Eight fallen logs, clear of the arrival ring and the chicken's room.
+        BlockState log = Blocks.OAK_LOG.defaultBlockState()
+                                       .setValue(BlockStateProperties.AXIS, Direction.Axis.X);
+        for (int i = 0; i < 8; i++) {
+            BlockPos p = flag.offset(-1 + i, 0, 6);
+            if (l.getBlockState(p).isAir() && !l.getBlockState(p.below()).isAir()) {
+                l.setBlock(p, log, 3);
+                placed++;
+            }
+        }
+        // The same tree grows at a given position every time.
+        MinecraftWorldAccess world = MinecraftWorldAccess.silent(l);
+        if (world.growTreeAt(flag.offset(8, 0, 6), new ItemStack(Items.OAK_SAPLING))) {
+            placed++;
+        }
+        if (world.growTreeAt(flag.offset(-8, 0, -6), new ItemStack(Items.OAK_SAPLING))) {
+            placed++;
+        }
+        if (placed > 0) {
+            QT.FLAG_LOGGER.info("Seeded starting timber at new flag {} ({} placements)", flag, placed);
+        }
+    }
+
+    /** Gives the player who placed the flag a filled map centred on it. */
+    public void grantStarterMap(net.minecraft.server.level.ServerPlayer placer) {
+        ServerLevel sl = getServerLevel();
+        if (sl == null) {
+            return;
+        }
+        BlockPos flag = getTownFlagBasePos();
+        ItemStack filledMap = net.minecraft.world.item.MapItem.create(
+                sl, flag.getX(), flag.getZ(), (byte) 1, true, false
+        );
+        net.minecraft.world.item.MapItem.renderBiomePreviewMap(sl, filledMap);
+        if (!placer.addItem(filledMap)) {
+            placer.drop(filledMap, false);
+        }
+        QT.FLAG_LOGGER.info(
+                "Granted starter map (zoom 1, flag-centered at {}) to {}",
+                flag,
+                placer.getGameProfile().getName()
+        );
+    }
+
     @Override
     public void roomRecipeCreated(
             MCRoom room,
             RoomRecipeMatch<MCRoom> match
     ) {
+        roomRecipeCreated(room, match, true);
+    }
+
+    /** As {@link #roomRecipeCreated}, without the chat line; block rooms announce themselves once. */
+    void roomRecipeCreated(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> match,
+            boolean broadcast
+    ) {
         ServerLevel l = getServerLevel();
         world.swapBlocks(l, match);
-        messages.roomRecipeCreated(room, getTopMatch(this::recipesFromLevel, match));
+        if (broadcast) {
+            messages.roomRecipeCreated(room, getTopMatch(this::recipesFromLevel, match));
+        }
         BlockPos pos = Positions.ToBlock(room.doorPos, room.yCoord);
         if (match.anyMatch(SpecialQuests.JOB_BOARD)) {
             AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(l, RoomTrigger.Triggers.FirstJobBoard, pos);
@@ -912,6 +1065,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             RoomRecipeMatch<MCRoom> newMatch
     ) {
         ServerLevel l = getServerLevel();
+        // Turn signs into job boards on changes too, not only on creation.
+        world.swapBlocks(l, newMatch);
         Optional<ResourceLocation> oldMatchID = getTopMatch(this::recipesFromLevel, oldMatch);
         Optional<ResourceLocation> newMatchID = getTopMatch(this::recipesFromLevel, newMatch);
         if (oldMatchID.isPresent() && newMatchID.isPresent() && !oldMatchID.equals(newMatchID)) {

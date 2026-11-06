@@ -73,7 +73,12 @@ public class RoomRecipes {
     }
 
     public static Component getName(ResourceLocation id) {
-        return Compat.translatable(String.format("room.%s", id.getPath()));
+        String path = id.getPath();
+        // A block room's name is its block's name ("Job Board").
+        if (path.startsWith("block_room/block.")) {
+            return Compat.translatable(path.substring("block_room/".length()));
+        }
+        return Compat.translatable(String.format("room.%s", path));
     }
 
     public static Component getName(Optional<ResourceLocation> recipe) {
