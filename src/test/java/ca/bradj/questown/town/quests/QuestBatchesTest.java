@@ -169,6 +169,33 @@ class QuestBatchesTest {
     }
 
     @Test
+    void markRecipeAsComplete_hasNoEffect_whenNoOpenQuestRemainsForRecipe() {
+        // Re-announcing a room doesn't re-complete or re-reward finished quests.
+        QuestBatches<
+                Integer, Room, TestQuest, Reward,
+                QuestBatch<Integer, Room, TestQuest, Reward>
+                > qbs = new QuestBatches<>((batchUUID, i, r) -> new QuestBatch<>(factory, r, batchUUID));
+
+        Room sameRoom = new Room(
+                new Position(1, 2),
+                InclusiveSpace.from(3, 4).to(5, 6)
+        );
+
+        TestQuestBatch completeBatch = new TestQuestBatch();
+        completeBatch.addNewQuest(null, 1);
+        completeBatch.markRecipeAsComplete(sameRoom, 1);
+
+        qbs.add(completeBatch);
+
+        qbs.markRecipeAsComplete(sameRoom, 1);
+
+        ImmutableList<TestQuest> quests = qbs.getAll();
+        Assertions.assertEquals(1, quests.size());
+        Assertions.assertTrue(quests.get(0).isComplete());
+        Assertions.assertSame(sameRoom, quests.get(0).completedOn);
+    }
+
+    @Test
     void initialize_shouldRemoveDuplicateCompletion_IfRoomAndRecipeAreSame() {
         QuestBatches<
                 Integer, Room, TestQuest, Reward,

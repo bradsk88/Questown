@@ -537,6 +537,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         runForTopMatch(this::recipesFromLevel, match, r -> quests.markQuestAsComplete(room, r));
     }
 
+    /** A block room (job board, welcome mat, mineshaft) at {@code block}, announced at the block. */
+    void blockRoomCreated(
+            MCRoom room,
+            RoomRecipeMatch<MCRoom> match,
+            BlockPos block
+    ) {
+        roomRecipeCreated(room, match, false);
+        messages.roomRecipeCreated(Positions.FromBlockPos(block), getTopMatch(this::recipesFromLevel, match));
+    }
+
 
     private Map<ResourceLocation, RoomRecipe> recipesFromLevel() {
         return RoomRecipes.hydrate(getServerLevel().getRecipeManager(), true);

@@ -221,23 +221,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
         NonNullList<Ingredient> fromIngredients = fromRecipe.get().getIngredients();
 
-
-        List<RoomRecipe> all = RoomRecipes.getAllRecipes(level);
-
-        ImmutableList.Builder<ResourceLocation> possibleUpgrades = ImmutableList.builder();
-
-        for (RoomRecipe aRecipe : all) {
-            Collection<List<String>> toIng = getItemKeyStrings(aRecipe.getIngredients());
-            Collection<List<String>> fromIng = getItemKeyStrings(fromIngredients);
-            if (toIng.equals(fromIng)) {
-                continue; // Perfect overlap. So not an upgrade.
-            }
-            if (RoomRecipes.containsAllTags(fromIng, toIng)) {
-                possibleUpgrades.add(aRecipe.getId());
-            }
+        Map<ResourceLocation, Collection<List<String>>> all = new HashMap<>();
+        for (RecipeRef.RecipePair<RoomRecipe> p : RecipeRef.pairsOf(level.getRecipeManager(), RecipesInit.ROOM)) {
+            all.put(p.id(), getItemKeyStrings(p.value().getIngredients()));
         }
 
-        ImmutableList<ResourceLocation> upgrades = possibleUpgrades.build();
+        List<ResourceLocation> upgrades = RoomRecipes.upgradeCandidates(
+                getItemKeyStrings(fromIngredients), all);
         if (upgrades.isEmpty()) {
             return null;
         }
@@ -474,6 +464,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() < 2) {
+            if (!hunterRawFoodLootComplete()) {
+                return Tutorial.SKIPPED;
+            }
             addQuestsForJobChangeAndFood(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
@@ -807,6 +800,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_HUNTER_GATHERER));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #1.5 was added to town: {}", qq.toNiceString());
+    }
+
+    private boolean hunterRawFoodLootComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAll().stream().anyMatch(
+                q -> q.getType() == Quest.QuestType.LOOT
+                        && rawFood.equals(q.getWantedId())
+                        && q.isComplete()
+        );
     }
 
     private void addQuestsForJobChangeAndFood(TutorialTownView view) {

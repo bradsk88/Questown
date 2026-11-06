@@ -154,6 +154,11 @@ public class RecipeItemConfig {
                     CraftedResources.FURNACE
             ), false
     );
+    public static final int PLATE = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.of(
+                    CraftedResources.PLANKS
+            ), false
+    );
     public static final int FOOD_DISPLAY = RecipeItemScore.requiresCraftingTable(
             ImmutableList.of(
                     CraftedResources.PLANKS,

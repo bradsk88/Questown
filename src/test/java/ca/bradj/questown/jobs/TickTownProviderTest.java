@@ -111,6 +111,15 @@ class TickTownProviderTest {
         Assertions.assertTrue(result, "BUG: isUnfinishedTimeWorkPresent() returns FALSE when timer is active");
     }
 
+    /** A state missing from the room map has no rooms, rather than throwing. */
+    @Test
+    void roomsAtState_stateAbsentFromRoomMap_yieldsEmptyCollection() {
+        TickTownProvider<?, ?, ?, ?, ?, ?> provider = new SimpleTownBuilder().build();
+
+        Assertions.assertDoesNotThrow(() ->
+                Assertions.assertTrue(provider.roomsAtState(0).isEmpty()));
+    }
+
     /**
      * Sanity check: isUnfinishedTimeWorkPresent() returns true when room IS at maxState
      * with active timer (this case works correctly).

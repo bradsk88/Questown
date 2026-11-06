@@ -62,16 +62,6 @@ class TestTutorialTownView implements TutorialTownView {
         triggersFired.add(trigger);
     }
 
-    @Override
-    public ResourceLocation getExoticWood() {
-        return exoticWood;
-    }
-
-    @Override
-    @Nullable
-    public JobID chooseJobForTutorial(MCQuestBatches questBatches) {
-        return jobForTutorial;
-    }
 
     @Override
     public ResourceLocation getRoomForJob(JobID job) {
@@ -112,20 +102,16 @@ class TestTutorialTownView implements TutorialTownView {
             return this;
         }
 
+        Builder villagerRoots(String... roots) {
+            this.villagerRoots = java.util.Set.of(roots);
+            return this;
+        }
+
         Builder tutorialBopGranted(boolean granted) {
             this.tutorialBopGranted = granted;
             return this;
         }
 
-        Builder exoticWood(ResourceLocation wood) {
-            this.exoticWood = wood;
-            return this;
-        }
-
-        Builder jobForTutorial(JobID job) {
-            this.jobForTutorial = job;
-            return this;
-        }
 
         Builder roomForJob(ResourceLocation room) {
             this.roomForJob = room;
