@@ -18,6 +18,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.interfaces.TownInterface;
@@ -101,6 +102,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
 
         quests.questBatches.add(fireQuest);
+        QT.QUESTS_LOGGER.info("Posted the empty-room quest batch");
     }
 
     @NotNull
@@ -313,6 +315,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public void tick(TownInterface town) {
+        QuestBackfiller.backfill(this, town, this.town::getUnsafe);
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
@@ -869,6 +872,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     @Override
     public void questCompleted(MCQuest quest) {
+        QT.QUESTS_LOGGER.dev("Quest completed: {} {}", quest.getType(), quest.getWantedId());
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         t.messages.questCompleted(quest);
         t.setChanged();

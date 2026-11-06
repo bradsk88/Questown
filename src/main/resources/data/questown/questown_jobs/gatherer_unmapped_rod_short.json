@@ -28,7 +28,7 @@
   "special": [
     {
       "type": "global",
-      "rules": []
+      "rules": ["log_status_reasons"]
     },
     {
       "type": "processing_state",

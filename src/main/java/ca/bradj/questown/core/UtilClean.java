@@ -31,6 +31,18 @@ public class UtilClean {
         };
     }
 
+    public static <R> boolean allPass(
+            Iterable<R> rules,
+            Predicate<R> passes
+    ) {
+        for (R rule : rules) {
+            if (!passes.test(rule)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static <X, Y> Map<X, ImmutableList<Y>> deepCopy(Map<X, ? extends Collection<Y>> items) {
         ImmutableMap.Builder<X, ImmutableList<Y>> b = ImmutableMap.builder();
         items.forEach((k, v) -> {

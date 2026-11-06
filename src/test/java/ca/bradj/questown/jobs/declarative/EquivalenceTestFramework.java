@@ -170,6 +170,21 @@ public class EquivalenceTestFramework {
     }
 
     /**
+     * Ticks the job and the work-status store together, as the flag does, for jobs that end in a
+     * timed wait. Use it to check that a job actually finishes and extracts.
+     */
+    static void runTickerWithStore(TickerSetup setup, int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            setup.deps.syncJournalWithInventory();
+            setup.ticker.tick(setup.deps, (msg, args) -> {});
+            setup.workStatusHandle().tick(FLAG_TICK_INTERVAL_GAME_TICKS);
+        }
+    }
+
+    // Game ticks per flag tick, the config default.
+    private static final long FLAG_TICK_INTERVAL_GAME_TICKS = 10L;
+
+    /**
      * Captures the result after running a simulation.
      */
     public static SimulationResult captureResult(TickerSetup setup) {

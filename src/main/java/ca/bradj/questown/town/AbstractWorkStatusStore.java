@@ -36,10 +36,13 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final HashMap<POS, State> jobStatuses = new HashMap<>();
     private final HashMap<POS, Long> timeJobStatuses = new HashMap<>();
     private final HashMap<POS, Claim> claims = new HashMap<>();
+    private final HashMap<POS, Long> stuckTicks = new HashMap<>();
 
     private final DebugLogger debugLogger;
 
     int curIdx = 0;
+
+    static final long TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET = 20_000L;
 
     public AbstractWorkStatusStore(
             BiFunction<ROOM, Position, Collection<POS>> posFactory,
@@ -83,6 +86,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             BiFunction<POS, State, State> mutator
     ) {
         State newV = jobStatuses.compute(pos, mutator);
+        if (newV == null) {
+            debugLogger.log("Job state removed at {}", pos);
+            return;
+        }
+        restartStuckCount(pos);
         debugLogger.log("Job state set to {} at {}", newV.toShortString(), pos);
         if (cascading.containsKey(pos)) {
             if (!cascading.get(pos).apply(newV)) {
@@ -100,7 +108,11 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
         setJobBlockState(bp, bs);
         Long cur = this.timeJobStatuses.get(bp);
         if (cur != null && cur > 0) {
-            QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
+            if (cur == ticksToNextState) {
+                this.debugLogger.log("Timer re-added with same value at {} ({})", bp, ticksToNextState);
+            } else {
+                QT.FLAG_LOGGER.error("Clobbered time on block at {} from {} to {}", bp, cur, ticksToNextState);
+            }
         }
 
         debugLogger.log("Timer added to {} at {} ({} to next state)", bs.toShortString(), bp, ticksToNextState);
@@ -112,6 +124,7 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     public Boolean clearState(POS bp) {
         this.timeJobStatuses.remove(bp);
         this.jobStatuses.remove(bp);
+        restartStuckCount(bp);
         debugLogger.log("Removed state from {}", bp);
         return true;
     }

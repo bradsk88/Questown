@@ -44,6 +44,7 @@ import vazkii.patchouli.api.TriPredicate;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -327,6 +328,25 @@ public class ServerJobsRegistry {
         if (state.isAir()) {
             return false;
         }
+    }
+
+    public static boolean hasGlobalRule(
+            JobID job,
+            String rule
+    ) {
+        if (!Works.isInitialized()) {
+            return false;
+        }
+        return Works.regularJobs().stream()
+                    .filter(e -> e.getKey().equals(job))
+                    .anyMatch(e -> e.getValue().get().getSpecialGlobalRules().contains(rule));
+    }
+
+    public static boolean isRestingState(
+            BlockState block,
+            int processingState
+    ) {
+        return specialJobs.stream().anyMatch(sj -> sj.restsAt().test(block, processingState));
         BlockState bs = state;
         Block b = bs.getBlock();
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
@@ -490,12 +510,19 @@ public class ServerJobsRegistry {
         );
     }
 
+    private static boolean isSpecialJob(JobID p) {
+        return specialJobs.stream().anyMatch(sj -> sj.idTest().test(p));
+    }
+
     public static boolean canSatisfy(
             WorksBehaviour.TownData town,
             JobID p,
             Ingredient requestedResult
     ) {
         if (isSeekingWork(p)) {
+            return false;
+        }
+        if (isSpecialJob(p)) {
             return false;
         }
 
@@ -601,6 +628,7 @@ public class ServerJobsRegistry {
         return DinerWork.isDining(jobID) || DinerNoTableWork.isDining(jobID) || DinerRawFoodWork.isDining(jobID);
     }
 
+    /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Special jobs always fit. */
     public static boolean canFit(
             UUID villagerID,
             JobID p,

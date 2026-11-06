@@ -42,6 +42,31 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
         return "TODO"; // TODO?
     }
 
+    private void collectEverythingNeededToResume(
+            Collection<Integer> states,
+            List<PredicateCollection<HELD, HELD>> neededIngredients,
+            List<PredicateCollection<ITEM, ITEM>> neededTools
+    ) {
+        for (Integer state : states) {
+            collectStateNeeds(state, neededIngredients, neededTools);
+        }
+    }
+
+    private void collectStateNeeds(
+            Integer state,
+            List<PredicateCollection<HELD, HELD>> neededIngredients,
+            List<PredicateCollection<ITEM, ITEM>> neededTools
+    ) {
+        PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
+        if (ingt != null) {
+            neededIngredients.add(ingt);
+        }
+        PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
+        if (tool != null) {
+            neededTools.add(tool);
+        }
+    }
+
     @Override
     protected Populated<WithReason<Boolean>> doPopulate(boolean stopOnTrue) {
         ImmutableMap.Builder<String, Object> b = ImmutableMap.builder();
@@ -55,15 +80,11 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             if (!v.getValue().apply(() -> null).value) {
                 continue;
             }
-            PredicateCollection<HELD, HELD> ingt = ingredients.apply(state);
-            if (ingt != null) {
-                neededIngredients.add(ingt);
-            }
-            PredicateCollection<ITEM, ITEM> tool = tools.apply(state);
-            if (tool != null) {
-                neededTools.add(tool);
-            }
-
+            collectStateNeeds(state, neededIngredients, neededTools);
+        }
+        boolean nothingWorkableNow = neededIngredients.isEmpty() && neededTools.isEmpty() && !needs.isEmpty();
+        if (nothingWorkableNow && townHasAnyJobBlock.get()) {
+            collectEverythingNeededToResume(needs.keySet(), neededIngredients, neededTools);
         }
 
         b.put("relevant ingredients", neededIngredients);

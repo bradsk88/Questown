@@ -128,7 +128,7 @@ public class ProductionJournal<
         }
         Signals sig = sigs.getSignal(townState.getDayTime());
         @Nullable ProductionStatus newStatus = ProductionStatuses.getNewStatusFromSignal(
-                status, sig, inventory, townState, entityState, factory, prioritizeExtraction
+                jobId, status, sig, inventory, townState, entityState, factory, prioritizeExtraction
         );
         if (newStatus != null) {
             changeStatus(newStatus);
