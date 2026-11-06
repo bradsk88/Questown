@@ -26,6 +26,9 @@ public class NoMCEconomics {
     private Map<UUID, ImmutableList<ItemEconomicsData>> aggregated = ImmutableMap.of();
     private ImmutableList<ItemEconomicsData> aggregatedAll = ImmutableList.of();
     private ImmutableList<RoomNeed<String>> roomsAll = ImmutableList.of();
+    private final WindowTotal unmetNeedsWindow = new WindowTotal(0);
+    /** Every unmet need ever registered; the record queue drops old entries, so it can't count. */
+    private long unmetNeedsCumulative = 0;
 
     public static ImmutableMap<UUID, ImmutableList<ItemEconomicsData>> aggregateForUI(
             Collection<UnmetNeed> unmetNeedsRecord
@@ -114,6 +117,7 @@ public class NoMCEconomics {
             String requested
     ) {
         unmetNeedsRecord.add(new UnmetNeed(tick, villagerId, requested));
+        unmetNeedsCumulative++;
         this.needAggregate = true;
     }
 
@@ -128,6 +132,11 @@ public class NoMCEconomics {
 
     public ImmutableList<ItemEconomicsData> getAggregatedItems(@Nullable UUID villagerId) {
         return getAggregated(aggregatedAll, aggregated, villagerId);
+    }
+
+    /** Unmet needs registered since the last call; 0 the first time. Call {@link #update} first. */
+    public long getUnmetNeedsWindowTotal() {
+        return unmetNeedsWindow.next(unmetNeedsCumulative);
     }
 
     public Collection<RoomNeed<String>> getAggregatedRooms() {
