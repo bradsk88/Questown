@@ -56,6 +56,16 @@ class WorkStatusStoreTest {
 
     }
 
+    /** A job that claims no spots can work a block someone else claimed. */
+    @Test
+    void canClaim_aJobWithNoClaimMayWorkAClaimedSpot() {
+        TestWorkStatusStore s = new TestWorkStatusStore();
+        Position pos = new Position(1, 2);
+        s.claimSpot(pos, new Claim(UUID.randomUUID(), 100));
+
+        Assertions.assertTrue(s.canClaim(pos, () -> null));
+    }
+
     @Test
     void Test_GetTimeLeftShouldReturnNullForUntouchedBlock() {
         TestWorkStatusStore s = new TestWorkStatusStore();

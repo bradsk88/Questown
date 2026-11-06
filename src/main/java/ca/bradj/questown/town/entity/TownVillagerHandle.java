@@ -127,6 +127,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public void resetWorkStatus(UUID villagerUUID) {
+                town.getUnsafe().resetWorkStatusFor(villagerUUID);
+            }
+
+            @Override
             public HealingModule<VisitorMobEntity> getHealingModule() {
                 return healing;
             }
@@ -417,6 +422,10 @@ public final class TownVillagerHandle {
 
     public boolean canDine(UUID uuid) {
         return delegate.canDine(uuid);
+    }
+
+    public boolean isStarving(@Nullable VillagerUUID vuid) {
+        return delegate.isStarving(getUuid(vuid));
     }
 
     public boolean gaveUpDiningRecently(@Nullable VillagerUUID vuid) {

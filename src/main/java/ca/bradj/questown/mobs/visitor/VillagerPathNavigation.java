@@ -17,6 +17,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.tags.ITag;
 import org.jetbrains.annotations.NotNull;
 
+/** Villager pathfinding: vanilla's, but lit campfires and fences are blocked, fence gates are walkable, and water under a roof is allowed. */
 @SuppressWarnings("NullableProblems")
 public class VillagerPathNavigation extends GroundPathNavigation {
     public VillagerPathNavigation(

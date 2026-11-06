@@ -39,6 +39,9 @@ public interface Delegator<ENTITY> {
 
     void invalidateCachedWorkPossibilities();
 
+    /** Drops the villager's job-block states, on a job change, so the new job doesn't read the old job's. */
+    void resetWorkStatus(UUID villagerUUID);
+
     HealingModule<ENTITY> getHealingModule();
 
     void addChangeListener(

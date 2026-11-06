@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.EntityCurrentJobSite;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.JobLogic;
 import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -15,6 +17,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -50,6 +53,7 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
 
         // Town operations - server level
         boolean hasServerLevel();
+        Signals.DayTime getDayTime();
         POS getRandomHorizontalFrom(POS bp);
         void logDebug(String message);
 
@@ -118,9 +122,19 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
     }
 
     private final WorldDeps<POS, HELD_ITEM, ROOM> deps;
+    private final Supplier<Boolean> holdsWorkOutput;
 
-    public DeclarativeLogicWorld(WorldDeps<POS, HELD_ITEM, ROOM> deps) {
+    public DeclarativeLogicWorld(
+            WorldDeps<POS, HELD_ITEM, ROOM> deps,
+            Supplier<Boolean> holdsWorkOutput
+    ) {
         this.deps = deps;
+        this.holdsWorkOutput = holdsWorkOutput;
+    }
+
+    @Override
+    public boolean holdsWorkOutput() {
+        return holdsWorkOutput.get();
     }
 
     @Override
@@ -128,6 +142,11 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
         Object data = deps.getVillagerData(deps.getEntityVUID());
         deps.runPreMaxTicksJobChangeHook(deps.getSpecialGlobalRules(), data);
         deps.changeJobForVillager(deps.getOwnerUUID(), id, false);
+    }
+
+    @Override
+    public boolean fitsInDay(JobID id) {
+        return ServerJobsRegistry.fitsInDay(deps.getOwnerUUID(), id, deps.getDayTime());
     }
 
     @Override

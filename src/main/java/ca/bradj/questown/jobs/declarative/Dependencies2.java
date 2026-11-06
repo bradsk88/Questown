@@ -1,6 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
 
-import ca.bradj.questown.jobs.ContainersClean;
+
 import ca.bradj.questown.jobs.Item;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.WorkPosition;
@@ -39,6 +39,10 @@ public interface Dependencies2<ROOM extends Room, MATCH extends IRoomRecipeMatch
     HELD_ITEM convert(TOWN_ITEM townItem);
 
     boolean hasSpace();
+
+    default boolean finishedProductNeedsStorage() {
+        return true;
+    }
 
     WorkPosition<POS> getWorkSpot();
 

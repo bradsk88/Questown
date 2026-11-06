@@ -82,6 +82,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -829,8 +830,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
+        // Empty slots are saved as an empty compound, keeping the slot count.
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.serializeNBT()));
+            .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
+                : ca.bradj.questown.mc.Compat.saveItem(getLevel(), v)));
         p_21484_.put("items", items);
     }
 
@@ -1316,7 +1319,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return false;
         }
 
+        // A lit campfire would burn a villager inside it; other fire still hurts.
+        if ((p_21016_ == net.minecraft.world.damagesource.DamageSource.IN_FIRE || p_21016_ == net.minecraft.world.damagesource.DamageSource.ON_FIRE) && !getLevel().isClientSide() && inOrOnLitCampfire()) {
+            return false;
+        }
+
         return super.hurt(p_21016_, p_21017_);
+    }
+
+    /** Whether the villager's feet are in or on a lit campfire. */
+    private boolean inOrOnLitCampfire() {
+        BlockPos feet = blockPosition();
+        return CampfireBlock.isLitCampfire(getLevel().getBlockState(feet))
+                || CampfireBlock.isLitCampfire(getLevel().getBlockState(feet.below()));
     }
 
     @Override
@@ -1358,6 +1373,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public JobID getJobId() {
         return job.get().getId();
+    }
+
+    /** Whether a hungry villager may switch straight to eating. Server only. */
+    public boolean canInstantlySwitchToEating() {
+        return job.get().canInstantlySwitchToEating();
     }
 
     public BlockPos getFlagPos() {

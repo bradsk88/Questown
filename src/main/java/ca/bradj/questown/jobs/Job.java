@@ -102,6 +102,11 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     Collection<String> getGlobalSpecialRules();
 
+    /** Whether a hungry villager may switch straight to eating. Other jobs finish first, so carried output is stored before the meal. */
+    default boolean canInstantlySwitchToEating() {
+        return getGlobalSpecialRules().contains(SpecialRules.CAN_INSTANTLY_SWITCH_TO_EATING);
+    }
+
     Collection<? extends Runnable> notifyListenersOfNewJob(Function<StatusListener, Runnable> listenToNewJob);
 
     int getExperienceEarned();

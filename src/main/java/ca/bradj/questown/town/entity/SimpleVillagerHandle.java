@@ -175,9 +175,14 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     private void tickDamage() {
         tickThing(
-                damage, 0, e -> applyHealFactor(e, 100), 0, (newVal, e) -> {
+                damage, 0, e -> applyHealFactor(e, healingPerFlagTick()), 0, (newVal, e) -> {
                 }
         );
+    }
+
+    /** Healing for one flag tick: one game tick's worth for each tick in the interval. */
+    private int healingPerFlagTick() {
+        return TICK_FACTOR * Math.toIntExact(configs.flagTickInterval);
     }
 
     private int applyHealFactor(
@@ -211,7 +216,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             int newVal = Math.max(min, oldVal - amount.apply(e));
             map.put(u, newVal);
             if (newVal != oldVal) {
-                listeners.forEach(l -> l.accept(getStats(u)));
+                notifyStatsListeners(u);
             }
             then.accept(newVal, e);
         });
@@ -225,7 +230,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO[Traits]: Track max unique fullness level per villager
-                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent,
+                getLevel(uuid), delegator.getMoodEffectIds(uuid));
     }
 
     private float getExpForCurrentLevel(UUID uuid) {
@@ -275,6 +281,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         delegator.invalidateCachedWorkPossibilities();
         if (!newJob.sameRoot(oldJob)) {
             jobChangesPending.put(delegator.getUUID(f), false);
+            delegator.resetWorkStatus(villagerUUID);
         }
     }
 

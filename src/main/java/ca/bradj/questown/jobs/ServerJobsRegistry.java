@@ -196,8 +196,9 @@ public class ServerJobsRegistry {
             JobID parent,
             JobID child
     ) {
-        @SuppressWarnings("DataFlowIssue") JobID parentID = getWork(child, false).parentID;
-        if (parentID == null) return false;
+        Work work = getWork(child, false);
+        if (work == null || work.parentID == null) return false;
+        JobID parentID = work.parentID;
         return parentID.equals(parent);
     }
 
@@ -571,16 +572,22 @@ public class ServerJobsRegistry {
     private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
-            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p);
-            ImmutableSet<Map.Entry<JobID, Supplier<Work>>> sameRootFallback = Works.entrySet(p.rootId());
-            Iterator<Map.Entry<JobID, Supplier<Work>>> i = sameRootFallback.stream()
-                                                                           .filter(v -> v.getKey().sameRoot(p))
-                                                                           .iterator();
-            if (!i.hasNext()) {
+            QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p, new Throwable("caller"));
+            // Prefer a job unlocked with the root; the first one listed may need a stocked room.
+            List<Supplier<Work>> sameRoot = Works.entrySet(p.rootId()).stream()
+                                                 .filter(v -> v.getKey().sameRoot(p))
+                                                 .map(Map.Entry::getValue)
+                                                 .toList();
+            Optional<Supplier<Work>> pick = Work.preferInitiallyUnlocked(
+                    sameRoot,
+                    s -> s.get().parentID,
+                    s -> s.get().isUnlockedWithRootJob()
+            );
+            if (pick.isEmpty()) {
                 QT.JOB_LOGGER.error("No fallback work found for root ID: {}", p.rootId());
                 return null;
             }
-            return i.next().getValue();
+            return pick.get();
         }
         return workSupplier;
     }
@@ -629,6 +636,17 @@ public class ServerJobsRegistry {
     }
 
     /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Special jobs always fit. */
+    public static boolean fitsInDay(
+            UUID villagerID,
+            JobID p,
+            Signals.DayTime currentTick
+    ) {
+        if (Works.get(p) == null) {
+            return true;
+        }
+        return canAlwaysStart(villagerID, p) || canFit(villagerID, p, currentTick);
+    }
+
     public static boolean canFit(
             UUID villagerID,
             JobID p,

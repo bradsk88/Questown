@@ -8,7 +8,9 @@ import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.declarative.SupplyItems;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.IPredicateCollection;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -377,6 +379,7 @@ public class Jobs {
                     target.getBlockPos(),
                     mct.toShortString()
             );
+            // Villager items never stack: each takes its own empty slot.
             boolean added = false;
             for (int i = 0; i < target.size(); i++) {
                 if (added) {

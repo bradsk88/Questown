@@ -279,6 +279,11 @@ public class DeclarativeJobTickerDependencies implements
     }
 
     @Override
+    public boolean finishedProductNeedsStorage() {
+        return job.finishedProductNeedsStorage();
+    }
+
+    @Override
     public WorkPosition<BlockPos> getWorkSpot() {
         return job.getWorld().getWorkSpot();
     }
@@ -504,6 +509,11 @@ public class DeclarativeJobTickerDependencies implements
             @Override
             public boolean hasServerLevel() {
                 return town.getServerLevel() != null;
+            }
+
+            @Override
+            public Signals.DayTime getDayTime() {
+                return self.getDayTime();
             }
 
             @Override
