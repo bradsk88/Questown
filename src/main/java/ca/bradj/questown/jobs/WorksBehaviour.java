@@ -258,7 +258,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
 
             @Override
@@ -277,7 +277,7 @@ public class WorksBehaviour {
                         expiration,
                         world.resultGenerator()::generate,
                         workSound
-                );
+                ).withFinishedProductNeedsStorage(!productConsumed);
             }
         };
     }
@@ -304,9 +304,7 @@ public class WorksBehaviour {
                 Config.MAX_INITIAL_TICKS_WITHOUT_SUPPLIES,
                 Config.MAX_TICKS_WITHOUT_SUPPLIES,
                 WorkSeekerJob::getIDForRoot,
-                // FIXME: This should be 3000 to make sure crafters don't get stuck
-                //  Can we add this to the JSON definition spec?
-                () -> 6000L,
+                () -> 3000L,
                 jobId -> jobId
         );
     }
