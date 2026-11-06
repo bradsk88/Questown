@@ -48,6 +48,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private final List<ActiveRecipes.ChangeListener<MCRoom, RoomRecipeMatch<MCRoom>>> recipeListeners = new ArrayList<>();
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
+    private final Map<TownPosition, DoorTrouble> deadDoors = new HashMap<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -115,6 +116,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeCreated(room, mcRoomRoomRecipeMatch));
+                    self.recomputeDeadDoors();
                 }
 
                 @Override
@@ -125,6 +127,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> key1
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeChanged(room, mcRoomRoomRecipeMatch, room1, key1));
+                    self.recomputeDeadDoors();
                 }
 
                 @Override
@@ -133,6 +136,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                         RoomRecipeMatch<MCRoom> mcRoomRoomRecipeMatch
                 ) {
                     self.recipeListeners.forEach(v -> v.roomRecipeDestroyed(room, mcRoomRoomRecipeMatch));
+                    self.recomputeDeadDoors();
                 }
             });
         }
@@ -230,6 +234,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 p -> WallDetection.IsDoor(level, p.toPosition(), flagPos.getY() + p.scanLevel),
                 (scanLevel, rooms) -> {
                     getOrCreateRooms(scanLevel).update(rooms);
+                    recomputeDeadDoors();
                     // TODO[Performance]: Drop registered doors if they haven't been assigned to a room in 100 ticks
 //                    registeredDoors.stream().map(v -> new Pair<>(v, rooms.values().stream()
 //                                                                    .noneMatch(z -> z.isPresent() && v.toPosition()
@@ -416,6 +421,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     ) {
         registeredDoors.add(new TownPosition(p.x, p.z, scanLevel));
         Questown.LOGGER.debug("Door was registered at x={}, z={}, scanLevel={}", p.x, p.z, scanLevel);
+        recomputeDeadDoors();
     }
 
     public void deRegisterDoor(
@@ -428,6 +434,41 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
         TownRooms rooms = getOrCreateRooms(scanLevel);
         Optional<MCRoom> oldRoom = rooms.get(p);
         oldRoom.ifPresent(mcRoom -> rooms.roomDestroyed(p, mcRoom));
+        recomputeDeadDoors();
+    }
+
+    /** Works out which registered doors have no room and why, and sends the set to clients for the bubble. */
+    private void recomputeDeadDoors() {
+        Set<MCRoom> matchedRooms = getAllMatches(m -> true).stream()
+                                                             .map(RoomRecipeMatch::getRoom)
+                                                             .collect(Collectors.toSet());
+        Map<TownPosition, DoorTrouble> updated = new HashMap<>();
+        for (TownPosition tp : registeredDoors) {
+            TownRooms rooms = activeRooms.get(tp.scanLevel);
+            Optional<MCRoom> room = rooms == null ? Optional.empty() : rooms.get(tp.toPosition());
+            if (room.isEmpty()) {
+                updated.put(tp, DoorTrouble.NOT_ENCLOSED);
+            } else if (!matchedRooms.contains(room.get())) {
+                updated.put(tp, DoorTrouble.NO_RECIPE);
+            }
+        }
+        if (!deadDoors.equals(updated)) {
+            deadDoors.clear();
+            deadDoors.putAll(updated);
+            pushDeadDoors();
+        }
+    }
+
+    private void pushDeadDoors() {
+        if (town == null) {
+            return;
+        }
+        int flagY = town.getBlockPos().getY();
+        ImmutableMap.Builder<BlockPos, DoorTrouble> b = ImmutableMap.builder();
+        deadDoors.forEach((tp, trouble) -> b.put(
+                new BlockPos(tp.x, flagY + tp.scanLevel, tp.z), trouble
+        ));
+        town.setDeadDoors(b.build());
     }
 
     public void registerFenceGate(

@@ -82,6 +82,12 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newJobQuest(id));
     }
 
+    public void addJobUnlockQuest(
+            KEY id
+    ) {
+        this.quests.add(this.questFactory.newJobUnlockQuest(id));
+    }
+
     public void addNewUpgradeQuest(
             @Nullable VillagerUUID ownerId,
             KEY fromID,
@@ -267,7 +273,10 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     ) {
         QUEST foundQuest = null;
         for (QUEST q : quests) {
-            if (oldRoom.equals(q.completedOn) && recipeID.equals(q.getWantedId())) {
+            // A completed quest stays done when its room changes type.
+            if (oldRoom.equals(q.completedOn)
+                    && recipeID.equals(q.getWantedId())
+                    && !q.isComplete()) {
                 foundQuest = q;
                 break;
             }
@@ -284,6 +293,14 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
     }
 
     /** Removes a quest outright and notifies the listener. */
+    public boolean withdrawQuest(QUEST quest) {
+        if (!this.quests.remove(quest)) {
+            return false;
+        }
+        this.changeListener.questLost(quest);
+        return true;
+    }
+
     public @Nullable VillagerUUID getUUID() {
         if (quests.isEmpty()) {
             return null;

@@ -8,8 +8,9 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
-import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.UUID;
 
@@ -45,9 +46,46 @@ public class VisitorMobRenderer extends HumanoidMobRenderer<VisitorMobEntity, Pl
         this.setModelProperties(entity);
         if (entity.isSitting()) {
             this.renderSiting(entity, yaw, pTicks, stack, buffer, light);
+        } else {
+            super.render(entity, yaw, pTicks, stack, buffer, light);
+        }
+        renderNeedBubble(entity, stack, buffer);
+    }
+
+    /** Drawn here rather than in a render layer, so the bubble faces the camera instead of turning with the villager. */
+    private void renderNeedBubble(
+            VisitorMobEntity entity,
+            PoseStack stack,
+            MultiBufferSource buffer
+    ) {
+        NeedBubbleFocus.forgetIfResolved(entity);
+        if (!NeedBubbleFocus.isShowingBubble(entity)) {
             return;
         }
-        super.render(entity, yaw, pTicks, stack, buffer, light);
+        var texture = entity.getNeed().iconTexture();
+        if (texture != null) {
+            BubbleRenderer.renderTextureBubbleFor(entity, texture, stack, buffer, this.entityRenderDispatcher);
+            return;
+        }
+        BubbleRenderer.renderIconBubbleFor(
+                entity, needBubbleIcon(entity), stack, buffer, this.entityRenderDispatcher
+        );
+    }
+
+    /** The bubble icon: the missing item for an unmet-item need, else the need's own icon. */
+    private static ItemStack needBubbleIcon(VisitorMobEntity entity) {
+        ItemStack roomBlock = NeedBubbleFocus.missingRoomIcon(entity);
+        if (roomBlock != null) {
+            return roomBlock;
+        }
+        Ingredient missing = NeedBubbleFocus.unmetNeedIngredient(entity);
+        if (missing == null) {
+            return entity.getNeed().icon();
+        }
+        ItemStack representative = Ingredients.representativeItemStack(missing);
+        return representative != null && !representative.isEmpty()
+                ? representative
+                : entity.getNeed().icon();
     }
 
     private void setModelProperties(VisitorMobEntity entity) {

@@ -72,6 +72,11 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newJobUnlockQuest(ResourceLocation id) {
+                return MCQuest.jobUnlock(batchUUID, null, id);
+            }
+
+            @Override
             public MCQuest newFirstWorkRequestQuest(@Nullable UUID ownerId) {
                 return MCQuest.firstWorkRequest(batchUUID, dep(ownerId));
             }

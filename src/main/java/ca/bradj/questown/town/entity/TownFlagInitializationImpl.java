@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -193,6 +194,15 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeBopWithdrawn() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.isBopWithdrawn());
+        return t;
+    }
+
+    @Override
+    public CompoundTag serializeQuestsSeen() {
+        CompoundTag t = new CompoundTag();
+        ListTag keys = new ListTag();
+        flag.seenQuests.keys().forEach(k -> keys.add(StringTag.valueOf(k)));
+        t.put("keys", keys);
         return t;
     }
 
