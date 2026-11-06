@@ -678,14 +678,71 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        JobID fallback = fallbackSelector.tryFallback(
-                1, villager.getJobId(), canFit, canAlwaysStart, requestedResults, td,
-                possibleWork.getFor(villager.getJobId()),
-                jobs -> Compat.shuffle(jobs.iterator(), getServerLevel())
-        );
-        if (fallback != null) {
-            changeJob.accept(fallback);
+        // Nothing to do: rest, if the last rest is old enough.
+        if (villagerHandle.isReadyForDowntimeIfIdle(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
+            changeJob.accept("idle-escape", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
+        }
+        // A diner that has eaten and has no work relaxes.
+        if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
+            changeJob.accept("diner-ate", DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
+        if (BoardIdleExits.depositFinished(currentJob)) {
+            changeJob.accept("bop-deposited", DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
+        getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                "[board] {} {} stays: no branch applied", ownerVUID, currentJob
+        );
+        return false;
+    }
+
+    private static boolean carriesBlockOfProgress(VisitorMobEntity villager) {
+        Container inv = villager.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Stores the villager's carried work output before it eats. @return true when the town has no chest, so the villager waits here */
+    private boolean depositCarriedWorkOutput(VisitorMobEntity villager) {
+        Container inventory = villager.getInventory();
+        List<MCTownItem> carried = new ArrayList<>();
+        List<Integer> carriedSlots = new ArrayList<>();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty() || stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                continue;
+            }
+            carried.add(MCTownItem.fromMCItemStack(stack));
+            carriedSlots.add(slot);
+        }
+        if (carried.isEmpty()) {
+            return false;
+        }
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.findClosestMatching(
+                this, MCTownItem::isEmpty, villager.blockPosition(), carried);
+        if (chest == null) {
+            return true;
+        }
+        int deposited = 0;
+        for (MCTownItem item : carried) {
+            ContainerTarget<MCContainer, MCTownItem> updated = chest.withItemAdded(item);
+            if (updated == null) {
+                break;
+            }
+            chest = updated;
+            deposited++;
+        }
+        for (int i = 0; i < deposited; i++) {
+            inventory.setItem(carriedSlots.get(i), ItemStack.EMPTY);
+        }
+        if (deposited > 0) {
+            inventory.setChanged();
         }
         return false;
     }
@@ -697,6 +754,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         biomes.getAllInTown(),
                         prefix
                 )
+        );
+    }
+
+    /** {@link #getTownData} for what players see: a trip job only claims what its own loot tables can drop. */
+    public WorksBehaviour.TownData getTownDataForDisplay() {
+        ServerLevel level = getServerLevel();
+        return new WorksBehaviour.TownData(
+                level,
+                prefix -> {
+                    ImmutableSet<String> drops = Loots.previewForPrefix(level.getServer().getResourceManager(), prefix);
+                    return knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix).stream()
+                            .filter(item -> drops.contains(Compat.getItemId(item.get()).toString()))
+                            .collect(ImmutableSet.toImmutableSet());
+                }
         );
     }
 
@@ -720,6 +791,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public Collection<BlockPos> getTownAnchors() {
+        BlockPos flagPos = getBlockPos();
+        List<BlockPos> anchors = new ArrayList<>();
+        anchors.add(flagPos);
+        anchors.addAll(pois.getWelcomeMats());
+        roomsHandle.getAllRegisteredDoors().forEach(d -> anchors.add(new BlockPos(d.x, flagPos.getY() + d.scanLevel, d.z)));
+        return anchors;
+    }
+
+    // Rate-limits the wander-failure warning per stuck villager.
+    private final Map<BlockPos, Long> wanderFailLogWindows = new HashMap<>();
+    private static final long WANDER_FAIL_LOG_INTERVAL_TICKS = 200;
+
+    @Override
     public BlockPos getRandomWanderTarget(BlockPos avoiding) {
         if (!isInitialized()) {
             return null;
@@ -730,7 +815,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
 
-        if (sl.isNight()) {
+        boolean night = sl.isNight();
+        if (night) {
             allRooms = roomsHandle.getRegisteredRooms().getAllRooms();
         } else {
             allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
@@ -746,13 +832,42 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         return true;
                     }
                     return false;
-                }, (p, r) -> Positions.ToBlock(p, r.yCoord)
+                }, (p, r) -> Positions.ToBlock(p, r.yCoord),
+                new TownPois.WanderDiagnostics() {
+                    @Override
+                    public void noRooms() {
+                        logWanderFailureOnce(sl, avoiding, "no wanderable rooms ({})", night ? "night" : "day");
+                    }
+
+                    @Override
+                    public void noCandidateInRoom(int roomCount, int enclosedCount) {
+                        logWanderFailureOnce(
+                                sl, avoiding,
+                                "all {} room(s) filtered out ({} enclosed position(s) checked; {})",
+                                roomCount, enclosedCount, night ? "night" : "day"
+                        );
+                    }
+                }
         );
-        if (townPos == null) {
-            QT.FLAG_LOGGER.warn("Could not find wander target avoiding {}", avoiding);
-            return townPos;
-        }
         return townPos;
+    }
+
+    private void logWanderFailureOnce(
+            ServerLevel sl,
+            BlockPos avoiding,
+            String reason,
+            Object... reasonArgs
+    ) {
+        long now = sl.getGameTime();
+        Long windowStart = wanderFailLogWindows.get(avoiding);
+        if (windowStart != null && now - windowStart < WANDER_FAIL_LOG_INTERVAL_TICKS) {
+            return;
+        }
+        wanderFailLogWindows.put(avoiding, now);
+        Object[] args = new Object[reasonArgs.length + 1];
+        System.arraycopy(reasonArgs, 0, args, 0, reasonArgs.length);
+        args[reasonArgs.length] = avoiding;
+        QT.FLAG_LOGGER.warn("Could not find wander target: " + reason + " [avoiding {}]", args);
     }
 
     public ImmutableSet<UUID> getVillagers() {
@@ -803,6 +918,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     @Override
+    public int missingBeds() {
+        long numVillagers = villagerHandle.size();
+        return roomsHandle.missingBeds(numVillagers);
+    }
+
+    @Override
+    public int missingBedsWithArrivals(int arrivals) {
+        return roomsHandle.missingBeds(villagerHandle.size() + arrivals);
+    }
+
+    @Override
     public boolean isInitialized() {
         return isInitializedQuests && biomes.isInitialized() && initializers.isEmpty();
     }
@@ -834,9 +960,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return uuid;
     }
 
+    /** Takes on a moved town's UUID. Call before the flag finishes loading. */
+    void adoptRelocatedIdentity(UUID carried) {
+        this.uuid = carried;
+    }
+
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
         roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
+        // A registered welcome mat completes the town gate quest.
+        Position gatePos = Positions.FromBlockPos(welcomeMatBlock);
+        MCRoom gateRoom = new MCRoom(gatePos, ImmutableList.of(InclusiveSpace.from(gatePos).to(gatePos)), welcomeMatBlock.getY());
+        quests.markQuestAsComplete(gateRoom, SpecialQuests.TOWN_GATE);
         setChanged();
         AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
                 getServerLevel(),

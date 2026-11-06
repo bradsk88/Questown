@@ -87,6 +87,8 @@ public class TownFlagState {
     private final Stack<Function<TownFlagBlockEntity, MCTownState>> townInit = new Stack<>();
 
     private final Map<BlockPos, Integer> listenedBlocks = new HashMap<>();
+
+    private long ticksSinceContainerScan = 0;
     private final ArrayList<Integer> times = new ArrayList<>();
 
     public TownFlagState(TownFlagBlockEntity parent) {
@@ -455,6 +457,15 @@ public class TownFlagState {
         }
         QT.FLAG_LOGGER.info("Running the morning the town slept through while no player was near (from {} to {})", lastTick, now);
         e.morningTick(gameTime);
+    }
+
+    private boolean isDueForContainerScan() {
+        ticksSinceContainerScan++;
+        if (ticksSinceContainerScan < Config.CONTAINER_SCAN_INTERVAL.get()) {
+            return false;
+        }
+        ticksSinceContainerScan = 0;
+        return true;
     }
 
     MCTownState warp(
