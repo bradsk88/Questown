@@ -281,6 +281,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         if (handler == null) {
             return false;
         }
+        // One per slot: villager items never stack.
         return Compat.insertInNextOpenSlot(handler, item, 1);
     }
 

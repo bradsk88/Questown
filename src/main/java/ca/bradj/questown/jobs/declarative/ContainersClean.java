@@ -1,4 +1,4 @@
-package ca.bradj.questown.jobs;
+package ca.bradj.questown.jobs.declarative;
 
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.Nullable;

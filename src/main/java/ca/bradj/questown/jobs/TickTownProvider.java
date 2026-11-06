@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.declarative.DeclarativeJobs;
+import ca.bradj.questown.jobs.declarative.ContainersClean;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -64,7 +66,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.roomsNeedingVillagerInput = roomsNeedingIngredientsOrTools;
         this.convert = convert;
         this.dayTime = dayTime;
-        this.roomsV2 = () -> JobsClean.rooms(
+        this.roomsV2 = () -> DeclarativeJobs.rooms(
                 roomsNeedingIngredientsOrTools::getMatches,
                 getJobBlockState,
                 isJobBlock,
@@ -96,7 +98,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public boolean isUnfinishedTimeWorkPresent() {
-        return JobsClean.isUnfinishedTimeWorkPresent(roomsFinder, getTicksLeft);
+        return DeclarativeJobs.isUnfinishedTimeWorkPresent(roomsFinder, getTicksLeft);
     }
 
     @Override
