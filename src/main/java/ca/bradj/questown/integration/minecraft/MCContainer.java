@@ -12,9 +12,17 @@ import java.util.Collection;
 public class MCContainer implements MCContainerInterface {
 
     private final Container container;
+    private final Runnable onTouch;
 
     public MCContainer(@NotNull Container container) {
+        this(container, () -> {
+        });
+    }
+
+    /** {@code onTouch} runs when an item goes in or out. */
+    public MCContainer(@NotNull Container container, Runnable onTouch) {
         this.container = container;
+        this.onTouch = onTouch;
     }
 
     @Override
@@ -32,6 +40,7 @@ public class MCContainer implements MCContainerInterface {
     public MCTownItem removeItem(
             int index
     ) {
+        onTouch.run();
         return MCTownItem.fromMCItemStack(container.removeItem(index, 1));
     }
 
@@ -40,6 +49,7 @@ public class MCContainer implements MCContainerInterface {
             int i,
             MCTownItem item
     ) {
+        onTouch.run();
         container.setItem(i, item.toMCItemStack());
         return true;
     }

@@ -84,12 +84,14 @@ import ca.bradj.questown.gui.Ingredients;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -112,6 +114,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public static final Map<MemoryModuleType<GlobalPos>, BiPredicate<VisitorMobEntity, Holder<PoiType>>> POI_MEMORIES = ImmutableMap.of(
             MemoryModuleType.HOME, (p_35493_, p_35494_) -> p_35494_.is(PoiTypes.HOME)
     );
+    private final TripVisibility tripVisibility = new TripVisibility();
+    // Built in registerGoals, which runs before field initializers.
+    private @Nullable LingeringDoorGoal doorGoal;
     private static final EntityDataAccessor<Boolean> visible = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.BOOLEAN
     );
@@ -638,6 +643,13 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
                 );
             }
         }
+        if (vis != this.entityData.get(visible)) {
+            // Sparkles where the villager leaves or comes back, rather than vanishing.
+            Vec3 sparkle = TripVisibility.sparkleAt(vis, position(), j.getWorkSpotBlock());
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sparkle.x, sparkle.y + 0.8, sparkle.z, 12, 0.4, 0.6, 0.4, 0.0);
+            QT.VILLAGER_LOGGER.debug("[visibility] {} {} at status {} ({}), sparkles at {}", UtilClean.truncateMiddle(uuid),
+                    vis ? "shown" : "hidden", j.getStatus(), j.getId(), sparkle);
+        }
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
@@ -1020,7 +1032,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         super.load(tag);
         if (tag.contains(NBT_TOWN_X) && tag.contains(NBT_TOWN_Y) && tag.contains(NBT_TOWN_Z)) {
             BlockPos bp = new BlockPos(tag.getInt(NBT_TOWN_X), tag.getInt(NBT_TOWN_Y), tag.getInt(NBT_TOWN_Z));
-            if (this.level instanceof ServerLevel sl) {
+            if (this.getLevel() instanceof ServerLevel sl) {
                 BlockEntity entity = sl.getBlockEntity(bp);
                 if (!(entity instanceof TownFlagBlockEntity flag)) {
                     QT.VILLAGER_LOGGER.error("Entity at {} was not a TownFlag", bp);
@@ -1045,10 +1057,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return new VillagerPathNavigation(this, p_21480_);
     }
 
+    // No door malus: vanilla treats a negative malus as impassable.
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+        this.doorGoal = new LingeringDoorGoal(this);
+        this.goalSelector.addGoal(2, doorGoal);
         this.goalSelector.addGoal(2, new OpenGateGoal(this, true));
     }
 
@@ -1078,7 +1092,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         brain.addActivity(Activity.REST, getRestPackage());
         brain.addActivity(Activity.CORE, getCorePackage());
         brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        brain.updateActivityFromSchedule(this.level.getDayTime(), this.level.getGameTime());
+        brain.updateActivityFromSchedule(this.getLevel().getDayTime(), this.getLevel().getGameTime());
         return brain;
     }
 
@@ -1092,10 +1106,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void startSleeping(BlockPos p_21141_) {
         getInBed(p_21141_);
         this.setSleepingPos(p_21141_);
-        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.level.getGameTime());
+        this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.getLevel().getGameTime());
         this.brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-        this.lastBedTime = Util.getDayTime(level);
+        this.lastBedTime = Util.getDayTime(getLevel());
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -1109,9 +1123,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             this.stopRiding();
         }
 
-        BlockState blockstate = this.level.getBlockState(p_21141_);
-        if (blockstate.isBed(level, p_21141_, this)) {
-            blockstate.setBedOccupied(level, p_21141_, this, true);
+        BlockState blockstate = this.getLevel().getBlockState(p_21141_);
+        if (blockstate.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+            getLevel().setBlock(p_21141_, blockstate.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.TRUE), 3);
         }
 
         this.setPose(SLEEPING);
@@ -1470,7 +1484,19 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return false;
         }
 
+        // A lit campfire would burn a villager inside it; other fire still hurts.
+        if ((p_21016_ == net.minecraft.world.damagesource.DamageSource.IN_FIRE || p_21016_ == net.minecraft.world.damagesource.DamageSource.ON_FIRE) && !getLevel().isClientSide() && inOrOnLitCampfire()) {
+            return false;
+        }
+
         return super.hurt(p_21016_, p_21017_);
+    }
+
+    /** Whether the villager's feet are in or on a lit campfire. */
+    private boolean inOrOnLitCampfire() {
+        BlockPos feet = blockPosition();
+        return CampfireBlock.isLitCampfire(getLevel().getBlockState(feet))
+                || CampfireBlock.isLitCampfire(getLevel().getBlockState(feet.below()));
     }
 
     @Override
@@ -1525,6 +1551,34 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     public TownInterface getTown() {
         return town;
+    }
+
+    /** Outside the town; false while away on a trip. */
+    public boolean isStrandedOutsideTown() {
+        if (town == null || !entityData.get(visible)) {
+            return false;
+        }
+        return StrandedRescue.isOutsideTown(blockPosition(), town.getTownAnchors());
+    }
+
+    /** Sends a stranded villager back to the gate, with a puff and a sound. */
+    public void rescueToGate(String why) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
+            return;
+        }
+        Vec3 from = position();
+        Vec3 to = town.getVisitorJoinPos();
+        poofHere(sl);
+        getNavigation().stop();
+        teleportTo(to.x + 0.5, to.y, to.z + 0.5);
+        poofHere(sl);
+        setNeed(TownieNeed.NONE);
+        QT.VILLAGER_LOGGER.info("[rescue] {} poofed from {} to the gate at {} ({})", uuid, from, to, why);
+    }
+
+    private void poofHere(ServerLevel sl) {
+        sl.sendParticles(ParticleTypes.POOF, getX(), getY() + 0.8, getZ(), 20, 0.3, 0.5, 0.3, 0.02);
+        Compat.playNeutralSound(sl, blockPosition(), SoundEvents.CHORUS_FRUIT_TELEPORT);
     }
 
     public void freeze(int ticks) {

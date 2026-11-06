@@ -41,7 +41,14 @@ public class TownDoorItem extends Item {
         InteractionResult interactionResult = input.getItem().useOn(new UseOnContext(ctx, input));
         if (interactionResult.equals(InteractionResult.CONSUME) && ctx.getLevel() instanceof ServerLevel sl) {
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
-            parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
+            if (parent == null) {
+                QT.ITEM_LOGGER.error(
+                        "Town door placed at {} but parent flag not found; door not registered",
+                        ctx.getClickedPos().above()
+                );
+            } else {
+                parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
+            }
         }
         if (!Compat.configGet(Config.INFINITE_TOWN_DOORS).get()) {
             ctx.getItemInHand().shrink(1);

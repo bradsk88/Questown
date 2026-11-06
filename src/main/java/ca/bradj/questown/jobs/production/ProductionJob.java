@@ -138,13 +138,7 @@ public abstract class ProductionJob<
         if (sl == null) {
             return false;
         }
-        Material footMaterial = sl.getBlockState(bp).getMaterial();
-        boolean footSpotBlocked = footMaterial.isSolid();
-        BlockState torsoMaterial = sl.getBlockState(bp.above());
-        boolean torsoSpotBlocked = torsoMaterial.getMaterial().isSolid();
-        BlockState groundMaterial = sl.getBlockState(bp.below());
-        boolean groundSpotSolid = groundMaterial.getMaterial().isSolid();
-        return groundSpotSolid && !(footSpotBlocked || torsoSpotBlocked);
+        return WalkTargets.isStandable(sl, bp);
     }
 
     private BlockPos jobSite;
@@ -407,6 +401,15 @@ public abstract class ProductionJob<
 
     protected void setLookTarget(BlockPos jobSite1) {
         this.lookTarget = jobSite1;
+    }
+
+    /** Where a villager stands to use a container: in front of it, at the room's floor level, so the path goes through the door rather than over the roof. */
+    protected static @NotNull BlockPos navTargetForContainer(ContainerTarget<MCContainer, MCTownItem> target) {
+        MCRoom room = target.getRoom();
+        if (room == null) {
+            return Positions.ToBlock(target.getInteractPosition(), target.getYPosition());
+        }
+        return Positions.ToBlock(target.getInteractPosition(), room.yCoord);
     }
 
     protected abstract @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel level);

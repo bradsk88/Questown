@@ -2,10 +2,12 @@ package ca.bradj.questown.town;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
+import ca.bradj.questown.integration.minecraft.ChestTouches;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
-import ca.bradj.questown.jobs.declarative.DeclarativeJob;
+import ca.bradj.questown.jobs.InteractionSpots;
+import ca.bradj.questown.jobs.WalkTargets;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.RoomsHolder;
@@ -172,8 +174,12 @@ public class TownContainers {
 
         BlockState blockState = level.getBlockState(p);
         if (room != null) {
-            Direction doorDirection = DeclarativeJob.getDoorDirectionFromCenter(room);
-            interactPos = Positions.FromBlockPos(p.relative(doorDirection));
+            // Where a villager can stand, door side first, never inside a wall.
+            BlockPos spot = InteractionSpots.find(p, room, b -> WalkTargets.isStandable(level, b));
+            if (spot == null) {
+                spot = p.relative(InteractionSpots.doorDirectionFromCenter(room));
+            }
+            interactPos = Positions.FromBlockPos(spot);
         } else {
             Optional<Direction> facing = blockState.getOptionalValue(BlockStateProperties.HORIZONTAL_FACING);
             if (facing.isPresent()) {
@@ -187,12 +193,14 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
         if (!blockState.getBlock().equals(block)) {
-            QT.BLOCK_LOGGER.error(
+            // The block at a recorded chest changed; expected, so debug only.
+            QT.BLOCK_LOGGER.debug(
                     "Given block is not present at given position. Actual blockstate {}", blockState
             );
             return new ContainerTarget<>(
@@ -200,7 +208,8 @@ public class TownContainers {
                     new MCContainer(ContainerTarget.REMOVED), () -> false,
                     item -> TownContainers.setWorkSpot(room, p, item),
                     REJECTS_EVERYTHING,
-                    NO_BOOST
+                    NO_BOOST,
+                    room
             );
         }
 
@@ -219,7 +228,7 @@ public class TownContainers {
         if (container == null) {
             throw new IllegalStateException("Container is null at " + p);
         }
-        MCContainer mcContainer = new MCContainer(container);
+        MCContainer mcContainer = new MCContainer(container, () -> ChestTouches.touch(level, p));
 
         return new ContainerTarget<>(
                 position,
@@ -229,7 +238,8 @@ public class TownContainers {
                 () -> level.getBlockState(p) == blockState,
                 item -> TownContainers.setWorkSpot(room, p, item),
                 ACCEPTS_ALL_ITEMS,
-                NO_BOOST
+                NO_BOOST,
+                room
         );
     }
 
@@ -298,7 +308,8 @@ public class TownContainers {
                 item -> {
                 }, // TODO: Allow players to put organizer requests in non-chest containers?
                 item -> ((ContainerTarget.Container) blockEntity).canAcceptIfSpaceAllows(item),
-                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value()
+                ((ContainerTarget.Container) blockEntity).getItemAcceptanceRankBoost().value(),
+                null
         );
     }
 
