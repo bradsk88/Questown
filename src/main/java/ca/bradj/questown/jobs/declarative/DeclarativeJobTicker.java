@@ -264,6 +264,18 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         );
     }
 
+    static <POS> State stateForJob(
+            WorkStatusHandle<POS, ?> work,
+            POS pos,
+            int maxState
+    ) {
+        State s = work.getJobBlockState(pos);
+        boolean pastThisJobsLastState = s.processingState() > maxState;
+        boolean willNeverMoveOn = s.processingState() == maxState
+                && !s.hasWorkLeft()
+                && work.getTimeToNextState(pos) == null;
+    }
+
     private <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> RoomsNeedingVillagerInput<ROOM, RECIPE, POS> computeRoomsNeedingInput(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work

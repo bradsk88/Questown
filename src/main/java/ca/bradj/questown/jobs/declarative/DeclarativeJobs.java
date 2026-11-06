@@ -355,7 +355,7 @@ public class DeclarativeJobs {
                 MCRoom fakeRoom = Spaces.metaRoomAround(workPos, 1);
                 final long VIRTUAL_MORNING_TICK = 1000;
                 @Nullable ProductionStatus nuStatus = ProductionStatuses.getNewStatusFromSignal(
-                        status,
+                        wi.getJobId(), status,
                         Signals.fromDayTime(new Signals.DayTime(VIRTUAL_MORNING_TICK)),
                         wi.asInventory(() -> wi.getHeldItems(fState, villagerNum), ztate::processingState),
                         wi.asTownJobs(

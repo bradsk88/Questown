@@ -1,6 +1,9 @@
 package ca.bradj.questown.town.workstatus;
 
+import ca.bradj.questown.QT;
+
 import java.util.Objects;
+import java.util.function.Function;
 
 public class State {
     private final int processingState;
@@ -26,6 +29,18 @@ public class State {
 
     public static State freshAtState(int s) {
         return new State(s, 0, 0);
+    }
+
+    public static <POS> State seededOrFresh(
+            Function<POS, State> getJobBlockState,
+            POS pos
+    ) {
+        State s = getJobBlockState.apply(pos);
+        if (s != null) {
+            return s;
+        }
+        QT.JOB_LOGGER.debug("No work state stored at {}; reading it as fresh", pos);
+        return freshAtState(0);
     }
 
     public State setProcessing(int s) {

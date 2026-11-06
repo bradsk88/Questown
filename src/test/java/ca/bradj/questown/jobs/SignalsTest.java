@@ -1,6 +1,8 @@
 package ca.bradj.questown.jobs;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static ca.bradj.questown.jobs.Signals.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;

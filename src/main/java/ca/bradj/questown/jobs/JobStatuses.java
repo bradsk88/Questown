@@ -11,16 +11,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class JobStatuses {
+
+    private static final Logger log = LoggerFactory.getLogger(JobStatuses.class);
+    private static final long STATUS_REASONS_LOG_INTERVAL_MS = 4000;
+    private static final Map<String, Long> lastStatusReasonsLog = new ConcurrentHashMap<>();
 
     public static boolean hasItems(EntityInvStateProvider<?> inventory) {
         if (inventory.hasNonSupplyItems()) {
@@ -73,7 +80,85 @@ public class JobStatuses {
     ) {
         LZCD<STATUS> root = usualRoutineRoot(ctx);
         root.initializeAll();
-        return nullIfUnchanged(ctx.currentStatus, root.resolve());
+        STATUS resolved = root.resolve();
+        logStatusReasons(ctx.jobId(), ctx.currentStatus, resolved, root);
+        return nullIfUnchanged(ctx.currentStatus, resolved);
+    }
+
+    private static <STATUS extends IStatus<STATUS>> void logStatusReasons(
+            JobID jobId,
+            STATUS current,
+            STATUS resolved,
+            LZCD<STATUS> root
+    ) {
+        if (!QT.DEV_LOGS || !ServerJobsRegistry.hasGlobalRule(jobId, SpecialRules.LOG_STATUS_REASONS)) {
+            return;
+        }
+        String label = jobId.toNiceString();
+        long now = System.currentTimeMillis();
+        Long last = lastStatusReasonsLog.get(label);
+        if (last != null && now - last < STATUS_REASONS_LOG_INTERVAL_MS) {
+            return;
+        }
+        lastStatusReasonsLog.put(label, now);
+        try {
+            StringBuilder reasons = new StringBuilder();
+            collectReasons(root.populate(), reasons, 0);
+            log.info("[WHY] job={} current={} → {}\n{}", label, current, resolved, reasons);
+        } catch (RuntimeException e) {
+            log.warn("[WHY] job={} current={} → {} (dump failed)", label, current, resolved, e);
+        }
+    }
+
+    private static void collectReasons(
+            Populated<?> pop,
+            StringBuilder out,
+            int depth
+    ) {
+        if (pop == null || depth > 60) {
+            return;
+        }
+        for (Map.Entry<String, Object> e : pop.conditions().entrySet()) {
+            appendCondition(e.getKey(), e.getValue(), out, depth);
+        }
+        Populated<?> fb = pop.ifCondFailOrNull();
+        if (fb != null) {
+            out.append("  else →\n");
+            collectReasons(fb, out, depth + 1);
+        }
+    }
+
+    private static void appendCondition(
+            String key,
+            Object val,
+            StringBuilder out,
+            int depth
+    ) {
+        if (!(val instanceof Populated<?> cp)) {
+            out.append(String.format("  %s = %s%n", key, val));
+            return;
+        }
+        if (cp.value() instanceof WithReason<?> wr) {
+            out.append(String.format("  %s = %s (%s)%n", key, wr.value(), wr.reason()));
+        } else {
+            out.append(String.format("  %s = %s%n", key, cp.value()));
+        }
+        appendDetails(cp, out, depth);
+    }
+
+    private static void appendDetails(
+            Populated<?> cp,
+            StringBuilder out,
+            int depth
+    ) {
+        for (Map.Entry<String, Object> d : cp.conditions().entrySet()) {
+            if (d.getValue() instanceof Populated<?> nested) {
+                out.append(String.format("    %s:%n", d.getKey()));
+                collectReasons(nested, out, depth + 1);
+                continue;
+            }
+            out.append(String.format("    %s = %s%n", d.getKey(), d.getValue()));
+        }
     }
 
     public static <STATUS extends IStatus<STATUS>, SUP_CAT> @NotNull LZCD<STATUS> usualRoutineRoot(
@@ -269,6 +354,22 @@ public class JobStatuses {
      *                              world for collection by whomever walks by.
      */
     public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+            STATUS currentStatus,
+            boolean prioritizeExtraction,
+            EntityInvStateProvider<Integer> inventory,
+            EntityLocStateProvider<ROOM> entity,
+            JobTownProvider<ROOM> town,
+            IProductionJob<STATUS> job,
+            IProductionStatusFactory<STATUS> factory
+    ) {
+        return productionRoutine(
+                new JobID("unknown", "unknown"),
+                currentStatus, prioritizeExtraction, inventory, entity, town, job, factory
+        );
+    }
+
+    public static <STATUS extends IProductionStatus<STATUS>, ROOM extends Room> STATUS productionRoutine(
+            JobID jobId,
             STATUS currentStatus,
             boolean prioritizeExtraction,
             EntityInvStateProvider<Integer> inventory,

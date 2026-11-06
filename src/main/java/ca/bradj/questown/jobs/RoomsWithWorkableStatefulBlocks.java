@@ -88,7 +88,14 @@ public final class RoomsWithWorkableStatefulBlocks<POS> implements LZCD.Dependen
 
     @Override
     public String describe() {
-        return "RoomsContainWorkState=" + value.value();
+        if (value == null) {
+            return "RoomsContainWorkState=<not populated>";
+        }
+        WithReason<Boolean> w = value.value();
+        if (w == null) {
+            return "RoomsContainWorkState=<no reason>";
+        }
+        return "RoomsContainWorkState=" + w;
     }
 
     @Override

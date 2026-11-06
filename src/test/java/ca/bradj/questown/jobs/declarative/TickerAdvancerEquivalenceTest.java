@@ -221,6 +221,80 @@ class TickerAdvancerEquivalenceTest {
                 + ".\n" + comparison.diffMessage());
     }
 
+    // Leavers: each must actually produce, not just match between real time and warp.
+
+    static Stream<Arguments> notoolExtractVariants() {
+        String food = "#questown:villager_food";
+        return Stream.of(
+                Arguments.of("gatherer_unmapped_notool_short.json", food, 4000),
+                Arguments.of("gatherer_unmapped_notool_med.json", food, 6000),
+                Arguments.of("gatherer_unmapped_notool_full.json", food, 8000)
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("notoolExtractVariants")
+    void gatherer_notool_ticker_shouldExtractProduct(
+            String filename, String food, int ticks) {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + filename);
+
+        EquivalenceTestFramework.TickerSetup setup = EquivalenceTestFramework.createTickerSetup(definition);
+        setup.inventory().set(0, new GathererJournalTest.TestItem(food));
+
+        EquivalenceTestFramework.runTickerWithStore(setup, ticks);
+        EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
+
+        Assertions.assertTrue(result.productExtracted(),
+                "Raw-meat leaver (" + filename + ") should extract its biome_loot product after " + ticks
+                        + " ticks. jobBlockState=" + result.jobBlockState()
+                        + " workRemaining=" + result.workRemaining()
+                        + " inventory=" + result.inventoryItems());
+    }
+
+    @Test
+    void gatherer_notool_freshMat_shouldStartAndLeaveState0() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_med.json");
+
+        EquivalenceTestFramework.TickerSetup setup = EquivalenceTestFramework.createTickerSetup(definition);
+        setup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+
+        EquivalenceTestFramework.runTickerWithStore(setup, 200);
+        EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
+
+        Assertions.assertTrue(result.jobBlockState() > 0,
+                "A gatherer at a fresh welcome mat with villager_food should get past state 0. "
+                        + "Stuck at state=" + result.jobBlockState()
+                        + ": the gate room or its job block is not visible, or the food is not accepted. "
+                        + "inventory=" + result.inventoryItems());
+    }
+
+    @Test
+    void gatherer_notool_unseededMat_shouldStillStartAndExtract() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "gatherer_unmapped_notool_med.json");
+
+        EquivalenceTestFramework.TickerSetup setup = EquivalenceTestFramework.createTickerSetup(definition);
+        setup.workStatusHandle().clearState(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
+        setup.inventory().set(0, new GathererJournalTest.TestItem("#questown:villager_food"));
+
+        EquivalenceTestFramework.runTickerWithStore(setup, 200);
+        EquivalenceTestFramework.SimulationResult startResult = EquivalenceTestFramework.captureResult(setup);
+
+        Assertions.assertTrue(startResult.jobBlockState() > 0,
+                "A gatherer whose store has no state for its welcome mat should still start, "
+                        + "reading the mat as fresh. Stuck at state=" + startResult.jobBlockState()
+                        + ". inventory=" + startResult.inventoryItems());
+
+        // Long enough for the timed wait; finishing shows as the extraction.
+        EquivalenceTestFramework.runTickerWithStore(setup, 5800);
+        EquivalenceTestFramework.SimulationResult result = EquivalenceTestFramework.captureResult(setup);
+
+        Assertions.assertTrue(result.productExtracted(),
+                "An unseeded-mat gatherer should complete and extract once it starts. "
+                        + "jobBlockState=" + result.jobBlockState() + " inventory=" + result.inventoryItems());
+        Assertions.assertTrue(result.inventoryItems().stream().anyMatch(s -> s.equals("loot")),
+                "The leaver should carry its extracted biome-loot result. inventory=" + result.inventoryItems());
+    }
+
     // ========== Crafter Planks Equivalence Test ==========
 
     @Test

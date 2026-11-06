@@ -6,7 +6,9 @@ import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -120,6 +122,10 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
 
         private final List<Runnable> tickListeners = new ArrayList<>();
 
+        private static final int TICKS_FOR_LOADING_FLAGS_TO_REGISTER_THEIR_MATS = 120;
+        private int ownerCheckTicks = 0;
+        private boolean ownerChecked = false;
+
         public Entity(
                 BlockPos p_155229_,
                 BlockState p_155230_
@@ -155,7 +161,34 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
                 BlockState blockState,
                 Entity entity
         ) {
+            if (level instanceof ServerLevel sl && revertedToItemBecauseNoFlagOwnsIt(sl, pos, entity)) {
+                return;
+            }
             entity.tickListeners.forEach(Runnable::run);
+        }
+
+        private static boolean revertedToItemBecauseNoFlagOwnsIt(
+                ServerLevel sl,
+                BlockPos pos,
+                Entity entity
+        ) {
+            if (entity.ownerCheckTicks < TICKS_FOR_LOADING_FLAGS_TO_REGISTER_THEIR_MATS) {
+                entity.ownerCheckTicks++;
+                return false;
+            }
+            if (entity.ownerChecked) {
+                return false;
+            }
+            entity.ownerChecked = true;
+            if (TownFlags.ownsWelcomeMat(pos)) {
+                return false;
+            }
+            QT.BLOCK_LOGGER.warn(
+                    "Welcome mat at {} belongs to no town flag; removing it and dropping the item", pos
+            );
+            sl.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+            TownFlagSubBlocks.dropDrops(sl, pos, ImmutableList.of(Items.OAK_PRESSURE_PLATE.getDefaultInstance()));
+            return true;
         }
     }
 }

@@ -3,6 +3,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
+import ca.bradj.questown.jobs.leaver.RankBoost;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.jobs.production.RoomsNeedingVillagerInput;
 import ca.bradj.questown.logic.PredicateCollection;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -118,16 +120,79 @@ public class TestTickerDependencies implements
                 return pos.equals(IntegrationTestWorld.DEFAULT_WORKSPOT_POS);
             }
 
+            // The villager's held items count as town storage, as a leaver arrives carrying its starting request.
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asContainer() {
-                return null;
+                return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
             }
 
             @Override
             public @Nullable ContainerTarget<?, GathererJournalTest.TestItem> asChest() {
-                return null;
+                return pos.equals(HELD_ITEMS_STORE_POS) ? heldItemsContainer() : null;
             }
         };
+    }
+
+    static final Position HELD_ITEMS_STORE_POS = new Position(3, 3);
+
+    private ContainerTarget<ContainerTarget.Container<GathererJournalTest.TestItem>, GathererJournalTest.TestItem> heldItemsContainer() {
+        ContainerTarget.Container<GathererJournalTest.TestItem> container = new ContainerTarget.Container<>() {
+            @Override
+            public int size() {
+                return inventory.getItems().size();
+            }
+
+            @Override
+            public GathererJournalTest.TestItem getItem(int i) {
+                List<GathererJournalTest.TestItem> items = List.copyOf(inventory.getItems());
+                return i < items.size() ? items.get(i) : new GathererJournalTest.TestItem("");
+            }
+
+            @Override
+            public GathererJournalTest.TestItem removeItem(int index) {
+                return getItem(index);
+            }
+
+            @Override
+            public boolean isFull() {
+                return false;
+            }
+
+            @Override
+            public String toShortString() {
+                return "held-items";
+            }
+
+            @Override
+            public String toShortString(boolean includeAir) {
+                return "held-items";
+            }
+
+            @Override
+            public boolean canAcceptIfSpaceAllows(GathererJournalTest.TestItem item) {
+                return true;
+            }
+
+            @Override
+            public RankBoost getItemAcceptanceRankBoost() {
+                return RankBoost.SAME_AS_VANILLA_CHEST;
+            }
+
+            @Override
+            public boolean setItem(int index, GathererJournalTest.TestItem item) {
+                return false;
+            }
+        };
+        return new ContainerTarget<>(
+                HELD_ITEMS_STORE_POS,
+                64,
+                HELD_ITEMS_STORE_POS,
+                container,
+                () -> true,
+                x -> {},
+                x -> true,
+                1.0f
+        );
     }
 
     @Override
@@ -242,7 +307,26 @@ public class TestTickerDependencies implements
             Supplier<Position> randomWalkTarget,
             UnsafeVillagerData villagerData
     ) {
-        // No-op for tests - special rules not tested yet
+        // A fresh map each tick, as production refreshes it.
+        cachedRoomsNeedingInput = recomputeRoomsNeedingInput();
+    }
+
+    private RoomsNeedingVillagerInput<Room, String, Position> recomputeRoomsNeedingInput() {
+        int maxState = getMaxState();
+        Function<Position, State> stateForJob = pos -> DeclarativeJobTicker.stateForJob(workStatusHandle, pos, maxState);
+        return RoomsStatusLogic.<String, Position, GathererJournalTest.TestItem, GathererJournalTest.TestItem, Room, TestRoomMatch>compute(
+                getJobSites(),
+                stateForJob,
+                this::canClaim,
+                this::isJobBlock,
+                this::item,
+                this::getQuantityForStep,
+                this::tools,
+                state -> definition.workRequiredAtStates().containsKey(state),
+                this::getContainedBlocks,
+                this::makeNVIRoom,
+                maxState
+        );
     }
 
     @Override
@@ -329,7 +413,7 @@ public class TestTickerDependencies implements
     @SuppressWarnings("unchecked")
     @Override
     public <X> RoomsNeedingVillagerInput<Room, X, Position> getCachedRoomsNeedingInput() {
-        return (RoomsNeedingVillagerInput<Room, X, Position>) cachedRoomsNeedingInput;
+        return (RoomsNeedingVillagerInput<Room, X, Position>) recomputeRoomsNeedingInput();
     }
 
     @Override
@@ -363,7 +447,7 @@ public class TestTickerDependencies implements
 
     private Map<Integer, Predicate<GathererJournalTest.TestItem>> buildPredicateMap(Map<Integer, String> tagMap) {
         Map<Integer, Predicate<GathererJournalTest.TestItem>> result = new HashMap<>();
-        tagMap.forEach((state, tag) -> result.put(state, item -> item.value.equals(tag)));
+        tagMap.forEach((state, tag) -> result.put(state, item -> TestTagResolver.matches(item, tag)));
         return result;
     }
 

@@ -180,10 +180,7 @@ class RoomsStatusLogic {
                 .stream()
                 .filter(room -> {
                     for (POS e : getContainedBlocks.apply(room)) {
-                        State jobBlockState = work.apply(e);
-                        if (jobBlockState == null) {
-                            continue;
-                        }
+                        State jobBlockState = State.seededOrFresh(work, e);
                         if (!canClaim.test(e)) {
                             continue;
                         }
