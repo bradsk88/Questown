@@ -16,6 +16,10 @@ import java.util.function.Supplier;
 
 public class JobLogic<EXTRA, TOWN, POS> {
 
+    /** Extra ticks the stuck-job watchdog waits while a job is extracting, so a trip's product is extracted before the job is handed off. */
+    static final long EXTRACT_GRACE_TICKS = 200;
+    private long extractingTicks = 0;
+
     private int worked = 0;
     private int ticksWithoutNextJob = 0;
 
@@ -33,6 +37,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
     public interface JLWorld<EXTRA, TOWN, POS> {
         void changeJob(JobID id);
+
+        /** Whether {@code id} may start now: it can always start, or it finishes before evening. */
+        boolean fitsInDay(JobID id);
 
         WorkPosition<POS> getWorkSpot();
 
@@ -172,7 +179,11 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
 
         WorkPosition<POS> workSpot = worldBeforeTick.getWorkSpot();
-        if (workSpot == null && this.ticksSinceStart > expiration.maxTicks()) {
+        // A job waiting on a timer is mid-cycle; don't re-create it. Extraction gets a grace window.
+        extractingTicks = status.isExtractingProduct() ? extractingTicks + 1 : 0;
+        boolean inExtractGrace = extractingTicks > 0 && extractingTicks <= EXTRACT_GRACE_TICKS;
+        if (workSpot == null && !status.isWaitingForTimers() && !inExtractGrace
+                && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
             QT.JOB_LOGGER.debug(
@@ -191,10 +202,15 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (noSuppliesTicks > maxNoSupplyTicks) {
             QT.JOB_LOGGER.debug(
-                    "{} gave up waiting for ingredients after {} ticks (job: {})",
+                    "{} gave up waiting for ingredients after {} ticks (job: {}, status: {}, workSpot: {}, inJobSite: {}, inserted: {}, spotsByState: {})",
                     entityCurrentJob.rootId(),
                     noSuppliesTicks,
-                    entityCurrentJob.jobId()
+                    entityCurrentJob.jobId(),
+                    status,
+                    workSpot,
+                    isEntityInJobSite,
+                    worldBeforeTick.timesInserted(),
+                    worldBeforeTick.listAllWorkSpots()
             );
             this.grabbingInsertedSupplies = true;
             if (status == ProductionStatus.NO_SUPPLIES) {
@@ -225,7 +241,6 @@ public class JobLogic<EXTRA, TOWN, POS> {
             this.workSpot = null;
             return;
         }
-        worldBeforeTick.tryGetSupplies();
 
         if (wrappingUp) {
             if (worldBeforeTick.holdsWorkOutput()) {
@@ -240,6 +255,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
             ticksWithoutNextJob++;
             return;
         }
+        worldBeforeTick.tryGetSupplies();
     }
 
     protected boolean setup(

@@ -99,6 +99,11 @@ class JobLogicTest {
         }
 
         @Override
+        public boolean fitsInDay(JobID id) {
+            return true;
+        }
+
+        @Override
         public boolean setWorkLeftAtFreshState(int work) {
             State cur = states.getJobBlockState(ARBITRARY_WORKSPOT_POS);
             if (cur == null) {
@@ -213,18 +218,89 @@ class JobLogicTest {
                     Integer.MAX_VALUE
             );
         }
+
+        /** No work spot and not at the job site, as when away on a trip. */
+        public void tickAway(
+                ProductionStatus status,
+                ExpirationRules expiration
+        ) {
+            tick(
+                    null,
+                    () -> status,
+                    definition.jobId(),
+                    false,
+                    false,
+                    false,
+                    false,
+                    expiration,
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+    }
+
+    private static ExpirationRules maxTicksOf(long maxTicks) {
+        return new ExpirationRules(
+                () -> Long.MAX_VALUE,
+                () -> Long.MAX_VALUE,
+                jobID -> jobID,
+                () -> maxTicks,
+                jobID -> jobID
+        );
+    }
+
+    /** A job waiting on a timer is mid-cycle; the watchdog must not re-create it. */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_WhileWaitingForTimedState() {
+        AtomicBoolean changedJob = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
         AtomicBoolean handedOff = new AtomicBoolean();
         AtomicBoolean handedOff = new AtomicBoolean();
         AtomicBoolean handedOff = new AtomicBoolean();
-        AtomicBoolean handedOff = new AtomicBoolean();
+    }
+
+    /** A trip timer finishing on the watchdog's last tick still extracts. */
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick() {
+        AtomicBoolean changedJob = new AtomicBoolean();
         AtomicBoolean handedOff = new AtomicBoolean();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
             @Override
             public void changeToNextJob() {
                 handedOff.set(true);
             }
         };
         TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job on the extract tick");
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board before the product was extracted");
+    }
+
+    @Test
+    void tick_shouldNotHitMaxTicksFallback_OnTheExtractTick_AfterATripLongerThanTheWindow() {
         AtomicBoolean handedOff = new AtomicBoolean();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
             @Override
@@ -234,8 +310,95 @@ class JobLogicTest {
         };
         TestJobLogic logic = new TestJobLogic(world, DEFINITION);
 
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 100; i++) {
+            logic.tickAway(ProductionStatus.WAITING_FOR_TIMED_STATE, maxTicksOf(5));
+        }
+        logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+
+        Assertions.assertFalse(handedOff.get(), "the watchdog asked the board on the extract tick of a long trip");
+    }
+
+    @Test
+    void tick_maxTicksFallback_stillFires_WhenExtractingPastTheGrace() {
         AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 5 + JobLogic.EXTRACT_GRACE_TICKS + 5; i++) {
+            logic.tickAway(ProductionStatus.EXTRACTING_PRODUCT, maxTicksOf(5));
+        }
+
+        Assertions.assertTrue(handedOff.get(), "a job stuck extracting must not stall forever");
+    }
+
+    @Test
+    void tick_maxTicksFallback_handsOffToTheBoard_WhenTheFallbackWontFitInTheDay() {
+        AtomicBoolean changedJob = new AtomicBoolean();
         AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        Assertions.assertFalse(changedJob.get(), "the watchdog restarted a job that won't fit in the day");
+        Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeToNextJob() {
+                handOffs.incrementAndGet();
+            }
+
+            @Override
+            public boolean fitsInDay(JobID id) {
+                return false;
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
+        AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedJob.set(true);
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
+        }
+
     }
 
     @Test
