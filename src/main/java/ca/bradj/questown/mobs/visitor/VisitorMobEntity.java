@@ -646,7 +646,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // only handle cosmetic stuff like position, pose, etc.
 
     private void detectNearbyDistractions(ServerLevel sl) {
-        List<Player> ps = level.getNearbyPlayers(
+        List<Player> ps = getLevel().getNearbyPlayers(
                 TargetingConditions.forNonCombat(),
                 this,
                 this.getBoundingBox().inflate(16.0D, 64.0D, 16.0D)
@@ -685,39 +685,39 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getBrain().getMemory(MemoryModuleType.WALK_TARGET)
                       .isPresent()) {
             BlockPos on = blockPosition();
-            BlockState bs = level.getBlockState(on);
+            BlockState bs = getLevel().getBlockState(on);
             if (bs.getBlock() instanceof FarmBlock) {
                 on = on.above();
-                bs = level.getBlockState(on);
+                bs = getLevel().getBlockState(on);
             }
             if (bs.getBlock() instanceof FenceGateBlock) {
                 bs = bs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(on, bs, 10);
+                getLevel().setBlock(on, bs, 10);
             }
             Direction dir = getDirection();
             BlockPos front = on.relative(dir);
-            BlockState fbs = level.getBlockState(front);
+            BlockState fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getCounterClockWise());
-            fbs = level.getBlockState(front);
+            fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             front = on.relative(dir.getClockWise());
-            fbs = level.getBlockState(front);
+            fbs = getLevel().getBlockState(front);
             if (fbs.getBlock() instanceof FenceGateBlock) {
                 fbs = fbs.setValue(FenceGateBlock.OPEN, true);
-                level.setBlock(front, fbs, 10);
+                getLevel().setBlock(front, fbs, 10);
             }
             BlockPos behind = on.relative(getDirection().getOpposite());
-            BlockState bbs = level.getBlockState(behind);
+            BlockState bbs = getLevel().getBlockState(behind);
             if (bbs.getBlock() instanceof FenceGateBlock) {
                 bbs = bbs.setValue(FenceGateBlock.OPEN, false);
-                level.setBlock(behind, bbs, 10);
+                getLevel().setBlock(behind, bbs, 10);
             }
         }
     }
@@ -726,13 +726,26 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     // State management should be done via the town block. This entity should
     // only handle cosmetic stuff like position, pose, etc.
 
+    /** Unregisters from the town on chunk unload; it registers again when it loads. */
+    @Override
+    public void onRemovedFromWorld() {
+        super.onRemovedFromWorld();
+        if (town == null || getLevel().isClientSide()) {
+            return;
+        }
+        RemovalReason reason = getRemovalReason();
+        if (reason == RemovalReason.UNLOADED_TO_CHUNK || reason == RemovalReason.UNLOADED_WITH_PLAYER) {
+            town.getVillagerHandle().remove(this);
+        }
+    }
+
     @Override
     public void remove(RemovalReason p_146834_) {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
-                level.addFreshEntity(new ItemEntity(
-                        level,
+                getLevel().addFreshEntity(new ItemEntity(
+                        getLevel(),
                         position().x,
                         position().y,
                         position().z,
@@ -741,6 +754,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             }
             if (town != null) {
                 town.getVillagerHandle().remove(this);
+            }
+            if (town instanceof TownFlagBlockEntity flag) {
+                flag.retireVillager(getUUID());
             }
         }
     }
@@ -785,7 +801,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     private Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob() {
-        if (level.isClientSide()) {
+        if (getLevel().isClientSide()) {
             return ClientSideThrowingJob.INSTANCE;
         }
         return this.job.get();
@@ -800,7 +816,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         if (getJob().shouldBeNoClip(town, blockPosition())) {
             return;
         }
-        List<Entity> list = this.level.getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
+        List<Entity> list = this.getLevel().getEntities(this, this.getBoundingBox(), EntitySelector.pushableBy(this));
         list = list.stream().filter(v -> !(getClass().isInstance(v) || v instanceof Player)).toList();
         // Copied from superclass
         if (!list.isEmpty()) {
@@ -880,6 +896,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     @Override
     public ItemStack getOffhandItem() {
         return getEntityData().get(lastHeldItem);
+    }
+
+    /** Hidden by its job, away on a trip. */
+    public boolean isAwayOnTrip() {
+        return !this.entityData.get(visible);
     }
 
     @Override
@@ -1250,6 +1271,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getStatus();
     }
 
+    public float getWorkProgress() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgress(town);
+        }
+        return -1;
+    }
+
     /** The job's work-site progress, for the inspect command; null when there is none. */
     public @Nullable String getWorkProgressDebug() {
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
@@ -1427,7 +1456,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .addStatsListener(villagerStatsMenu);
+            .addStatsListener(getUUID(), villagerStatsMenu);
     }
 
 
@@ -1436,7 +1465,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return;
         }
         town.getVillagerHandle()
-            .removeStatsListener(villagerStatsMenu);
+            .removeStatsListener(getUUID(), villagerStatsMenu);
     }
 
     public boolean shouldStandStill() {

@@ -361,6 +361,23 @@ public class DeclarativeJob extends
         return new LeaverReturn(level.getGameTime() + remaining, Math.max(total, remaining));
     }
 
+    /** How much of the current step's work is done, 0 to 1, or -1 when the job is not working off a count. */
+    public float getWorkProgress(TownInterface town) {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        if (spot == null || spot.jobBlock() == null) {
+            return -1;
+        }
+        State state = ((TownFlagBlockEntity) town).getRealWorkStatusHandle(
+                specialGlobalRules.contains(SpecialRules.SHARED_WORK_STATUS) ? null : ownerUUID
+        ).getJobBlockState(spot.jobBlock());
+        if (state == null || !state.hasWorkLeft()) {
+            return -1;
+        }
+        Integer declared = checks.getWorkForStep(state.processingState());
+        int total = Math.max(declared == null ? 0 : declared, state.workLeft());
+        return WorkProgress.fraction(state.workLeft(), total);
+    }
+
     public @Nullable String getWorkProgressDebug(TownInterface town) {
         WorkPosition<BlockPos> spot = ticker.workSpot();
         if (spot == null || spot.jobBlock() == null) {

@@ -36,6 +36,7 @@ import static ca.bradj.questown.gui.PagedCardScreen.buttonWidth;
 public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPagedCardScreen<C, UIQuest> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final String VILLAGERS_TAB = "tooltips.villagers";
 
     private static final int TEXT_COLOR = 0xFF404040;
     private static final int TEXT_MARGIN = 12;
@@ -47,6 +48,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private final List<UIQuest> quests;
     private final JEI.NineNine background;
     private final Map<Position, Runnable> removes = new HashMap<>();
+    /** This frame's clickable item icons on ITEM and LOOT cards. */
+    private final Map<Position, Ingredient> itemIconClicks = new HashMap<>();
     private final SubUI tabs;
 
     private final boolean allComplete;
@@ -71,6 +74,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs = tabs;
     }
 
+    /** Open quests, or the completed ones once the player asks for them. */
     @Override
     protected ImmutableList<UIQuest> cardsData() {
         if (showingCompleted) {
@@ -303,6 +307,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                             Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
         }
 
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            return jobChangeTooltip(recipe, villagersTabShown);
+        }
+
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
             return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
         }
@@ -341,6 +349,25 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 ? Compat.getItemName(recipe.getWantedId())
                 : Ingredients.getName(recipe.getIngredients().iterator().next());
         return ImmutableList.of(Compat.translatable("menu.quests.loot_quest", size, name));
+    }
+
+    /** The card's text, plus a grey click hint once the villagers tab exists. */
+    private static List<Component> jobChangeTooltip(UIQuest recipe, boolean villagersTabShown) {
+        List<Component> base = recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()
+                ? ImmutableList.of(Compat.literal(recipe.getFlavorText()))
+                : renderJobQuestTooltip(recipe);
+        return withVillagersHint(base, villagersTabShown);
+    }
+    private static List<Component> withVillagersHint(List<Component> base, boolean villagersTabShown) {
+        if (!villagersTabShown) {
+            return base;
+        }
+        return ImmutableList.<Component>builder()
+                .addAll(base)
+                .add(Compat.translatableStyled(
+                        "menu.quests.job_change.click_villagers",
+                        Style.EMPTY.applyFormat(ChatFormatting.GRAY)))
+                .build();
     }
 
     private static ImmutableList<Component> renderJobQuestTooltip(UIQuest recipe) {
@@ -490,6 +517,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             ingredients = ImmutableList.of(Ingredient.of(Items.OAK_DOOR));
         }
 
+        // An item icon opens the jobs that make it (for a tag, any of its items).
+        boolean clickable = recipe.getType() == Quest.QuestType.ITEM || recipe.getType() == Quest.QuestType.LOOT;
         return RenderUtil.stripOfRequestableItems(
                 (ing, coord) -> {
                     Ingredients.render(ctx, ing, coord.x(), coord.y());
@@ -520,6 +549,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             int mouseX,
             int mouseY
     ) {
+        itemIconClicks.clear();
         super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
@@ -576,7 +606,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, panelHeight()));
     }
 
     @Override

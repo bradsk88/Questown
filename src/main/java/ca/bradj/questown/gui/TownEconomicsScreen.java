@@ -38,6 +38,8 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         this.tabs = FlagTabs.forMenu(menu, "tooltips.economics");
     }
 
+    private static boolean showRecent = false;
+
     @Override
     protected ImmutableList<ItemEconomicsData> cardsData() {
         return EconomicsCardOrder.order(showRecent ? lastUpdate.recent() : lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
@@ -97,6 +99,10 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
                 viewToggleLabel().getString());
         ctx.renderWidget(previousView, mouseX, mouseY, partialTicks);
         ctx.renderWidget(nextView, mouseX, mouseY, partialTicks);
+        if (isOverViewToggle(mouseX, mouseY)) {
+            this.showTooltip(Compat.translatable("questown.menu.economics.view.tooltip"));
+            return;
+        }
         renderTooltips(ctx, mouseX, mouseY);
     }
 

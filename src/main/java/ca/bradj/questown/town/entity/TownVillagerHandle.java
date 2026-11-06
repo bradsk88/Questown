@@ -308,6 +308,14 @@ public final class TownVillagerHandle {
     /** Gives the next number, unless the villager already has one. */
     public void assignDisplayNumber(UUID vuid) {
         displayNumbers.assign(vuid);
+    }
+
+    /** The villager died; its number is never reused. */
+    void retireDisplayNumber(UUID vuid) {
+        displayNumbers.retire(vuid);
+    }
+
+    private void stampNameplate(VisitorMobEntity villager) {
         int displayNumber = displayNumberFor(villager.getUUID());
         if (displayNumber <= 0) {
             return;
@@ -338,6 +346,14 @@ public final class TownVillagerHandle {
 
     Map<UUID, Integer> getDisplayNumbers() {
         return displayNumbers.byVuid();
+    }
+
+    /** Villagers in the saved roster, which doesn't drop while their entities are unloaded. */
+    long knownVillagerCount() {
+        return displayNumbers.byVuid().size();
+    }
+
+    int getHighestDisplayNumber() {
         return displayNumbers.highest();
     }
 
@@ -409,6 +425,28 @@ public final class TownVillagerHandle {
             boolean b
     ) {
         delegate.changeJobForVillager(getUuid(uuid), idForRoot, getTick(), b);
+    }
+
+    private final ca.bradj.questown.town.PendingJobSwitches<VillagerUUID, JobID> switchesAfterTrip =
+            new ca.bradj.questown.town.PendingJobSwitches<>();
+
+    /** Switches the villager's job now, dropping any trip in progress. */
+    void switchJobNow(VillagerUUID uuid, JobID job) {
+        town.getUnsafe().resetWorkStatusFor(getUuid(uuid));
+        changeJobForVillager(uuid, job, true);
+    }
+
+    /** Switches the villager's job at its next job pick. */
+    void switchJobAfterTrip(VillagerUUID uuid, JobID job) {
+        switchesAfterTrip.request(uuid, job);
+    }
+
+    @Nullable JobID peekSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.peek(uuid);
+    }
+
+    @Nullable JobID takeSwitchAfterTrip(VillagerUUID uuid) {
+        return switchesAfterTrip.take(uuid);
     }
 
     VisitorMobEntity getEntity(VillagerUUID ownerUUID) {

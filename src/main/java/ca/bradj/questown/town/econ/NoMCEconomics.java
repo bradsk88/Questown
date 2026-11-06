@@ -134,6 +134,26 @@ public class NoMCEconomics {
         return roomsAll;
     }
 
+    public static final long RECENT_WINDOW_TICKS = 1000;
+
+    /** Unmet needs since {@code sinceTick}, all villagers, most needed first. */
+    public static ImmutableList<ItemEconomicsData> aggregateSince(Collection<UnmetNeed> records, long sinceTick) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (UnmetNeed n : records) {
+            if (n.tick() >= sinceTick) {
+                counts.merge(n.request(), 1, Integer::sum);
+            }
+        }
+        return counts.entrySet().stream()
+                .map(e -> new ItemEconomicsData(e.getKey(), e.getValue()))
+                .sorted((x, y) -> Integer.compare(y.timesNeeded(), x.timesNeeded()))
+                .collect(ImmutableList.toImmutableList());
+    }
+
+    public ImmutableList<ItemEconomicsData> getRecentItems(long nowTick) {
+        return aggregateSince(unmetNeedsRecord, nowTick - RECENT_WINDOW_TICKS);
+    }
+
     public interface Needable {
         int timesNeeded();
     }

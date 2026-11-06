@@ -13,6 +13,9 @@ import java.util.Map;
 public class StatusArt {
 
     private static final Map<ProductionStatus, String> pArt;
+    // working, waiting and extracting are placeholder art.
+    private static final String WORKING_ART = "menu/gatherer/working.png";
+    private static final String WAITING_ART = "menu/gatherer/waiting.png";
     public static final ResourceLocation ERROR_TEX = new ResourceLocation("questown", "textures/error.png");
 
     static {
@@ -26,6 +29,8 @@ public class StatusArt {
         b.put(ProductionStatus.COLLECTING_SUPPLIES, "menu/gatherer/get_supplies.png");
         b.put(ProductionStatus.NO_WORK_POSSIBLE, "menu/gatherer/no_work_possible.png");
         b.put(ProductionStatus.DROPPING_LOOT, "menu/gatherer/dropping_loot.png");
+        b.put(ProductionStatus.WAITING_FOR_TIMED_STATE, WAITING_ART);
+        b.put(ProductionStatus.EXTRACTING_PRODUCT, "menu/gatherer/extracting.png");
         pArt = b.build();
     }
 
@@ -35,6 +40,9 @@ public class StatusArt {
     ) {
         if (status instanceof ProductionStatus ps) {
             String art = pArt.get(ps);
+            if (art == null && ps.isWorkingOnProduction()) {
+                art = WORKING_ART;
+            }
             if (WorkSeekerJob.isSeekingWork(jobId) && ps.isExtractingProduct()) {
                 art = "menu/work_seeker.png";
             }

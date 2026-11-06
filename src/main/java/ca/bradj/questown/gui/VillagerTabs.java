@@ -17,6 +17,8 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -190,6 +192,13 @@ public class VillagerTabs extends Tabs implements SubUI {
         );
     }
 
+    // Client side: each villager's change-job red dot, from the last menu it opened with.
+    private static final Map<UUID, Boolean> CHANGE_ROOT_ATTENTION = new HashMap<>();
+
+    static void recordChangeRootAttention(UUID villager, boolean attention) {
+        CHANGE_ROOT_ATTENTION.put(villager, attention);
+    }
+
     public static Collection<String> hideInventory(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.INVENTORY)).toList();
     }
@@ -205,6 +214,17 @@ public class VillagerTabs extends Tabs implements SubUI {
                 OpenVillagerMenuMessage.ECONOMICS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
+    }
+
+    /** The tab a villager menu opens on: change-job while it has a red dot, else inventory, or stats when there is no inventory tab. */
+    public static String initialTab(boolean changeRootAttention, boolean showInventoryTab) {
+        if (changeRootAttention) {
+            return OpenVillagerMenuMessage.CHANGE_ROOT;
+        }
+        if (showInventoryTab) {
+            return OpenVillagerMenuMessage.INVENTORY;
+        }
+        return OpenVillagerMenuMessage.STATS;
     }
 
     public static Collection<String> all() {

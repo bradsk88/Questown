@@ -246,6 +246,9 @@ public class TownVillagerUIs {
         syncWorkToClient(sender);
 
         VisitorMobEntity e = f.get();
+        if (OpenVillagerMenuMessage.INITIAL.equals(type)) {
+            type = VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab);
+        }
 
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
 
@@ -466,6 +469,14 @@ public class TownVillagerUIs {
         throw new IllegalStateException("Missing MenuShow entry for [" + Strings.join(a, ", ") + "]");
     }
 
+
+    private static boolean wantsJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        return flag != null && flag.wantsJobChangeFrom(e.getJobId());
+    }
 
     /** The flag's Blocks of Progress, for a panel opened from the flag. */
     private static JobChangeConfirmMenu.FlagBop flagBop(ServerPlayer sender, VisitorMobEntity e) {
