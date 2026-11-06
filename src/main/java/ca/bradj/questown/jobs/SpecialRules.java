@@ -47,6 +47,9 @@ public class SpecialRules {
     // idle in the evening.
     public static final String WORK_IN_EVENING = "work_in_evening";
 
+    // A hungry villager with this job may switch straight to eating; other jobs finish first.
+    public static final String CAN_INSTANTLY_SWITCH_TO_EATING = "can_instantly_switch_to_eating";
+
     // If this rule is active (globally) then blocks will only be considered
     // valid for use as workspots if they have empty air above them.
     public static final String REQUIRE_AIR_ABOVE = "require_air_above";
