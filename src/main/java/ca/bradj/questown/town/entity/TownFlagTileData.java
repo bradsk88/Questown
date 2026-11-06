@@ -6,7 +6,9 @@ import ca.bradj.questown.items.QTNBT;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import ca.bradj.questown.town.*;
+import net.minecraft.world.level.block.Rotation;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
@@ -41,9 +43,17 @@ public class TownFlagTileData {
     private static final String NBT_BLOCK_ROOMS = QTNBT.keyify("block_rooms");
     private static final String NBT_BONUS_GIVEN = QTNBT.keyify("bonus_given");
     private static final String NBT_ECONOMICS = QTNBT.keyify("economics");
+    private static final String NBT_CHICKEN_EVER_SPAWNED = QTNBT.keyify("chicken_ever_spawned");
+    private static final String NBT_CHICKEN_BEAT_STATE = QTNBT.keyify("chicken_beat_state");
+    private static final String NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED = QTNBT.keyify(
+            "chicken_first_gather_worldly_seeds_fired"
+    );
     private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
             "first_hunter_loot_guarantee_fired"
     );
+    private static final String NBT_CHICKEN_ARC_FORFEIT = QTNBT.keyify("chicken_arc_forfeit");
+    private static final String NBT_CHICKEN_STRUCTURE_ROTATION = QTNBT.keyify("chicken_structure_rotation");
+    private static final String NBT_CHICKEN_ROTATION_DETECTED = QTNBT.keyify("chicken_rotation_detected");
     private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
     private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
@@ -62,10 +72,26 @@ public class TownFlagTileData {
         b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
         b.put(NBT_BONUS_GIVEN, initBonusGiven());
         b.put(NBT_ECONOMICS, initEconomics());
+        b.put(NBT_CHICKEN_EVER_SPAWNED, initChickenEverSpawned());
+        b.put(NBT_CHICKEN_BEAT_STATE, initChickenBeatState());
+        b.put(NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, initChickenFirstGatherWorldlySeedsFired());
         b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
+        b.put(NBT_CHICKEN_ARC_FORFEIT, initChickenArcForfeit());
+        b.put(NBT_CHICKEN_STRUCTURE_ROTATION, initChickenStructureRotation());
+        b.put(NBT_CHICKEN_ROTATION_DETECTED, initChickenRotationDetected());
         b.put(NBT_QUESTS_SEEN, initQuestsSeen());
         b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
+    }
+
+    private static InitPair initChickenEverSpawned() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenEverSpawned = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.chickenEverSpawned = false
+        );
     }
 
     private static InitPair initBopWithdrawn() {
@@ -93,6 +119,26 @@ public class TownFlagTileData {
         );
     }
 
+    private static InitPair initChickenBeatState() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenBeatState = ChickenBeatState.fromNameSafe(tag.getString("value"));
+                    return true;
+                },
+                flag -> flag.chickenBeatState = ChickenBeatState.WAITING_FOR_STICK
+        );
+    }
+
+    private static InitPair initChickenFirstGatherWorldlySeedsFired() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenFirstGatherWorldlySeedsFired = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.chickenFirstGatherWorldlySeedsFired = false
+        );
+    }
+
     private static InitPair initFirstHunterLootGuaranteeFired() {
         return new InitPair(
                 (tag, flag) -> {
@@ -101,6 +147,47 @@ public class TownFlagTileData {
                 },
                 flag -> flag.firstHunterLootGuaranteeFired = false
         );
+    }
+
+    private static InitPair initChickenArcForfeit() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenArcForfeit = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.chickenArcForfeit = false
+        );
+    }
+
+    private static InitPair initChickenStructureRotation() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenStructureRotation = safeRotation(tag.getString("value"));
+                    return true;
+                },
+                flag -> flag.chickenStructureRotation = Rotation.NONE
+        );
+    }
+
+    private static InitPair initChickenRotationDetected() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.chickenRotationDetected = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.chickenRotationDetected = false
+        );
+    }
+
+    public static Rotation safeRotation(String name) {
+        if (name == null) {
+            return Rotation.NONE;
+        }
+        try {
+            return Rotation.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            return Rotation.NONE;
+        }
     }
 
     private static InitPair initEconomics() {
@@ -294,7 +381,13 @@ public class TownFlagTileData {
         write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         write(t, NBT_ECONOMICS, flag.serializeEconomics());
+        write(t, NBT_CHICKEN_EVER_SPAWNED, flag.serializeChickenEverSpawned());
+        write(t, NBT_CHICKEN_BEAT_STATE, flag.serializeChickenBeatState());
+        write(t, NBT_CHICKEN_FIRST_GATHER_WORLDLY_SEEDS_FIRED, flag.serializeChickenFirstGatherWorldlySeedsFired());
         write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
+        write(t, NBT_CHICKEN_ARC_FORFEIT, flag.serializeChickenArcForfeit());
+        write(t, NBT_CHICKEN_STRUCTURE_ROTATION, flag.serializeChickenStructureRotation());
+        write(t, NBT_CHICKEN_ROTATION_DETECTED, flag.serializeChickenRotationDetected());
         write(t, NBT_QUESTS_SEEN, flag.serializeQuestsSeen());
         write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }
