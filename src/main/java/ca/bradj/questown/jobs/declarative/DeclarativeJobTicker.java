@@ -388,6 +388,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         return () -> {
             ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
+                // The supply pipeline reads the journal's status, so put the override there.
+                if (!s.equals(journal.getStatus())) {
+                    journal.changeStatus(s);
+                }
                 return s;
             }
             ProductionJournal journal = deps.getJournal();

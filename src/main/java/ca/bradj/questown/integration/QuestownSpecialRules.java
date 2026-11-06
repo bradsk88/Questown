@@ -161,6 +161,14 @@ public final class QuestownSpecialRules {
                 new SmeltFurnaceWarpRule()
         );
 
+        // Moves a requested item into the stock request's chest during a warp.
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.RELOCATE_REQUESTED_ITEM_WARP
+                ),
+                new RelocateRequestedItemWarpRule()
+        );
+
         VanillaSpecialRules.register();
     }
 }
