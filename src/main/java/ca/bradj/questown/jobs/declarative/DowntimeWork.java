@@ -94,7 +94,8 @@ public class DowntimeWork {
                                 SpecialRules.ALWAYS_POPULATE_JOBSITE,
                                 SpecialRules.RANDOM_SHORT_LIVED_WORKSPOT_PREFER_SOCIAL,
                                 SpecialRules.RANDOM_DOWNTIME_POSE,
-                                SpecialRules.WORK_IN_EVENING
+                                SpecialRules.WORK_IN_EVENING,
+                                SpecialRules.CAN_INSTANTLY_SWITCH_TO_EATING
                         )
                 ),
                 null,

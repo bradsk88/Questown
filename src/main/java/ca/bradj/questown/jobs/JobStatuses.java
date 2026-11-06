@@ -42,6 +42,16 @@ public class JobStatuses {
 
         @Nullable
         STATUS tryUsingSupplies(Map<SUP_CAT, SupplyItemStatus> supplyItemStatus);
+
+        /** A finished product waits at one of the job's sites: extract it if there, else go there. Null when nothing is finished. */
+        default @Nullable STATUS tryCollectingFinishedProduct() {
+            return null;
+        }
+
+        /** Whether collecting the finished product needs storage space. False for products that are used up (a diner's meal). */
+        default boolean finishedProductNeedsStorage() {
+            return true;
+        }
     }
 
     /**
@@ -175,6 +185,10 @@ public class JobStatuses {
                 new Pair<>(ctx.jobId, "hasNonWorkItems"),
                 inventory::hasNonSupplyItems
         );
+        LZCD<LZCD.Dependency<STATUS>> dFinishedProductWaiting = prePopAble(
+                new Pair<>(ctx.jobId, "finished product waiting"),
+                () -> ctx.job.finishedProductNeedsStorage() && ctx.job.tryCollectingFinishedProduct() != null
+        );
         LZCD<LZCD.Dependency<STATUS>> dHasAnyItems = prePopAble(
                 new Pair<>(ctx.jobId, "hasAnyItems"),
                 () -> supplyItemStatus.containsValue(SupplyItemStatus.HAS_ITEM) || inventory.hasNonSupplyItems()
@@ -200,11 +214,38 @@ public class JobStatuses {
         ILZCD<LZCD.Dependency<STATUS>> dTimerActive = fromVoid(town.isTimerActive());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasSupplies = fromVoid(town.hasSupplies());
         ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSupplies = fromVoid(LZCDs.invert(town.hasSupplies()));
+        ILZCD<LZCD.Dependency<STATUS>> dTownHasNoSpace = fromVoid(LZCDs.invert(town.hasSpace()));
         ILZCD<LZCD.Dependency<STATUS>> dHasWorkableBlocks = fromVoid(town.containsWorkableBlocksAtAnyState());
         ILZCD<LZCD.Dependency<STATUS>> dHasNoWorkableBlocks = fromVoid(LZCDs.invert(town.containsWorkableBlocksAtAnyState()));
         Job<STATUS, SUP_CAT> job = ctx.job;
         IStatusFactory<STATUS> factory = ctx.factory;
         LZCD<STATUS> root = new LZCD<>(
+                // Work output goes to storage before any more work.
+                new Pair<>(ctx.jobId, "drop loot before more work"),
+                leaf(factory::droppingLoot),
+                ImmutableList.of(
+                        dHoldsWorkOutput,
+                        dTownHasSpace
+                ),
+                LZCDs.oneDep(
+                        // Holding output with nowhere to put it: stop, so the problem shows.
+                        new Pair<>(ctx.jobId, "stop when holding output and the town has no space"),
+                        leaf(factory::noSpace),
+                        dHoldsWorkOutput,
+                        new LZCD<>(
+                                // A finished product with nowhere to put it: stop here too.
+                                new Pair<>(ctx.jobId, "stop when a finished product waits and the town has no space"),
+                                leaf(factory::noSpace),
+                                ImmutableList.of(
+                                        dFinishedProductWaiting,
+                                        dTownHasNoSpace
+                                ),
+                                new LZCD<>(
+                                // A finished product waiting at a job site is collected before anything else.
+                                new Pair<>(ctx.jobId, "collect a finished product"),
+                                LZCDs.leaf(job::tryCollectingFinishedProduct, Objects::isNull),
+                                ImmutableList.of(),
+                                new LZCD<>(
                 new Pair<>(ctx.jobId, "work without items"),
                 LZCDs.leaf(job::tryChoosingItemlessWork, Objects::isNull),
                 ImmutableList.of(
@@ -316,6 +357,10 @@ public class JobStatuses {
                                 )
                         )
                 )
+        )
+                                )
+                        )
+                )
         );
         return root;
     }
@@ -383,8 +428,8 @@ public class JobStatuses {
                 return null;
             }
         }
-        STATUS status = usualRoutine(
-                currentStatus, prioritizeExtraction, inventory,
+        STATUS status = usualRoutine(new UsualRoutineContext<>(
+                jobId, currentStatus, prioritizeExtraction, inventory,
                 JobTownStates.forTown(town),
                 new Job<>() {
                     @Override
@@ -414,6 +459,24 @@ public class JobStatuses {
                             }
                         }
 
+                        return factory.goingToJobSite();
+                    }
+
+                    @Override
+                    public boolean finishedProductNeedsStorage() {
+                        return town.finishedProductNeedsStorage();
+                    }
+
+                    @Override
+                    public @Nullable STATUS tryCollectingFinishedProduct() {
+                        Collection<ROOM> rooms = town.roomsWithCompletedProduct();
+                        if (rooms.isEmpty()) {
+                            return null;
+                        }
+                        ROOM location = entity.getEntityCurrentJobSite();
+                        if (location != null && rooms.contains(location)) {
+                            return factory.extractingProduct();
+                        }
                         return factory.goingToJobSite();
                     }
 
@@ -462,7 +525,7 @@ public class JobStatuses {
                         return job.tryUsingSupplies(supplyItemStatus);
                     }
                 }, factory
-        );
+        ));
         // TODO: For "no supplies" status, ignore rooms that only need tools
         // Because rooms needing tools "need supplies" at all times, the logic chooses that status.
         if (status == null || factory.idle().equals(status) || factory.noSupplies().equals(status)) {

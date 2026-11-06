@@ -40,6 +40,9 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         boolean tryDropLoot();
 
+        /** The villager holds work output, which it takes to storage before the job hands off. */
+        boolean holdsWorkOutput();
+
         void tryGetSupplies();
 
         Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
@@ -225,10 +228,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
         worldBeforeTick.tryGetSupplies();
 
         if (wrappingUp) {
+            if (worldBeforeTick.holdsWorkOutput()) {
+                // Holding output: carry on as a fresh cycle, which takes it to a chest.
+                wrappingUp = false;
+                return;
+            }
             // TODO: Check if all special rules were leveraged.
             //  If not, spit an error into the console to help with debugging.
+            // A finished cycle hands off; it doesn't fetch supplies for another one.
             worldBeforeTick.changeToNextJob();
             ticksWithoutNextJob++;
+            return;
         }
     }
 

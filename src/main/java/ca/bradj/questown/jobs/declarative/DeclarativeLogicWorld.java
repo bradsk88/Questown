@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -118,9 +119,19 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
     }
 
     private final WorldDeps<POS, HELD_ITEM, ROOM> deps;
+    private final Supplier<Boolean> holdsWorkOutput;
 
-    public DeclarativeLogicWorld(WorldDeps<POS, HELD_ITEM, ROOM> deps) {
+    public DeclarativeLogicWorld(
+            WorldDeps<POS, HELD_ITEM, ROOM> deps,
+            Supplier<Boolean> holdsWorkOutput
+    ) {
         this.deps = deps;
+        this.holdsWorkOutput = holdsWorkOutput;
+    }
+
+    @Override
+    public boolean holdsWorkOutput() {
+        return holdsWorkOutput.get();
     }
 
     @Override

@@ -1360,6 +1360,11 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getId();
     }
 
+    /** Whether a hungry villager may switch straight to eating. Server only. */
+    public boolean canInstantlySwitchToEating() {
+        return job.get().canInstantlySwitchToEating();
+    }
+
     public BlockPos getFlagPos() {
         return town.getTownFlagBasePos();
     }
