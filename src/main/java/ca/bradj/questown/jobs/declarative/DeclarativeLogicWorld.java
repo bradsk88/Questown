@@ -2,6 +2,8 @@ package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.jobs.EntityCurrentJobSite;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.JobLogic;
 import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.jobs.production.ProductionStatus;
@@ -51,6 +53,7 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
 
         // Town operations - server level
         boolean hasServerLevel();
+        Signals.DayTime getDayTime();
         POS getRandomHorizontalFrom(POS bp);
         void logDebug(String message);
 
@@ -139,6 +142,11 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
         Object data = deps.getVillagerData(deps.getEntityVUID());
         deps.runPreMaxTicksJobChangeHook(deps.getSpecialGlobalRules(), data);
         deps.changeJobForVillager(deps.getOwnerUUID(), id, false);
+    }
+
+    @Override
+    public boolean fitsInDay(JobID id) {
+        return ServerJobsRegistry.fitsInDay(deps.getOwnerUUID(), id, deps.getDayTime());
     }
 
     @Override
