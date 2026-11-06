@@ -629,6 +629,17 @@ public class ServerJobsRegistry {
     }
 
     /** Whether a job started outside the board may start now: it can always start, or it finishes before evening. Special jobs always fit. */
+    public static boolean fitsInDay(
+            UUID villagerID,
+            JobID p,
+            Signals.DayTime currentTick
+    ) {
+        if (Works.get(p) == null) {
+            return true;
+        }
+        return canAlwaysStart(villagerID, p) || canFit(villagerID, p, currentTick);
+    }
+
     public static boolean canFit(
             UUID villagerID,
             JobID p,

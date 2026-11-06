@@ -512,6 +512,11 @@ public class DeclarativeJobTickerDependencies implements
             }
 
             @Override
+            public Signals.DayTime getDayTime() {
+                return self.getDayTime();
+            }
+
+            @Override
             public BlockPos getRandomHorizontalFrom(BlockPos bp) {
                 ServerLevel sl = town.getServerLevel();
                 return bp.relative(Compat.getRandomHorizontal(sl));
