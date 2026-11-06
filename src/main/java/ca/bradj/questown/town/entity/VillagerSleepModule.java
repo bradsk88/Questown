@@ -13,4 +13,9 @@ public interface VillagerSleepModule<ENTITY> {
     void stopSleeping(ENTITY entity);
 
     boolean isSleeping(ENTITY e);
+
+    boolean hasBed(ENTITY e);
+
+    /** False until the town has matched its bedrooms after a load. */
+    boolean bedsKnown();
 }

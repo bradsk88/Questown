@@ -7,10 +7,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
-import net.minecraft.world.level.material.Material;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,6 +29,9 @@ public class CampfireSleepHandler {
     private static final Set<UUID> campfireSleepers = Collections.synchronizedSet(new HashSet<>());
     private static final Map<UUID, BlockPos> tempBedPositions = new ConcurrentHashMap<>();
     private static final Map<UUID, Direction> tempBedFacings = new ConcurrentHashMap<>();
+    private static final Map<UUID, BlockPos> campfirePositions = new ConcurrentHashMap<>();
+    // The flag each sleeper's campfire belongs to, so waking counts for that flag's helper chicken.
+    private static final Map<UUID, BlockPos> sleepingFlagPositions = new ConcurrentHashMap<>();
 
     public static void beginCampfireSleep(
             ServerPlayer player,
@@ -33,21 +39,23 @@ public class CampfireSleepHandler {
             BlockPos campfirePos,
             TownFlagBlockEntity parent
     ) {
-        boolean campfireRegistered = TownCycle.findCampfire(parent.getBlockPos(), level)
-                                              .filter(campfirePos::equals)
-                                              .isPresent();
-        if (!campfireRegistered) {
-            Util.onScreenText(() -> player, "message.wand.campfire.not_registered");
+        // A double-click lands a second use before the sleep starts; ignore it.
+        if (player.isSleeping()) {
+            return;
+        }
+        BlockState campfireState = level.getBlockState(campfirePos);
+        if (!campfireState.hasProperty(CampfireBlock.LIT) || !campfireState.getValue(CampfireBlock.LIT)) {
+            Util.onScreenText(() -> player, "message.wand.campfire.not_lit");
             return;
         }
 
-        BlockPos headPos = findSafeSleepPosition(level, campfirePos);
+        BlockPos headPos = findSafeSleepPosition(level, campfirePos, player.position());
         if (headPos == null) {
             Util.onScreenText(() -> player, "message.wand.campfire.no_safe_position");
             return;
         }
 
-        Direction facing = findBedFacing(level, headPos);
+        Direction facing = findBedFacing(headPos, campfirePos);
         if (facing == null) {
             Util.onScreenText(() -> player, "message.wand.campfire.no_safe_position");
             return;
@@ -57,52 +65,83 @@ public class CampfireSleepHandler {
         campfireSleepers.add(uuid);
         tempBedPositions.put(uuid, headPos);
         tempBedFacings.put(uuid, facing);
+        campfirePositions.put(uuid, campfirePos);        sleepingFlagPositions.put(uuid, parent.getBlockPos());
 
         placeTempBed(level, headPos, facing);
 
+        ca.bradj.questown.QT.JOB_LOGGER.dev(
+                "[campfire-sleep] beginCampfireSleep player={} campfire={} bedHead={} facing={} dayTime={} isDay={} isNight={}",
+                player.getGameProfile().getName(), campfirePos, headPos, facing,
+                level.getDayTime() % 24000L, level.isDay(), level.dimensionType().hasFixedTime() ? "fixed" : !level.isDay()
+        );
         player.startSleepInBed(headPos).ifLeft(problem -> {
-            if (problem != null) {
+            ca.bradj.questown.QT.JOB_LOGGER.dev(
+                    "[campfire-sleep] startSleepInBed returned LEFT for player={} problem={}",
+                    player.getGameProfile().getName(), problem
+            );
+            if (problem != null && problem.getMessage() != null) {
                 player.displayClientMessage(problem.getMessage(), true);
             }
             campfireSleepers.remove(uuid);
             tempBedPositions.remove(uuid);
             tempBedFacings.remove(uuid);
+            campfirePositions.remove(uuid);
+            sleepingFlagPositions.remove(uuid);
             removeTempBed(level, headPos, facing);
-        });
+        }).ifRight(unit -> ca.bradj.questown.QT.JOB_LOGGER.dev(
+                "[campfire-sleep] startSleepInBed RIGHT (sleeping started) player={} isSleeping={}",
+                player.getGameProfile().getName(), player.isSleeping()
+        ));
     }
 
     static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos) {
+        return findSafeSleepPosition(level, campfirePos, Vec3.atCenterOf(campfirePos));
+    }
+
+    /** The safe bed spot closest to the player, so the bed is close enough to sleep in. */
+    static @Nullable BlockPos findSafeSleepPosition(Level level, BlockPos campfirePos, Vec3 playerPos) {
+        BlockPos best = null;
+        double bestDistSq = Double.MAX_VALUE;
         for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos candidate = campfirePos.relative(dir);
-            BlockPos below = candidate.below();
-            if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+            BlockPos footCandidate = campfirePos.relative(dir);
+            BlockPos headCandidate = footCandidate.relative(dir);
+            if (!isSafeToLieOn(level, footCandidate) || !isSafeToLieOn(level, headCandidate)) {
                 continue;
             }
-            if (!isClearForSleep(level, candidate) || !isClearForSleep(level, candidate.above())) {
-                continue;
+            double distSq = playerPos.distanceToSqr(Vec3.atCenterOf(headCandidate));
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                best = headCandidate;
             }
-            return candidate;
         }
-        return null;
+        return best;
+    }
+
+    private static boolean isSafeToLieOn(Level level, BlockPos pos) {
+        BlockPos below = pos.below();
+        if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+            return false;
+        }
+        return isClearForSleep(level, pos) && isClearForSleep(level, pos.above());
     }
 
     private static boolean isClearForSleep(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
+        // The bed replaces whatever is there, so a solid block (the flag) is not a free spot.
+        if (ca.bradj.questown.mc.Compat.isSolid(state)) {
+            return false;
+        }
         if (!level.isUnobstructed(state, pos, CollisionContext.empty())) {
             return false;
         }
-        Material mat = state.getMaterial();
-        return !mat.isLiquid() && mat != Material.FIRE;
+        FluidState fluidState = state.getFluidState();
+        return !fluidState.is(FluidTags.WATER) && !fluidState.is(FluidTags.LAVA) && !state.is(Blocks.FIRE);
     }
 
-    private static @Nullable Direction findBedFacing(Level level, BlockPos headPos) {
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos footPos = headPos.relative(dir.getOpposite());
-            if (level.getBlockState(footPos).getMaterial().isReplaceable()) {
-                return dir;
-            }
-        }
-        return null;
+    private static @Nullable Direction findBedFacing(BlockPos headPos, BlockPos campfirePos) {
+        int dx = Integer.signum(headPos.getX() - campfirePos.getX());
+        int dz = Integer.signum(headPos.getZ() - campfirePos.getZ());
+        return Direction.fromNormal(dx, 0, dz);
     }
 
     private static void placeTempBed(Level level, BlockPos headPos, Direction facing) {
@@ -125,17 +164,48 @@ public class CampfireSleepHandler {
         level.setBlock(footPos, Blocks.AIR.defaultBlockState(), 3);
     }
 
+    /** For autotests: picks and places the temp bed as {@link #beginCampfireSleep} does, without sleeping. Returns the bed head, or null. */
+    public static @Nullable BlockPos placeTempBedForTest(Level level, BlockPos campfirePos) {
+        BlockPos headPos = findSafeSleepPosition(level, campfirePos);
+        if (headPos == null) {
+            return null;
+        }
+        Direction facing = findBedFacing(headPos, campfirePos);
+        if (facing == null) {
+            return null;
+        }
+        placeTempBed(level, headPos, facing);
+        return headPos;
+    }
+
     public static boolean isCampfireSleeper(UUID uuid) {
         return campfireSleepers.contains(uuid);
     }
 
+    public static int getCampfireSleeperCount() {
+        return campfireSleepers.size();
+    }
+
     public static void onWake(ServerPlayer player) {
         UUID uuid = player.getUUID();
+        ca.bradj.questown.QT.JOB_LOGGER.dev(
+                "[campfire-sleep] onWake fired player={} dayTime={} isDay={}",
+                player.getGameProfile().getName(),
+                player.getLevel().getDayTime() % 24000L, player.getLevel().isDay()
+        );
         campfireSleepers.remove(uuid);
         BlockPos headPos = tempBedPositions.remove(uuid);
         Direction facing = tempBedFacings.remove(uuid);
         if (headPos != null && facing != null) {
-            removeTempBed(player.level, headPos, facing);
+            removeTempBed(player.getLevel(), headPos, facing);
+        }
+        // The campfire stays lit: it guides the player back, and sleeping needs it lit.
+        campfirePositions.remove(uuid);
+        BlockPos flagPos = sleepingFlagPositions.remove(uuid);
+        if (flagPos != null
+                && player.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
+            flag.setChickenObservedSleepSinceSunset(true);
         }
     }
+
 }

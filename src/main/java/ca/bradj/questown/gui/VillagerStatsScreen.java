@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu> {
@@ -162,8 +163,33 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
                 title,
                 (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
         );
+        Component level = Compat.translatable("menu.villager_stats.level", menu.getLevel());
+        int bgX = (this.width - backgroundWidth) / 2;
+        int titleY = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
+        rc.darkText(level, bgX + backgroundWidth - 8 - this.font.width(level), titleY);
+        return bar;
+    }
+
+    /** The villager's mood effects in words ("Didn't sleep"). Nothing when none are active. */
+    private void renderMoodEffects(
+            RenderContext rc,
+            int position
+    ) {
         truncatedEffects = List.of();
+        if (menu.getMoodEffects().isEmpty()) {
+            return;
+        }
+        int bgX = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight) / 2 + (25 * position) + 16;
         // One line; a long list ends in "..." and shows whole on hover.
+        List<String> names = new ArrayList<>();
+        for (String effect : menu.getMoodEffects()) {
+            String path = effect.substring(effect.indexOf(':') + 1);
+            names.add(Compat.translatableWithFallback(
+                    "menu.villager_stats.effect." + path, ca.bradj.questown.jobs.JobNames.variant(path)
+            ).getString());
+        }
+        String line = Compat.translatable("menu.villager_stats.mood_effects", String.join(", ", names)).getString();
         String shown = Compat.fitToWidth(this.font, line, backgroundWidth - 16);
         rc.darkText(Compat.literal(shown), bgX + 8, y);
         effectsLine = new ImmutableRect2i(bgX + 8, y, this.font.width(shown), this.font.lineHeight);

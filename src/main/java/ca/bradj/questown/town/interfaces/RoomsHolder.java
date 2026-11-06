@@ -1,5 +1,6 @@
 package ca.bradj.questown.town.interfaces;
 
+import ca.bradj.questown.town.rooms.RoomDoors;
 import ca.bradj.questown.town.rooms.TownPosition;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
@@ -41,4 +42,9 @@ public interface RoomsHolder {
     ImmutableSet<TownPosition> getAllRegisteredDoors();
 
     void registerBlockAsRoom(ResourceLocation blockId, BlockPos clickedPos);
+
+    /** The doorway of the room holding {@code pos}, for a villager with no free floor beside a block. */
+    default Optional<BlockPos> findDoorOfRoomContaining(BlockPos pos) {
+        return RoomDoors.doorOfRoomContaining(getRegisteredRooms().getAllRooms(), pos);
+    }
 }

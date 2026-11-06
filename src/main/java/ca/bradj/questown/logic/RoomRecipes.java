@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
 
+    /** A recipe lists two bed entries per bed; the cards show one icon per bed. */
     public static Collection<Ingredient> filterSpecialBlocks(
             Iterable<Ingredient> ingredients
     ) {

@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.town.MoodEffects;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,6 +52,18 @@ class SimpleVillagerHandleTest {
         @Override
         public boolean isSleeping(UUID e) {
             return false;
+        }
+
+        Set<UUID> bedded = new HashSet<>();
+
+        @Override
+        public boolean hasBed(UUID e) {
+            return bedded.contains(e);
+        }
+
+        @Override
+        public boolean bedsKnown() {
+            return true;
         }
     }
 

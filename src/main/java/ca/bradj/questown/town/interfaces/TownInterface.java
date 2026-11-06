@@ -66,6 +66,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     int missingBeds();
 
+    int missingBedsWithArrivals(int arrivals);
+
     boolean isInitialized();
 
     UUID getUUID();

@@ -313,6 +313,16 @@ public class Jobs {
         return Compat.translatable("jobs." + job.rootId());
     }
 
+    public static @NotNull Component getVariantNameComponent(JobID job) {
+        ResourceLocation product = JobNames.product(job, iconId(job));
+        if (product != null) {
+            return Compat.getItemName(product);
+        }
+        return Compat.translatableWithFallback(
+                "jobs." + job.rootId() + "." + job.jobId(), JobNames.variant(job.jobId())
+        );
+    }
+
     public static String getNiceString(ImmutableList<JobID> value) {
         return value.stream().map(JobID::toNiceString).collect(Collectors.joining(","));
     }
