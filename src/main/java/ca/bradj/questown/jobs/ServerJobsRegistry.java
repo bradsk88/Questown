@@ -735,41 +735,36 @@ public class ServerJobsRegistry {
         return workSupplier;
     }
 
-    public static ItemStack getDefaultWorkForNewWorker(
+    /** The job's {@code initial_request} as declared (a tag stays a tag), or null. A new worker's first board requests come from it. */
+    public static @Nullable Ingredient getInitialRequest(
             ServerLevel sl,
             JobID v
     ) {
         if (isSeekingWork(v)) {
-            return ItemStack.EMPTY;
+            return null;
         }
         Supplier<Work> w = getWorkSupplier(v);
         if (w == null) {
             QT.JOB_LOGGER.error("[Default Work Request] No recognized job for ID: {}", v);
-            return ItemStack.EMPTY;
+            return null;
         }
-        Ingredient apply = w.get().initialRequest.apply(sl);
-        if (apply == null) {
-            return ItemStack.EMPTY;
-        }
-        for (ItemStack item : apply.getItems()) {
-            return item;
-        }
-        return ItemStack.EMPTY;
+        return w.get().initialRequest.apply(sl);
     }
 
-    public static ImmutableSet<Ingredient> getAllOutputs(WorksBehaviour.TownData t) {
-        List<Ingredient> list = Works.values().stream().map(v -> {
-                                         Work work = v.get();
-                                         ImmutableSet.Builder<ItemStack> b = ImmutableSet.builder();
-                                         work.results.apply(t).forEach(z -> b.add(z.toMCItemStack()));
-                                         @Nullable Ingredient req = work.initialRequest.apply(t.serverLevel());
-                                         if (req != null) {
-                                             for (ItemStack item : req.getItems()) {
-                                                 b.add(item);
-                                             }
-                                         }
+    /** What the player can request on the job board: the products of jobs unlocked in town, with gathered results narrowed to what the town has found. */
+    public static ImmutableSet<Ingredient> getAllOutputs(
+            WorksBehaviour.TownData t,
+            Predicate<JobID> jobIsUnlocked
+    ) {
+        List<Ingredient> list = Works.values().stream()
+                                     .map(Supplier::get)
+                                     .filter(work -> jobIsUnlocked.test(work.id))
+                                     .map(work -> {
+                                         ImmutableSet.Builder<Ingredient> b = ImmutableSet.builder();
+                                         work.results.apply(t).forEach(z -> b.add(Ingredient.of(z.toMCItemStack())));
+                                         b.addAll(RequestOutputs.of(work.initialRequest.apply(t.serverLevel())));
                                          return b.build();
-                                     }).flatMap(Collection::stream).map(Ingredient::of).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
+                                     }).flatMap(Collection::stream).filter(v -> !v.isEmpty()).map(Ingredients::asWorkRequest)
                                      .collect(Collectors.toSet()).stream().map(WorkRequest::asIngredient).toList();
         return ImmutableSet.copyOf(list);
     }

@@ -192,6 +192,23 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return null;
         }
 
+        if (recipe.getType() == Quest.QuestType.ROOM && opensCrafting(recipe.getWantedId())) {
+            String key;
+            if (SpecialQuests.TOWN_GATE.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.welcome_mat";
+            } else if (SpecialQuests.JOB_BOARD.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.job_board";
+            } else if (FlagCraftRecipes.MINESHAFT_QUEST.equals(recipe.getWantedId())) {
+                key = "menu.quests.roomblock.mineshaft";
+            } else {
+                key = "menu.quests.roomblock.empty_room";
+            }
+            return ImmutableList.of(
+                    Compat.translatable(key),
+                    Compat.translatableStyled(
+                            "menu.quests.roomblock.click_crafting",
+                            Style.EMPTY.applyFormat(ChatFormatting.GRAY)));
+        }
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
             return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
         }

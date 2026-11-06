@@ -138,7 +138,35 @@ class QuestBatchesTest {
     }
 
     @Test
-    void markRecipeAsComplete_ShouldHaveNoEffect_IfRoomAndRecipeAreAlreadyPresent() {
+    void markRecipeAsLost_doesNotLoseAnAlreadyCompleteQuest() {
+        // A completed quest stays done when its room changes type.
+        QuestBatches<
+                Integer, Room, TestQuest, Reward,
+                QuestBatch<Integer, Room, TestQuest, Reward>
+                > qbs = new QuestBatches<>((batchUUID, owner, reward) -> new QuestBatch<>(factory, reward, batchUUID));
+
+        Room room = new Room(
+                new Position(1, 2),
+                InclusiveSpace.from(3, 4).to(5, 6)
+        );
+
+        TestQuestBatch batch = new TestQuestBatch();
+        batch.addNewQuest(null, 1);
+        batch.markRecipeAsComplete(room, 1);
+
+        qbs.add(batch);
+
+        boolean lost = batch.markRecipeAsLost(room, 1);
+
+        Assertions.assertFalse(lost);
+        ImmutableList<TestQuest> quests = batch.getAll();
+        Assertions.assertEquals(1, quests.size());
+        Assertions.assertTrue(quests.get(0).isComplete());
+    }
+
+    @Test
+    void markRecipeAsComplete_completesOpenQuest_evenWhenSameRoomAndRecipeWereCompletedBefore() {
+        // A re-issued quest for the same recipe can still complete on the same room.
         QuestBatches<
                 Integer, Room, TestQuest, Reward,
                 QuestBatch<Integer, Room, TestQuest, Reward>
@@ -163,16 +191,15 @@ class QuestBatchesTest {
 
         ImmutableList<TestQuest> quests = qbs.getAll();
         Assertions.assertEquals(2, quests.size());
-        Assertions.assertEquals(1, quests.stream()
+        Assertions.assertEquals(2, quests.stream()
                 .filter(Quest::isComplete)
                 .filter(v -> v.getWantedId().equals(1))
                 .filter(v -> sameRoom.equals(v.completedOn))
                 .count()
         );
-        Assertions.assertEquals(1, quests.stream()
+        Assertions.assertEquals(0, quests.stream()
                 .filter(Predicates.not(Quest::isComplete))
                 .filter(v -> v.getWantedId().equals(1))
-                .filter(v -> v.completedOn == null)
                 .count()
         );
     }

@@ -3,6 +3,7 @@ package ca.bradj.questown.blocks;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.entity.TownFlags;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -85,6 +86,23 @@ public class JobBoardBlock extends TownFlagSubBlock<JobBoardBlock.Entity> {
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
         p_51385_.add(FACING);
+    }
+
+    @Override
+    public void onRemove(
+            BlockState state,
+            Level level,
+            BlockPos pos,
+            BlockState newState,
+            boolean isMoving
+    ) {
+        if (!state.is(newState.getBlock())) {
+            // The board was removed, not replaced: forget it on the flag.
+            for (TownFlagBlockEntity flag : TownFlags.all()) {
+                flag.removeJobsBoard(pos);
+            }
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     public void addOpenMenuListener(OpenMenuListener l) {

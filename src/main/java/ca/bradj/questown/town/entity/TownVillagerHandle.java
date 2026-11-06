@@ -71,6 +71,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public String displayNameFor(UUID vuid) {
+                return TownVillagerHandle.this.displayNameFor(vuid);
+            }
+
+            @Override
             public void setJob(
                     UUID villagerUUID,
                     JobID newJob,
@@ -332,6 +337,11 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, Map<JobID, ? extends Collection<JobID>>> getJobsKnownToExist() {
         return ImmutableMap.copyOf(learning.jobsKnownToExist);
+    }
+
+    /** The jobs the town knows: across villagers, plus unlocked ones. */
+    public ImmutableSet<JobID> getTownKnownJobs() {
+        return learning.getTownKnownJobs();
     }
 
     long getTick() {

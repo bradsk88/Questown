@@ -194,6 +194,19 @@ public class JobLogic<EXTRA, TOWN, POS> {
                 && this.ticksSinceStart > expiration.maxTicks()) {
             JobID fbJov = expiration.maxTicksFallbackFn()
                                     .apply(entityCurrentJob);
+            // A fallback to the same job still goes through the board, which may have something more urgent.
+            boolean sameJob = fbJov.equals(entityCurrentJob);
+            if (sameJob || !worldBeforeTick.fitsInDay(fbJov)) {
+                // The fallback must still respect the day rule.
+                QT.JOB_LOGGER.debug(
+                        "Reached max ticks for {}. Fallback {} {}; asking the board.",
+                        entityCurrentJob, fbJov, sameJob ? "is the same job" : "won't fit in the day"
+                );
+                worldBeforeTick.changeToNextJob();
+                // If the board keeps this job, wait a full window before asking again.
+                this.ticksSinceStart = 0;
+                return;
+            }
             QT.JOB_LOGGER.debug(
                     "Reached max ticks for {}. Falling back to {}.",
                     entityCurrentJob, fbJov

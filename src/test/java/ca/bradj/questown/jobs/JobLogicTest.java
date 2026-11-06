@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -302,6 +303,7 @@ class JobLogicTest {
         TestLogicWorld world = droppingWorld(handedOff);
         world.starving = true;
         TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
         logic.tickDropping(new JobID("hunter", "sword"));
 
         Assertions.assertTrue(handedOff.get(), "a starving townie should re-decide after a deposit");
@@ -434,6 +436,11 @@ class JobLogicTest {
 
         Assertions.assertFalse(changedJob.get(), "the watchdog restarted a job that won't fit in the day");
         Assertions.assertTrue(handedOff.get(), "the board should pick the next job");
+    }
+
+    @Test
+    void tick_maxTicksHandOff_asksTheBoardOncePerWindow_whenTheBoardKeepsTheJob() {
+        AtomicInteger handOffs = new AtomicInteger();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
             @Override
             public void changeToNextJob() {
@@ -451,6 +458,33 @@ class JobLogicTest {
             logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
         }
 
+        Assertions.assertTrue(handOffs.get() <= 4, "asked the board " + handOffs.get() + " times in 20 ticks");
+    }
+
+    @Test
+    void tick_shouldHitMaxTicksFallback_WhenIdleWithNoWorkSpot() {
+        // The watchdog still moves a job with no cycle in progress to a different fallback.
+        JobID other = new JobID("other_root", "other_job");
+        AtomicReference<JobID> changedTo = new AtomicReference<>();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void changeJob(JobID id) {
+                changedTo.set(id);
+            }
+        };
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        for (int i = 0; i < 20; i++) {
+            logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5).withMaxTickFallback(id -> other));
+        }
+
+        Assertions.assertEquals(other, changedTo.get());
+    }
+
+    /** Re-creating the same job goes through the board. */
+    @Test
+    void tick_sameJobMaxTicksFallback_asksTheBoard() {
+        AtomicBoolean changedJob = new AtomicBoolean();
         AtomicBoolean handedOff = new AtomicBoolean();
         TestLogicWorld world = new TestLogicWorld(DEFINITION) {
             @Override
@@ -469,6 +503,8 @@ class JobLogicTest {
             logic.tickAway(ProductionStatus.IDLE, maxTicksOf(5));
         }
 
+        Assertions.assertFalse(changedJob.get(), "the watchdog re-created the same job without the board");
+        Assertions.assertTrue(handedOff.get(), "the board should decide what comes next");
     }
 
     @Test

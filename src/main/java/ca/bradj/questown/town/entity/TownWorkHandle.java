@@ -87,6 +87,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         });
     }
 
+    /** Forgets a broken job board. */
+    public void removeJobBoard(BlockPos matPos) {
+        jobBoards.remove(matPos);
+    }
+
     @Override
     public boolean hasAtLeastOneBoard() {
         return !jobBoards.isEmpty();
