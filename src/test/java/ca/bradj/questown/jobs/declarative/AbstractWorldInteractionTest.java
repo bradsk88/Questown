@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.GathererJournalTest;
 import ca.bradj.questown.jobs.WorkPosition;
 import ca.bradj.questown.logic.IPredicateCollection;
@@ -10,13 +12,19 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.SharedConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -26,6 +34,12 @@ import static ca.bradj.questown.jobs.declarative.AbstractItemWITest.alwaysTrue;
 
 class AbstractWorldInteractionTest {
 
+    // Before any ItemStack or Items class loads.
+    @BeforeAll
+    static void bootstrap() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
 
     public static TestWorldInteraction noMemoryInventory(
             int i,
@@ -589,6 +603,67 @@ class AbstractWorldInteractionTest {
         wi.setJobBlockState(null, true, arbitrarySpot().jobBlock(), State.freshAtState(2));
         wi.tryWorking(null, arbitrarySpot());
         Assertions.assertTrue(inserted.get());
+    }
+
+
+    @Test
+    void withLootGuarantees_nullFlag_isIdentity() {
+        TestWorldInteraction wi = noMemoryInventory(
+                0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
+                () -> ImmutableList.of(), () -> {}
+        );
+        // No flag: the results pass through unchanged.
+        ImmutableList<MCHeldItem> base = ImmutableList.of(MCHeldItem.fromTown(MCTownItem.Air()));
+        Assertions.assertSame(base, wi.withLootGuarantees(null, base));
+    }
+
+    @Test
+    void flagBlockEntityAt_nullLevelOrPos_returnsNull() {
+        Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, new BlockPos(0, 64, 0)));
+        Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, null));
+    }
+
+    @Test
+    void levelProficiencies_nullId_returnsCurrentMap() {
+        TestWorldInteraction wi = noMemoryInventory(
+                0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
+                () -> ImmutableList.of(), () -> {}
+        );
+        Map<String, Float> cur = new LinkedHashMap<>();
+        cur.put("fishing", 0.5f);
+        Assertions.assertSame(cur, wi.levelProficiencies(cur, null, 0.001f, 0.0001f));
+    }
+
+    @Test
+    void levelProficiencies_createsWorkedId_atZeroIntervalLevelsUntouched() {
+        // Interval 0 means no gain or decay, so this checks the wiring only.
+        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
+            @Override
+            public Collection<GathererJournalTest.TestItem> getItems() {
+                return ImmutableList.of(new GathererJournalTest.TestItem(""));
+            }
+
+            @Override
+            public void set(int ii, GathererJournalTest.TestItem shrink) {
+            }
+        };
+        TestWorldInteraction wi = new TestWorldInteraction(
+                0,
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ValidatedInventoryHandle.unvalidated(inventoryHandle),
+                testWorkStateContainer(),
+                () -> new Claim(UUID.randomUUID(), 100)
+        );
+        Map<String, Float> cur = new LinkedHashMap<>();
+        cur.put("fishing", 0.5f);
+        Map<String, Float> after = wi.levelProficiencies(cur, "farming", 0.001f, 0.0001f);
+        Assertions.assertEquals(2, after.size());
+        Assertions.assertEquals(0f, after.get("farming"));
+        Assertions.assertEquals(0.5f, after.get("fishing"));
     }
 
 }

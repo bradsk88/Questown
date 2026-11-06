@@ -106,16 +106,32 @@ public class DowntimeWork {
                         Compat.configGet(Config.MAX_DOWNTIME_TICKS),
                         WorkSeekerJob::getIDForRoot
                 )
-        ).withOverrides(new Overrides(
+        ).withOverrides(overrides());
+    }
+
+    /** Every downtime status, including the fallback with no wander spot, shows as relaxing. */
+    static Overrides overrides() {
+        Pair<String, String> relaxingText = new Pair<>(
+                "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
+                "questown.tooltips.villagers.job_common.click_to_learn"
+        );
+        ImmutableMap.Builder<IStatus<?>, Pair<String, String>> text = ImmutableMap.builder();
+        text.put(ProductionStatus.NO_JOBSITE, relaxingText);
+        text.put(ProductionStatus.NO_SUPPLIES, relaxingText);
+        text.put(ProductionStatus.EXTRACTING_PRODUCT, relaxingText);
+        for (int i = 0; i < MAX_STATE; i++) {
+            text.put(ProductionStatus.fromJobBlockStatus(i), relaxingText);
+        }
+        // The idle art: the relaxing art is the end-of-day night scene.
+        ResourceLocation idle = StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE);
+        return new Overrides(
                 ImmutableMap.of(
-                        ProductionStatus.NO_JOBSITE,
-                        StatusArt.getTexture(getIdForRoot("___"), ProductionStatus.IDLE)
+                        ProductionStatus.NO_JOBSITE, idle,
+                        ProductionStatus.NO_SUPPLIES, idle
                 ),
-                ImmutableMap.of(ProductionStatus.NO_JOBSITE, new Pair<>(
-                        "questown.tooltips.villagers.job_common.status_1.DOWNTIME",
-                        "questown.tooltips.villagers.job_common.click_to_learn"
-                ))
-        ));
+                text.build(),
+                idle
+        );
     }
 
     public static JobID getIdFor(JobID rootId) {

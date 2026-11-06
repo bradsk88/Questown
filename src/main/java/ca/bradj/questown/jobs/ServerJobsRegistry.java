@@ -511,6 +511,52 @@ public class ServerJobsRegistry {
         );
     }
 
+    public static boolean jobBlockAt(JobID jobID, WorkLocation.BlockInfo blockInfo, BlockPos pos) {
+        Supplier<Work> w = Works.get(jobID);
+        if (w == null) {
+            return false;
+        }
+        Work work = w.get();
+        if (work == null) {
+            return false;
+        }
+        return work.isJobBlockAt(blockInfo, pos);
+    }
+
+    public static boolean jobBlockAt(JobID jobID, ServerLevel level, BlockPos pos) {
+        return jobBlockAt(jobID, levelBlockInfo(level), pos);
+    }
+
+    /** Block info read from a live level. */
+    public static WorkLocation.BlockInfo levelBlockInfo(ServerLevel level) {
+        return new WorkLocation.BlockInfo() {
+            @Override
+            public BlockState state(BlockPos p) {
+                return level.getBlockState(p);
+            }
+
+            @Override
+            public @Nullable BlockEntity entity(BlockPos p) {
+                return level.getBlockEntity(p);
+            }
+        };
+    }
+
+    /** Block info that answers {@code state} for every position. Use {@link #levelBlockInfo} when the block above matters. */
+    public static WorkLocation.BlockInfo blockInfo(BlockState state, @Nullable BlockEntity entity) {
+        return new WorkLocation.BlockInfo() {
+            @Override
+            public BlockState state(BlockPos p) {
+                return state;
+            }
+
+            @Override
+            public @Nullable BlockEntity entity(BlockPos p) {
+                return entity;
+            }
+        };
+    }
+
     private static boolean isSpecialJob(JobID p) {
         return specialJobs.stream().anyMatch(sj -> sj.idTest().test(p));
     }

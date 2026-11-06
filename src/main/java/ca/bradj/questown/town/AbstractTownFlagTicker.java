@@ -144,6 +144,11 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         }
     }
 
+    /** The morning pass after a campfire sleep, on game time: a sleep moves the day time but not the game time. */
+    public void runSleptMorning(TICK_DATA data) {
+        runMorning(data, getTick(data));
+    }
+
     protected abstract void onMorning(
             TICK_DATA data,
             Long pop

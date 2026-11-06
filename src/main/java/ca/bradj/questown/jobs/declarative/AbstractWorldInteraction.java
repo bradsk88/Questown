@@ -1,18 +1,23 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.items.KnowledgeMetaItem;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -280,10 +285,13 @@ public abstract class AbstractWorldInteraction<
         return reset.apply(ts);
     }
 
-    protected abstract void iterate(
+    /** Pushes the items onto {@code push}, at most {@code Config.BASE_MAX_LOOP} of them. */
+    protected void iterate(
             Iterable<HELD_ITEM> newItemsSource,
             Function<HELD_ITEM, HELD_ITEM> push
-    );
+    ) {
+        Util.iterate(newItemsSource, push::apply);
+    }
 
     private @NotNull Function<TOWN, TOWN> getResetFunc(
             EXTRA inputs,
@@ -295,6 +303,55 @@ public abstract class AbstractWorldInteraction<
             return ts;
         };
         return reset;
+    }
+
+    /** Scales a work speed (out of 10) by a proficiency multiplier, kept within 1 to 10. */
+    static int applyProficiencyToWorkSpeed(
+            int baseOf10,
+            float multiplier
+    ) {
+        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
+    }
+
+    /** The work-speed multiplier for the job's proficiency (1 when it has none), the same in real time and during a warp. */
+    static float proficiencyMultiplier(
+            @Nullable String proficiencyId,
+            Function<String, Float> levelForId
+    ) {
+        if (proficiencyId == null) {
+            return 1f;
+        }
+        return Proficiency.multiplierFor(
+                levelForId.apply(proficiencyId),
+                Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
+                Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
+        );
+    }
+
+    /** One completed work action on the villager's proficiencies, with the configured gain and decay. */
+    protected Map<String, Float> levelProficiencies(
+            Map<String, Float> current,
+            @Nullable String proficiencyId
+    ) {
+        return levelProficiencies(
+                current,
+                proficiencyId,
+                Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
+                Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue()
+        );
+    }
+
+    /** As above, with the gain, decay and interval passed in. */
+    protected Map<String, Float> levelProficiencies(
+            Map<String, Float> current,
+            @Nullable String proficiencyId,
+            float gainPerTick,
+            float decayPerTick
+    ) {
+        if (proficiencyId == null) {
+            return current;
+        }
+        return Proficiency.levelUp(current, proficiencyId, gainPerTick, decayPerTick, interval);
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -354,14 +411,34 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
+    /** The server level behind {@code extra}, or null when there is none. */
+    protected @Nullable ServerLevel getServerLevel(EXTRA extra) {
+        return null;
+    }
+
+    /** The order a villager tries its work spots in: random, unless a path ranks them (fullest display first). */
+    protected ArrayList<WorkPosition<POS>> orderSpots(
+            EXTRA extra,
+            Collection<WorkPosition<POS>> workSpots
+    ) {
+        return shuffle(extra, workSpots);
+    }
+
+    protected boolean dressesDisplays() {
+        return specialRules.values().stream()
+                .anyMatch(rules -> rules.stream().anyMatch(r -> r.endsWith(SpecialRules.DRESS_DISPLAY)));
+    }
+
+    protected ArrayList<WorkPosition<POS>> shuffle(
+            EXTRA extra,
+            Collection<WorkPosition<POS>> workSpots
+    ) {
+        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), getServerLevel(extra)));
+    }
+
     protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(
             EXTRA extra,
             WorkOutput<TOWN, WorkPosition<POS>> v
-    );
-
-    protected abstract ArrayList<WorkPosition<POS>> shuffle(
-            EXTRA extra,
-            Collection<WorkPosition<POS>> workSpots
     );
 
     public @Nullable WorkOutput<@Nullable TOWN, WorkPosition<POS>> tryWorking(
@@ -489,6 +566,7 @@ public abstract class AbstractWorldInteraction<
         return checks.getQuantityForStep(state, 0);
     }
 
+    /** Called once per completed job cycle. The warp records XP here; real time pays it elsewhere. */
     protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position
@@ -510,6 +588,7 @@ public abstract class AbstractWorldInteraction<
             if (town != null) {
                 town = getResetFunc(inputs, position).apply(town);
                 triggerCompletionAdvancement(inputs, position);
+                town = onJobCompleted(inputs, town);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
             return town;
@@ -583,6 +662,27 @@ public abstract class AbstractWorldInteraction<
             return currentState;
         }
         return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
+    }
+
+    /** Applies the once-per-town loot guarantees: the helper chicken's Worldly Seeds, and the first hunter's raw food. */
+    protected Iterable<MCHeldItem> withLootGuarantees(
+            @Nullable TownFlagBlockEntity flag,
+            Iterable<MCHeldItem> results
+    ) {
+        results = ChickenArcLootGuarantee.maybePrepend(flag, results);
+        results = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), results);
+        return results;
+    }
+
+    /** The town flag at {@code pos}, or null. */
+    protected static @Nullable TownFlagBlockEntity flagBlockEntityAt(
+            @Nullable ServerLevel level,
+            @Nullable BlockPos pos
+    ) {
+        if (level == null || pos == null) {
+            return null;
+        }
+        return level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag ? flag : null;
     }
 
     protected abstract POS getTownPos(EXTRA inputs);

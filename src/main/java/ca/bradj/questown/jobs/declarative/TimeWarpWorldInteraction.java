@@ -53,6 +53,7 @@ public class TimeWarpWorldInteraction extends
     private final @Nullable BlockPos assignedWorkBlock;
     private final Map<ProductionStatus, Collection<String>> specialRulesMap;
     private final @Nullable ca.bradj.questown.world.QTWorldAccess warpWorld;
+    private int experiencePerCompletion = 0;
 
     public record Inputs(MCTownState town, ServerLevel level, UUID vUUID) {
     }
@@ -80,6 +81,25 @@ public class TimeWarpWorldInteraction extends
         this.assignedWorkBlock = assignedWorkBlock;
         this.specialRulesMap = specialRules;
         this.warpWorld = warpWorld;
+    }
+
+    /** The XP a completed cycle earns during a warp. */
+    public TimeWarpWorldInteraction withExperiencePerCompletion(int experiencePerCompletion) {
+        this.experiencePerCompletion = experiencePerCompletion;
+        return this;
+    }
+
+    /** Records the cycle's XP on the warp state, granted once when the warp ends. */
+    @Override
+    protected MCTownState onJobCompleted(
+            Inputs inputs,
+            MCTownState town
+    ) {
+        if (town == null || experiencePerCompletion <= 0) {
+            return town;
+        }
+        town.recordExperience(town.getVillager(villagerIndex).uuid, experiencePerCompletion);
+        return town;
     }
 
     private ca.bradj.questown.world.QTWorldAccess resolveWorld(Inputs inputs) {
@@ -408,6 +428,21 @@ public class TimeWarpWorldInteraction extends
     @Override
     protected void registerUnmetRoom(Inputs inputs) {
         // TODO[WARP]: Implement tracking of needs
+    }
+
+    /** Records non-empty extractions on the warp state; matching LOOT quests close when the warp ends. */
+    @Override
+    protected @Nullable MCTownState postExtractHook(
+            Inputs inputs,
+            MCTownState currentState,
+            @Nullable MCHeldItem item
+    ) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            currentState.recordLootExtract(item);
+        }
+        return super.postExtractHook(inputs, currentState, item);
     }
 
     /**

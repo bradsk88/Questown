@@ -168,6 +168,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public boolean isRemoved(VisitorMobEntity e) {
+                return e.isRemoved();
+            }
+
+            @Override
             public boolean isDining(VisitorMobEntity v) {
                 return ServerJobsRegistry.isDining(v.getJobId());
             }
@@ -347,6 +352,17 @@ public final class TownVillagerHandle {
             long tick
     ) {
         return delegate.isReadyForDowntime(getUuid(ownerVUID), tick);
+    }
+
+    boolean isReadyForDowntimeIfIdle(
+            VillagerUUID ownerVUID,
+            long tick
+    ) {
+        return delegate.isReadyForDowntimeIfIdle(getUuid(ownerVUID), tick);
+    }
+
+    void markWorked(VillagerUUID ownerVUID, long tick) {
+        delegate.markWorked(getUuid(ownerVUID), tick);
     }
 
     long size() {

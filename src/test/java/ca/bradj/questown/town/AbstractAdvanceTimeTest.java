@@ -1,11 +1,17 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.jobs.GathererJournalTest.TestItem;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.entity.ImportantTicks;
 import ca.bradj.questown.town.entity.TownFlagState;
+import ca.bradj.questown.town.workstatus.State;
+import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -13,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.LongUnaryOperator;
+import java.util.function.Predicate;
 
 /**
  * Tests for AbstractAdvanceTime interfaces and ImportantTicks integration.
@@ -223,6 +231,275 @@ class AbstractAdvanceTimeTest {
         // Assert
         Assertions.assertNotNull(warper);
         Assertions.assertEquals(1, warper.getTicks(0, 1000).size());
+    }
+
+    // The real advanceTime loop, with stub types: villagers work on the working budget, world processes on the full clock.
+
+    private static final long DAY = Signals.FULL_DAY_TICKS;
+    private static final long PRODUCTIVE_DAY = Signals.PRODUCTIVE_DAY_END_TICK;
+    private static final long NIGHT = DAY - PRODUCTIVE_DAY;
+
+    static class SeamTown extends TownState<ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown> {
+        SeamTown(List<VillagerData<TestItem>> villagers, long worldTimeAtSleep) {
+            super(villagers, List.of(), ImmutableMap.of(), ImmutableMap.of(), List.of(), ImmutableMap.of(), worldTimeAtSleep);
+        }
+
+        @Override
+        protected SeamTown newTownState(
+                ImmutableList<VillagerData<TestItem>> villagers,
+                ImmutableList<ContainerTarget<ContainerTarget.Container<TestItem>, TestItem>> containers,
+                ImmutableMap<Position, State> workStates,
+                ImmutableMap<Position, Integer> workTimers,
+                ImmutableList<Position> gates,
+                ImmutableMap<UUID, Boolean> blocksOfProgress,
+                long worldTimeAtSleep
+        ) {
+            return new SeamTown(villagers, worldTimeAtSleep);
+        }
+    }
+
+    /** An AbstractAdvanceTime that emits a fixed list of work ticks. */
+    static class SeamAdvanceTime extends AbstractAdvanceTime<
+            ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown, Object> {
+        private final ImmutableList<Warper.Tick> presetTicks;
+
+        SeamAdvanceTime(ImmutableList<Warper.Tick> presetTicks) {
+            this.presetTicks = presetTicks;
+        }
+
+        @Override
+        protected ImmutableList<Warper.Tick> computeImportantTicks(
+                Work work, VillagerUUID uuid, JobID jobID, Predicate<JobID> downtimeCheck,
+                long downtimeTicks, long ticksPassed, long currentTick
+        ) {
+            return presetTicks;
+        }
+
+        @Override
+        protected SeamTown finalizeState(SeamTown state, long currentTick) {
+            return state;
+        }
+    }
+
+    private static ImmutableSnapshot<TestItem, ?> stubJournal() {
+        return new ImmutableSnapshot<TestItem, Object>() {
+            @Override
+            public Object withSetItem(int itemIndex, TestItem item) {
+                return this;
+            }
+
+            @Override
+            public Object withItems(ImmutableList<TestItem> items) {
+                return this;
+            }
+
+            @Override
+            public String statusStringValue() {
+                return "";
+            }
+
+            @Override
+            public String jobStringValue() {
+                return "";
+            }
+
+            @Override
+            public ImmutableList<TestItem> items() {
+                return ImmutableList.of();
+            }
+
+            @Override
+            public JobID jobId() {
+                return TEST_JOB;
+            }
+        };
+    }
+
+    private static SeamTown singleVillagerTown() {
+        TownState.VillagerData<TestItem> v = new TownState.VillagerData<>(
+                0, 0, 0, stubJournal(), UUID.randomUUID()
+        );
+        return new SeamTown(List.of(v), 0);
+    }
+
+    private static ImmutableList<Warper.Tick> laborTicksAt(long windowEnd, long... productiveOffsets) {
+        ImmutableList.Builder<Warper.Tick> b = ImmutableList.builder();
+        long prev = 0;
+        for (long off : productiveOffsets) {
+            b.add(new Warper.Tick(windowEnd + off, off - prev));
+            prev = off;
+        }
+        return b.build();
+    }
+
+    @Test
+    void advanceTime_passiveDeltaTotalsWallClockTicks_whileLaborStaysOnProductiveBudget() {
+        // Two days: work, night, work.
+        long windowEnd = 35500;
+        long wallClockTicks = 35500;
+        long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks);
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
+        LongUnaryOperator productiveToWallClock = timeline::wallClockOffsetAt;
+
+        ImmutableList<Warper.Tick> labor = laborTicksAt(windowEnd, 5000, 11000, 12000, 20000, 23000);
+
+        List<Long> passiveDeltas = new ArrayList<>();
+        List<Long> passiveCurrentTicks = new ArrayList<>();
+        List<Long> laborCurrentTicks = new ArrayList<>();
+
+        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+            passiveCurrentTicks.add(currentTick);
+            passiveDeltas.add(tickDelta);
+            return town;
+        };
+
+        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+                (work, fallbackJobID, villagerIndex) -> new Warper<>() {
+                    @Override
+                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                        laborCurrentTicks.add(currentTick);
+                        return liveState;
+                    }
+
+                    @Override
+                    public java.util.Collection<Tick> getTicks(long referenceTick, long ticksPassed) {
+                        return List.of();
+                    }
+                };
+
+        new SeamAdvanceTime(labor).advanceTime(
+                singleVillagerTown(),
+                productiveTicks,
+                wallClockTicks,
+                windowEnd,
+                productiveToWallClock,
+                new TestWork(),
+                factory,
+                null,
+                passive,
+                new Object(),
+                job -> false,
+                0,
+                new TestLogger()
+        );
+
+        // World processes get the whole window, night included.
+        long totalPassive = passiveDeltas.stream().mapToLong(Long::longValue).sum();
+        Assertions.assertEquals(wallClockTicks, totalPassive,
+                "passive tickDelta must total wallClockTicks (night included)");
+
+        // Work never runs past the working budget.
+        long maxLaborOffset = laborCurrentTicks.stream().mapToLong(t -> t - windowEnd).max().orElse(-1);
+        Assertions.assertEquals(productiveTicks, maxLaborOffset,
+                "labour stays on the productive budget");
+        Assertions.assertTrue(totalPassive > productiveTicks,
+                "wall-clock budget must exceed productive budget for a night-spanning window");
+    }
+
+    @Test
+    void advanceTime_creditsNightBetweenLaborSteps_soDependencyChainsMature() {
+        // A sapling planted on day 1 has had a night by day 2.
+        long windowEnd = 35500;
+        long wallClockTicks = 35500;
+        long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks);
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
+
+        ImmutableList<Warper.Tick> labor = laborTicksAt(windowEnd, 11000, 12000);
+
+        List<Long> passiveCurrentTicks = new ArrayList<>();
+        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+            passiveCurrentTicks.add(currentTick);
+            return town;
+        };
+
+        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+                (work, fallbackJobID, villagerIndex) -> new Warper<>() {
+                    @Override
+                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                        return liveState;
+                    }
+
+                    @Override
+                    public java.util.Collection<Tick> getTicks(long referenceTick, long ticksPassed) {
+                        return List.of();
+                    }
+                };
+
+        new SeamAdvanceTime(labor).advanceTime(
+                singleVillagerTown(),
+                productiveTicks,
+                wallClockTicks,
+                windowEnd,
+                timeline::wallClockOffsetAt,
+                new TestWork(),
+                factory,
+                null,
+                passive,
+                new Object(),
+                job -> false,
+                0,
+                new TestLogger()
+        );
+
+        Assertions.assertTrue(passiveCurrentTicks.size() >= 2, "both labour steps fired the passive hook");
+        long dawnToDuskGap = passiveCurrentTicks.get(1) - passiveCurrentTicks.get(0);
+        // The night between the two steps is counted.
+        Assertions.assertTrue(dawnToDuskGap >= NIGHT,
+                "night must be credited between day-1 and day-2 labour steps (gap=" + dawnToDuskGap + ")");
+    }
+
+    @Test
+    void advanceTime_allNightWindow_runsPassiveEffectsWithNoLabor() {
+        // An all-night window: no work, but world processes still run.
+        long windowEnd = 17000;
+        long wallClockTicks = 2000;
+        long productiveTicks = Signals.calculateProductiveTicks(windowEnd, wallClockTicks);
+        Assertions.assertEquals(0, productiveTicks, "precondition: all-night window");
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(windowEnd, wallClockTicks);
+
+        List<Long> passiveDeltas = new ArrayList<>();
+        boolean[] laborRan = {false};
+
+        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+            passiveDeltas.add(tickDelta);
+            return town;
+        };
+        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+                (work, fallbackJobID, villagerIndex) -> new Warper<>() {
+                    @Override
+                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                        laborRan[0] = true;
+                        return liveState;
+                    }
+
+                    @Override
+                    public java.util.Collection<Tick> getTicks(long referenceTick, long ticksPassed) {
+                        return List.of();
+                    }
+                };
+
+        new SeamAdvanceTime(laborTicksAt(windowEnd, 100)).advanceTime(
+                singleVillagerTown(),
+                productiveTicks,
+                wallClockTicks,
+                windowEnd,
+                timeline::wallClockOffsetAt,
+                new TestWork(),
+                factory,
+                null,
+                passive,
+                new Object(),
+                job -> false,
+                0,
+                new TestLogger()
+        );
+
+        Assertions.assertFalse(laborRan[0], "no labour runs during an all-night window");
+        Assertions.assertEquals(wallClockTicks, passiveDeltas.stream().mapToLong(Long::longValue).sum(),
+                "passive effects still run for the whole night");
     }
 
     @Test

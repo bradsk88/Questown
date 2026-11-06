@@ -218,4 +218,9 @@ public class Work {
         return warper.apply(input.withSlotPrecondition(slotPrecondition));
     }
 
+    /** Whether this job's block is at {@code pos}, by block and properties only, whatever the block currently holds. */
+    public boolean isJobBlockAt(WorkLocation.BlockInfo blockInfo, BlockPos pos) {
+        return shouldInitializeWorkState.test(blockInfo, pos);
+    }
+
 }

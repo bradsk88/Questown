@@ -60,6 +60,8 @@ public interface Delegator<ENTITY> {
 
     void discardEntity(ENTITY visitorMobEntity);
 
+    boolean isRemoved(ENTITY e);
+
     boolean isDining(ENTITY v);
 
     boolean canStopWorkingAtAnyTime(ENTITY v);
