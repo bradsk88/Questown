@@ -264,16 +264,10 @@ public abstract class AbstractWorldInteraction<
                 QT.JOB_LOGGER.debug("[tryGiveItems] Pushing shrunk item qty={}", shrunk.get().quantity());
                 stack.push(shrunk);
             }
-            if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
-                ts = withKnowledge(inputs, ts, newItem);
-            } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
-                ts = withEffectApplied(inputs, ts, newItem);
-            } else {
-                HELD_ITEM unit = newItem.unit();
-                TOWN hooked = postExtractHook(inputs, ts, unit);
-                ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
-                QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
-            }
+            HELD_ITEM unit = newItem.unit();
+            TOWN hooked = postExtractHook(inputs, ts, unit);
+            ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
+            QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
 
             if (stack.isEmpty()) {
                 gotAll = true;
@@ -759,23 +753,6 @@ public abstract class AbstractWorldInteraction<
             TOWN ts,
             POS position,
             State fresh
-    );
-
-    protected abstract TOWN withEffectApplied(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
-    );
-
-    protected abstract TOWN withKnowledge(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
-    );
-
-    protected abstract boolean isInstanze(
-            INNER_ITEM innerItem,
-            Class<?> clazz
     );
 
     protected abstract boolean isMulti(INNER_ITEM innerItem);
