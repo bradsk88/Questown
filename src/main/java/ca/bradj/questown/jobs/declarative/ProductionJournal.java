@@ -179,7 +179,7 @@ public class ProductionJournal<
     }
 
     public boolean hasAnyLootToDrop() {
-        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.isLocked());
+        return inventory.stream().anyMatch(v -> !v.isEmpty() && !v.staysWithVillager());
     }
 
     public void setItem(

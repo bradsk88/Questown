@@ -270,6 +270,10 @@ public class ServerJobsRegistry {
     }
 
     public static ImmutableSet<JobID> getAllRootJobs() {
+        if (!Works.isInitialized()) {
+            // Job data not loaded yet: no candidates.
+            return ImmutableSet.of();
+        }
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (JobID j : getAllJobs()) {
             Work work = getWork(j, false);

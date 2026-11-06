@@ -28,6 +28,11 @@ public class Works {
         return works.keySet();
     }
 
+    /** Whether the job data has loaded. */
+    public static boolean isInitialized() {
+        return initialized;
+    }
+
     public static void staticInitialize(
             Map<JobID, Work> dataPackJobs
     ) {

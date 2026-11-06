@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -160,6 +161,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
+
 
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "questown:blocks/armorers_table_top",
+    "front": "questown:blocks/armorers_table_front",
+    "side": "questown:blocks/armorers_table_side"
+  }
+}

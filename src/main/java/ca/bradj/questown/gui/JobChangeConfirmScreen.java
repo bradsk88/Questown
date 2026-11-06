@@ -1,10 +1,11 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.mc.JEI;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -12,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
 

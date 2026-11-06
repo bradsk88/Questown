@@ -235,6 +235,13 @@ class TutorialPhaseGateTest {
                         && q.getWantedId().equals(kitchenSmall)
         ), "phase 2.5 batch must carry the kitchen_small room quest");
         ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ROOM
+                        && storeRoomMedium.equals(q.getWantedId())
+                        && q.fromRecipeID().map(new ResourceLocation("questown", "store_room")::equals).orElse(false)
+        ), "phase 2.5 batch must carry the Small Storeroom -> Storeroom upgrade quest");
+        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.FirstRoomUpgrade),
+                "the upgrades lesson opens with the batch that carries the first upgrade");
     }
 
     @Test
@@ -273,6 +280,16 @@ class TutorialPhaseGateTest {
 
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(2)
+                .build();
+
+    }
+
+    @Test
+    void whenHunterDoneButOneVillager_noAdvance() {
+        TownQuests quests = questsAtPhase2_5();
+
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(1)
                 .build();
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);

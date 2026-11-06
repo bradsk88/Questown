@@ -1,10 +1,12 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.SpendFlagBopOnSkillMessage;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -39,6 +41,7 @@ public class ItemJobsScreen extends Screen {
     private @NotNull Ingredient requestedItem;
     private final BlockPos flagPos;
     private Button addButton;
+    private final int flagBops;
 
     public ItemJobsScreen(
             Ingredient requestedItem,
@@ -61,6 +64,24 @@ public class ItemJobsScreen extends Screen {
         this.requestedItem = requestedItem;
         this.flagPos = flagPos;
 
+    }
+
+    private static final int FLAG_BOP_ICON_SPACE = 20;
+
+    private int flagBopIconX() {
+        return addButton.x - FLAG_BOP_ICON_SPACE + 1;
+    }
+
+    private int flagBopIconY() {
+        return addButton.y + 1;
+    }
+
+    private boolean isOverFlagBop(int mouseX, int mouseY) {
+        return showsFlagBop() && UtilClean.isCoordInBox(mouseX, mouseY, flagBopIconX(), flagBopIconY(), 16, 16);
+    }
+
+    private boolean showsFlagBop() {
+        return skillVillager != null && skillLocked && flagBops > 0;
     }
 
     private void send() {
@@ -105,6 +126,7 @@ public class ItemJobsScreen extends Screen {
         int pageTopY = ((this.height - delegate.backgroundHeight)) / 2;
         int pageLeftX = ((this.width - backgroundWidth) / 2);
         int buttonHeight = (2 * font.lineHeight) + 2;
+        int bopSpace = showsFlagBop() ? FLAG_BOP_ICON_SPACE : 0;
         this.addButton = this.addRenderableWidget(
                 new Button(
                         pageLeftX + BIG_PADDING,

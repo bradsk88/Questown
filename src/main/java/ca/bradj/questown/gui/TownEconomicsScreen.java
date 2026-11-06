@@ -5,8 +5,9 @@ import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.vertex.PoseStack;
+import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,12 +35,42 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.economics");
     }
 
     @Override
     protected ImmutableList<ItemEconomicsData> cardsData() {
-        return lastUpdate.data();
+        return EconomicsCardOrder.order(showRecent ? lastUpdate.recent() : lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
+    }
+
+    private final GuiIconButtonSmall previousView = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> showRecent = !showRecent
+    );
+    private final GuiIconButtonSmall nextView = JEI.guiIconButtonSmall(
+            0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> showRecent = !showRecent
+    );
+
+    @Override
+    protected void init() {
+        super.init();
+        int x = (this.width - backgroundWidth) / 2;
+        int y = (this.height - backgroundHeight()) / 2 + backgroundHeight() - borderPadding - buttonHeight;
+        previousView.x = x + borderPadding;
+        previousView.y = y;
+        nextView.x = x + backgroundWidth - buttonWidth - borderPadding;
+        nextView.y = y;
+        addRenderableWidget(previousView);
+        addRenderableWidget(nextView);
+    }
+
+    private boolean isOverViewToggle(int mouseX, int mouseY) {
+        int x = previousView.x;
+        return UtilClean.isCoordInBox(mouseX, mouseY, x, previousView.y,
+                nextView.x + buttonWidth - x, buttonHeight);
+    }
+
+    private Component viewToggleLabel() {
+        return Compat.translatable(showRecent ? "questown.menu.economics.view.recent" : "questown.menu.economics.view.all");
     }
 
     @Override
@@ -61,6 +92,10 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
             int p_97809_,
             int p_97810_
     ) {
+        drawSelectorStrip(ctx, previousView, nextView, (this.width - backgroundWidth) / 2 + backgroundWidth,
+                viewToggleLabel().getString());
+        ctx.renderWidget(previousView, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(nextView, mouseX, mouseY, partialTicks);
     }
 
     private void renderTooltips(

@@ -78,6 +78,12 @@ public interface Delegator<ENTITY> {
             JobID newJob
     );
 
+    /** The jobs a villager starts with in this root; a job change unlocks them all. */
+    ImmutableList<JobID> getDefaultWork(JobID root);
+
+    /** Posts the root's starter requests on the job board, so a new worker has something to do. */
+    void postStarterRequests(JobID root);
+
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);

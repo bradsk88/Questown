@@ -12,6 +12,8 @@ import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.gui.FlagTabs;
+import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
@@ -65,6 +67,8 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final Item.Properties ITEM_PROPS = new Item.Properties().
             tab(ModItemGroup.QUESTOWN_GROUP);
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
+    // The flag holds as many Blocks of Progress as it can; more would be lost.
+    public static final Property<Boolean> BOP_FULL = BooleanProperty.create("bop_full");
     private Map<Player, Long> informedPlayers = new HashMap<>();
 
     public TownFlagBlock() {

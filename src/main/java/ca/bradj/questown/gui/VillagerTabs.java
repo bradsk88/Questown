@@ -1,5 +1,7 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
@@ -141,6 +143,10 @@ public class VillagerTabs extends Tabs implements SubUI {
             }
             return null;
         };
+        VillagerBopTab bop = VillagerBopTab.decide(!menu.showInventoryTab(), menu.showBlockOfProgressTab());
+        Runnable bopFn = bop.opensFlagUi()
+                ? FlagTabs.makeOpenFn(FlagTabsEmbedding.FlagInfo.dumb(menu.getFlagPos(), true, false), OpenFlagMenuMessage.BOP)
+                : factory.apply(OpenVillagerMenuMessage.BOP);
         return new VillagerTabs(
                 factory.apply(OpenVillagerMenuMessage.INVENTORY),
                 factory.apply(OpenVillagerMenuMessage.QUESTS),

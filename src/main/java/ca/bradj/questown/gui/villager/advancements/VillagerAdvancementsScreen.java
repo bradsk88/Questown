@@ -32,6 +32,7 @@ public class VillagerAdvancementsScreen extends Screen {
     public static final int backgroundHeight = 140;
     private final BlockPos flagPos;
     private final UUID villagerUUID;
+    private final boolean fromFlag;
     private final VillagerAdvancementsContent content;
     private final VillagerTabs tabs;
     private boolean isScrolling;
@@ -66,6 +67,7 @@ public class VillagerAdvancementsScreen extends Screen {
         );
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
+        this.fromFlag = !showInventoryTab;
         this.tabs = VillagerTabs.forMenu(new VillagerTabsEmbedding() {
             @Override
             public Collection<String> getEnabledTabs() {
@@ -85,6 +87,11 @@ public class VillagerAdvancementsScreen extends Screen {
             @Override
             public boolean showBlockOfProgressTab() {
                 return showBlockOfProgressTab;
+            }
+
+            @Override
+            public boolean showInventoryTab() {
+                return showInventoryTab;
             }
         });
     }

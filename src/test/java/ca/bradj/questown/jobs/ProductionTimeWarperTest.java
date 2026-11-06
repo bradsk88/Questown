@@ -114,7 +114,7 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of();
                 },
                 () -> new TestItem("")
         );
@@ -136,7 +136,7 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of();
                 },
                 () -> new TestItem("")
         );
@@ -159,10 +159,38 @@ class ProductionTimeWarperTest {
                         ),
                 heldItems -> {
                             townItems.addAll(heldItems);
-                            return ImmutableList.of(); // All items deposited - no leftovers TODO: Test leftovers
+                            return ImmutableList.of();
                 },
                 () -> new TestItem("")
         );
+        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, res.status());
+    }
+
+    @Test
+    void simulateDropLoot_shouldLeaveUndepositedItemsInInventory_IfTownCanOnlyTakeSome() {
+        // When the town takes only some items, the rest stay with the villager.
+        ArrayList<TestItem> townItems = new ArrayList<>();
+
+        ProductionTimeWarper.Result<TestItem> res = ProductionTimeWarper.<TestItem, TestItem>
+                simulateDropLoot(
+                        new ProductionTimeWarper.Result<>(
+                                ProductionStatus.DROPPING_LOOT,
+                                ImmutableList.of(
+                                        new TestItem("bread"),
+                                        new TestItem("stick")
+                                )
+                        ),
+                        heldItems -> {
+                            townItems.addAll(heldItems.subList(0, 1));
+                            return heldItems.subList(1, heldItems.size());
+                        },
+                        () -> new TestItem("")
+                );
+        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("bread")), townItems);
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new TestItem("stick"),
+                new TestItem("")
+        ), res.items());
         Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, res.status());
     }
 
@@ -201,6 +229,29 @@ class ProductionTimeWarperTest {
                 new TestItem("bread") // Only room to insert one of the breads. So one remains.
         ), after);
     }
+    @Test
+    void dropIntoContainers_ShouldLeaveABlockOfProgressWithTheVillager() {
+        ImmutableList<TestItem> items = ImmutableList.of(
+                new TestItem("block_of_progress"),
+                new TestItem("gold")
+        );
+        TestContainer<TestItem> chest = new TestContainer<>(2, () -> new TestItem(""));
+        @NotNull ImmutableList<ContainerTarget<TestContainer<TestItem>, TestItem>> containers = ImmutableList.of(
+                new ContainerTarget<>(
+                        new Position(1, 2), 3,
+                        new Position(2, 2),
+                        chest,
+                        () -> true,
+                        item -> {},
+                        i -> true,
+                        RankBoost.SAME_AS_VANILLA_CHEST.value()
+                )
+        );
+        dropIntoContainers(items, containers);
+        Assertions.assertEquals(new TestItem("gold"), chest.getItem(0));
+        Assertions.assertEquals(new TestItem(""), chest.getItem(1));
+    }
+
     @Test
     void dropIntoContainers_ShouldReturnNoItems_IfAllCanFitInContainers() {
         ImmutableList<TestItem> items = ImmutableList.of(

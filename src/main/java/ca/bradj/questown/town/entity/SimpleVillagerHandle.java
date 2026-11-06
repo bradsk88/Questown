@@ -48,6 +48,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     // Serialized
     private final Map<UUID, Boolean> jobChangesPending = new HashMap<>();
+    // The job an open job-change quest promised at the spend, until the change applies.
+    private final Map<UUID, JobID> guaranteedRoots = new HashMap<>();
+    // The job rolled when a Block of Progress was spent, for changes no quest promised; applied in the morning. Saved.
+    private final Map<UUID, JobID> preRolls = new HashMap<>();
 
     public static void staticInit() {
         TownVillagerUIs.staticInit();
@@ -64,8 +68,19 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return ImmutableMap.copyOf(jobChangesPending);
     }
 
+    public ImmutableMap<UUID, JobID> getGuaranteedRoots() {
+        return ImmutableMap.copyOf(guaranteedRoots);
+    }
+
+    public ImmutableMap<UUID, JobID> getPreRolls() {
+        return ImmutableMap.copyOf(preRolls);
+    }
+
     private final List<ENTITY> entities = new ArrayList<>();
-    private final List<Consumer<VillagerStatsData>> listeners = new ArrayList<>();
+    // By villager: a stats page hears only its own villager.
+    private final Map<UUID, List<Consumer<VillagerStatsData>>> listeners = new HashMap<>();
+    // Any villager's stats changed, so the flag saves.
+    private final List<Runnable> anyStatsListeners = new ArrayList<>();
     private final List<Consumer<ENTITY>> hungryListeners = new ArrayList<>();
 
     private static final int TICK_FACTOR = 10;
@@ -125,6 +140,32 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ImmutableMap<UUID, Boolean> jobChangesPending,
             boolean hungerEnabled
     ) {
+        initialize(fullness, damage, experience, level, jobChangesPending, hungerEnabled, ImmutableMap.of());
+    }
+
+    public void initialize(
+            Map<UUID, Integer> fullness,
+            Map<UUID, Integer> damage,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level,
+            ImmutableMap<UUID, Boolean> jobChangesPending,
+            boolean hungerEnabled,
+            ImmutableMap<UUID, JobID> guaranteedRoots
+    ) {
+        initialize(fullness, damage, experience, level, jobChangesPending, hungerEnabled, guaranteedRoots,
+                ImmutableMap.of());
+    }
+
+    public void initialize(
+            Map<UUID, Integer> fullness,
+            Map<UUID, Integer> damage,
+            ImmutableMap<UUID, Integer> experience,
+            ImmutableMap<UUID, Integer> level,
+            ImmutableMap<UUID, Boolean> jobChangesPending,
+            boolean hungerEnabled,
+            ImmutableMap<UUID, JobID> guaranteedRoots,
+            ImmutableMap<UUID, JobID> preRolls
+    ) {
         if (!this.fullness.isEmpty()) {
             throw new IllegalStateException("Attempting to initialize already initialized");
         }
@@ -133,11 +174,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.experience.putAll(experience);
         this.levels.putAll(level);
         this.jobChangesPending.putAll(jobChangesPending);
-        addHungryListener(e -> {
-            if (UtilClean.getOrDefault(fullness, delegator.getUUID(e), configs.baseFullness) == 0) {
-                starving.put(delegator.getUUID(e), true);
-            }
-        });
+        this.guaranteedRoots.putAll(guaranteedRoots);
+        this.preRolls.putAll(preRolls);
         this.hungerEnabled = hungerEnabled;
     }
 
@@ -388,16 +426,33 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return entities.contains(visitorMobEntity);
     }
 
-    public void addStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.add(l);
+    public void addStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        this.listeners.computeIfAbsent(villager, k -> new ArrayList<>()).add(l);
+    }
+
+    public void addAnyStatsListener(Runnable l) {
+        this.anyStatsListeners.add(l);
+    }
+
+    private void notifyStatsListeners(UUID villager) {
+        anyStatsListeners.forEach(Runnable::run);
+        List<Consumer<VillagerStatsData>> ls = listeners.get(villager);
+        if (ls == null || ls.isEmpty()) {
+            return;
+        }
+        VillagerStatsData stats = getStats(villager);
+        List.copyOf(ls).forEach(l -> l.accept(stats));
     }
 
     public void addHungryListener(Consumer<ENTITY> l) {
         this.hungryListeners.add(l);
     }
 
-    public void removeStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.remove(l);
+    public void removeStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        List<Consumer<VillagerStatsData>> ls = this.listeners.get(villager);
+        if (ls != null) {
+            ls.remove(l);
+        }
     }
 
     public Collection<ENTITY> entities() {
@@ -452,7 +507,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (exists(visitorMobEntity)) {
             return;
         }
-        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        QT.FLAG_LOGGER.error(
+                "Visitor mob's parent has no record of entity. Removing visitor. uuid={} handleSize={}",
+                delegator.getUUID(visitorMobEntity),
+                this.entities.size()
+        );
         delegator.discardEntity(visitorMobEntity);
     }
 
@@ -530,7 +589,21 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public void register(ENTITY vEntity) {
-        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", delegator.getUUID(vEntity), vEntity);
+        QT.FLAG_LOGGER.info("Registered villager {} with the town (arrival or reload): {}", delegator.getUUID(vEntity), vEntity);
+        // One entry per villager: a reloaded entity has the same UUID.
+        UUID id = delegator.getUUID(vEntity);
+        // A copy still in the world wins over one that loads later.
+        boolean liveCopyListed = this.entities.stream().anyMatch(
+                e -> e != vEntity && delegator.getUUID(e).equals(id) && !delegator.isRemoved(e)
+        );
+        if (liveCopyListed) {
+            QT.FLAG_LOGGER.info("Discarding a duplicate entity for townie {}: a live copy is already registered", id);
+            delegator.discardEntity(vEntity);
+            return;
+        }
+        if (this.entities.removeIf(e -> e != vEntity && delegator.getUUID(e).equals(id))) {
+            QT.FLAG_LOGGER.info("Replaced a stale entity for townie {} on re-registration", id);
+        }
         this.add(vEntity);
         delegator.addChangeListener(
                 vEntity, () -> {
@@ -557,11 +630,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            delegator.broadcastMessage(
-                    "message.villager.leveled_up",
-                    UtilClean.truncateMiddle(uuid),
-                    newLvl
-            );
             broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
@@ -594,31 +662,65 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         hasBlockOfProgress.put(uuid, false);
     }
 
-    public void scheduleJobRootChange(
+    public Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             long currentTick,
             boolean instant
     ) {
+        return scheduleJobRootChange(villagerUUID, currentTick, instant, Optional.empty());
+    }
+
+    /** Schedules a job change and returns the job: a quest's promised one, else a random pick. Empty when there is no candidate. */
+    public Optional<JobID> scheduleJobRootChange(
+            UUID villagerUUID,
+            long currentTick,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
+    ) {
         ENTITY e = getEntity(villagerUUID);
         if (e == null) {
             QT.FLAG_LOGGER.error("Villager not found for job root change: {}", villagerUUID);
-            return;
+            return Optional.empty();
         }
+        UUID vuid = delegator.getUUID(e);
+        guaranteedRoot.ifPresentOrElse(
+                root -> guaranteedRoots.put(vuid, root),
+                () -> guaranteedRoots.remove(vuid)
+        );
         if (instant) {
             QT.FLAG_LOGGER.info(
-                    "Villager {} will change to a new job NOW (creative mode)",
+                    "Villager {} will change to a new job NOW (creative mode or onboarding)",
                     UtilClean.truncateMiddle(villagerUUID)
             );
             changeJobRootNow(e, currentTick);
-            return;
+            return guaranteedRoot;
         }
+        // Decide the job now, at the spend; the morning applies it.
+        JobID preRoll = rollPendingRoot(delegator.getJobId(e)).orElse(null);
+        if (preRoll != null) {
+            preRolls.put(vuid, preRoll);
+        } else {
+            preRolls.remove(vuid);
+        }
+        jobChangesPending.put(vuid, true);
         delegator.broadcastMessage("message.questown.villager.change_job_in_morning", chatName(villagerUUID));
+        return guaranteedRoot.isPresent() ? guaranteedRoot : Optional.ofNullable(preRoll);
+    }
 
-        jobChangesPending.put(delegator.getUUID(e), true);
-        delegator.broadcastMessage(
-                "message.questown.villager.change_job_in_morning",
-                UtilClean.truncateMiddle(villagerUUID)
-        );
+    /** The job a pending change takes: one no villager has yet, else any other. Empty when there is none. */
+    Optional<JobID> rollPendingRoot(JobID currentJob) {
+        ImmutableSet<JobID> candidates = rootCandidates(currentJob);
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(delegator.shuffle(candidates).get(0));
+    }
+
+    private ImmutableSet<JobID> rootCandidates(JobID currentJob) {
+        Set<String> held = entities.stream()
+                .map(e -> delegator.getJobId(e).rootId())
+                .collect(Collectors.toSet());
+        return RootRoll.candidates(ServerJobsRegistry.getAllRootJobs(), currentJob, held);
     }
 
     public void handleMorning(long tick) {
@@ -644,7 +746,14 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             ENTITY v,
             long currentTick
     ) {
-//        Optional<JobID> override = town.getUnsafe().getQuestHandle().overnightJobOverride();
+        // A quest's promised job applies first.
+        Optional<JobID> guaranteed = Optional.ofNullable(guaranteedRoots.remove(delegator.getUUID(v)));
+        if (guaranteed.isPresent()) {
+            QT.FLAG_LOGGER.info("Job-change quest dictates job root change to: {}", guaranteed.get());
+            unlockAndChange(v, guaranteed.get(), currentTick);
+            return;
+        }
+
         Optional<JobID> override = delegator.getOvernightJobOverride();
         if (override.isPresent()) {
             QT.FLAG_LOGGER.info("Overriding random job root change in favor of: {}", override.get());
@@ -652,26 +761,44 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             return;
         }
 
-        ImmutableSet<JobID> allRoots = ServerJobsRegistry.getAllRootJobs();
-        List<JobID> allOtherJobs = allRoots.stream().filter(z -> !delegator.getJobId(v).sameRoot(z)).toList();
+        JobID preRoll = preRolls.remove(delegator.getUUID(v));
+        if (preRoll != null) {
+            QT.FLAG_LOGGER.info("Applying pre-rolled job root change to: {}", preRoll);
+            unlockAndChange(v, preRoll, currentTick);
+            return;
+        }
+
+        ImmutableSet<JobID> allOtherJobs = rootCandidates(delegator.getJobId(v));
         QT.FLAG_LOGGER.info(
                 "Changing villager from {} to one of [{}]",
                 delegator.getJobId(v).rootId(),
-                String.join(", ", allRoots.stream().map(JobID::rootId).toList())
+                String.join(", ", allOtherJobs.stream().map(JobID::rootId).toList())
         );
         if (allOtherJobs.isEmpty()) {
             QT.FLAG_LOGGER.error("Only one job root detected in town? This is likely a poorly configured data pack.");
             jobChangesPending.put(delegator.getUUID(v), false);
             return;
         }
-        ImmutableList<JobID> shuffled = delegator.shuffle(
-                ImmutableSet.copyOf(allOtherJobs)
-        );
+        ImmutableList<JobID> shuffled = delegator.shuffle(allOtherJobs);
         JobID newJob = shuffled.get(0);
         if (delegator.getJobId(v).sameRoot(newJob)) {
             QT.logBug("Root change resulted in same root. From {} to {}.", delegator.getJobId(v), newJob);
         }
         unlockAndChange(v, newJob, currentTick);
+    }
+
+    /** Makes this villager a {@code job} worker now, as a spent Block of Progress does at dawn: unlocks it and its root's starting jobs, sets it, and posts the starter requests. */
+    public void assignJob(
+            UUID villagerUUID,
+            JobID job,
+            long currentTick
+    ) {
+        ENTITY v = getEntity(villagerUUID);
+        if (v == null) {
+            QT.FLAG_LOGGER.error("Could not find entity {} to assign job: {}", villagerUUID, job);
+            return;
+        }
+        unlockAndChange(v, job, currentTick);
     }
 
     private void unlockAndChange(
@@ -681,7 +808,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     ) {
         QT.FLAG_LOGGER.info("Changing villager from {} to {}", delegator.getJobId(v).rootId(), newJob);
         delegator.unlockJob(v, newJob);
+        // The root's starting jobs (a cook: extract, fuel, a starter recipe).
+        for (JobID defaultWork : delegator.getDefaultWork(newJob)) {
+            delegator.unlockJob(v, defaultWork);
+        }
         changeJobForVillager(delegator.getUUID(v), newJob, currentTick, true);
+        // And the starter requests, so the new jobs have something to make.
+        delegator.postStarterRequests(newJob);
     }
 
     public boolean isReadyForDowntime(
@@ -718,7 +851,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             UUID ownerUUID,
             long tick
     ) {
-        mostRecentDowntimeTick.put(ownerUUID, tick);
+        markRested(ownerUUID, tick);
     }
 
     private void registerMostRecentFoodAttempt(
