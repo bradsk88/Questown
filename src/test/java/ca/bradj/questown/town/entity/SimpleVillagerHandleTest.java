@@ -93,6 +93,7 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void setChanged() {
+            changes++;
         }
 
         @Override

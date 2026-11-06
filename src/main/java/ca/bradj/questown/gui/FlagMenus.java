@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -47,6 +48,7 @@ public class FlagMenus {
             // Buffer reads - order must match write()
             Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
             BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
+            Map<UUID, String> villagerDisplayNames = AbstractQuestsContainer.readVillagerNames(buf);
             TownBlockofProgressMenu.ReadResult bopResult = TownBlockofProgressMenu.readWithFlagInfo(buf);
             int blocksOfProgress = bopResult.blocksOfProgress();
             FlagTabsEmbedding.FlagInfo flagInfo = bopResult.flagInfo();

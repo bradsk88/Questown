@@ -251,7 +251,9 @@ public class TownVillagerUIs {
                 unlockedJobs,
                 unlockableJobs,
                 villagerId,
-                flag.getVillagerHandle().isJobChangePending(e.getVUID())
+                flag.getVillagerHandle().isJobChangePending(e.getVUID()),
+                showInventoryTab,
+                flag.getVillagerHandle().displayNameFor(villagerId)
         );
         runnable.accept(d);
     }
@@ -439,7 +441,10 @@ public class TownVillagerUIs {
             List<UIQuest> quests,
             VisitorMobEntity e,
             VillagerStatsData stats,
-            boolean isJobChangePending
+            boolean isJobChangePending,
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            String villagerDisplayName
     ) {
         Compat.openScreen(
                 sender, new MenuProvider() {

@@ -633,6 +633,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
+        delegator.setChanged();
     }
 
     private void broadcastLevelUp(
@@ -661,6 +662,22 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void clearBlockOfProgress(UUID uuid) {
         hasBlockOfProgress.put(uuid, false);
+        delegator.setChanged();
+    }
+
+    /** The latched villagers, for saving, so an earned Block of Progress is still deposited after a reload. */
+    public ImmutableMap<UUID, Boolean> getBlockOfProgressLatches() {
+        ImmutableMap.Builder<UUID, Boolean> b = ImmutableMap.builder();
+        hasBlockOfProgress.forEach((uuid, latched) -> {
+            if (latched) {
+                b.put(uuid, true);
+            }
+        });
+        return b.build();
+    }
+
+    public void restoreBlockOfProgress(Map<UUID, Boolean> latches) {
+        hasBlockOfProgress.putAll(latches);
     }
 
     public Optional<JobID> scheduleJobRootChange(
