@@ -829,8 +829,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void addAdditionalSaveData(CompoundTag p_21484_) {
         super.addAdditionalSaveData(p_21484_);
         ListTag items = new ListTag();
+        // Empty slots are saved as an empty compound, keeping the slot count.
         Jobs.getItems(job.get())
-            .forEach(v -> items.add(v.serializeNBT()));
+            .forEach(v -> items.add(v.isEmpty() ? new CompoundTag()
+                : ca.bradj.questown.mc.Compat.saveItem(getLevel(), v)));
         p_21484_.put("items", items);
     }
 

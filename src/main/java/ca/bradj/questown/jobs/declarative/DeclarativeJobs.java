@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.*;
 import java.util.stream.Stream;
@@ -599,7 +600,6 @@ public class DeclarativeJobs {
         return new WithReason<>(null, "No job sites");
     }
 
-
     public static <POS, ROOM extends Room, RECIPE> ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<POS>> rooms(
             Supplier<ImmutableList<NVIRoom<ROOM, RECIPE, POS>>> jobSites,
             Function<POS, State> jobBlockStates,
@@ -609,8 +609,9 @@ public class DeclarativeJobs {
     ) {
         ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks<POS>> b = ImmutableMap.builder();
         Supplier<Rooms<POS, ?>> e = () -> {
-            ImmutableMap.Builder<POS, Integer> spotStatuses = ImmutableMap.builder();
-            ImmutableMap.Builder<POS, Boolean> spotJBs = ImmutableMap.builder();
+            // By position: overlapping job sites can hold the same block twice.
+            Map<POS, Integer> spotStatuses = new LinkedHashMap<>();
+            Map<POS, Boolean> spotJBs = new LinkedHashMap<>();
             Map<ROOM, List<Integer>> roomStatuses = new HashMap<>();
             // Rooms that only need work count too: some jobs' states need no item at all.
             Stream<NVIRoom<ROOM, RECIPE, POS>> rooms = jobSites.get().stream();
@@ -627,12 +628,12 @@ public class DeclarativeJobs {
                         jobBlockState = State.freshAtState(0);
                     }
                     int v = jobBlockState.processingState();
-                    spotStatuses.put(bp, v);
+                    spotStatuses.putIfAbsent(bp, v);
                     UtilClean.addOrInitializeList(roomStatuses, match.room().getRoom(), v);
-                    spotJBs.put(bp, isJobBlock.test(bp));
+                    spotJBs.computeIfAbsent(bp, isJobBlock::test);
                 }
             });
-            return new Rooms<>(spotStatuses.build(), roomStatuses, spotJBs.build());
+            return new Rooms<>(ImmutableMap.copyOf(spotStatuses), roomStatuses, ImmutableMap.copyOf(spotJBs));
         };
 
         for (int i = 0; i < maxState; i++) {
