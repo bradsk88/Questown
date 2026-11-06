@@ -37,6 +37,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
     private final Stack<Runnable> closers = new Stack<>();
     private @Nullable VisitorMobEntity townie;
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
     private final boolean showInventoryTab;
 
     public static InventoryAndStatusMenu ForClientSide(
@@ -67,6 +68,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         layoutSlots(gathererInv);
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
         this.showInventoryTab = showInventoryTab;
     }
 

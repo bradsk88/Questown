@@ -16,6 +16,7 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
     // Every tab but economics, the open one.
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.ECONOMICS);
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
     private final boolean showInventoryTab;
 
     public static VillagerEconomicsMenu ForClientSide(
@@ -39,6 +40,7 @@ public class VillagerEconomicsMenu extends AbstractTabbedVillagerMenu implements
     ) {
         super(MenuTypesInit.VILLAGER_ECONOMICS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
         this.showInventoryTab = showInventoryTab;
     }
 

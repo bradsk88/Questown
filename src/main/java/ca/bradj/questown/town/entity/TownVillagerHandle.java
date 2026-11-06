@@ -416,6 +416,10 @@ public final class TownVillagerHandle {
         return ImmutableMap.copyOf(delegate.levels);
     }
 
+    int getLevel(UUID villagerUUID) {
+        return delegate.getLevel(villagerUUID);
+    }
+
     public void revealSkill(JobID skill) {
         JobID parent = ServerJobsRegistry.getParentOf(skill);
         if (parent != null) {

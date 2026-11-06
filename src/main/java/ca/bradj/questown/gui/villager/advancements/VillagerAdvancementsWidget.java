@@ -1,14 +1,13 @@
 package ca.bradj.questown.gui.villager.advancements;
 
+import ca.bradj.questown.gui.RenderContext;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.mc.Util;
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.advancements.FrameType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
-import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -25,9 +24,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class VillagerAdvancementsWidget extends GuiComponent {
+public class VillagerAdvancementsWidget {
     private static final ResourceLocation WIDGETS_LOCATION = new ResourceLocation(
-            "textures/gui/advancements/widgets.png");
+            "questown", "textures/gui/advancements/widgets.png");
     private static final int[] TEST_SPLIT_OFFSETS = new int[]{0, 10, -10, 25, -25};
     private static final int OBTAINED = 0;
     private static final int UNOBTAINED = 1;
@@ -74,7 +73,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         this.description = Language.getInstance().getVisualOrder(this.findOptimalLines(
                 ComponentUtils.mergeStyles(
                         p_97258_.getDescription().copy(),
-                        Style.EMPTY.withColor(p_97258_.getFrame().getChatColor())
+                        Style.EMPTY.withColor(net.minecraft.ChatFormatting.GOLD)
                 ), l
         ));
 
@@ -131,7 +130,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void drawConnectivity(
-            PoseStack p_97299_,
+            RenderContext ctx,
             int p_97300_,
             int p_97301_,
             boolean p_97302_
@@ -147,18 +146,18 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int i1 = p_97301_ + this.y + 13;
             int j1 = p_97302_ ? -16777216 : -1;
             if (p_97302_) {
-                this.hLine(p_97299_, j, i, k - 1, j1);
-                this.hLine(p_97299_, j + 1, i, k, j1);
-                this.hLine(p_97299_, j, i, k + 1, j1);
-                this.hLine(p_97299_, l, j - 1, i1 - 1, j1);
-                this.hLine(p_97299_, l, j - 1, i1, j1);
-                this.hLine(p_97299_, l, j - 1, i1 + 1, j1);
-                this.vLine(p_97299_, j - 1, i1, k, j1);
-                this.vLine(p_97299_, j + 1, i1, k, j1);
+                this.hLine(ctx, j, i, k - 1, j1);
+                this.hLine(ctx, j + 1, i, k, j1);
+                this.hLine(ctx, j, i, k + 1, j1);
+                this.hLine(ctx, l, j - 1, i1 - 1, j1);
+                this.hLine(ctx, l, j - 1, i1, j1);
+                this.hLine(ctx, l, j - 1, i1 + 1, j1);
+                this.vLine(ctx, j - 1, i1, k, j1);
+                this.vLine(ctx, j + 1, i1, k, j1);
             } else {
-                this.hLine(p_97299_, j, i, k, j1);
-                this.hLine(p_97299_, l, j, i1, j1);
-                this.vLine(p_97299_, j, i1, k, j1);
+                this.hLine(ctx, j, i, k, j1);
+                this.hLine(ctx, l, j, i1, j1);
+                this.vLine(ctx, j, i1, k, j1);
             }
         }
 
@@ -166,13 +165,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
         while (var11.hasNext()) {
             VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var11.next();
-            advancementwidget.drawConnectivity(p_97299_, p_97300_, p_97301_, p_97302_);
+            advancementwidget.drawConnectivity(ctx, p_97300_, p_97301_, p_97302_);
         }
 
     }
 
     public void draw(
-            PoseStack p_97267_,
+            RenderContext ctx,
             int p_97268_,
             int p_97269_
     ) {
@@ -188,12 +187,13 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int y = p_97269_ + this.y;
             int ft = getFrameType();
             if (ft >= 0) {
-                this.blit(p_97267_, x, y, ft, v1, v2, v3);
-                this.minecraft.getItemRenderer().renderAndDecorateFakeItem(
-                        this.display.getIcon(),
-                        p_97268_ + this.x + 8,
-                        p_97269_ + this.y + 5
-                );
+                // A locked skill is dimmed and lights up under the cursor.
+                float shade = unlocked ? 1f : LOCKED_SHADE;
+                Util.blitState();
+                RenderSystem.setShaderColor(shade, shade, shade, 1f);
+                ctx.blit(WIDGETS_LOCATION, x, y, ft, v1, v2, v3);
+                ctx.renderItemAndDecorations(this.display.getIcon(), p_97268_ + this.x + 8, p_97269_ + this.y + 5);
+                RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             }
         }
 
@@ -201,7 +201,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
 
         while (var6.hasNext()) {
             VillagerAdvancementsWidget advancementwidget = (VillagerAdvancementsWidget) var6.next();
-            advancementwidget.draw(p_97267_, p_97268_, p_97269_);
+            advancementwidget.draw(ctx, p_97268_, p_97269_);
         }
 
     }
@@ -210,13 +210,52 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         // widgets.png: 26-px frames at u 0 (task), 26 (challenge), 52 (goal).
         int ft = -1;
         if (unlocked) {
-            ft = FrameType.TASK.getTexture();
+            ft = 0;
         } else if (canUnlock) {
-            ft = FrameType.GOAL.getTexture();
+            ft = 52;
         } else if (minecraft.player.isCreative()) {
-            ft = FrameType.CHALLENGE.getTexture();
+            ft = 26;
         }
         return ft;
+    }
+
+    private void blit(
+            RenderContext ctx,
+            int x,
+            int y,
+            int u,
+            int v,
+            int width,
+            int height
+    ) {
+        Util.blitState();
+        ctx.blit(WIDGETS_LOCATION, x, y, u, v, width, height);
+    }
+
+    private void hLine(
+            RenderContext ctx,
+            int x1,
+            int x2,
+            int y,
+            int color
+    ) {
+        int min = Math.min(x1, x2);
+        int max = Math.max(x1, x2);
+        Util.blitState();
+        ctx.fill(min, y, max + 1, y + 1, color);
+    }
+
+    private void vLine(
+            RenderContext ctx,
+            int x,
+            int y1,
+            int y2,
+            int color
+    ) {
+        int min = Math.min(y1, y2);
+        int max = Math.max(y1, y2);
+        Util.blitState();
+        ctx.fill(x, min, x + 1, max + 1, color);
     }
 
     public void addChild(VillagerAdvancementsWidget p_97307_) {
@@ -224,7 +263,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     public void drawHover(
-            PoseStack p_97271_,
+            RenderContext ctx,
             int p_97272_,
             int p_97273_,
             float p_97274_,
@@ -259,9 +298,9 @@ public class VillagerAdvancementsWidget extends GuiComponent {
         int j1 = 32 + this.description.size() * 9;
         if (!this.description.isEmpty()) {
             if (flag1) {
-                this.render9Sprite(p_97271_, i1, l + 26 - j1, this.width, j1, 10, 200, 26, 0, 52);
+                this.render9Sprite(ctx, i1, l + 26 - j1, this.width, j1, 10, 200, 26, 0, 52);
             } else {
-                this.render9Sprite(p_97271_, i1, l, this.width, j1, 10, 200, 26, 0, 52);
+                this.render9Sprite(ctx, i1, l, this.width, j1, 10, 200, 26, 0, 52);
             }
         }
 
@@ -270,7 +309,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             return;
         }
         this.blit(
-                p_97271_,
+                ctx,
                 p_97272_ + this.x + 3,
                 p_97273_ + this.y,
                 texture,
@@ -279,46 +318,45 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 26
         );
         if (flag) {
-            this.minecraft.font.drawShadow(p_97271_, this.title, (float) (i1 + 5), (float) (p_97273_ + this.y + 9), -1);
+            ctx.text(this.title, i1 + 5, p_97273_ + this.y + 9, -1, true);
         } else {
-            this.minecraft.font.drawShadow(
-                    p_97271_,
+            ctx.text(
                     this.title,
-                    (float) (p_97272_ + this.x + 32),
-                    (float) (p_97273_ + this.y + 9),
-                    -1
+                    p_97272_ + this.x + 32,
+                    p_97273_ + this.y + 9,
+                    -1,
+                    true
             );
         }
 
         int k1;
         if (flag1) {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(
-                        p_97271_,
+                ctx.text(
                         (FormattedCharSequence) this.description.get(k1),
-                        (float) (i1 + 5),
-                        (float) (l + 26 - j1 + 7 + k1 * 9),
-                        -5592406
+                        i1 + 5,
+                        l + 26 - j1 + 7 + k1 * 9,
+                        -5592406,
+                        false
                 );
             }
         } else {
             for (k1 = 0; k1 < this.description.size(); ++k1) {
-                this.minecraft.font.draw(
-                        p_97271_,
+                ctx.text(
                         (FormattedCharSequence) this.description.get(k1),
-                        (float) (i1 + 5),
-                        (float) (p_97273_ + this.y + 9 + 17 + k1 * 9),
-                        -5592406
+                        i1 + 5,
+                        p_97273_ + this.y + 9 + 17 + k1 * 9,
+                        -5592406,
+                        false
                 );
             }
         }
 
-        this.minecraft.getItemRenderer()
-                      .renderAndDecorateFakeItem(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
+        ctx.renderItemAndDecorations(this.display.getIcon(), p_97272_ + this.x + 8, p_97273_ + this.y + 5);
     }
 
     protected void render9Sprite(
-            PoseStack p_97288_,
+            RenderContext ctx,
             int p_97289_,
             int p_97290_,
             int p_97291_,
@@ -329,9 +367,9 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             int p_97296_,
             int p_97297_
     ) {
-        this.blit(p_97288_, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
+        this.blit(ctx, p_97289_, p_97290_, p_97296_, p_97297_, p_97293_, p_97293_);
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -342,7 +380,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97295_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_,
                 p_97296_ + p_97294_ - p_97293_,
@@ -351,7 +389,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97293_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97296_,
@@ -360,7 +398,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -371,7 +409,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97295_
         );
         this.blit(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_ + p_97292_ - p_97293_,
                 p_97296_ + p_97294_ - p_97293_,
@@ -380,7 +418,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_,
                 p_97290_ + p_97293_,
                 p_97293_,
@@ -391,7 +429,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97295_ - p_97293_ - p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97293_,
                 p_97290_ + p_97293_,
                 p_97291_ - p_97293_ - p_97293_,
@@ -402,7 +440,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
                 p_97295_ - p_97293_ - p_97293_
         );
         this.renderRepeating(
-                p_97288_,
+                ctx,
                 p_97289_ + p_97291_ - p_97293_,
                 p_97290_ + p_97293_,
                 p_97293_,
@@ -415,7 +453,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
     }
 
     protected void renderRepeating(
-            PoseStack p_97278_,
+            RenderContext ctx,
             int p_97279_,
             int p_97280_,
             int p_97281_,
@@ -432,7 +470,7 @@ public class VillagerAdvancementsWidget extends GuiComponent {
             for (int l = 0; l < p_97282_; l += p_97286_) {
                 int i1 = p_97280_ + l;
                 int j1 = Math.min(p_97286_, p_97282_ - l);
-                this.blit(p_97278_, j, i1, p_97283_, p_97284_, k, j1);
+                this.blit(ctx, j, i1, p_97283_, p_97284_, k, j1);
             }
         }
 

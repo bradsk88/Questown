@@ -294,6 +294,15 @@ public class ServerJobsRegistry {
         return parentID.equals(parent);
     }
 
+    /** The villager level at which the job can be unlocked; the default before job data has loaded. */
+    public static int getAvailableAtLevel(JobID job) {
+        if (!Works.isInitialized()) {
+            return Work.DEFAULT_AVAILABLE_AT_LEVEL;
+        }
+        Work work = getWork(job, false);
+        return work != null ? work.getAvailableAtLevel() : Work.DEFAULT_AVAILABLE_AT_LEVEL;
+    }
+
     public static ImmutableSet<JobID> getAllRootJobs() {
         if (!Works.isInitialized()) {
             // Job data not loaded yet: no candidates.
@@ -327,7 +336,8 @@ public class ServerJobsRegistry {
             TriFunction<JobID, @Nullable Snapshot<MCHeldItem>, @Nullable ImmutableList<MCHeldItem>, Snapshot<MCHeldItem>> journalFn,
             TriPredicate<JobID, Supplier<BlockState>, JobBlockTestContext> jobBlockTest,
             TriPredicate<JobID, Supplier<BlockState>, Pair<WorkLocation.BlockInfo, BlockPos>> shouldInit,
-            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs
+            BiFunction<JobID, List<MCHeldItem>, ImmutableList<Ingredient>> needs,
+            BiPredicate<BlockState, Integer> restsAt
     ) {
 
         Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> getJob(JobID job, VillagerUUID owner) {
@@ -380,7 +390,8 @@ public class ServerJobsRegistry {
                                 }
                             }, bp.b()
                     ),
-                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items))
+                    (id, items) -> ImmutableList.copyOf(cached.apply(id).needs.apply(items)),
+                    (bs, state) -> false
             );
         }
     }
@@ -403,7 +414,9 @@ public class ServerJobsRegistry {
                     Block block = bsSrc.get().getBlock();
                     return Ingredient.of(TagsInit.Items.JOB_BOARD_INPUTS).test(block.asItem().getDefaultInstance());
                 },
-                (id, items) -> ImmutableList.of()
+                (id, items) -> ImmutableList.of(),
+                (bs, state) -> state == ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.MAX_STATE
+                        && bs.getBlock() instanceof JobBoardBlock
         ));
 
         b.add(SpecialJob.fromWork(DinerWork::isDining, id -> DinerWork.asWork(id.rootId())));

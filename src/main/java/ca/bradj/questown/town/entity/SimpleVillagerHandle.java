@@ -306,6 +306,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return (float) (baseExp * Math.pow(rampFactor, level - 1));
     }
 
+    /** The villager's level; 1 by default. */
+    public int getLevel(UUID uuid) {
+        return UtilClean.getOrDefault(levels, uuid, 1);
+    }
+
     public float getDamagePercent(UUID uuid) {
         return (float) Util.getOrDefault(damage, uuid, 0) / (16 * configs.damageTicks * TICK_FACTOR);
     }

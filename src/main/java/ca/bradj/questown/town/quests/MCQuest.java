@@ -4,6 +4,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -117,7 +118,120 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             @Nullable VillagerUUID ownerId,
             ResourceLocation jobId
     ) {
-        return new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        MCQuest q = new MCQuest(batchUUID, ownerId, jobId, null, QuestType.JOB_CHANGE, 1);
+        q.setFlavorText("A villager wants to work as a " + JobID.fromRL(jobId).toNiceString()
+                + ". Spend a Block of Progress on the change job tab to request a job change - "
+                + "it takes effect overnight.");
+        return q;
+    }
+
+    /** Day 2's quest: post the first work request on the job board. */
+    public static MCQuest firstWorkRequest(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId
+    ) {
+        MCQuest q = new MCQuest(
+                batchUUID, ownerId, SpecialQuests.FIRST_WORK_REQUEST, null,
+                QuestType.FIRST_WORK_REQUEST, 1
+        );
+        q.setFlavorText("Open the job board and post your first work request - the town needs to know what to make.");
+        return q;
+    }
+
+    /** Unlock any skill on a job root's tree. Its id is {@code questown:skill_unlock/<root>}, apart from the job-change quest's. */
+    public static MCQuest skillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            String treeRoot
+    ) {
+        MCQuest q = new MCQuest(batchUUID, ownerId, Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + treeRoot),
+                null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Once your " + treeRoot + " levels up, open its skills tab and spend a "
+                + "Block of Progress on any skill. New skills let a villager make more things.");
+        return q;
+    }
+
+    /** Unlock one named skill. Id {@code questown:skill_unlock/<root>/<job>}. */
+    public static MCQuest namedSkillUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            JobID skill
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(SKILL_UNLOCK_PREFIX + skill.rootId() + "/" + skill.jobId());
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.SKILL_UNLOCK, 1);
+        q.setFlavorText("Once your " + skill.rootId() + " can learn it, open its skills tab and spend a "
+                + "Block of Progress on " + Jobs.getVariantNameComponent(skill).getString() + ".");
+        return q;
+    }
+
+    private static final String SKILL_UNLOCK_PREFIX = "skill_unlock/";
+
+    /** A villager in {@code root} reaches {@code level}. */
+    public static MCQuest villagerLevel(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            String root,
+            int level
+    ) {
+        ResourceLocation id = Questown.ResourceLocation(VillagerLevelQuests.path(root, level));
+        MCQuest q = new MCQuest(batchUUID, ownerId, id, null, QuestType.VILLAGER_LEVEL, 1);
+        q.setFlavorText("Villagers level up by working. Post requests on the job board for your " + root
+                + " to make, and new skills open up once one of them reaches level " + level + ".");
+        return q;
+    }
+
+    /** The job root a skill-unlock quest's id names. */
+    public static String skillTreeRoot(ResourceLocation wantedId) {
+        String path = wantedId.getPath();
+        if (path.startsWith(SKILL_UNLOCK_PREFIX)) {
+            String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+            int slash = tree.indexOf('/');
+            return slash < 0 ? tree : tree.substring(0, slash);
+        }
+        return JobID.fromRL(wantedId).rootId();
+    }
+
+    /** The one skill a named skill-unlock quest wants; empty for any skill on the tree. */
+    public static Optional<JobID> namedSkill(ResourceLocation wantedId) {
+        String path = wantedId.getPath();
+        if (!path.startsWith(SKILL_UNLOCK_PREFIX)) {
+            return Optional.empty();
+        }
+        String tree = path.substring(SKILL_UNLOCK_PREFIX.length());
+        int slash = tree.indexOf('/');
+        if (slash < 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new JobID(tree.substring(0, slash), tree.substring(slash + 1)));
+    }
+
+    public static MCQuest jobUnlock(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation rootJobId
+    ) {
+        // The caller sets the flavor text.
+        return new MCQuest(batchUUID, ownerId, rootJobId, null, QuestType.JOB_UNLOCK, 1);
+    }
+
+    /** Records which stuck root this JOB_UNLOCK quest was posted for, saved with the quest. */
+    public void setUnlockStuckRoot(String stuckRoot) {
+        this.fromRecipeID = JobID.toRL(new JobID(stuckRoot, stuckRoot));
+    }
+
+    public Optional<String> unlockStuckRoot() {
+        return this.fromRecipeID()
+                .map(JobID::fromRL)
+                .map(JobID::rootId);
+    }
+
+    /** Points an open JOB_UNLOCK quest at a different producer, in place. */
+    public void retargetUnlock(ResourceLocation newRootJob, String newFlavorText) {
+        if (this.getType() != QuestType.JOB_UNLOCK) {
+            throw new IllegalStateException("retargetUnlock: not a JOB_UNLOCK quest: " + this.getType());
+        }
+        this.recipeId = newRootJob;
+        this.setFlavorText(newFlavorText);
     }
 
     public static MCQuest concurrentJobs(
@@ -163,6 +277,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
     }
@@ -182,6 +297,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         q.setTopNeedProducer(this.topNeedProducer().orElse(null));
+        q.setPathBatch(this.pathBatch().orElse(null));
         return q;
     }
 
@@ -196,6 +312,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_DISCARDABLE = "discardable";
         private static final String NBT_TOP_NEED_PRODUCER = "top_need_producer";
+        private static final String NBT_PATH_BATCH = "path_batch";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
         private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
@@ -238,6 +355,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
                 ct.putBoolean(NBT_DISCARDABLE, true);
             }
             quest.topNeedProducer().ifPresent(p -> ct.putString(NBT_TOP_NEED_PRODUCER, p));
+            quest.pathBatch().ifPresent(p -> ct.putString(NBT_PATH_BATCH, p));
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
             }
@@ -303,6 +421,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (nbt.contains(NBT_TOP_NEED_PRODUCER)) {
                 quest.setTopNeedProducer(nbt.getString(NBT_TOP_NEED_PRODUCER));
+            }
+            if (nbt.contains(NBT_PATH_BATCH)) {
+                quest.setPathBatch(nbt.getString(NBT_PATH_BATCH));
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);
