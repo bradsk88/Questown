@@ -47,6 +47,8 @@ public interface VillagerHolder {
             float amount
     );
 
+    void eat(UUID uuid, float percent);
+
     void makeAngry(UUID uuid);
 
     boolean isDining(UUID uuid);

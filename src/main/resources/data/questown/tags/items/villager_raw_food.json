@@ -10,6 +10,10 @@
     "minecraft:beef",
     "minecraft:potato",
     "minecraft:brown_mushroom",
-    "minecraft:red_mushroom"
+    "minecraft:red_mushroom",
+    "minecraft:wheat_seeds",
+    "minecraft:melon_seeds",
+    "minecraft:pumpkin_seeds",
+    "minecraft:beetroot"
   ]
 }

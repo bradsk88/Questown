@@ -108,6 +108,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.delegator = del;
         this.configs = config;
         this.hungerEnabled = config.hungerEnabled;
+        // Registered here, not in initialize: a newly placed flag never calls initialize.
+        addHungryListener(e -> {
+            // At or below zero: a villager reloaded below zero must be flagged again.
+            if (UtilClean.getOrDefault(this.fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
+                starving.put(delegator.getUUID(e), true);
+            }
+        });
     }
 
     public void initialize(
@@ -305,6 +312,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void fillHunger(UUID uuid) {
         fillHunger(uuid, 1.0f);
+    }
+
+    /** A meal: adds {@code percent} of max fullness, up to the max. Unlike {@link #fillHunger}, it never lowers it. */
+    public void eat(UUID uuid, float percent) {
+        int current = Util.getOrDefault(fullness, uuid, configs.baseFullness);
+        float after = Math.min(1.0f, Math.max(0, current) / (float) configs.baseFullness + percent);
+        fillHunger(uuid, after);
     }
 
     public void fillHunger(

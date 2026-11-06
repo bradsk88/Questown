@@ -51,7 +51,11 @@ public class TownPossibleWork {
     private final UnsafeTown town = new UnsafeTown(getClass());
 
     private final Map<String, List<JobID>> preselectedJobs = new HashMap<>();
+    /** The warp's job list, scored without slot preconditions, since the warp fills the slots itself. */
+    private final Map<String, List<JobID>> warpPreselectedJobs = new HashMap<>();
     private final Map<UUID, JobCycler> villagerCyclers = new HashMap<>();
+    private final Queue<String> rootsAwaitingRecompute = new ArrayDeque<>();
+    private @Nullable RootScoring scoringInProgress;
     private boolean shouldRecompute = true;
     private int buffer;
 

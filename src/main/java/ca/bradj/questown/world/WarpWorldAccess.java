@@ -1,6 +1,7 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.BreadOvenBake;
 import ca.bradj.questown._vanilla.SnapshotWorldGenLevel;
 import ca.bradj.questown._vanilla.TreeFeatureResolver;
 import ca.bradj.questown.mc.Compat;
@@ -54,6 +55,8 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
     private final Map<BlockPos, List<ItemStack>> containerSlots = new HashMap<>();
     // cookProgress[0] = cookTime, cookProgress[1] = litTime
     private final Map<BlockPos, int[]> cookProgress = new HashMap<>();
+    // Each oven's baking during this warp; every warp starts from 0.
+    private final Map<BlockPos, BreadOvenBake> ovenBakes = new HashMap<>();
 
     final Set<BlockPos> dirtyBlocks = new HashSet<>();
     final Set<BlockPos> dirtyContainers = new HashSet<>();
@@ -550,6 +553,14 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
             return;
         }
 
+        BlockState blockState = blockStates.get(pos);
+        if (blockState != null
+                && blockState.getBlock() instanceof ca.bradj.questown.blocks.BreadOvenBlock) {
+            advanceBreadOven(pos, slots, ticks);
+            return;
+        }
+
+
         int[] progress = cookProgress.computeIfAbsent(pos, p -> new int[]{0, 0});
         int cookTime = progress[0];
         int litTime = progress[1];
@@ -622,6 +633,14 @@ public class WarpWorldAccess implements QTWorldAccess, SnapshotWorldGenLevel.Sna
                 "[WarpWorldAccess] advanceProcessing done. Slot0={}, Slot1={}, Slot2={}",
                 slots.get(0).getItem(), slots.get(1).getItem(), slots.get(2).getItem()
         );
+    }
+
+    /** Bakes in the oven's in-memory slots during a warp, with the same {@link BreadOvenBake} as real time. */
+    private void advanceBreadOven(BlockPos pos, List<ItemStack> slots, int ticks) {
+        BreadOvenBake bake = ovenBakes.computeIfAbsent(pos, p -> new BreadOvenBake(slots));
+        if (bake.advance(ticks)) {
+            dirtyContainers.add(pos);
+        }
     }
 
     // -------------------------------------------------------------------------

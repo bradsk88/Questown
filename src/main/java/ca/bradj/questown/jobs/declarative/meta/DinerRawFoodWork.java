@@ -44,7 +44,7 @@ public class DinerRawFoodWork {
             BLOCK_STATE_NEED_EAT, Ingredient.of(TagsInit.Items.VILLAGER_RAW_FOOD)
     );
     public static final ImmutableMap<Integer, Integer> WORK_REQUIRED_AT_STATES = ImmutableMap.of(
-            BLOCK_STATE_NEED_EAT, 25,
+            BLOCK_STATE_NEED_EAT, 12,
             BLOCK_STATE_CONSUME_FOOD, 0,
             BLOCK_STATE_DONE, 0
     );
@@ -99,7 +99,9 @@ public class DinerRawFoodWork {
                                         SpecialRules.APPLY_ATE_RAW_FOOD
                                 )
                         ), // No stage rules
+                        // Finish the meal before fetching more food.
                         ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.WORK_IN_EVENING,
                                 SpecialRules.NO_EXPERIENCE_GAINED
                         )

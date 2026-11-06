@@ -34,6 +34,8 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
 
         // Owner info
         UUID getOwnerUUID();
+
+        boolean isOwnerStarving();
         JobID getJobId();
 
         // Special rules
@@ -135,6 +137,11 @@ public class DeclarativeLogicWorld<POS, HELD_ITEM, ROOM extends Room> implements
     @Override
     public boolean holdsWorkOutput() {
         return holdsWorkOutput.get();
+    }
+
+    @Override
+    public boolean isStarving() {
+        return deps.isOwnerStarving();
     }
 
     @Override

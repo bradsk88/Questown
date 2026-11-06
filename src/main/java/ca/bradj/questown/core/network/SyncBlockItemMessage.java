@@ -19,7 +19,7 @@ public record SyncBlockItemMessage(
         buffer.writeInt(msg.pos.getX());
         buffer.writeInt(msg.pos.getY());
         buffer.writeInt(msg.pos.getZ());
-        buffer.writeItem(msg.item());
+        ca.bradj.questown.mc.Compat.writeItem(buffer, msg.item());
         buffer.writeInt(msg.index());
     }
 
@@ -27,7 +27,7 @@ public record SyncBlockItemMessage(
         int blockX = buffer.readInt();
         int blockY = buffer.readInt();
         int blockZ = buffer.readInt();
-        ItemStack item = buffer.readItem();
+        ItemStack item = ca.bradj.questown.mc.Compat.readItem(buffer);
         int index = buffer.readInt();
         return new SyncBlockItemMessage(new BlockPos(blockX, blockY, blockZ), item, index);
     }

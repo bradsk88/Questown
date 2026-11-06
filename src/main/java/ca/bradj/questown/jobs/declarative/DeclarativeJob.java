@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.JobBlockScan;
+
 import ca.bradj.questown.jobs.JobExperience;
 
 import ca.bradj.questown.QT;
@@ -499,6 +501,35 @@ public class DeclarativeJob extends
         return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state);
     }
 
+    /** {@link #hasRoomsAtState} without the slot check, for a warp, which fills the slots itself. */
+    public WithReason<Boolean> hasRoomsAtStateIgnoringSlot(
+            TownFlagBlockEntity town,
+            int state
+    ) {
+        ServerLevel level = town.getServerLevel();
+        if (level == null) {
+            return WithReason.always(false, "No server level");
+        }
+        WorkStatusHandle<BlockPos, MCHeldItem> ws = town.getWorkStatusHandle(null);
+        Collection<RoomRecipeMatch<MCRoom>> rooms = town.getRoomHandle()
+                .getRoomsMatching(location.baseRoom());
+        if (rooms.isEmpty()) {
+            return WithReason.always(false, "No rooms match base room " + location.baseRoom());
+        }
+        JobBlockTestContext ctx = new JobBlockTestContext(
+                new MinecraftWorldAccess(level), info(level), BlockPos.ZERO, journal::getItems, ImmutableList::of, true, true
+        );
+        ImmutableList<RoomRecipeMatch<MCRoom>> roomsWithState = DeclarativeJobs.roomsWithState(
+                ImmutableList.copyOf(rooms),
+                bp -> location.isJobBlock().test(ctx.withPos(bp)),
+                bp -> Integer.valueOf(state).equals(JobBlock.getState(ws::getJobBlockState, bp))
+        );
+        if (roomsWithState.isEmpty()) {
+            return WithReason.always(false, rooms.size() + " rooms match " + location.baseRoom() + " but none have job blocks at state " + state + " (slot ignored)");
+        }
+        return WithReason.always(true, roomsWithState.size() + " rooms have job blocks at state " + state + " (slot ignored)");
+    }
+
     private boolean hasInserted(Integer action) {
         for (int i = 1; i < action; i++) {
             //noinspection DataFlowIssue
@@ -811,6 +842,11 @@ public class DeclarativeJob extends
                 gcb,
                 maxState
         );
+    }
+
+    /** The job works at the town flag (downtime, the diners, depositing). */
+    public boolean worksAtTheFlag() {
+        return ca.bradj.questown.town.special.SpecialQuests.TOWN_FLAG.equals(location.baseRoom());
     }
 
     @Override

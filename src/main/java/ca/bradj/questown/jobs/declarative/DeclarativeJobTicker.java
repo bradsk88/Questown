@@ -298,6 +298,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 deps::makeNVIRoom,
                 maxState
         );
+        return items != null && !items.isEmpty();
     }
 
     private <TOWN_ITEM extends Item<TOWN_ITEM>, RECIPE> void tick(
@@ -322,6 +323,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                         deps::canClaim,
                         deps::item,
                         deps::tools,
+                        state -> DeclarativeJobs.declaresUnfinishedWork(
+                                state, maxState, deps.getWorkForStep(state) != null,
+                                requiresItems(deps.item(state))
+                        ),
                         deps::stringify,
                         maxState,
                         deps::convert,
