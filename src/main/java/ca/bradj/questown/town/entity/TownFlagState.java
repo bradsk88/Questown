@@ -13,6 +13,7 @@ import ca.bradj.questown.core.init.AdvancementsInit;
 import ca.bradj.questown.integration.minecraft.*;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
+import ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee;
 import ca.bradj.questown.jobs.declarative.WarpTickHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.jobs.requests.WorkRequest;
@@ -518,8 +519,16 @@ public class TownFlagState {
         try {
             newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
+                // Apply the LOOT extractions the warp recorded, once. If one closed the raw-food quest, mark the hunter guarantee used.
+                boolean rawLootActiveBefore = FirstHunterLootGuarantee.rawFoodLootQuestActive(e)
+                        && !e.isFirstHunterLootGuaranteeFired();
+                boolean anyRawFoodExtract = newState.recordedLootExtractions().stream()
+                        .anyMatch(FirstHunterLootGuarantee::matchesFirstHunterItem);
                 for (MCHeldItem extracted : newState.recordedLootExtractions()) {
                     e.getQuestHandle().processLootQuests(extracted.get());
+                }
+                if (rawLootActiveBefore && anyRawFoodExtract) {
+                    FirstHunterLootGuarantee.flipOnceBit(e);
                 }
                 newState.clearRecordedLootExtractions();
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);

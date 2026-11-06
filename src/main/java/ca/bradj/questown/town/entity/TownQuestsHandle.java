@@ -9,6 +9,7 @@ import ca.bradj.questown.gui.TownQuestsContainer;
 import ca.bradj.questown.gui.TownRemoveQuestsContainer;
 import ca.bradj.questown.gui.UIQuest;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.interfaces.QuestsHolder;
@@ -163,6 +164,14 @@ public class TownQuestsHandle implements QuestsHolder {
         TownQuests.addItemQuest(t, t.quests, itemId, count);
     }
 
+    @Override
+    public void processLootQuests(MCTownItem extracted) {
+        unsafeGetTown().quests.processLootQuests(extracted);
+    }
+
+    public Map<ResourceLocation, Integer> openQuestProgress() {
+        return unsafeGetTown().quests.openQuestProgress();
+    }
     @Override
     public Optional<JobID> overnightJobOverride() {
         if (town.getUnsafe().quests.isWaitingForHunterGathererTutorial()) {

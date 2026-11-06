@@ -50,6 +50,10 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.batchUUID = batchUUID;
     }
 
+    QUEST newestQuest() {
+        return this.quests.get(this.quests.size() - 1);
+    }
+
     public static <R extends Room, Q extends Quest<?, R>> Stream<Q> stream(QuestBatch<?, R, Q, ?> batch) {
         return batch.quests.stream();
     }
@@ -94,6 +98,14 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newItemQuest(dep(ownerId), itemId, count));
     }
 
+    public void addLootQuest(
+            @Nullable VillagerUUID ownerId,
+            KEY itemId,
+            int count
+    ) {
+        this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
+    }
+
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.quests);
     }
@@ -115,7 +127,16 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
             ROOM room,
             KEY recipe
     ) {
-        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        return markRecipeAsComplete(room, recipe, v -> true);
+    }
+
+    /** As above, completing only a quest {@code which} accepts. */
+    public boolean markRecipeAsComplete(
+            ROOM room,
+            KEY recipe,
+            java.util.function.Predicate<QUEST> which
+    ) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId())).filter(which);
         Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
         if (incomplete.isEmpty()) {
             return false;
@@ -253,6 +274,7 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return false;
     }
 
+    /** Removes a quest outright and notifies the listener. */
     public @Nullable VillagerUUID getUUID() {
         if (quests.isEmpty()) {
             return null;

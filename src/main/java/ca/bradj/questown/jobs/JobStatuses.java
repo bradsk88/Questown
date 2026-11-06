@@ -185,6 +185,10 @@ public class JobStatuses {
                 new Pair<>(ctx.jobId, "hasNonWorkItems"),
                 inventory::hasNonSupplyItems
         );
+        LZCD<LZCD.Dependency<STATUS>> dHoldsWorkOutput = prePopAble(
+                new Pair<>(ctx.jobId, "holdsWorkOutput"),
+                inventory::holdsWorkOutput
+        );
         LZCD<LZCD.Dependency<STATUS>> dFinishedProductWaiting = prePopAble(
                 new Pair<>(ctx.jobId, "finished product waiting"),
                 () -> ctx.job.finishedProductNeedsStorage() && ctx.job.tryCollectingFinishedProduct() != null

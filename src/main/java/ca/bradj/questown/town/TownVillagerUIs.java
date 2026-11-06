@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;

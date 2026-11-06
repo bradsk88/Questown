@@ -137,6 +137,15 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.discardable = discardable;
     }
 
+    /** Copies what a rebuild on load doesn't: the onboarding flag and the flavor text. */
+    protected void carrySavedStateFrom(Quest<?, ?> saved) {
+        this.onboarding = saved.onboarding;
+        this.discardable = saved.discardable;
+        this.flavorText = saved.flavorText;
+        this.topNeedProducer = saved.topNeedProducer;
+        this.pathBatch = saved.pathBatch;
+    }
+
     public enum QuestStatus {
         UNSET(""),
         ACTIVE("active"),
@@ -180,6 +189,12 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         );
 
         QUEST newItemQuest(
+                @Nullable UUID ownerId,
+                KEY itemId,
+                int count
+        );
+
+        QUEST newLootQuest(
                 @Nullable UUID ownerId,
                 KEY itemId,
                 int count

@@ -659,11 +659,21 @@ public abstract class AbstractWorldInteraction<
             TOWN currentState,
             @Nullable HELD_ITEM item
     ) {
+        // Every non-empty extraction is reported, whatever the job's own extraction rules.
+        onLootExtracted(inputs, item);
         Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
         if (rules == null || rules.isEmpty()) {
             return currentState;
         }
         return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
+    }
+
+    /** Called on every extraction. The live game closes matching LOOT quests here. */
+    protected void onLootExtracted(EXTRA inputs, @Nullable HELD_ITEM item) {}
+
+    protected boolean hasExtractingProductRule() {
+        Collection<String> rules = specialRules.get(ProductionStatus.EXTRACTING_PRODUCT);
+        return rules != null && !rules.isEmpty();
     }
 
     /** Applies the once-per-town loot guarantees: the helper chicken's Worldly Seeds, and the first hunter's raw food. */

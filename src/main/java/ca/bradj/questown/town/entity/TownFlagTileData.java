@@ -37,6 +37,9 @@ public class TownFlagTileData {
     private static final String NBT_BLOCK_ROOMS = QTNBT.keyify("block_rooms");
     private static final String NBT_BONUS_GIVEN = QTNBT.keyify("bonus_given");
     private static final String NBT_ECONOMICS = QTNBT.keyify("economics");
+    private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
+            "first_hunter_loot_guarantee_fired"
+    );
 
     public static Map<String, InitPair> initialize() {
 
@@ -53,7 +56,18 @@ public class TownFlagTileData {
         b.put(NBT_BLOCKS_OF_PROGRESS_STORED, initBlocksOfProgress());
         b.put(NBT_BONUS_GIVEN, initBonusGiven());
         b.put(NBT_ECONOMICS, initEconomics());
+        b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
         return b.build();
+    }
+
+    private static InitPair initFirstHunterLootGuaranteeFired() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.firstHunterLootGuaranteeFired = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.firstHunterLootGuaranteeFired = false
+        );
     }
 
     private static InitPair initEconomics() {
@@ -247,6 +261,7 @@ public class TownFlagTileData {
         write(t, NBT_BLOCKS_OF_PROGRESS_STORED, flag.serializeBOP());
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         write(t, NBT_ECONOMICS, flag.serializeEconomics());
+        write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
     }
 
     private static void write(

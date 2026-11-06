@@ -56,6 +56,15 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newLootQuest(
+                    @Nullable UUID ownerId,
+                    ResourceLocation itemId,
+                    int count
+            ) {
+                return MCQuest.loot(batchUUID, dep(ownerId), itemId, count);
+            }
+
+            @Override
             public MCQuest newJobQuest(ResourceLocation id) {
                 return MCQuest.jobChange(batchUUID, null, id);
             }
