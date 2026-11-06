@@ -1158,6 +1158,39 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     /** Progress of each open ITEM or LOOT quest: items in town storage for ITEM, items brought back for LOOT. */
+    public Map<ResourceLocation, Integer> openQuestProgress() {
+        List<MCQuest> open = questBatches.getAll().stream()
+                .filter(q -> (q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT
+                        || q.getType() == Quest.QuestType.VILLAGER_LEVEL)
+                        && !q.isComplete())
+                .toList();
+        if (open.isEmpty()) {
+            return ImmutableMap.of();
+        }
+        boolean anyItems = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.ITEM);
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        ImmutableList<MCTownItem> stacks = anyItems
+                ? TownContainers.getAllStacks(t, t.getServerLevel())
+                : ImmutableList.of();
+        boolean anyLevels = open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL);
+        Map<String, Integer> levels = anyLevels ? t.highestLevelByRoot() : Map.of();
+        Map<ResourceLocation, Integer> out = new HashMap<>();
+        for (MCQuest q : open) {
+            if (q.getType() == Quest.QuestType.LOOT) {
+                out.put(q.getWantedId(), q.getExtracted());
+            } else if (q.getType() == Quest.QuestType.VILLAGER_LEVEL) {
+                VillagerLevelQuests.target(q.getWantedId())
+                        .ifPresent(l -> out.put(q.getWantedId(), levels.getOrDefault(l.root(), 0)));
+            } else {
+                out.put(q.getWantedId(), stacks.stream()
+                        .filter(s -> questMatchesStack(q.getWantedId(), s))
+                        .mapToInt(s -> s.toQTItemStack().getCount())
+                        .sum());
+            }
+        }
+        return out;
+    }
+
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
         // TODO: Consider putting on QuestBatches and testing
         for (MCQuestBatch batch : questBatches.getAllBatches()) {

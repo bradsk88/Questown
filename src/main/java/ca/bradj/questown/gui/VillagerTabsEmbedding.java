@@ -13,4 +13,9 @@ public interface VillagerTabsEmbedding {
     UUID getVillagerUUID();
 
     boolean showBlockOfProgressTab();
+
+    /** Opened from the flag, the villager menu has no inventory tab. */
+    default boolean showInventoryTab() {
+        return true;
+    }
 }

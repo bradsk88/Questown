@@ -30,12 +30,17 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBopTab
+            boolean showBopTab,
+            boolean bopTabAttention,
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            boolean showChangeRootTab,
+            boolean changeRootAttention
     ) {
-        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab));
+        super(build(invScreenFn, qScreenFn, sScreenFn, skillScreenFn, changeRootScreenFn, econScreenFn, bopScreenFn, showBopTab, bopTabAttention, showSkillsTab, showInventoryTab, showChangeRootTab, changeRootAttention));
     }
 
-    private static @NotNull ImmutableList<Tab> build(
+    static @NotNull ImmutableList<Tab> build(
             @Nullable Runnable invScreenFn,
             @Nullable Runnable qScreenFn,
             @Nullable Runnable sScreenFn,
@@ -43,16 +48,24 @@ public class VillagerTabs extends Tabs implements SubUI {
             @Nullable Runnable changeRootScreenFn,
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
-            boolean showBopTab
+            boolean showBopTab,
+            boolean bopTabAttention,
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            boolean showChangeRootTab,
+            boolean changeRootAttention
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
-        b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer().renderAndDecorateItem(Items.CHEST.getDefaultInstance(), x + 10, y + 7),
-                setScreen(invScreenFn),
-                "tooltips.inventory",
-                invScreenFn == null,
-                false
-        ));
+        // Opened from the flag, the menu has no inventory tab.
+        if (showInventoryTab) {
+            b.add(new Tab(
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CHEST.getDefaultInstance(), x + 10, y + 7),
+                    setScreen(invScreenFn),
+                    "tooltips.inventory",
+                    invScreenFn == null,
+                    false
+            ));
+        }
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
@@ -97,6 +110,17 @@ public class VillagerTabs extends Tabs implements SubUI {
                 qScreenFn == null,
                 false
         ));
+        if (showChangeRootTab) {
+            b.add(new Tab(
+                    (rc, x, y) -> {
+                        int txBefore = RenderSystem.getShaderTexture(0);
+                        RenderSystem.setShaderColor(0.25f, 0.25f, 0.25f, 1f);
+                        Util.blitTab(rc.gui(), x, y, 1);
+                        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+                        RenderSystem.setShaderTexture(0, txBefore);
+                    }, setScreen(changeRootScreenFn), "tooltips.change_root", changeRootScreenFn == null, changeRootAttention
+            ));
+        }
         if (showBopTab) {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
@@ -122,14 +146,16 @@ public class VillagerTabs extends Tabs implements SubUI {
     public static Runnable makeOpenFn(
             BlockPos fp,
             UUID gathererId,
-            String type
+            String type,
+            boolean showInventoryTab
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenVillagerMenuMessage(
+        Runnable fn = () -> QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
                 fp.getX(),
                 fp.getY(),
                 fp.getZ(),
                 gathererId,
-                type
+                type,
+                showInventoryTab
         ));
         return fn;
     }
@@ -139,7 +165,7 @@ public class VillagerTabs extends Tabs implements SubUI {
 
         Function<String, Runnable> factory = typ -> {
             if (enabledTabs.contains(typ)) {
-                return makeOpenFn(menu.getFlagPos(), menu.getVillagerUUID(), typ);
+                return makeOpenFn(menu.getFlagPos(), menu.getVillagerUUID(), typ, menu.showInventoryTab());
             }
             return null;
         };
@@ -151,12 +177,21 @@ public class VillagerTabs extends Tabs implements SubUI {
                 factory.apply(OpenVillagerMenuMessage.INVENTORY),
                 factory.apply(OpenVillagerMenuMessage.QUESTS),
                 factory.apply(OpenVillagerMenuMessage.STATS),
-                factory.apply(OpenVillagerMenuMessage.SKILLS),
+                skillFn,
                 factory.apply(OpenVillagerMenuMessage.CHANGE_ROOT),
                 factory.apply(OpenVillagerMenuMessage.ECONOMICS),
-                factory.apply(OpenVillagerMenuMessage.BOP),
-                menu.showBlockOfProgressTab()
+                bopFn,
+                bop.shown(),
+                bop.attention(),
+                menu.showSkillsTab(),
+                menu.showInventoryTab(),
+                SHOW_CHANGE_ROOT_TAB.getOrDefault(menu.getVillagerUUID(), true),
+                CHANGE_ROOT_ATTENTION.getOrDefault(menu.getVillagerUUID(), false)
         );
+    }
+
+    public static Collection<String> hideInventory(Collection<String> tabs) {
+        return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.INVENTORY)).toList();
     }
 
     public static Collection<String> except(String except) {

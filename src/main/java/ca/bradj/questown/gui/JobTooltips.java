@@ -14,6 +14,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class JobTooltips {
+    /** Shown when a job's status has no tooltip of its own. */
+    static final String FALLBACK_LINE_1 = "%s is busy with their work.";
+    static final String FALLBACK_LINE_2 = "";
+
     public static ImmutableList<Component> get(
             ProductionStatus status,
             JobID jobId
@@ -48,8 +52,8 @@ public class JobTooltips {
         String key1 = String.format("tooltips.villagers.job.%s.status_1.%s", cat, status.nameV2());
         String key2 = String.format("tooltips.villagers.job.%s.status_2.%s", cat, status.nameV2());
         components = ImmutableList.of(
-                Compat.translatable(key1, jobName),
-                Compat.translatable(key2, jobName)
+                Compat.translatableWithFallback(key1, FALLBACK_LINE_1, jobName),
+                Compat.translatableWithFallback(key2, FALLBACK_LINE_2, jobName)
         );
         return components;
     }

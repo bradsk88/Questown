@@ -178,9 +178,11 @@ public class TownVillagerUIs {
         sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
+        // Only jobs the town knows.
         ImmutableList<JobID> jubz = ServerJobsRegistry.getAllJobs()
                                                       .stream()
                                                       .filter(v -> v.sameRoot(childJob))
+                                                      .filter(unsafe.getVillagerHandle()::isUnlocked)
                                                       .collect(ImmutableList.toImmutableList());
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : jubz) {
@@ -216,6 +218,22 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs
     ) {
+        showUI(sender, entities, type, villagerId, unlockedJobs, unlockableJobs, true);
+    }
+
+    /** Opened from the flag, without the inventory tab; a request for the inventory opens stats instead. */
+    public static void showUI(
+            ServerPlayer sender,
+            Collection<? extends LivingEntity> entities,
+            String type,
+            UUID villagerId,
+            Map<UUID, ? extends Set<JobID>> unlockedJobs,
+            Set<JobID> unlockableJobs,
+            boolean showInventoryTab
+    ) {
+        if (!showInventoryTab && OpenVillagerMenuMessage.INVENTORY.equals(type)) {
+            type = OpenVillagerMenuMessage.STATS;
+        }
         Optional<VisitorMobEntity> f = entities.stream()
                                                .filter(VisitorMobEntity.class::isInstance)
                                                .map(v -> (VisitorMobEntity) v)
@@ -258,8 +276,8 @@ public class TownVillagerUIs {
         runnable.accept(d);
     }
 
-    private static void syncWorkToClient(ServerPlayer sender) {
-        PacketDistributor.PacketTarget tgt = PacketDistributor.PLAYER.with(() -> sender);
+    /** Sends every job's parent and icon to the client; on join too, since quest cards need the icons. */
+    public static void syncWorkToClient(ServerPlayer sender) {
         Map<JobID, @Nullable JobID> b = new HashMap<>();
         Map<JobID, ResourceLocation> b2 = new HashMap<>();
         Works.values().forEach(w -> {
@@ -267,7 +285,7 @@ public class TownVillagerUIs {
             b.put(work.id, work.parentID);
             b2.put(work.id, Compat.getItemId(work.icon.getItem()));
         });
-        QuestownNetwork.CHANNEL.send(tgt, new SyncVillagerAdvancementsMessage(b, b2));
+        QuestownNetwork.sendToPlayer(sender, new SyncVillagerAdvancementsMessage(b, b2));
     }
 
     record ShowerData(
@@ -276,7 +294,10 @@ public class TownVillagerUIs {
             Map<UUID, ? extends Set<JobID>> unlockedJobs,
             Set<JobID> unlockableJobs,
             UUID villagerId,
-            boolean jobChangePending
+            boolean jobChangePending,
+            boolean showInventoryTab,
+            /** The villager's "Villager N" name; empty when it has none. */
+            String villagerDisplayName
     ) {
     }
 
@@ -297,11 +318,13 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     e.getJobId(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             );
                             x.connectToServer(e, d.sender());
                             return x;
-                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                        }, d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
@@ -314,12 +337,17 @@ public class TownVillagerUIs {
                                     e.getUUID(),
                                     d.quests(),
                                     e.getFlagPos(),
-                                    e.hasBlockOfProgress()
+                                    e.hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
                             ),
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -328,17 +356,26 @@ public class TownVillagerUIs {
                     VisitorMobEntity e = d.entity();
                     openMenu(
                             d.sender(),
-                            (windowId, inv, p) -> new VillagerStatsMenu(
-                                    windowId,
-                                    e,
-                                    e.getFlagPos(),
-                                    d.stats(),
-                                    e.hasBlockOfProgress()
-                            ),
+                            (windowId, inv, p) -> {
+                                VillagerStatsMenu m = new VillagerStatsMenu(
+                                        windowId,
+                                        e.getUUID(),
+                                        e.getFlagPos(),
+                                        d.stats(),
+                                        e.hasBlockOfProgress(),
+                                        !d.unlockableJobs().isEmpty(),
+                                        d.showInventoryTab()
+                                );
+                                m.attach(e);
+                                return m;
+                            },
                             d.quests(),
                             e,
                             d.stats(),
-                            d.jobChangePending()
+                            d.jobChangePending(),
+                            !d.unlockableJobs().isEmpty(),
+                            d.showInventoryTab(),
+                            d.villagerDisplayName()
                     );
                 }
         );
@@ -356,9 +393,10 @@ public class TownVillagerUIs {
                             vUnlocked,
                             d.unlockableJobs,
                             d.entity().getJobId(),
-                            d.entity().hasBlockOfProgress()
+                            d.entity().hasBlockOfProgress(),
+                            d.showInventoryTab()
                     );
-                    QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(d::sender), msg);
+                    QuestownNetwork.sendToPlayer(d.sender(), msg);
                 }
         );
         b.put(
@@ -375,26 +413,29 @@ public class TownVillagerUIs {
                                 d.entity.getUUID(),
                                 d.entity.getJobId(),
                                 d.entity().getFlagPos(),
-                                d.jobChangePending()
-                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                d.jobChangePending(),
+                                !d.unlockableJobs().isEmpty(),
+                                d.showInventoryTab(),
+                                promisedRoot(d.sender(), d.entity()),
+                                JobChangeConfirmMenu.FlagBop.NONE
+                        ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                 )
         );
         b.put(
                 OpenVillagerMenuMessage.ECONOMICS, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerEconomicsMenu(
                                     windowId,
-                                    d.entity(),
+                                    d.entity().getUUID(),
                                     d.entity().getFlagPos(),
                                     d.econ(),
-                                    d.entity().hasBlockOfProgress()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().hasBlockOfProgress(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );
@@ -402,16 +443,16 @@ public class TownVillagerUIs {
                 OpenVillagerMenuMessage.BOP, (ShowerData d) -> {
                     NoMCEconomics tEcon = d.econHandle.get();
                     ImmutableList<ItemEconomicsData> aggregated = tEcon.getAggregatedItems(d.villagerId());
-                    QuestownNetwork.CHANNEL.send(
-                            PacketDistributor.PLAYER.with(d::sender),
-                            new EconomicsUpdate(aggregated)
-                    );
+                    QuestownNetwork.sendToPlayer(d.sender(), new EconomicsUpdate(aggregated));
                     openMenu(
                             d.sender(), (windowId, inv, p) -> new VillagerBlockofProgressMenu(
                                     windowId,
                                     d.entity().getUUID(),
-                                    d.entity().getFlagPos()
-                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending()
+                                    d.entity().getFlagPos(),
+                                    !d.unlockableJobs().isEmpty(),
+                                    d.showInventoryTab(),
+                                    d.villagerDisplayName()
+                            ), d.quests(), d.entity(), d.stats(), d.jobChangePending(), !d.unlockableJobs().isEmpty(), d.showInventoryTab(), d.villagerDisplayName()
                     );
                 }
         );

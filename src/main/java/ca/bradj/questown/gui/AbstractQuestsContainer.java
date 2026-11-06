@@ -160,9 +160,17 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
         return this.quests;
     }
 
+    public boolean isAllComplete() {
+        return false;
+    }
+
+    public boolean isMorningRewardPending() {
+        return false;
+    }
+
     public void sendRemoveRequest(UUID batchUUID) {
         BlockPos f = flagInfo.flagPos();
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new RemoveQuestFromUIMessage(batchUUID, f.getX(), f.getY(), f.getZ(), true)
         );
     }

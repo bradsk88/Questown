@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -37,6 +38,7 @@ public class UIQuest implements Comparable<UIQuest> {
             Quest.QuestType.UNKNOWN,
             null,
             Quest.QuestStatus.ACTIVE,
+            null,
             null,
             null,
             null,
@@ -63,6 +65,8 @@ public class UIQuest implements Comparable<UIQuest> {
     @Nullable
     private final String flavorText;
     /** Progress toward the quest's count (stored items for ITEM, items brought back for LOOT), or null. */
+    @Nullable
+    private final Integer deposited;
     public final boolean isBroken;
 
     public UIQuest(
@@ -86,6 +90,7 @@ public class UIQuest implements Comparable<UIQuest> {
         this.jobName = jobName;
         this.flavorText = flavorText;
         this.batchUUID = batchUUID;
+        this.deposited = deposited;
     }
 
     public static List<UIQuest> fromLevel(
@@ -208,8 +213,22 @@ public class UIQuest implements Comparable<UIQuest> {
     public Component getName() {
         return switch (type) {
             case ROOM -> RoomRecipes.getName(wantedId);
-            case ITEM -> Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
-            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractJobName());
+            case ITEM -> {
+                MutableComponent name = Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+                if (deposited != null) {
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
+            case LOOT -> {
+                MutableComponent name = lootName(wantedId);
+                if (deposited != null) {
+                    name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
+                }
+                yield name;
+            }
+            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractRootJobName());
+            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case UNKNOWN -> Compat.literal("ERROR");
         };
@@ -245,6 +264,11 @@ public class UIQuest implements Comparable<UIQuest> {
         return type;
     }
 
+    @Nullable
+    public Integer getDeposited() {
+        return deposited;
+    }
+
     public static class Serializer {
 
         public void toNetwork(
@@ -268,6 +292,7 @@ public class UIQuest implements Comparable<UIQuest> {
             buf.writeUtf(jobName);
             buf.writeUtf(p_44102_.batchUUID == null ? "" : p_44102_.batchUUID.toString());
             buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
+            buf.writeInt(p_44102_.deposited == null ? -1 : p_44102_.deposited);
         }
 
         @Nullable

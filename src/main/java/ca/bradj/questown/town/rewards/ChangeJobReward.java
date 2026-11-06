@@ -48,14 +48,11 @@ public class ChangeJobReward extends MCReward {
             JobID jobID = WorkSeekerJob.newIDForRoot(jobName);
             town.getVillagerHandle().changeJobForVillager(visitorUUID, jobID, false);
             ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(jobID);
-            defaultWork.forEach(v -> {
-                ItemStack output = ServerJobsRegistry.getDefaultWorkForNewWorker(town.getServerLevel(), v);
-                if (output.isEmpty()) {
-                    return;
-                }
-                town.getWorkHandle().requestWork(output.getItem());
-                QT.JOB_LOGGER.debug("Request was added to job board automatically");
-            });
+            // A job change must unlock the new root's starting jobs, as registering a villager does.
+            for (JobID workID : defaultWork) {
+                town.getVillagerHandle().unlockJob(visitorUUID, workID);
+            }
+            ((TownFlagBlockEntity) town).postStarterRequests(jobID);
         };
     }
 

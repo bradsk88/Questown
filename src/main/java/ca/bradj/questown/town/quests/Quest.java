@@ -5,6 +5,8 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.Position;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -124,6 +126,11 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         return type;
     }
 
+    /** A CONCURRENT_JOBS quest's job ids; empty for other types. */
+    public Collection<KEY> getConcurrentJobIds() {
+        return Collections.emptyList();
+    }
+
     public int getCountNeeded() {
         return count;
     }
@@ -207,6 +214,12 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
                 KEY itemId,
                 int count
         );
+
+        /** Day 2's first-work-request quest. Don't build it with {@link #newQuest}. */
+        QUEST newFirstWorkRequestQuest(@Nullable UUID ownerId);
+
+        /** A CONCURRENT_JOBS quest. Don't build it with {@link #newQuest}: the job list would be lost. */
+        QUEST newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<KEY> jobIds);
 
         QUEST completed(
                 ROOM room,
