@@ -33,6 +33,7 @@ package ca.bradj.questown.jobs.declarative;
 import ca.bradj.questown.jobs.ItemsHolder;
 import java.util.function.IntFunction;
 import java.util.function.Predicate;
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
@@ -160,6 +161,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     private final ImmutableMap<?, Collection<String>> specialRules;
     private final LOCATION location;
     private boolean isFirstTick = true;
+    private long lastCompletedProductViewLogMs;
 
     public DeclarativeJobTicker(
             ImmutableList<String> specialGlobalRules,
@@ -257,7 +259,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, ?> work
     ) {
-        return DeclarativeJobs.roomsWithState(
+        ImmutableList<MATCH> matches = DeclarativeJobs.roomsWithState(
                 deps.getJobSites(),
                 deps::isJobBlock,
                 pos -> {
@@ -265,6 +267,44 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                     return s != null && maxState == s.processingState();
                 }
         );
+        if (matches.isEmpty()) {
+            logCompletedProductView(deps, work);
+        }
+        return matches;
+    }
+
+    // Dev diagnostics: when no product shows as finished but a job block is in its final state, log
+    // what the view was built from. Throttled.
+    private <RECIPE> void logCompletedProductView(
+            Dependencies<POS, RECIPE, ?, ?, ROOM, MATCH, EXTRA, ?> deps,
+            WorkStatusHandle<POS, ?> work
+    ) {
+        long now = System.currentTimeMillis();
+        if (now - lastCompletedProductViewLogMs < 5000L) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder()
+                .append("[completed-product-view] empty view: maxState=").append(maxState)
+                .append(" location=").append(location);
+        boolean anyTerminal = false;
+        for (MATCH room : deps.getJobSites()) {
+            sb.append(" room=").append(room);
+            for (POS pos : deps.getContainedBlocks(room)) {
+                if (!deps.isJobBlock(pos)) {
+                    continue;
+                }
+                State s = work.getJobBlockState(pos);
+                sb.append(' ').append(pos).append('=').append(s == null ? "null" : s.toShortString());
+                if (s != null && s.processingState() == maxState) {
+                    anyTerminal = true;
+                }
+            }
+        }
+        if (!anyTerminal) {
+            return;
+        }
+        lastCompletedProductViewLogMs = now;
+        QT.JOB_LOGGER.dev(sb.toString());
     }
 
     static <POS> State stateForJob(
@@ -273,23 +313,30 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             int maxState
     ) {
         State s = work.getJobBlockState(pos);
+        if (s == null) {
+            return State.fresh();
+        }
         boolean pastThisJobsLastState = s.processingState() > maxState;
         boolean willNeverMoveOn = s.processingState() == maxState
                 && !s.hasWorkLeft()
                 && work.getTimeToNextState(pos) == null;
+        if (pastThisJobsLastState || willNeverMoveOn) {
+            return State.fresh();
+        }
+        return s;
     }
 
     private <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> RoomsNeedingVillagerInput<ROOM, RECIPE, POS> computeRoomsNeedingInput(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
             WorkStatusHandle<POS, HELD_ITEM> work
     ) {
-        Function<POS, State> getJobBlockState = pos -> work.getJobBlockState((POS) pos);
+        Function<POS, State> getJobBlockState = pos -> stateForJob(work, pos, maxState);
         Predicate<POS> canClaim = pos -> deps.canClaim((POS) pos);
         Predicate<POS> isJobBlock = pos -> deps.isJobBlock((POS) pos);
         Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients = state -> deps.item((Integer) state);
         Function<Integer, Integer> getQuantity = state -> deps.getQuantityForStep((Integer) state);
         Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> getTools = state -> deps.tools((Integer) state);
-        return RoomsStatusLogic.<RECIPE, POS, HELD_ITEM, TOWN_ITEM, ROOM, MATCH>compute(
+        RoomsNeedingVillagerInput<ROOM, RECIPE, POS> rni = RoomsStatusLogic.<RECIPE, POS, HELD_ITEM, TOWN_ITEM, ROOM, MATCH>compute(
                 deps.getJobSites(),
                 getJobBlockState,
                 canClaim,
@@ -297,10 +344,15 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 getIngredients,
                 getQuantity,
                 getTools,
+                state -> deps.getWorkForStep(state) != null,
                 deps::getContainedBlocks,
                 deps::makeNVIRoom,
                 maxState
         );
+        return rni;
+    }
+
+    private static boolean requiresItems(@Nullable PredicateCollection<?, ?> items) {
         return items != null && !items.isEmpty();
     }
 
@@ -335,7 +387,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                         deps::convert,
                         deps::hasSpace,
                         deps::getDayTime
-                );
+                ).withFinishedProductNeedsStorage(deps.finishedProductNeedsStorage());
 
         // Compute entityCurrentJobSite for uses that need a snapshot (e.g., logic.tick parameters)
         EntityCurrentJobSite<ROOM> entityCurrentJobSite = getEntityCurrentJobSite(deps, rniot2, work);
@@ -387,6 +439,8 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     }
 
 
+    private static long cookNoJoBSiteN = 0L;
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> @NotNull Supplier<ProductionStatus> getStateComputer(
             Dependencies<POS, RECIPE, HELD_ITEM, TOWN_ITEM, ROOM, MATCH, EXTRA, ?> deps,
@@ -394,6 +448,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             EntityLocStateProvider<ROOM> elp
     ) {
         return () -> {
+            ProductionJournal journal = deps.getJournal();
             ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
                 // The supply pipeline reads the journal's status, so put the override there.
@@ -402,9 +457,23 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 }
                 return s;
             }
-            ProductionJournal journal = deps.getJournal();
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
-            return journal.getStatus();
+            ProductionStatus now = journal.getStatus();
+            // Dev diagnostics: a cook stuck at NO_JOBSITE logs why. Sampled.
+            if (QT.DEV_LOGS
+                    && deps.getJobId().rootId().contains("cook")
+                    && now == ProductionStatus.NO_JOBSITE
+                    && (cookNoJoBSiteN++ % 200) < 1L) {
+                ca.bradj.questown.jobs.TownStateProvider tps = ca.bradj.questown.jobs.JobTownStates.forTown(jtp);
+                QT.JOB_LOGGER.dev("[cook] NO_JOBSITE job={} hasSupplies={!} hasSpace={!} workable={!} invFull={} hasItems={}",
+                        deps.getJobId(),
+                        tps.hasSupplies().describe(),
+                        tps.hasSpace().describe(),
+                        tps.containsWorkableBlocksAtAnyState().describe(),
+                        journal.isInventoryFull(),
+                        journal.hasAnyLootToDrop());
+            }
+            return now;
         };
     }
 
@@ -436,7 +505,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                                     .flatMap(v -> deps.getRecipe(v).stream())
                                     .toList()
                 );
-                return JobsClean.hasNonSupplyItems((ItemsHolder) deps.getJournal(), (ImmutableList) allFillableRecipes);
+                return SupplyItems.hasNonSupplyItems((ItemsHolder) deps.getJournal(), (ImmutableList) allFillableRecipes);
             }
 
             @Override
@@ -517,7 +586,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     ) {
         ImmutableList<MATCH> roomsWithCompletedProduct = computeRoomsWithCompletedProduct(deps, work);
 
-        return JobsClean.getEntityCurrentJobSite(
+        return DeclarativeJobs.getEntityCurrentJobSite(
                 deps.toPosition(deps.getEntity().getBlockPosition()),
                 roomsNeedingVillagerInput,
                 roomsWithCompletedProduct.stream().map(IRoomRecipeMatch::getRoom).toList(),

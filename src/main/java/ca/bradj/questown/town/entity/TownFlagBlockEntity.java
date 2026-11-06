@@ -112,7 +112,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -1127,7 +1127,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     ) {
         long tick = Util.getTick(getServerLevel());
         VillagerUUID ownerVUID = VillagerUUID.from(ownerUUID);
-        Consumer<JobID> changeJob = id -> villagerHandle.changeJobForVillager(ownerVUID, id, false);
+        // Every exit logs its branch.
+        BiConsumer<String, JobID> changeJob = (branch, id) -> {
+            getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                    "[board] {} {} -> {} via {}", ownerVUID, currentJob, id, branch
+            );
+            villagerHandle.changeJobForVillager(ownerVUID, id, false);
+        };
 
         VisitorMobEntity villager = villagerHandle.getEntity(ownerVUID);
         if (villager == null) {
@@ -1137,7 +1143,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (damagePercent > 0) {
             // The more damaged they are, the more likely they are to rest.
             if (level.getRandom().nextFloat() < damagePercent) {
-                changeJob.accept(ResterWork.getIdForRoot(currentJob.rootId()));
+                changeJob.accept("damaged-rest", ResterWork.getIdForRoot(currentJob.rootId()));
                 return true;
             }
         }
@@ -1209,7 +1215,9 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                 td
         );
         if (work != null) {
-            changeJob.accept(work);
+            // Taking real work earns a later rest.
+            villagerHandle.markWorked(VillagerUUID.from(ownerUUID), tick);
+            changeJob.accept("work-roll", work);
             return true;
         }
 

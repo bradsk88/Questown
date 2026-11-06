@@ -70,11 +70,12 @@ public class DeclarativeJobTickerDependencies implements
     public ImmutableList<RoomRecipeMatch<MCRoom>> getJobSites() {
         // Use getRoomsMatching() instead of getMatches() because it has
         // special handling for farms (stored in activeFarms, not activeRecipes)
-        return town.getRoomHandle()
+        ImmutableList<RoomRecipeMatch<MCRoom>> out = town.getRoomHandle()
                    .getRoomsMatching(job.location().baseRoom())
                    .stream()
                    .map(v -> new RoomRecipeMatches<>(v.room, v.getRecipeIDs(), v.containedBlocks.entrySet()))
                    .collect(ImmutableList.toImmutableList());
+        return out;
     }
 
     @Override

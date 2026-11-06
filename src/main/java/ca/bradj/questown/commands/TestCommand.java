@@ -18,9 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import java.util.List;
 
 public class TestCommand {
 
@@ -40,6 +38,9 @@ public class TestCommand {
             Commands.literal("_qtdev").then(
                 Commands.literal("test")
                     .requires(AddExperienceCommand::isCreative)
+                    .then(Commands.literal("list")
+                        .executes(css -> listScenarios(css.getSource()))
+                    )
                     .then(jobArg
                     .then(warpArg
                         .executes(css -> warn(css.getSource()))
@@ -54,6 +55,24 @@ public class TestCommand {
             )
         );
         // @formatter:on
+    }
+
+    private static int listScenarios(CommandSourceStack source) {
+        ServerPlayer player;
+        try {
+            player = source.getPlayerOrException();
+        } catch (Exception e) {
+            return -1;
+        }
+        List<String> names = TestBlueprintRegistry.allScenarioNames();
+        Compat.sendMessage(player, Component.literal(
+                "[qt test] " + names.size()
+                        + " scenario(s) for -Dquestown.autotest.only=<name> (substring match):")
+        );
+        for (String name : names) {
+            Compat.sendMessage(player, Component.literal("  " + name));
+        }
+        return 1;
     }
 
     private static int warn(CommandSourceStack source) {

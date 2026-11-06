@@ -470,7 +470,8 @@ class JobIntegrationTest {
 
         Assertions.assertEquals(new JobID("cook", "extract"), definition.jobId());
         Assertions.assertEquals(1, definition.maxState());
-        Assertions.assertEquals("minecraft:stick", definition.toolsRequiredAtStates().get(0));
+        Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
+                "cook/extract must have no tools (work-only state 0)");
         // Note: work is 0.1 in JSON, parsed as integer 0
         Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0));
         Assertions.assertEquals("minecraft:air", definition.result());

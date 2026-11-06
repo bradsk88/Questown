@@ -72,6 +72,7 @@ class TickTownProviderTest {
                     p -> true,
                     s -> { throw new UnsupportedOperationException(); },
                     s -> { throw new UnsupportedOperationException(); },
+                    s -> false,
                     Position::toString,
                     maxState,
                     s -> { throw new UnsupportedOperationException(); },
