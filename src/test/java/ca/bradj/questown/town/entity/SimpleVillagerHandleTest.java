@@ -46,6 +46,7 @@ class SimpleVillagerHandleTest {
 
     class TestDelegator implements Delegator<UUID> {
         List<JobID> jobChanges = new ArrayList<>();
+        List<UUID> workStatusResets = new ArrayList<>();
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
         Map<UUID, String> names = new HashMap<>();

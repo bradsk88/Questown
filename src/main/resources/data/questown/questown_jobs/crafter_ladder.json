@@ -2,7 +2,7 @@
   "version": 1,
   "id": "crafter/ladder",
   "priority": "3000",
-  "parent": null,
+  "parent": "crafter/stick",
   "icon": "minecraft:ladder",
   "initial_request": "minecraft:ladder",
   "result": {
