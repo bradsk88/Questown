@@ -29,6 +29,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import ca.bradj.questown.logic.CampfireRange;
 import ca.bradj.questown.logic.TownCycle;
 import org.jetbrains.annotations.Nullable;
 

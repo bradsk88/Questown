@@ -29,7 +29,7 @@ public class TownVillagerLearningHandle {
             return true;
         }
         return false;
-    }, j -> true, Config.JOB_TREE_GROWTH.get()
+    }, j -> true, ca.bradj.questown.town.VillagerLearningHandle.REVEAL_ALL
     );
     private long lastTicked;
     private long lastComputed;
@@ -52,6 +52,19 @@ public class TownVillagerLearningHandle {
         ImmutableSet<JobID> representativeJobs = ServerJobsRegistry.getAllJobs();
         boolean changed = delegate.tick(representativeJobs);
         if (!changed) return;
+
+        // Save the new awareness for every villager, so deeper tiers appear.
+        Set<UUID> villagers = new HashSet<>();
+        villagers.addAll(unlockedJobs.keySet());
+        villagers.addAll(jobsKnownToExist.keySet());
+        for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
+            for (UUID villager : villagers) {
+                for (JobID child : pc.getValue()) {
+                    registerAsKnown(villager, pc.getKey(), child);
+                }
+            }
+        }
+
         String tag = DebugLogArgument.AWARENESS_COMPUTE;
         TownInterface.DebugLogger logger = town.getUnsafe().getDebugLogger(QT.FLAG_LOGGER, tag);
         for (Map.Entry<JobID, ImmutableList<JobID>> pc : delegate.getNextJobAwarenesses().entrySet()) {
@@ -87,14 +100,12 @@ public class TownVillagerLearningHandle {
 
     public ImmutableSet<JobID> getChildJobsKnownToExist(JobID parent) {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
-        for (Map.Entry<UUID, Map<JobID, Set<JobID>>> kjs : jobsKnownToExist.entrySet()) {
-            Map<JobID, Set<JobID>> villagerKnown = kjs.getValue();
-            ImmutableList<JobID> known = UtilClean.getOrDefaultCollectionByKeyPredicate(
-                    villagerKnown,
-                    parent::sameRoot,
-                    ImmutableList.of()
-            );
-            b.addAll(known);
+        for (Map<JobID, ? extends Set<JobID>> villagerKnown : known.values()) {
+            for (Map.Entry<JobID, ? extends Set<JobID>> e : villagerKnown.entrySet()) {
+                if (parent.sameRoot(e.getKey())) {
+                    b.addAll(e.getValue());
+                }
+            }
         }
         return b.build();
     }
