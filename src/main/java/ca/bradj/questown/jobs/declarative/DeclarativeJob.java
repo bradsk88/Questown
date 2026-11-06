@@ -73,6 +73,7 @@ public class DeclarativeJob extends
     private final @NotNull Integer maxState;
     private final JobID jobId;
     private final ExpirationRules expiration;
+    private boolean finishedProductNeedsStorage = true;
     private final long totalDuration;
     private final int workInterval;
     private final RecipeProvider recipe;
@@ -906,6 +907,16 @@ public class DeclarativeJob extends
     }
 
     // Package-accessible delegates for DeclarativeJobTickerDependencies
+
+    /** False when the finished product is used up, not stored (a diner's meal). Full storage never stops such a job. */
+    public DeclarativeJob withFinishedProductNeedsStorage(boolean needsStorage) {
+        this.finishedProductNeedsStorage = needsStorage;
+        return this;
+    }
+
+    boolean finishedProductNeedsStorage() {
+        return finishedProductNeedsStorage;
+    }
 
     ProductionJournal<MCTownItem, MCHeldItem> getJournal() {
         return journal;

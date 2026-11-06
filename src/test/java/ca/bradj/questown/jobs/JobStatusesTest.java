@@ -330,7 +330,7 @@ class JobStatusesTest {
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(
-                        false, true, ImmutableMap.of(
+                        false, false, ImmutableMap.of(
                         TestStatus.ITEM_WORK, false,
                         TestStatus.ITEM_WORK_2, true
                 )
@@ -416,6 +416,103 @@ class JobStatusesTest {
                 TestStatus.FACTORY
         );
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
+    /** Holding work output with no storage space: stop with the no-space status. */
+    @Test
+    /** A finished product elsewhere outranks collecting supplies. */
+    @Test
+    void StatusShouldBe_GoingToJob_WhenAFinishedProductWaitsElsewhere_EvenWithSuppliesInTown() {
+        JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, true, false),
+                finishedElsewhere,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
+    }
+
+    /** A finished product waiting with no space is the no-space stop too. */
+    @Test
+    void StatusShouldBe_NoSpace_WhenAFinishedProductWaits_AndTownHasNoSpace() {
+        JobStatuses.Job<TestStatus, TestStatus> finishedElsewhere = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, false, false),
+                finishedElsewhere,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_SPACE, s);
+    }
+
+    /** The no-space stop doesn't catch a job whose product is used up, or a diner would never eat. */
+    @Test
+    void StatusShouldBe_GoingToJob_WhenAFinishedProductWaits_AndTownHasNoSpace_ButTheProductNeedsNoStorage() {
+        JobStatuses.Job<TestStatus, TestStatus> mealWaiting = new JobStatuses.Job<>() {
+            @Override
+            public @Nullable TestStatus tryChoosingItemlessWork() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public @Nullable TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                return null;
+            }
+
+            @Override
+            public @Nullable TestStatus tryCollectingFinishedProduct() {
+                return TestStatus.GOING_TO_JOB;
+            }
+
+            @Override
+            public boolean finishedProductNeedsStorage() {
+                return false;
+            }
+        };
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(TestStatus.ITEM_WORK, true)),
+                new ConstTown(true, false, false),
+                mealWaiting,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.GOING_TO_JOB, s);
     }
 
     @Test
@@ -611,8 +708,17 @@ class JobStatusesTest {
     }
 
     private LZCD<LZCD.Dependency<TestStatus>> getHasSupplies(@NotNull LZCD<TestStatus> root) {
-        if (!(root.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+        if (!(root.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileHolding)) {
             throw new ClassCastException("Expected root.ifCondFail to be LZCD");
+        }
+        if (!(noSpaceWhileHolding.ifCondFail instanceof LZCD<TestStatus> noSpaceWhileWaiting)) {
+            throw new ClassCastException("Expected noSpaceWhileHolding.ifCondFail to be LZCD");
+        }
+        if (!(noSpaceWhileWaiting.ifCondFail instanceof LZCD<TestStatus> collectFinished)) {
+            throw new ClassCastException("Expected noSpaceWhileWaiting.ifCondFail to be LZCD");
+        }
+        if (!(collectFinished.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
+            throw new ClassCastException("Expected collectFinished.ifCondFail to be LZCD");
         }
         if (!(useItems.ifCondFail instanceof LZCD<TestStatus> dropLoot)) {
             throw new ClassCastException("Expected useItems.ifCondFail to be LZCD");
@@ -759,7 +865,58 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.FACTORY.noJobSite(), val);
     }
 
-    // TODO: Should not be dropping loot if can extract product and still have room
-    //  THIS IS BLOCKING BOP Depositor
+    @Test
+    void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_AndInventoryHasRoom() {
+        // The depositor holds its Block of Progress and a product waits at the flag: extracting wins.
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "bop_depositing"),
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, false, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, true
+                )),
+                new ConstTown(true, true, true),
+                new JobStatuses.Job<>() {
+                    @Override
+                    public TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.COLLECTING_PRODUCT;
+                    }
+
+                    @Override
+                    public TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        ));
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, val);
+    }
+
+    @Test
+    void usualRoutineRoot_resolve_shouldExtractProduct_NotDropLoot_IfProductIsExtractable_EvenWhenInventoryIsFull() {
+        // With extraction prioritized, a full inventory still extracts.
+        @NotNull LZCD<TestStatus> root = JobStatuses.usualRoutineRoot(new JobStatuses.UsualRoutineContext<>(
+                new JobID("test", "bop_depositing"),
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(true, false, HAS_ALL_SUPPLIES),
+                new ConstTown(true, true, true),
+                new JobStatuses.Job<>() {
+                    @Override
+                    public TestStatus tryChoosingItemlessWork() {
+                        return TestStatus.COLLECTING_PRODUCT;
+                    }
+
+                    @Override
+                    public TestStatus tryUsingSupplies(Map<TestStatus, SupplyItemStatus> supplyItemStatus) {
+                        return null;
+                    }
+                },
+                TestStatus.FACTORY
+        ));
+        TestStatus val = root.resolve();
+        Assertions.assertEquals(TestStatus.COLLECTING_PRODUCT, val);
+    }
 
 }

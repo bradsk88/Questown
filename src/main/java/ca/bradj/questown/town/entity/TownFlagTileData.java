@@ -182,6 +182,10 @@ public class TownFlagTileData {
             TownVillagerHandle villagerHandle = t.initializer().getVillagers();
             villagerHandle.associate(t);
             villagerHandle.addHungryListener(e -> {
+                // Only jobs that opt in switch straight to eating; others finish and store their output first.
+                if (!e.canInstantlySwitchToEating()) {
+                    return;
+                }
                 if (t.villagerHandle.isDining(e.getUUID())) {
                     return;
                 }
