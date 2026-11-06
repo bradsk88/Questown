@@ -127,6 +127,11 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public void resetWorkStatus(UUID villagerUUID) {
+                town.getUnsafe().resetWorkStatusFor(villagerUUID);
+            }
+
+            @Override
             public HealingModule<VisitorMobEntity> getHealingModule() {
                 return healing;
             }

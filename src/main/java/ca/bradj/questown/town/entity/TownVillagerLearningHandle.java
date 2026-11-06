@@ -186,4 +186,9 @@ public class TownVillagerLearningHandle {
         }
         return false;
     }
+
+    public boolean isUnlocked(UUID villagerUUID, JobID jobID) {
+        HashSet<JobID> set = unlockedJobs.get(villagerUUID);
+        return set != null && set.contains(jobID);
+    }
 }

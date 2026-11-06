@@ -135,6 +135,9 @@ public interface VillagerHolder {
 
     boolean isUnlocked(JobID jobID);
 
+    /** Whether this villager has unlocked the job. {@link #isUnlocked(JobID)} asks whether anyone in town has. */
+    boolean isUnlocked(UUID villagerUUID, JobID jobID);
+
     UnsafeVillagerData getUnprotectedDataHandle(@Nullable VillagerUUID vuid);
 
     Optional<Entity> getLookTarget(@Nullable VillagerUUID vuid);
