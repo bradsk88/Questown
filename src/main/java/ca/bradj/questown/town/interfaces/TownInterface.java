@@ -1,9 +1,11 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.HealingStore;
@@ -22,6 +24,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
@@ -37,6 +40,9 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
     void addMorningReward(MCReward ev);
 
     Vec3 getVisitorJoinPos();
+
+    /** The saved state a returning villager respawns with, taken once; empty for a new arrival. */
+    Optional<ImmutableSnapshot<MCHeldItem, ?>> takeRespawnJournal(VillagerUUID villager);
 
     BlockPos getRandomWanderTarget(BlockPos avoiding);
 

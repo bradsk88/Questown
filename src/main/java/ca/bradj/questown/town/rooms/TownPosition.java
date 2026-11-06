@@ -44,4 +44,10 @@ public class TownPosition {
     public int getY(int flagY) {
         return flagY + scanLevel;
     }
+
+    /** This fixture re-anchored to a flag at a new height, keeping its world Y. */
+    public TownPosition rebasedTo(int oldFlagY, int newFlagY) {
+        int absoluteY = getY(oldFlagY);
+        return new TownPosition(x, z, absoluteY - newFlagY);
+    }
 }

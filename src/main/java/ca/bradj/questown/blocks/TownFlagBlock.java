@@ -11,7 +11,9 @@ import ca.bradj.questown.core.init.ModItemGroup;
 import ca.bradj.questown.core.init.TilesInit;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.materials.WallType;
+import ca.bradj.questown.core.network.OpenDormantFlagMessage;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
+import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.FlagTabs;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
@@ -63,10 +65,14 @@ import java.util.function.Supplier;
 
 public class TownFlagBlock extends BaseEntityBlock {
 
+    public static final com.mojang.serialization.MapCodec<TownFlagBlock> CODEC =
+            com.mojang.serialization.MapCodec.unit(TownFlagBlock::new);
+
     public static final String ITEM_ID = "flag_base";
-    public static final Item.Properties ITEM_PROPS = new Item.Properties().
-            tab(ModItemGroup.QUESTOWN_GROUP);
+    public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
+    // A relocation deed waits above this flag.
+    public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
     // The flag holds as many Blocks of Progress as it can; more would be lost.
     public static final Property<Boolean> BOP_FULL = BooleanProperty.create("bop_full");
     private Map<Player, Long> informedPlayers = new HashMap<>();

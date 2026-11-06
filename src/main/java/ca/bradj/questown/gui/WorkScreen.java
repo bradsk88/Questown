@@ -50,6 +50,8 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     private final AddWorkScreen addWorkScreen;
 
     private int currentPage = 0;
+    // A - / + click re-opens the board on the same page.
+    private static int pageAfterReopen = -1;
     private Map<Position, Runnable> removes = new HashMap<>();
 
     // Wider hit boxes for the bottom-band toggles; the glyph alone is too small.
@@ -67,6 +69,11 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         super.imageHeight = 220;
 
         this.work = ImmutableList.copyOf(container.getWork());
+        if (pageAfterReopen >= 0) {
+            int lastPage = Math.max(0, (work.size() - 1) / MAX_CARDS_PER_PAGE);
+            this.currentPage = Math.min(pageAfterReopen, lastPage);
+            pageAfterReopen = -1;
+        }
         this.background = JEI.getRecipeGuiBackground();
         this.cardBackground = JEI.getRecipeBackground();
 
@@ -217,6 +224,11 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
     private List<Slot> slots = new ArrayList<>();
 
+
+    private void sendLimitStep(UIWork jobPosting, int delta) {
+        pageAfterReopen = currentPage;
+        menu.sendLimitStep(jobPosting, delta);
+    }
     private ImmutableList<Slot> renderJobCardIcons(
             PoseStack poseStack,
             UIWork recipe,
