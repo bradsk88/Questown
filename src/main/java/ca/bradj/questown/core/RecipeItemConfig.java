@@ -1,5 +1,11 @@
 package ca.bradj.questown.core;
 
+import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.loader.ConfigBuilder;
+import ca.bradj.questown.loader.ConfigSpec;
+import ca.bradj.questown.loader.ConfigValue;
+import ca.bradj.questown.loader.Loader;
+
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.SmallSoupPotBlock;
 import ca.bradj.questown.blocks.SoupPotBlock;
@@ -12,21 +18,19 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class RecipeItemConfig {
 
-    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
-    public static final ForgeConfigSpec SPEC;
+    public static final ConfigBuilder BUILDER = Loader.configBuilder();
+    public static final ConfigSpec SPEC;
 
     public static final String ITEM_WEIGHTS = "Item weights";
     private static final Config defaultItemWeights = Config.of(InMemoryFormat.defaultInstance());
-    public static final ForgeConfigSpec.ConfigValue<Config> itemWeights;
+    public static final ConfigValue<String> itemWeights;
 
     private static final int TORCH_SCORE = RecipeItemScore.canCraftInFourGrid(
             CommonRecipes.TORCH_INGREDIENTS, false
@@ -185,7 +189,15 @@ public class RecipeItemConfig {
         add(assumePresent(Items.LANTERN), LANTERN);
         add(String.format("#%s", TagsInit.Items.LANTERNS.location()), LANTERN);
         add(assumePresent(Items.CHEST), CHEST);
-        add(String.format("#%s", Tags.Items.CHESTS.location()), CHEST);
+        add(
+                String.format(
+                        "#%s",
+                        Compat.itemTag(
+                                new net.minecraft.resources.ResourceLocation("minecraft:chests")
+                        ).location()
+                ),
+                CHEST
+        );
         add(assumePresent(Items.FURNACE), FURNACE);
         add(String.format("#%s", ItemTags.SIGNS.location()), SIGN);
         add(assumePresent(Items.BOOKSHELF), BOOKSHELF);
@@ -194,23 +206,27 @@ public class RecipeItemConfig {
         add(assumePresent(Items.TARGET), TARGET);
         add(assumePresent(Items.CAULDRON), CAULDRON);
         add(Questown.ResourceLocation(SmallSoupPotBlock.ITEM_ID), SMALL_SOUP_POT);
-        add(SoupPotBlock.ITEM_ID, BIG_SOUP_POT);
+        // Room recipes name the big pot questown:soup_pot.
+        add(Questown.ResourceLocation(SoupPotBlock.ITEM_ID), BIG_SOUP_POT);
         add(assumePresent(Items.COMPOSTER), COMPOSTER);
-        // TODO: Bring back hunger/dining and reduce this cost to represent plate recipe
-        add(ItemsInit.PLATE_BLOCK.getId(), Integer.MAX_VALUE);
+        add(ItemsInit.PLATE_BLOCK.id(), PLATE);
         add(String.format("#%s", TagsInit.Items.SOUP_POTS.location()), SMALL_SOUP_POT);
         // TODO: Add a crafter job for building bowl racks (should probably upgrade job board so we can make "one time" requests)
-        add(ItemsInit.BOWL_RACK_BLOCK.getId(), Integer.MAX_VALUE);
-        add(ItemsInit.ORE_PROCESSING_BLOCK.getId(), ORE_PROCESSING_BLOCK);
-        add(ItemsInit.BREAD_OVEN_BLOCK.getId(), BREAD_OVEN_BLOCK);
-        add(ItemsInit.FOOD_DISPLAY_BLOCK.getId(), FOOD_DISPLAY);
+        add(ItemsInit.BOWL_RACK_BLOCK.id(), Integer.MAX_VALUE);
+        add(ItemsInit.ORE_PROCESSING_BLOCK.id(), ORE_PROCESSING_BLOCK);
+        add(ItemsInit.BREAD_OVEN_BLOCK.id(), BREAD_OVEN_BLOCK);
+        add(ItemsInit.FOOD_DISPLAY_BLOCK.id(), FOOD_DISPLAY);
+        add(ItemsInit.BLACKSMITHS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(ItemsInit.ARMORERS_TABLE_BLOCK.id(), WORK_TABLE);
+        add(assumePresent(Items.ARMOR_STAND), ARMOR_STAND);
+        add(assumePresent(Items.ITEM_FRAME), ITEM_FRAME);
         add(String.format("#%s", TagsInit.Items.JOB_BOARD_INPUTS.location()), Integer.MAX_VALUE); // Never recommend job board
 //        add(ForgeRegistries.ITEMS.getKey(ItemsInit.HOSPITAL_BED.get()).toString(), HOSPITAL_BED);
     }
 
     @SuppressWarnings("DataFlowIssue")
     private static @NotNull ResourceLocation assumePresent(Item item) {
-        return ForgeRegistries.ITEMS.getKey(item);
+        return Compat.getItemId(item);
     }
     private static void add(
             ResourceLocation itemOrTagKey,
@@ -225,6 +241,11 @@ public class RecipeItemConfig {
         defaultItemWeights.add(itemOrTagKey, cost);
     }
 
+    // Current weights as a map, decoded from the stored config value.
+    public static Map<String, Integer> getWeights() {
+        return ItemWeightCodec.decode(itemWeights.get());
+    }
+
     // TODO: How can mod pack builders add weights to this?
 
     public static final String FILENAME = "questown-item-weights-server.toml";
@@ -232,7 +253,7 @@ public class RecipeItemConfig {
     static {
         BUILDER.push(FILENAME);
 
-        itemWeights = BUILDER.define(ITEM_WEIGHTS, defaultItemWeights);
+        itemWeights = BUILDER.define(ITEM_WEIGHTS, ItemWeightCodec.encode(defaultItemWeights));
 
         BUILDER.pop();
         SPEC = BUILDER.build();
