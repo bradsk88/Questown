@@ -365,7 +365,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
                 !deps.isInventoryEmpty(),
                 deps.getExpiration(),
                 new JobLogic.JobDetails(maxState, deps.getWorkForStep(0), deps.getWorkInterval()),
-                (JobLogic.JLWorld<EXTRA, TOWN, POS>) (Object) new DeclarativeLogicWorld<POS, HELD_ITEM, ROOM>(deps.createWorldDependencies(rniot2, entityCurrentJobSite)),
+                (JobLogic.JLWorld<EXTRA, TOWN, POS>) (Object) new DeclarativeLogicWorld<POS, HELD_ITEM, ROOM>(
+                        deps.createWorldDependencies(rniot2, entityCurrentJobSite),
+                        () -> holdsWorkOutput(deps)
+                ),
                 (unused, bpp) -> Util.withFallbackForNullInput(
                         work.getJobBlockState((POS) bpp),
                         State::processingState,

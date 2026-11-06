@@ -21,6 +21,7 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
 import ca.bradj.questown.jobs.declarative.BOPDepositorWork;
+import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.ResterWork;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
@@ -606,19 +607,53 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
         }
 
-        if (villagerHandle.hasBlockOfProgress(ownerVUID)) {
-            MCHeldItem bop = MCHeldItem.fromTown(ItemsInit.BLOCK_OF_PROGRESS.get());
-            villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
-            changeJob.accept(BOPDepositorWork.getIdForRoot(currentJob.rootId()));
+        boolean carrying = carriesBlockOfProgress(villager);
+        // A carried Block of Progress always goes to the flag.
+        if (villagerHandle.hasBlockOfProgress(ownerVUID) || carrying) {
+            // Hand one out only when the villager isn't already carrying one.
+            if (!carrying) {
+                // Record the job that earned it.
+                ItemStack bopStack = new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+                BlockOfProgress.markEarnedBy(bopStack, currentJob);
+                MCHeldItem bop = MCHeldItem.fromTown(bopStack);
+                villager.tryGiveItem(bop, InventoryFullStrategy.REMOVE_FROM_WORLD);
+            }
+            changeJob.accept("bop-deposit", BOPDepositorWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
 
-        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
-            changeJob.accept(DowntimeWork.getIdForRoot(currentJob.rootId()));
+        if (villagerHandle.isReadyForDowntime(ownerVUID, tick) && !DowntimeWork.matches(currentJob)
+                && DiningStages.downtimeMayInterrupt(currentJob, villagerHandle.isStarving(ownerVUID))) {
+            changeJob.accept("ready-for-downtime", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
 
-        ImmutableList<WorkRequest> requestedResults = workHandle.getRequestedResults();
+        // Store carried work output before eating; storing it is what counts it as made.
+        if (depositCarriedWorkOutput(villager)) {
+            return true;
+        }
+
+        // A starving villager that hasn't just given up on dining starts the diner chain.
+        if (villagerHandle.isStarving(ownerVUID) && !villagerHandle.gaveUpDiningRecently(ownerVUID)) {
+            String rid = currentJob.rootId();
+            ResourceLocation diningRoom = DinerWork.asWork(rid).baseRoom;
+            boolean hasDiningRoom = !roomsHandle.getRoomsMatching(diningRoom).isEmpty();
+            // Still starving on the way out of a diner: try the next one.
+            JobID diner = DiningStages.next(currentJob, hasDiningRoom);
+            if (diner != null) {
+                changeJob.accept("starving-diner-stage", diner);
+                return true;
+            }
+        }
+
+        // The player's "after this trip" switch, applied at the next job pick.
+        JobID chosen = villagerHandle.takeSwitchAfterTrip(ownerVUID);
+        if (chosen != null) {
+            changeJob.accept("player-after-trip", chosen);
+            return true;
+        }
+
+        BoardRequests requestedResults = workHandle.getBoardRequests();
         WorksBehaviour.TownData td = getTownData();
         Predicate<JobID> canFit = p -> {
             if (ServerJobsRegistry.canFit(uuid, p, Util.getDayTime(getServerLevel()))) {

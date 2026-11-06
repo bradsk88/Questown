@@ -20,4 +20,8 @@ public interface JobTownProvider<ROOM> extends TownProvider {
     Collection<ROOM> roomsAtState(Integer state);
 
     Signals.DayTime getDayTime();
+
+    default boolean finishedProductNeedsStorage() {
+        return true;
+    }
 }
