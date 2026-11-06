@@ -623,47 +623,4 @@ class AbstractWorldInteractionTest {
         Assertions.assertNull(AbstractWorldInteraction.flagBlockEntityAt(null, null));
     }
 
-    @Test
-    void levelProficiencies_nullId_returnsCurrentMap() {
-        TestWorldInteraction wi = noMemoryInventory(
-                0, ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of(),
-                () -> ImmutableList.of(), () -> {}
-        );
-        Map<String, Float> cur = new LinkedHashMap<>();
-        cur.put("fishing", 0.5f);
-        Assertions.assertSame(cur, wi.levelProficiencies(cur, null, 0.001f, 0.0001f));
-    }
-
-    @Test
-    void levelProficiencies_createsWorkedId_atZeroIntervalLevelsUntouched() {
-        // Interval 0 means no gain or decay, so this checks the wiring only.
-        InventoryHandle<GathererJournalTest.TestItem> inventoryHandle = new InventoryHandle<>() {
-            @Override
-            public Collection<GathererJournalTest.TestItem> getItems() {
-                return ImmutableList.of(new GathererJournalTest.TestItem(""));
-            }
-
-            @Override
-            public void set(int ii, GathererJournalTest.TestItem shrink) {
-            }
-        };
-        TestWorldInteraction wi = new TestWorldInteraction(
-                0,
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ValidatedInventoryHandle.unvalidated(inventoryHandle),
-                testWorkStateContainer(),
-                () -> new Claim(UUID.randomUUID(), 100)
-        );
-        Map<String, Float> cur = new LinkedHashMap<>();
-        cur.put("fishing", 0.5f);
-        Map<String, Float> after = wi.levelProficiencies(cur, "farming", 0.001f, 0.0001f);
-        Assertions.assertEquals(2, after.size());
-        Assertions.assertEquals(0f, after.get("farming"));
-        Assertions.assertEquals(0.5f, after.get("fishing"));
-    }
-
 }

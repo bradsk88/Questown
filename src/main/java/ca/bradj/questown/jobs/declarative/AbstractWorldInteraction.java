@@ -301,53 +301,8 @@ public abstract class AbstractWorldInteraction<
         return reset;
     }
 
-    /** Scales a work speed (out of 10) by a proficiency multiplier, kept within 1 to 10. */
-    static int applyProficiencyToWorkSpeed(
-            int baseOf10,
-            float multiplier
-    ) {
-        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
-    }
-
-    /** The work-speed multiplier for the job's proficiency (1 when it has none), the same in real time and during a warp. */
-    static float proficiencyMultiplier(
-            @Nullable String proficiencyId,
-            Function<String, Float> levelForId
-    ) {
-        if (proficiencyId == null) {
-            return 1f;
-        }
-        return Proficiency.multiplierFor(
-                levelForId.apply(proficiencyId),
-                Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
-                Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
-        );
-    }
-
-    /** One completed work action on the villager's proficiencies, with the configured gain and decay. */
-    protected Map<String, Float> levelProficiencies(
-            Map<String, Float> current,
-            @Nullable String proficiencyId
-    ) {
-        return levelProficiencies(
-                current,
-                proficiencyId,
-                Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
-                Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue()
-        );
-    }
-
-    /** As above, with the gain, decay and interval passed in. */
-    protected Map<String, Float> levelProficiencies(
-            Map<String, Float> current,
-            @Nullable String proficiencyId,
-            float gainPerTick,
-            float decayPerTick
-    ) {
-        if (proficiencyId == null) {
-            return current;
-        }
-        return Proficiency.levelUp(current, proficiencyId, gainPerTick, decayPerTick, interval);
+    protected JobID getJobId() {
+        return jobId;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -563,6 +518,13 @@ public abstract class AbstractWorldInteraction<
     }
 
     /** Called once per completed job cycle. The warp records XP here; real time pays it elsewhere. */
+    protected TOWN onJobCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
+    }
+
     protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position

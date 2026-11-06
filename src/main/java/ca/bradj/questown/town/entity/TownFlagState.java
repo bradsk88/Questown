@@ -130,8 +130,7 @@ public class TownFlagState {
         Vec3 pos = entity.position();
         ImmutableSnapshot<MCHeldItem, ?> snapshot = entity.getJobJournalSnapshot();
         return new TownState.VillagerData<>(
-                pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
-                town.getVillagerHandle().getProficiencies(entity.getUUID())
+                pos.x, pos.y, pos.z, snapshot, entity.getUUID()
         );
     }
 

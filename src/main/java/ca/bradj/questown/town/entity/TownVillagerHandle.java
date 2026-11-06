@@ -292,7 +292,6 @@ public final class TownVillagerHandle {
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
-            Map<UUID, ? extends Map<String, Float>> proficiencies,
             ImmutableMap<UUID, JobID> guaranteedRoots,
             ImmutableMap<UUID, JobID> preRolls,
             Map<UUID, Integer> displayNumbersIn,
@@ -550,6 +549,7 @@ public final class TownVillagerHandle {
 
         assignDisplayNumber(visitorMobEntity.getUUID());
         stampNameplate(visitorMobEntity);
+
 
         ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(visitorMobEntity.getJobId());
         for (JobID jobID : defaultWork) {
