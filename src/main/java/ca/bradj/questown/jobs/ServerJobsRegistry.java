@@ -23,6 +23,7 @@ import ca.bradj.questown.jobs.declarative.*;
 import ca.bradj.questown.jobs.declarative.meta.DinerRawFoodWork;
 import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -513,7 +514,10 @@ public class ServerJobsRegistry {
     ) {
         BlockState state = ctx.blockInfo().state(ctx.blockPos());
         if (state.isAir()) {
-            return false;
+            // Only display jobs claim the air a display stands in.
+            return ctx.world() != null
+                    && !ctx.world().getDisplaySlots(ctx.blockPos()).isEmpty()
+                    && Works.values().stream().anyMatch(v -> v.get().isJobBlock.test(ctx));
         }
         BlockState bs = state;
         Block b = bs.getBlock();
@@ -690,6 +694,26 @@ public class ServerJobsRegistry {
                 return entity;
             }
         };
+    }
+
+    /** True when the job's cycle makes nothing (fuel, stock, display jobs). A paused request still counts for it. */
+    public static boolean makesNothing(JobID p) {
+        if (isSeekingWork(p) || specialJobs.stream().anyMatch(sj -> sj.idTest().test(p))) {
+            return false;
+        }
+        Supplier<Work> w = getWorkSupplier(p);
+        return w != null && w.get().hasNoOutput();
+    }
+
+    /** The first board request the job can answer. A paused request still counts for a job that makes nothing. */
+    public static Optional<WorkRequest> firstAnswerable(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.toWorkFor(makesNothing(p)).stream()
+                       .filter(r -> canSatisfy(town, p, r.asIngredient()))
+                       .findFirst();
     }
 
     public static boolean answersUnpaused(

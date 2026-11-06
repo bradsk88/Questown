@@ -366,6 +366,8 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 : renderJobQuestTooltip(recipe);
         return withVillagersHint(base, villagersTabShown);
     }
+
+    /** A skill card opens the villager's skills tab, like a job-change card. */
     private static List<Component> skillUnlockTooltip(UIQuest recipe) {
         if (recipe.getLockedUntilLevel() != null) {
             // A blank skill card says how far off it is, not what it is.
@@ -380,6 +382,11 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         }
         return ImmutableList.of();
     }
+
+    private static boolean opensVillagersTab(Quest.QuestType type) {
+        return type == Quest.QuestType.JOB_CHANGE || type == Quest.QuestType.SKILL_UNLOCK;
+    }
+
     private static List<Component> withVillagersHint(List<Component> base, boolean villagersTabShown) {
         if (!villagersTabShown) {
             return base;

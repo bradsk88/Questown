@@ -174,6 +174,8 @@ public class Config {
                 "and \"baker\" is unlocked when this is set to 2, only 2 jobs from \"bread\", \"cakes\" and \"cookies\" "
         ).comment(
                 "will become available for unlocking."
+        ).comment(
+                "Currently ignored: every sub-job is offered, until education gates learning."
         ).defineInRange("JobTreeGrowth", 2, 1, 10);
         MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"

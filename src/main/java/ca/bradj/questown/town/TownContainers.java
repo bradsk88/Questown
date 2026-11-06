@@ -4,6 +4,8 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Pair;
 import ca.bradj.questown.integration.minecraft.ChestTouches;
 import ca.bradj.questown.integration.minecraft.MCContainer;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
+import ca.bradj.questown.integration.minecraft.MCDisplayContainer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.InteractionSpots;
@@ -18,6 +20,9 @@ import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -96,6 +101,61 @@ public class TownContainers {
                 x -> true
         );
         return Stream.concat(allChestsStream, entities).toList();
+    }
+
+    /** Every container plus the displays in town rooms, for counting what the town holds. */
+    public static List<ContainerTarget<MCContainer, MCTownItem>> getAllContainersAndDisplays(
+            TownInterface town,
+            ServerLevel level
+    ) {
+        return Stream.concat(
+                getAllContainers(town, level).stream(),
+                getAllDisplaysStream(town.getRoomHandle(), level, x -> true)
+        ).toList();
+    }
+
+    public static boolean isDisplay(ContainerTarget<?, ?> target) {
+        return target.getContainer() instanceof MCDisplayContainer;
+    }
+
+    /** Armor stands and item frames in town rooms. */
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> getAllDisplaysStream(
+            RoomsHolder rooms,
+            ServerLevel level,
+            Predicate<RoomRecipeMatch<MCRoom>> includeRoom
+    ) {
+        return rooms.getMatches(includeRoom).stream().flatMap(m -> displaysIn(m, level));
+    }
+
+    private static Stream<ContainerTarget<MCContainer, MCTownItem>> displaysIn(
+            RoomRecipeMatch<MCRoom> match,
+            ServerLevel level
+    ) {
+        Set<BlockPos> positions = match.getContainedBlocks().keySet();
+        return BoundingBox.encapsulatingPositions(positions).map(AABB::of).stream()
+                    .flatMap(box -> level.getEntitiesOfClass(Entity.class, box, DisplaySlots::isDisplay).stream())
+                    .filter(e -> positions.contains(e.blockPosition()))
+                    .map(e -> fromDisplay(match.room, e));
+    }
+
+    private static ContainerTarget<MCContainer, MCTownItem> fromDisplay(
+            MCRoom room,
+            Entity e
+    ) {
+        BlockPos p = e.blockPosition();
+        Position position = Positions.FromBlockPos(p);
+        return new ContainerTarget<>(
+                position,
+                p.getY(),
+                position,
+                new MCDisplayContainer(DisplaySlots.of(e)),
+                () -> e.isAlive() && e.blockPosition().equals(p),
+                item -> {
+                },
+                REJECTS_EVERYTHING,
+                NO_BOOST,
+                room
+        );
     }
 
     @NotNull
@@ -343,7 +403,7 @@ public class TownContainers {
             TownFlagBlockEntity e,
             ServerLevel serverLevel
     ) {
-        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainers(e, serverLevel);
+        List<ContainerTarget<MCContainer, MCTownItem>> cs = getAllContainersAndDisplays(e, serverLevel);
         return cs.stream().map(ContainerTarget::getItems).flatMap(Collection::stream).filter(v -> !v.isEmpty())
                  .collect(ImmutableList.toImmutableList());
     }

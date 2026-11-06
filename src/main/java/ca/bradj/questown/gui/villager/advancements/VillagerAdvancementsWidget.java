@@ -42,6 +42,7 @@ public class VillagerAdvancementsWidget {
     private VillagerAdvancementsWidget parent;
     private final List<VillagerAdvancementsWidget> children = Lists.newArrayList();
     private final boolean active;
+    private static final float LOCKED_SHADE = 0.45f;
     private final boolean unlocked;
     private final boolean canUnlock;
     private final int x;

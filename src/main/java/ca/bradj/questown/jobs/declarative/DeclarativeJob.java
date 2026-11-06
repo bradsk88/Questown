@@ -845,7 +845,7 @@ public class DeclarativeJob extends
                     return jbs != null && maxState.equals(jbs.processingState());
                 }
         );
-        return JobsClean.findJobSite(
+        return DeclarativeJobs.findJobSite(
                 maxState,
                 prioritizesExtraction(),
                 statusItems,
@@ -854,8 +854,14 @@ public class DeclarativeJob extends
                 blocksSrc,
                 work,
                 isJobBlock,
-                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent)
+                (block, room) -> findInteractionSpot(block, room, isValidWalkTarget, getRandomAdjacent),
+                bp -> filledDisplaySlots(town, bp)
         );
+    }
+
+    private static int filledDisplaySlots(TownInterface town, BlockPos bp) {
+        ServerLevel level = town.getServerLevel();
+        return level == null ? 0 : ca.bradj.questown.integration.minecraft.DisplaySlots.filledAt(level, bp);
     }
 
     private Dependencies4<MCHeldItem> getSupplyDeps() {
@@ -959,18 +965,14 @@ public class DeclarativeJob extends
 
     @Override
     public int getExperienceEarned() {
-        if (specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED)) {
-            return 0;
-        }
-        int workPart = initialWork.values().stream().reduce(0, Integer::sum) * workInterval;
-        long timePart = workPart + Math.max((totalDuration / 10), 1);
-        QT.JOB_LOGGER.debug(
-                "{} gained experience: {} from work, {} from time",
-                UtilClean.truncateMiddle(ownerUUID),
-                workPart,
-                timePart
+        int earned = JobExperience.formula(
+                specialGlobalRules.contains(SpecialRules.NO_EXPERIENCE_GAINED),
+                initialWork.values(),
+                workInterval,
+                List.of(Math.toIntExact(totalDuration))
         );
-        return (int) timePart;
+        QT.JOB_LOGGER.debug("{} gained experience: {}", UtilClean.truncateMiddle(ownerUUID), earned);
+        return earned;
     }
 
     public int getMaxState() {

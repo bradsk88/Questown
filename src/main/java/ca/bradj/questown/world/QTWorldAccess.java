@@ -60,6 +60,13 @@ public interface QTWorldAccess {
     boolean insertIntoSlot(BlockPos pos, int slot, ItemStack item);
     ItemStack extractFromSlot(BlockPos pos, int slot, int count);
     boolean insertIntoContainer(BlockPos pos, ItemStack item);
+    /** The slots of the display at pos (armor stand: feet, legs, chest, head; item frame: one), or empty. */
+    List<ItemStack> getDisplaySlots(BlockPos pos);
+    /** Puts the item in that slot of the display at pos; false when there is none. */
+    boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item);
+
+    /** Drops the item at pos, so an item with nowhere to go isn't lost. */
+    void dropItem(BlockPos pos, ItemStack item);
 
     // Sound
     void playSound(BlockPos pos, SoundEvent sound);

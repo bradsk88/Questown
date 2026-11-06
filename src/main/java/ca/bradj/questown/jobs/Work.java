@@ -51,6 +51,8 @@ public class Work {
     private @Nullable Integer experience;
     /** {@code prefer_requested}: a full-day trip rolls twice and keeps requested items. */
     private boolean prefersRequestedLoot;
+    /** The trip's default loot table, or null; the skill details list its items. */
+    private @Nullable String lootTableDefault;
 
     /** The first level at which the skills tab appears. */
     public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
@@ -141,6 +143,15 @@ public class Work {
         return prefersRequestedLoot;
     }
 
+    public @Nullable String lootTableDefault() {
+        return lootTableDefault;
+    }
+
+    public Work withLootTableDefault(@Nullable String lootTableDefault) {
+        this.lootTableDefault = lootTableDefault;
+        return this;
+    }
+
     public Work withPrefersRequestedLoot(boolean prefersRequestedLoot) {
         this.prefersRequestedLoot = prefersRequestedLoot;
         return this;
@@ -181,6 +192,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
     }
 
     public Work withNeeds(
@@ -207,6 +219,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
@@ -242,6 +255,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 
@@ -256,6 +270,7 @@ public class Work {
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
+        work.lootTableDefault = lootTableDefault;
         return work;
     }
 

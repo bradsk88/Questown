@@ -803,16 +803,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     //  cannot complete their current work (e.g. no supplies)
     private void updateWorkersAfterRequestChange() {
         WorksBehaviour.TownData td = getTownData();
-        Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(e -> {
-            for (WorkRequest r : workHandle.getRequestedResults()) {
-                if (ServerJobsRegistry.canSatisfy(td, e.getJobId(), r.asIngredient())) {
-                    if (e.getStatusForServer().isBusy()) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        });
+        BoardRequests requests = workHandle.getBoardRequests();
+        Stream<VisitorMobEntity> relevantWorkers = villagerHandle.stream().filter(Objects::nonNull).filter(
+                e -> !IStatus.isBusy(e.getStatusForServer())
+                        || ServerJobsRegistry.firstAnswerable(td, e.getJobId(), requests).isEmpty()
+        );
         relevantWorkers.forEach(e -> villagerHandle.changeJobForVillager(
                 e.getVUID(),
                 WorkSeekerJob.getIDForRoot(e.getJobId()),
@@ -954,6 +949,27 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         TownQuests.setUpQuestsForNewlyPlacedFlag(this, quests);
         this.isInitializedQuests = true;
         setChanged();
+    }
+
+    /** Pauses the requests storage holds enough of. */
+    void refreshStockedRequests(ImmutableList<MCTownItem> stacks) {
+        java.util.Map<WorkRequest, Integer> stock = new java.util.LinkedHashMap<>();
+        for (WorkRequest r : workHandle.getRequestedResults()) {
+            stock.put(r, countInStorage(stacks, r));
+        }
+        ImmutableMap<WorkRequest, Integer> counts = ImmutableMap.copyOf(stock);
+        workHandle.setStock(counts);
+        workHandle.setStocked(BoardRequests.stocked(
+                workHandle.getRequestedResults(),
+                r -> counts.getOrDefault(r, 0),
+                quests.requestsOpenQuestsNeed(),
+                workHandle::limitOf
+        ));
+    }
+
+    private static int countInStorage(ImmutableList<MCTownItem> stacks, WorkRequest r) {
+        Ingredient requested = r.asIngredient();
+        return stacks.stream().filter(s -> requested.test(s.toQTItemStack())).mapToInt(MCTownItem::quantity).sum();
     }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAllQuests() {
