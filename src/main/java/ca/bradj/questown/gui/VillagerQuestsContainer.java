@@ -16,6 +16,7 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
     private static final Collection<String> ENABLED_TABS = VillagerTabs.except(OpenVillagerMenuMessage.QUESTS);
     private final UUID villagerUUID;
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
     private final boolean showInventoryTab;
 
     public VillagerQuestsContainer(
@@ -23,7 +24,9 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
             UUID villagerUUID,
             Collection<UIQuest> quests,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(
                 MenuTypesInit.VILLAGER_QUESTS.get(),
@@ -33,6 +36,7 @@ public class VillagerQuestsContainer extends AbstractQuestsContainer implements 
         );
         this.villagerUUID = villagerUUID;
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
         this.showInventoryTab = showInventoryTab;
     }
 

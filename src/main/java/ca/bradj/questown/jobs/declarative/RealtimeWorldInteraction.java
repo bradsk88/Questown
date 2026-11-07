@@ -49,6 +49,8 @@ public class RealtimeWorldInteraction extends
     private final Supplier<String> jobRoom;
     private final Function<MCExtra, BlockPos> townFlagPos;
     private int soundTicksLeft;
+    private static final java.util.Set<net.minecraft.resources.ResourceLocation> MISSING_SOUNDS_WARNED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private final ProductionJournal<MCTownItem, MCHeldItem> journal;
     private final BiFunction<ServerLevel, Collection<MCHeldItem>, Iterable<MCHeldItem>> resultGenerator;
@@ -289,7 +291,14 @@ public class RealtimeWorldInteraction extends
         if (sound == null) {
             return;
         }
-        @Nullable SoundEvent s = ForgeRegistries.SOUND_EVENTS.getValue(sound.sound());
+        @Nullable SoundEvent s = Loader.soundFromId(sound.sound());
+        if (s == null) {
+            // An unknown sound id would play as null and crash the server.
+            if (MISSING_SOUNDS_WARNED.add(sound.sound())) {
+                QT.JOB_LOGGER.warn("Job sound {} is not a registered sound event; skipping it", sound.sound());
+            }
+            return;
+        }
         int dieRoll = mcExtra.town().getServerLevel().getRandom().nextInt(100);
         int chance = sound.chance() == null ? 10 : sound.chance();
         if (dieRoll < chance) {

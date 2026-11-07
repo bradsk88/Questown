@@ -79,7 +79,7 @@ public class VillagerTabs extends Tabs implements SubUI {
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
                     RenderSystem.setShaderTexture(0, Questown.ResourceLocation("textures/menu/gatherer/menu.png"));
-                    GuiComponent.blit(rc.stack(), x + 13, y + 11, 0, 0, 0, 9, 9, 256, 256);
+                    Util.blit(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), x + 13, y + 11, 0, 0, 9, 9);
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
@@ -171,6 +171,7 @@ public class VillagerTabs extends Tabs implements SubUI {
             }
             return null;
         };
+        Runnable skillFn = menu.showSkillsTab() ? factory.apply(OpenVillagerMenuMessage.SKILLS) : null;
         VillagerBopTab bop = VillagerBopTab.decide(!menu.showInventoryTab(), menu.showBlockOfProgressTab());
         Runnable bopFn = bop.opensFlagUi()
                 ? FlagTabs.makeOpenFn(FlagTabsEmbedding.FlagInfo.dumb(menu.getFlagPos(), true, false), OpenFlagMenuMessage.BOP)
@@ -204,6 +205,10 @@ public class VillagerTabs extends Tabs implements SubUI {
 
     static void recordShowChangeRootTab(UUID villager, boolean show) {
         SHOW_CHANGE_ROOT_TAB.put(villager, show);
+    }
+
+    public static Collection<String> hideSkills(Collection<String> tabs) {
+        return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.SKILLS)).toList();
     }
 
     public static Collection<String> hideInventory(Collection<String> tabs) {

@@ -34,6 +34,9 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     // The producer a top-need room quest was posted for, or null.
     @Nullable
     private String topNeedProducer;
+    // The curated-path batch this quest belongs to, or null.
+    @Nullable
+    private String pathBatch;
 
     Quest() {
         this(null, null, null, null, null, 1);
@@ -179,6 +182,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
         this.topNeedProducer = producerRoot;
     }
 
+    public Optional<String> pathBatch() {
+        return Optional.ofNullable(pathBatch);
+    }
+
+    public void setPathBatch(@Nullable String pathBatchTag) {
+        this.pathBatch = pathBatchTag;
+    }
+
     /** Copies what a rebuild on load doesn't: the onboarding flag and the flavor text. */
     protected void carrySavedStateFrom(Quest<?, ?> saved) {
         this.onboarding = saved.onboarding;
@@ -215,7 +226,7 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     }
 
     public enum QuestType {
-        ITEM, ROOM, JOB_CHANGE, CONCURRENT_JOBS, UNKNOWN;
+        ITEM, ROOM, JOB_CHANGE, JOB_UNLOCK, CONCURRENT_JOBS, LOOT, FIRST_WORK_REQUEST, SKILL_UNLOCK, VILLAGER_LEVEL, UNKNOWN;
     }
 
     protected interface QuestFactory<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>> {
@@ -249,6 +260,10 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
         /** A CONCURRENT_JOBS quest. Don't build it with {@link #newQuest}: the job list would be lost. */
         QUEST newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<KEY> jobIds);
+
+        QUEST newSkillUnlockQuest(@Nullable UUID ownerId, KEY treeRootId);
+
+        QUEST newVillagerLevelQuest(@Nullable UUID ownerId, KEY id);
 
         QUEST completed(
                 ROOM room,

@@ -30,6 +30,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private ImmutableList<String> moodEffects;
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
+    private final boolean showSkillsTab;
     private final boolean showInventoryTab;
 
     public static VillagerStatsMenu ForClientSide(
@@ -53,6 +54,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     ) {
         super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showSkillsTab = showSkillsTab;
         this.showInventoryTab = showInventoryTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
