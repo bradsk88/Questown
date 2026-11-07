@@ -55,6 +55,9 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     // A Block of Progress recipe asks for a second click to confirm.
     private int armedRecipe = -1;
 
+    // Laid out from the real wrapped-text heights, so rows never overlap.
+    private int panelHeight = 166;
+    private int titleY;
     private int[] rowY = new int[0];
 
     public FlagCraftingScreen(
@@ -70,6 +73,19 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         this.flagPos = menu.getFlagInfo().flagPos();
     }
 
+    private Component title() {
+        return Compat.translatable("menu.flag_crafting.title");
+    }
+
+    private int lineHeight() {
+        return (int) (font.lineHeight * 1.5);
+    }
+
+    private int wrappedHeight(Component text) {
+        return Compat.splitText(font, text, TEXT_WIDTH).size() * lineHeight();
+    }
+
+    /** Stacks the rows top to bottom by their real heights. */
     private void computeLayout() {
         int y = 8;
         titleY = y;
@@ -97,9 +113,11 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
 
         panelHeight = y;
     }
+
     @Override
     protected void init() {
         super.init();
+        computeLayout();
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
 
