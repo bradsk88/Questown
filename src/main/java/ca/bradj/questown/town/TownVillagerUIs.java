@@ -522,9 +522,21 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
-                        isJobChangePending
+                        showSkillsTab,
+                        showInventoryTab,
+                        isJobChangePending,
+                        villagerDisplayName,
+                        wantsJobChange(sender, e),
+                        promisedRoot(sender, e),
+                        !hidesJobChange(sender, e),
+                        showInventoryTab ? JobChangeConfirmMenu.FlagBop.NONE : flagBop(sender, e)
                 )
         );
+        if (e.getFlagPos() != null) {
+            ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markVillagerUiOpened(
+                    sender.getLevel(), e.getFlagPos()
+            );
+        }
     }
 
 }
