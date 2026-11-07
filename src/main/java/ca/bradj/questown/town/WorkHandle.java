@@ -1,5 +1,6 @@
 package ca.bradj.questown.town;
 
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.world.item.Item;
@@ -18,4 +19,7 @@ public interface WorkHandle {
     boolean hasAtLeastOneBoard();
 
     ImmutableList<WorkRequest> getRequestedResults();
+
+    /** The requests, and the ones paused because storage holds enough. */
+    BoardRequests getBoardRequests();
 }

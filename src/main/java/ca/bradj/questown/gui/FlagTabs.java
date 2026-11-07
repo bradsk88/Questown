@@ -167,6 +167,9 @@ public class FlagTabs extends Tabs implements SubUI {
     }
 
     /**
+     * The tab a flag click opens on. A full flag opens the Blocks of Progress tab. Otherwise the first
+     * tab with a red dot, in the order villagers, Blocks of Progress, quests, economics; with no red
+     * dot, villagers.
      */
     public static String initialFlagTab(
             boolean bopFull,

@@ -1,9 +1,10 @@
 package ca.bradj.questown.gui.villager.advancements;
 
-import ca.bradj.questown.core.network.ChangeVillagerJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
-import ca.bradj.questown.core.network.UnlockJobMessage;
+import ca.bradj.questown.core.network.OpenSkillDetailsMessage;
+import ca.bradj.questown.gui.CompatScreen;
 import ca.bradj.questown.gui.RenderContext;
+import ca.bradj.questown.gui.ScrollableScreen;
 import ca.bradj.questown.gui.VillagerTabs;
 import ca.bradj.questown.gui.VillagerTabsEmbedding;
 import ca.bradj.questown.jobs.JobID;

@@ -110,6 +110,25 @@ public class RecipeItemConfig {
     );
 
     private static final int HOSPITAL_BED = STICK_SCORE + BED;
+    private static final int WORK_TABLE = RecipeItemScore.canCraftInFourGrid(
+            ImmutableList.of(
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.IRON_INGOT,
+                    CraftedResources.CRAFTING_TABLE,
+                    CraftedResources.CRAFTING_TABLE
+            ), false
+    );
+    private static final int ITEM_FRAME = RecipeItemScore.requiresCraftingTable(
+            Collections.nCopies(8, CraftedResources.STICK),
+            false
+    );
+    private static final int ARMOR_STAND = RecipeItemScore.requiresCraftingTable(
+            ImmutableList.<Resource>builder()
+                    .addAll(Collections.nCopies(6, CraftedResources.STICK))
+                    .add(MinedResources.COBBLESTONE)
+                    .build(),
+            false
+    );
 
     public static final int SMALL_SOUP_POT = RecipeItemScore.canCraftInFourGrid(
             ImmutableList.of(

@@ -48,7 +48,8 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
         Chapter2,
         Chapter3,
         Chapter4,
-        FirstCampfireSleep;
+        FirstCampfireSleep,
+        OutfitterPath;
 
         private static final BiMap<Triggers, String> stringVals = ImmutableBiMap.<Triggers, String>builder()
                 .put(Triggers.TutorialComplete, "tutorial_complete")
@@ -61,7 +62,14 @@ public class TutorialTrigger extends SimpleCriterionTrigger<TutorialTrigger.Inst
                 .put(Triggers.Chapter3, "chapter_3")
                 .put(Triggers.Chapter4, "chapter_4")
                 .put(Triggers.FirstCampfireSleep, "first_campfire_sleep")
+                .put(Triggers.OutfitterPath, "path_outfitter")
                 .build();
+
+        /** The advancement for finishing a curated path, if it has one. */
+        public static java.util.Optional<Triggers> forPath(String pathId) {
+            String name = pathId.substring(pathId.indexOf(':') + 1);
+            return java.util.Optional.ofNullable(stringVals.inverse().get("path_" + name));
+        }
 
         public static Triggers fromJSON(JsonElement element) {
             String key = element.getAsString();

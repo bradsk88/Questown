@@ -83,6 +83,8 @@ public class VillagerTabs extends Tabs implements SubUI {
                     RenderSystem.setShaderTexture(0, txBefore);
                 }, setScreen(sScreenFn), "tooltips.stats", sScreenFn == null, false
         ));
+        // Locked until the villager has skills to learn: dimmed, with a tooltip saying why.
+        float skillsShade = showSkillsTab ? 1f : 0.35f;
         b.add(new Tab(
                 (rc, x, y) -> {
                     int txBefore = RenderSystem.getShaderTexture(0);
@@ -92,24 +94,14 @@ public class VillagerTabs extends Tabs implements SubUI {
                     stack.scale(15f / 30f, 15f / 30f, 1);
                     int adjustedX = (int) ((x + 11) / (15f / 30f));
                     int adjustedY = (int) ((y + 7) / (15f / 30f));
-                    GuiComponent.blit(stack, adjustedX, adjustedY, 0, 17, 7, 30, 30, 256, 256);
+                    Util.blitShaded(rc.gui(), Questown.ResourceLocation("textures/menu/gatherer/menu.png"), adjustedX, adjustedY, 17, 7, 30, 30, skillsShade);
                     stack.popPose();
 
                     RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(skillScreenFn), "tooltips.skills", skillScreenFn == null, false
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> {
-                    int txBefore = RenderSystem.getShaderTexture(0);
-                    Util.blitTab(rc.stack(), x, y, 1);
-                    RenderSystem.setShaderTexture(0, txBefore);
-                }, setScreen(changeRootScreenFn), "tooltips.change_root", skillScreenFn == null, false
-        ));
-        b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer().renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
-                setScreen(qScreenFn),
-                "tooltips.quests",
-                qScreenFn == null,
+                },
+                showSkillsTab ? setScreen(skillScreenFn) : setScreen(null),
+                showSkillsTab ? "tooltips.skills" : "tooltips.skills.locked",
+                showSkillsTab && skillScreenFn == null,
                 false
         ));
         if (showChangeRootTab) {
@@ -127,11 +119,11 @@ public class VillagerTabs extends Tabs implements SubUI {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
                             rc.itemRenderer(),
-                            2,
+                            0.8f,
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7
-                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null, true
+                    ), setScreen(bopScreenFn), "tooltips.blocks_of_progress", bopScreenFn == null, bopTabAttention
             ));
         }
         return b.build();
@@ -205,6 +197,12 @@ public class VillagerTabs extends Tabs implements SubUI {
 
     static void recordShowChangeRootTab(UUID villager, boolean show) {
         SHOW_CHANGE_ROOT_TAB.put(villager, show);
+    }
+
+    /** The skills pane's tabs: every tab but its own, without inventory when opened from the flag. */
+    public static Collection<String> skillsPaneTabs(boolean showInventoryTab) {
+        Collection<String> others = except(OpenVillagerMenuMessage.SKILLS);
+        return showInventoryTab ? others : hideInventory(others);
     }
 
     public static Collection<String> hideSkills(Collection<String> tabs) {

@@ -744,7 +744,7 @@ public class TownPossibleWork {
             JobID currentJob,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td
     ) {
         JobCycler cycler = villagerCyclers.computeIfAbsent(villagerUUID, k -> new JobCycler());

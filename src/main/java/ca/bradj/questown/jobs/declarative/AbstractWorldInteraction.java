@@ -347,7 +347,7 @@ public abstract class AbstractWorldInteraction<
             EXTRA extra,
             Preferred<WorkPosition<POS>> workSpots
     ) {
-        ArrayList<WorkPosition<POS>> shuffled = shuffle(extra, workSpots.alternates());
+        ArrayList<WorkPosition<POS>> shuffled = orderSpots(extra, workSpots.alternates());
         if (workSpots.preferredValue() != null) {
             shuffled.removeIf(v -> v.equals(workSpots.preferredValue()));
             shuffled.add(0, workSpots.preferredValue());
@@ -371,6 +371,19 @@ public abstract class AbstractWorldInteraction<
     /** The server level behind {@code extra}, or null when there is none. */
     protected @Nullable ServerLevel getServerLevel(EXTRA extra) {
         return null;
+    }
+
+    /** The order a villager tries its work spots in: random, unless a path ranks them (fullest display first). */
+    protected ArrayList<WorkPosition<POS>> orderSpots(
+            EXTRA extra,
+            Collection<WorkPosition<POS>> workSpots
+    ) {
+        return shuffle(extra, workSpots);
+    }
+
+    protected boolean dressesDisplays() {
+        return specialRules.values().stream()
+                .anyMatch(rules -> rules.stream().anyMatch(r -> r.endsWith(SpecialRules.DRESS_DISPLAY)));
     }
 
     protected ArrayList<WorkPosition<POS>> shuffle(

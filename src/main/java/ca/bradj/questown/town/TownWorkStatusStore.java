@@ -1,6 +1,7 @@
 package ca.bradj.questown.town;
 
 import ca.bradj.questown.blocks.StatefulJobBlock;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.mc.Util;
