@@ -33,6 +33,7 @@ public class FlagMenus {
     TownEconomicsMenu econMenu;
     TownBlockofProgressMenu bopMenu;
     FlagCraftingMenu craftingMenu;
+    FlagSettingsMenu settingsMenu;
 
     public FlagMenus() {
     }

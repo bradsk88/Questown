@@ -5,8 +5,13 @@ import ca.bradj.questown.jobs.BoardIdleExits;
 
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
+import ca.bradj.questown.loader.ItemHandler;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.blocks.BlockOfProgress;
+import ca.bradj.questown.blocks.FlagPhase;
+import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.blocks.TownFlagSubBlocks;
+import ca.bradj.questown.items.RelocationDeedItem;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.ApproachTownTrigger;
@@ -19,6 +24,8 @@ import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
+import ca.bradj.questown.jobs.ImmutableSnapshot;
+import ca.bradj.questown.integration.minecraft.TownStateSerializer;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
@@ -290,6 +297,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final MCAsapRewards asapRewards = new MCAsapRewards();
     private final UUID uuid = UUID.randomUUID();
     final TownFlagState state = new TownFlagState(this);
+    final TownShutdownController shutdownController = new TownShutdownController();
     public long advancedTimeOnTick = -1;
     boolean isInitializedQuests = false;
     boolean changed = false;
@@ -1065,6 +1073,11 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return uuid;
     }
 
+    /** Takes on a moved town's UUID. Call before the flag finishes loading. */
+    void adoptRelocatedIdentity(UUID carried) {
+        this.uuid = carried;
+    }
+
     public void registerWelcomeMat(BlockPos welcomeMatBlock) {
         pois.registerWelcomeMat(welcomeMatBlock);
         roomsHandle.registerBlockAsRoom(SpecialQuests.TOWN_GATE, welcomeMatBlock);
@@ -1108,6 +1121,137 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public VillagerHolder getVillagerHandle() {
         return TownVillagerHandles.asVillagerHolder(villagerHandle);
+    }
+
+    public TownVillagerHandle getTownVillagerHandle() {
+        return villagerHandle;
+    }
+
+    /** The jobs this town knows that make {@code result}, from what it has found. */
+    public ImmutableMap<JobID, ResourceLocation> getKnownProducersOf(Ingredient result) {
+        ImmutableSet<JobID> townKnown = villagerHandle.getTownKnownJobs();
+        ImmutableMap.Builder<JobID, ResourceLocation> producers = ImmutableMap.builder();
+        ServerJobsRegistry.getJobsKnownToProduce(getTownDataForDisplay(), result).forEach((jobId, icon) -> {
+            if (townKnown.contains(jobId)) {
+                producers.put(jobId, icon);
+            }
+        });
+        return producers.build();
+    }
+
+    /** Starts the town shutdown: villagers come back and are taken into the flag, which goes dormant. Only for an active flag; false otherwise. */
+    public boolean beginTownShutdown() {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return false;
+        }
+        BlockState state = getBlockState();
+        if (!state.hasProperty(TownFlagBlock.PHASE) || state.getValue(TownFlagBlock.PHASE) != FlagPhase.ACTIVE) {
+            return false;
+        }
+        shutdownController.begin(level, getBlockPos(), state, this);
+        return true;
+    }
+
+    /** Stops a shutdown in progress: the villagers come back and the flag is active again. */
+    public boolean cancelTownShutdown() {
+        ServerLevel level = getServerLevel();
+        if (level == null || !shutdownController.isRunning()) {
+            return false;
+        }
+        shutdownController.cancel(level, getBlockPos(), this);
+        return true;
+    }
+
+    private boolean isDormant() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.PHASE)
+                && state.getValue(TownFlagBlock.PHASE) == FlagPhase.DORMANT;
+    }
+
+    public boolean isDeedAvailable() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.DEED_AVAILABLE) && state.getValue(TownFlagBlock.DEED_AVAILABLE);
+    }
+
+    /** A relocation deed is waiting above this dormant flag; the player collects it by using the flag. */
+    void makeDeedAvailable() {
+        setDeedAvailable(true);
+    }
+
+    private void setDeedAvailable(boolean value) {
+        ServerLevel level = getServerLevel();
+        if (level == null || !getBlockState().hasProperty(TownFlagBlock.DEED_AVAILABLE)) {
+            return;
+        }
+        level.setBlock(getBlockPos(), getBlockState().setValue(TownFlagBlock.DEED_AVAILABLE, value), Block.UPDATE_ALL);
+    }
+
+    /** Gives the waiting deed to the player, or drops it at the flag if their inventory is full. */
+    public void collectDeed(ServerPlayer recipient) {
+        ServerLevel level = getServerLevel();
+        if (!isDeedAvailable() || level == null) {
+            return;
+        }
+        setDeedAvailable(false);
+        BlockPos pos = getBlockPos();
+        ItemStack deed = RelocationDeedItem.forReference(getUUID(), pos, level.dimension().location());
+        if (recipient.getInventory().add(deed)) {
+            recipient.getInventory().setChanged();
+            recipient.inventoryMenu.broadcastChanges();
+        } else {
+            level.addFreshEntity(new ItemEntity(
+                    level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, deed
+            ));
+        }
+        recipient.sendSystemMessage(Compat.translatable("message.questown.relocation.deed_collected"));
+    }
+
+    /** Issues a new deed for this dormant flag. */
+    public boolean reissueDeed() {
+        if (!isDormant() || getServerLevel() == null) {
+            return false;
+        }
+        makeDeedAvailable();
+        return true;
+    }
+
+    /** Wakes this dormant town where it is. */
+    public boolean wakeInPlace() {
+        ServerLevel level = getServerLevel();
+        if (level == null || !isDormant()) {
+            return false;
+        }
+        // A woken town has no deed waiting.
+        setDeedAvailable(false);
+        shutdownController.wake(level, getBlockPos(), this);
+        return true;
+    }
+
+    /** Saves a villager as it is taken in, so it comes back with its job and items. */
+    void rememberAbsorbedJournal(VisitorMobEntity absorbed) {
+        CompoundTag villagerTag = TownStateSerializer.storeVillager(TownFlagState.captureVillager(this, absorbed));
+        AbsorbedJournals.remember(Compat.getBlockStoredTagData(this), absorbed.getUUID(), villagerTag);
+        setChanged();
+    }
+
+    /** Villagers taken in by a shutdown and not back yet. */
+    List<UUID> absorbedVillagers() {
+        return AbsorbedJournals.absorbed(Compat.getBlockStoredTagData(this));
+    }
+
+    @Override
+    public Optional<ImmutableSnapshot<MCHeldItem, ?>> takeRespawnJournal(VillagerUUID villager) {
+        UUID uuid = UUID.fromString(VillagerUUID.getStringUUID(villager));
+        Optional<CompoundTag> tag = AbsorbedJournals.take(Compat.getBlockStoredTagData(this), uuid);
+        setChanged();
+        return tag.map(t -> TownStateSerializer.loadVillager(t).journal);
+    }
+
+    /** For tests: claims every queued immediate reward now. */
+    public void claimImmediateRewardsForTest() {
+        while (asapRewards.tick()) {
+        }
     }
 
     public int getY() {
