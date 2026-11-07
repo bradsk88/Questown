@@ -384,8 +384,12 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.cleanupJobListeners.add(initializedJob.addJobCompletionListener(
                 id -> {
                     Job<?, ?, ?> job = ServerJobsRegistry.getInitializedJob(sl, id, getJobJournalSnapshot(), getUUID());
-                    this.town.getVillagerHandle().addExperience(uuid, job.getExperienceEarned());
                     int earned = ServerJobsRegistry.getExperienceEarned(job.getId(), job.getExperienceEarned());
+                    QT.VILLAGER_LOGGER.info(
+                            "[Experience] +{} from {} for {}",
+                            earned, job.getId().toNiceString(), uuid
+                    );
+                    this.town.getVillagerHandle().addExperience(uuid, earned);
                 }
         ));
     }
