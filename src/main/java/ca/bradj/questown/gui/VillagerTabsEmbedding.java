@@ -14,6 +14,11 @@ public interface VillagerTabsEmbedding {
 
     boolean showBlockOfProgressTab();
 
+    /** Hidden until the villager's level unlocks a job. */
+    default boolean showSkillsTab() {
+        return true;
+    }
+
     /** Opened from the flag, the villager menu has no inventory tab. */
     default boolean showInventoryTab() {
         return true;

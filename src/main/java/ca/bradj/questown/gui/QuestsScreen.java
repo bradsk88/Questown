@@ -12,6 +12,7 @@ import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
@@ -312,6 +313,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             return jobChangeTooltip(recipe, villagersTabShown);
         }
 
+        if (recipe.getType() == Quest.QuestType.SKILL_UNLOCK) {
+            return withVillagersHint(skillUnlockTooltip(recipe), villagersTabShown);
+        }
+
         if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
             return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
         }
@@ -334,6 +339,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
             case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
+            case FIRST_WORK_REQUEST, SKILL_UNLOCK, VILLAGER_LEVEL -> ImmutableList.of();
             case UNKNOWN -> null;
         };
     }
@@ -359,6 +365,20 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 ? ImmutableList.of(Compat.literal(recipe.getFlavorText()))
                 : renderJobQuestTooltip(recipe);
         return withVillagersHint(base, villagersTabShown);
+    }
+    private static List<Component> skillUnlockTooltip(UIQuest recipe) {
+        if (recipe.getLockedUntilLevel() != null) {
+            // A blank skill card says how far off it is, not what it is.
+            return ImmutableList.of(Compat.translatable(
+                    "menu.quests.skill_unlock.locked",
+                    Compat.translatable("jobs." + MCQuest.skillTreeRoot(recipe.getWantedId())),
+                    recipe.getLockedUntilLevel()
+            ));
+        }
+        if (recipe.getFlavorText() != null && !recipe.getFlavorText().isEmpty()) {
+            return ImmutableList.of(Compat.literal(recipe.getFlavorText()));
+        }
+        return ImmutableList.of();
     }
     private static List<Component> withVillagersHint(List<Component> base, boolean villagersTabShown) {
         if (!villagersTabShown) {

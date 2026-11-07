@@ -16,6 +16,8 @@ public interface TutorialTownView {
     String PHASE_EMPTY_ROOMS = "emptyRooms";
     String PHASE_JOB_CHANGE_FOOD = "jobChangeAndFood";
     String PHASE_COOK_JOB = "cookJob";
+    String PHASE_PATH = "path";
+    String PHASE_PATH_ARRIVAL = "pathArrival";
     String PHASE_MINER = "miner";
     String PHASE_NEW_JOB_ROOM = "newJobRoom";
     String PHASE_4A = "phase4a";
