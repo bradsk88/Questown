@@ -60,6 +60,66 @@ public class TownRoomsMapSerializer {
         roomsMap.initialize(owner, doorsB.build(), gatesB.build(), doorsWithRecipes.build());
     }
 
+    /** Re-anchors registered doors and fence gates to a flag at a new height, keeping their world Y. */
+    public void rebaseFixtureY(
+            CompoundTag roomsTag,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_DOORS, oldFlagY, newFlagY);
+        rebaseScanLevels(roomsTag, NBT_REGISTERED_FENCE_GATES, oldFlagY, newFlagY);
+    }
+
+    private static void rebaseScanLevels(
+            CompoundTag roomsTag,
+            String key,
+            int oldFlagY,
+            int newFlagY
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            int absoluteY = oldFlagY + ct.getInt(NBT_POS_Y);
+            ct.putInt(NBT_POS_Y, absoluteY - newFlagY);
+        }
+    }
+
+    /** Drops registered doors and fence gates whose world position matches {@code dropIf}. Call after {@link #rebaseFixtureY}, with the new flag Y. */
+    public void dropFixtures(
+            CompoundTag roomsTag,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        dropFrom(roomsTag, NBT_REGISTERED_DOORS, flagY, dropIf);
+        dropFrom(roomsTag, NBT_REGISTERED_FENCE_GATES, flagY, dropIf);
+    }
+
+    private static void dropFrom(
+            CompoundTag roomsTag,
+            String key,
+            int flagY,
+            java.util.function.Predicate<BlockPos> dropIf
+    ) {
+        if (!roomsTag.contains(key)) {
+            return;
+        }
+        ListTag entries = roomsTag.getList(key, Tag.TAG_COMPOUND);
+        ListTag kept = new ListTag();
+        for (Tag t : entries) {
+            CompoundTag ct = (CompoundTag) t;
+            BlockPos absolute = new BlockPos(
+                    ct.getInt(NBT_POS_X), flagY + ct.getInt(NBT_POS_Y), ct.getInt(NBT_POS_Z)
+            );
+            if (!dropIf.test(absolute)) {
+                kept.add(ct);
+            }
+        }
+        roomsTag.put(key, kept);
+    }
+
     public CompoundTag serializeNBT(TownRoomsMap roomsMap) {
         CompoundTag tag = new CompoundTag();
         ListTag doors = new ListTag();

@@ -85,11 +85,17 @@ public class FlagTabs extends Tabs implements SubUI {
             ));
         }
         b.add(new Tab(
-                (rc, x, y) -> rc.itemRenderer()
-                                .renderAndDecorateItem(Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.CRAFTING_TABLE.getDefaultInstance(), x + 10, y + 7),
                 setScreen(craftingScreenFn),
                 "tooltips.crafting",
-                craftingScreenFn == null,
+                isSelected("tooltips.crafting", activeTabKey),
+                false
+        ));
+        b.add(new Tab(
+                (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.COMPARATOR.getDefaultInstance(), x + 10, y + 7),
+                setScreen(settingsScreenFn),
+                "tooltips.settings",
+                isSelected("tooltips.settings", activeTabKey),
                 false
         ));
         return b.build();
@@ -139,6 +145,7 @@ public class FlagTabs extends Tabs implements SubUI {
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), false));
         b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
         b.add(new TabDecision("tooltips.crafting", true, false));
+        b.add(new TabDecision("tooltips.settings", true, false));
         return b.build();
     }
 
@@ -175,7 +182,8 @@ public class FlagTabs extends Tabs implements SubUI {
                 OpenFlagMenuMessage.QUESTS,
                 OpenFlagMenuMessage.ECONOMICS,
                 OpenFlagMenuMessage.BOP,
-                OpenFlagMenuMessage.CRAFTING
+                OpenFlagMenuMessage.CRAFTING,
+                OpenFlagMenuMessage.SETTINGS
         );
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }

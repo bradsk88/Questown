@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.blocks.FlagPhase;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.Config;
@@ -195,6 +196,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             TickData tickData,
             boolean playersNearbyOnPrevTick
     ) {
+        // Held autotest runs keep the flag awake from server start.
+        if ("true".equals(System.getProperty("questown.autotest.hold"))) {
+            return false;
+        }
+
         ServerLevel level = tickData.level();
         BlockPos blockEntityPos = tickData.blockEntityPos();
         Player nearestPlayer = level.getNearestPlayer(
@@ -266,16 +272,54 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         if (!(level instanceof ServerLevel sl)) {
             return;
         }
+        FlagPhase phase = phaseOf(state);
+        if (phase != FlagPhase.ACTIVE) {
+            // A dormant town still owns its boards and mats; keep them from removing themselves.
+            notifySubBlocksOfTick(new TickData(sl, blockEntityPos, state, e));
+        }
+        if (phase == FlagPhase.SHUTTING_DOWN) {
+            if (!e.shutdownController.isRunning()) {
+                // Loaded mid-shutdown: load the town, then carry on recalling the villagers still out.
+                if (runAnyInitializers(new TickData(sl, blockEntityPos, state, e))) {
+                    return;
+                }
+                e.shutdownController.begin(sl, blockEntityPos, state, e);
+            }
+            e.shutdownController.tick(sl, blockEntityPos, state, e);
+            spawnShutdownParticles(sl, blockEntityPos);
+            return;
+        }
+        if (phase == FlagPhase.DORMANT) {
+            // A dormant flag still loads its town; it just doesn't run it.
+            runAnyInitializers(new TickData(sl, blockEntityPos, state, e));
+            return;
+        }
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }
 
+    private static FlagPhase phaseOf(BlockState state) {
+        if (!state.hasProperty(TownFlagBlock.PHASE)) {
+            return FlagPhase.ACTIVE;
+        }
+        return state.getValue(TownFlagBlock.PHASE);
+    }
+
+    private void spawnShutdownParticles(ServerLevel sl, BlockPos pos) {
+        if (sl.getGameTime() % 5 != 0) {
+            return;
+        }
+        double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        double y = pos.getY() + 1.4;
+        double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
+        sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
+    }
     // The flag sparkles cyan while it holds Blocks of Progress.
     private static final DustParticleOptions CYAN_SPARKLE =
             new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);
 
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {
-        if (e.bopCount <= 0) {
+        if (e.getBopCount() <= 0) {
             return;
         }
         if (sl.getGameTime() % 20 != 0) {
@@ -284,7 +328,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         double x = pos.getX() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
         double y = pos.getY() + 1.2;
         double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.3;
-        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, y, z, 1, 0, 0.1, 0, 0.01);
+        sl.sendParticles(CYAN_SPARKLE, x, y, z, 1, 0, 0.1, 0, 0.01);
     }
 
     public record TickData(ServerLevel level, BlockPos blockEntityPos, BlockState state, TownFlagBlockEntity entity) {
