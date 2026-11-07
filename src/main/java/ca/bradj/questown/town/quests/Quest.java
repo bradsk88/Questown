@@ -25,6 +25,8 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     @Nullable
     private String flavorText;
 
+    // Only procedural batches can be discarded.
+    private boolean discardable;
     Quest() {
         this(null, null, null, null, null, 1);
     }
@@ -125,6 +127,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
     public void setFlavorText(@Nullable String flavorText) {
         this.flavorText = flavorText;
+    }
+
+    public boolean isDiscardable() {
+        return discardable;
+    }
+
+    public void setDiscardable(boolean discardable) {
+        this.discardable = discardable;
     }
 
     public enum QuestStatus {

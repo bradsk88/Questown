@@ -1244,6 +1244,27 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         return job.get().getStatus();
     }
 
+    /** The job's work-site progress, for the inspect command; null when there is none. */
+    public @Nullable String getWorkProgressDebug() {
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && town != null) {
+            return dj.getWorkProgressDebug(town);
+        }
+        return null;
+    }
+
+    /** The trip this villager is on, or null. */
+    public @Nullable LeaverReturn getLeaverReturn() {
+        if (town == null) {
+            return null;
+        }
+        Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> j = job.get();
+        if (j instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj) {
+            return dj.getLeaverReturn(town);
+        }
+        return null;
+    }
+
     public void addStatusListener(StatusListener l) {
         this.cleanupJobListeners.add(
                 job.get().addStatusListener(l)

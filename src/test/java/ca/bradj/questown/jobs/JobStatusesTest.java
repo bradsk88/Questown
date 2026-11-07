@@ -418,8 +418,33 @@ class JobStatusesTest {
         Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
     }
 
+    @Test
+    void StatusShouldBe_DroppingLoot_WhenHoldingOutput_EvenIfItemlessWorkIsAvailable() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of()),
+                new ConstTown(true, true, true),
+                jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
     /** Holding work output with no storage space: stop with the no-space status. */
     @Test
+    void StatusShouldBe_NoSpace_WhenHoldingOutput_AndTownHasNoSpace() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of()),
+                new ConstTown(true, false, true),
+                jobWithItemlessWork,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.NO_SPACE, s);
+    }
+
     /** A finished product elsewhere outranks collecting supplies. */
     @Test
     void StatusShouldBe_GoingToJob_WhenAFinishedProductWaitsElsewhere_EvenWithSuppliesInTown() {
@@ -719,6 +744,9 @@ class JobStatusesTest {
         }
         if (!(collectFinished.ifCondFail instanceof LZCD<TestStatus> itemlessWork)) {
             throw new ClassCastException("Expected collectFinished.ifCondFail to be LZCD");
+        }
+        if (!(itemlessWork.ifCondFail instanceof LZCD<TestStatus> useItems)) {
+            throw new ClassCastException("Expected itemlessWork.ifCondFail to be LZCD");
         }
         if (!(useItems.ifCondFail instanceof LZCD<TestStatus> dropLoot)) {
             throw new ClassCastException("Expected useItems.ifCondFail to be LZCD");

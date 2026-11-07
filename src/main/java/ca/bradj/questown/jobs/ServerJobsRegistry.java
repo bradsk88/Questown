@@ -729,6 +729,16 @@ public class ServerJobsRegistry {
         return canAlwaysStart(villagerID, p) || canFit(villagerID, p, currentTick);
     }
 
+    /** A trip's total duration, or 0 for a job that stays in town. */
+    public static long tripLength(UUID villagerID, JobID p) {
+        Supplier<Work> w = getWorkSupplier(p);
+        if (w == null) {
+            return 0;
+        }
+        Job<?, ?, ?> job = w.get().jobFunc.apply(villagerID);
+        return job.leavesTown() ? job.getTotalDuration() : 0;
+    }
+
     public static boolean canFit(
             UUID villagerID,
             JobID p,

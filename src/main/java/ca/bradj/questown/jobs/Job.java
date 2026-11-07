@@ -98,6 +98,11 @@ public interface Job<H extends HeldItem<H, ?>, SNAPSHOT, STATUS> {
 
     BlockPos getLook();
 
+    /** True for a trip: the villager leaves the world for part of the job. */
+    default boolean leavesTown() {
+        return false;
+    }
+
     boolean isWorking();
 
     Collection<String> getGlobalSpecialRules();

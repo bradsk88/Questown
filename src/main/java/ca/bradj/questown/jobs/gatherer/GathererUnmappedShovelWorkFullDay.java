@@ -74,7 +74,7 @@ public class GathererUnmappedShovelWorkFullDay extends NewLeaverWork {
                 ),
                 SPECIAL_RULES,
                 GathererUnmappedShovelWorkFullDay::getFromLootTables
-        );
+        ).withPrefersRequestedLoot(true);
     }
 
     // Note: this is still declarative. In a file, we would just specify something like:
