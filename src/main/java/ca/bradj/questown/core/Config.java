@@ -103,6 +103,11 @@ public class Config {
     public static final ConfigValue<Double> NORMAL_BED_HEAL_MULTIPLIER;
     public static final ConfigValue<Double> HOSPITAL_BED_HEAL_MULTIPLIER;
     public static final ConfigValue<Integer> JOB_TREE_GROWTH;
+    public static final ConfigValue<Double> PROFICIENCY_MIN_MULTIPLIER;
+    public static final ConfigValue<Double> PROFICIENCY_MAX_MULTIPLIER;
+    public static final ConfigValue<Integer> PROFICIENCY_SEED_COUNT;
+    public static final ConfigValue<Double> PROFICIENCY_GAIN_PER_TICK;
+    public static final ConfigValue<Double> PROFICIENCY_DECAY_PER_TICK;
 
     static {
         // Scanning Config
@@ -189,6 +194,24 @@ public class Config {
         ).comment(
                 "Currently ignored: every sub-job is offered, until education gates learning."
         ).defineInRange("JobTreeGrowth", 2, 1, 10);
+
+        BUILDER.push("Proficiency");
+        PROFICIENCY_MIN_MULTIPLIER = BUILDER.comment(
+                "The work-speed multiplier applied to a townie with proficiency level 0 in their current job's proficiency-id"
+        ).defineInRange("ProficiencyMinMultiplier", 0.5, 0.0, 100.0);
+        PROFICIENCY_MAX_MULTIPLIER = BUILDER.comment(
+                "The work-speed multiplier applied to a townie with proficiency level 1 (maxed) in their current job's proficiency-id. NOTE: the scaled speed is clamped to 1-10 (State.decrWork's contract), so values above 1 have no effect on a well-fed townie."
+        ).defineInRange("ProficiencyMaxMultiplier", 2.0, 0.0, 100.0);
+        PROFICIENCY_SEED_COUNT = BUILDER.comment(
+                "The number of distinct proficiencies a freshly-spawned townie is seeded with (drawn from the union of declared proficiency-ids)"
+        ).defineInRange("ProficiencySeedCount", 3, 0, 100);
+        PROFICIENCY_GAIN_PER_TICK = BUILDER.comment(
+                "Proficiency gained per tick of action duration when a townie completes a work action of that proficiency-id"
+        ).defineInRange("ProficiencyGainPerTick", 0.001, 0.0, 1.0);
+        PROFICIENCY_DECAY_PER_TICK = BUILDER.comment(
+                "Proficiency lost per tick of action duration (from every OTHER held proficiency) when a townie completes a work action"
+        ).defineInRange("ProficiencyDecayPerTick", 0.0001, 0.0, 1.0);
+        BUILDER.pop();
         MAX_INITIAL_TICKS_WITHOUT_SUPPLIES = BUILDER.comment(
                 "If the town is missing the supplies that the villager needs to do their job, they will wait some time for those supplies to be generated/added. After these ticks, they will give up and go back to the job board"
         ).defineInRange("MaxInitialTicksWithoutSupplies", 100L, 1L, 24000L);
