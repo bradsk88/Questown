@@ -105,13 +105,33 @@ class JobIntegrationTest {
         JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_bread.json");
 
         Assertions.assertEquals(new JobID("baker", "bread"), definition.jobId());
-        Assertions.assertEquals(3, definition.maxState()); // wheat, coal, time
-        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(0));
-        Assertions.assertEquals(Integer.valueOf(2), definition.ingredientQtyRequiredAtStates().get(0));
+        Assertions.assertEquals(2, definition.maxState());
+        Assertions.assertEquals("minecraft:wheat", definition.toolsRequiredAtStates().get(0));
+        Assertions.assertEquals("minecraft:wheat", definition.ingredientsRequiredAtStates().get(1));
+        Assertions.assertEquals("minecraft:air", definition.result());
+    }
+
+    @Test
+    void baker_extract_shouldLoadCorrectly() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_extract.json");
+
+        Assertions.assertEquals(new JobID("baker", "extract"), definition.jobId());
+        Assertions.assertEquals(1, definition.maxState());
+        Assertions.assertTrue(definition.toolsRequiredAtStates().isEmpty(),
+                "baker/extract must have no tools (work-only state 0)");
+        Assertions.assertEquals(Integer.valueOf(0), definition.workRequiredAtStates().get(0));
+        Assertions.assertEquals("minecraft:air", definition.result());
+    }
+
+    @Test
+    void baker_fuel_shouldLoadCorrectly() {
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "baker_fuel.json");
+
+        Assertions.assertEquals(new JobID("baker", "fuel"), definition.jobId());
+        Assertions.assertEquals(2, definition.maxState());
+        Assertions.assertEquals("#minecraft:coals", definition.toolsRequiredAtStates().get(0));
         Assertions.assertEquals("#minecraft:coals", definition.ingredientsRequiredAtStates().get(1));
-        Assertions.assertEquals(Integer.valueOf(1), definition.ingredientQtyRequiredAtStates().get(1));
-        Assertions.assertEquals(Integer.valueOf(1000), definition.timeRequiredAtStates().get(2));
-        Assertions.assertEquals("minecraft:bread", definition.result());
+        Assertions.assertEquals("minecraft:air", definition.result());
     }
 
     @Test

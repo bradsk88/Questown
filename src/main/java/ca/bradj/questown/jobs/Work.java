@@ -162,7 +162,7 @@ public class Work {
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
-        return overrides.statusTextures().get(status);
+        return overrides.textureFor(status);
     }
 
     public @Nullable Pair<String, String> applyStatusTextOverride(IStatus<?> status) {

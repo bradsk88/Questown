@@ -145,48 +145,6 @@ public class DeclarativeJobs {
         );
     }
 
-    // TODO: Unit test. This calculation is fairly sensitive and critical.
-    public static ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<BlockPos>> rooms(
-            @NotNull Integer maxState,
-            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomHandle,
-            WorkStatusHandle<BlockPos, MCHeldItem> work,
-            Predicate<BlockPos> isJobBlock
-    ) {
-        Stream<RoomsNeedingVillagerInput.NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches()
-                                                                                                        .stream();
-        //TODO: Validate that this is actually needed
-        rooms = rooms.filter(v -> !v.dueToWorkOnly());
-
-        return JobsClean.<BlockPos, MCRoom, ResourceLocation>rooms(
-                () ->
-                        roomHandle.getMatches().stream()
-                                  .filter(v -> !v.dueToWorkOnly()) //TODO: Validate that this is actually needed
-                                  .collect(ImmutableList.toImmutableList()),
-                work::getJobBlockState,
-                isJobBlock,
-                BlockPos::toShortString,
-                maxState
-        );
-
-//        ImmutableMap.Builder<Integer, RoomsWithWorkableStatefulBlocks> b = ImmutableMap.builder();
-//        Supplier<Rooms> e = () -> {
-//            ImmutableMap.Builder<BlockPos, Integer> spotStatuses = ImmutableMap.builder();
-//            ImmutableMap.Builder<BlockPos, Boolean> spotJBs = ImmutableMap.builder();
-//            Map<MCRoom, List<Integer>> roomStatuses = new HashMap<>();
-//            Stream<NVIRoom<MCRoom, ResourceLocation, BlockPos>> rooms = roomHandle.getMatches().stream();
-//
-//            //TODO: Validate that this is actually needed
-//            rooms = rooms.filter(v -> !v.dueToWorkOnly());
-//            return JobsClean.rooms(
-//
-//                    rooms.forEach(match -> {
-//                        for (Map.Entry<BlockPos, ?> entry : match.room().getContainedBlocks().entrySet()) {
-//                            BlockPos bp = entry.getKey();
-//                            State jobBlockState = work.getJobBlockState(bp);
-//                            if (jobBlockState == null) {
-//                                continue;
-//        );
-    }
 
     public static SupplyChecks<MCHeldItem> toSupplyChecks(DeclarativeJobChecks<MCExtra, MCHeldItem, MCTownItem, RoomRecipeMatch<MCRoom>, BlockPos> checks) {
         return new SupplyChecks<>() {

@@ -91,7 +91,9 @@ public class DinerWork {
                                         SpecialRules.APPLY_COMFORTABLE_EATING
                                 )
                         ),
+                        // Finish the meal before fetching more food.
                         ImmutableList.of(
+                                SpecialRules.PRIORITIZE_EXTRACTION,
                                 SpecialRules.SHARED_WORK_STATUS,
                                 SpecialRules.CLAIM_SPOT,
                                 SpecialRules.WORK_IN_EVENING,

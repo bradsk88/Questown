@@ -50,6 +50,8 @@ public class JobLogic<EXTRA, TOWN, POS> {
         /** The villager holds work output, which it takes to storage before the job hands off. */
         boolean holdsWorkOutput();
 
+        boolean isStarving();
+
         void tryGetSupplies();
 
         Map<Integer, Collection<WorkPosition<POS>>> listAllWorkSpots();
@@ -145,6 +147,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
+            redecideIfStarving(worldBeforeTick, entityCurrentJob);
             return;
         }
 
@@ -164,10 +167,15 @@ public class JobLogic<EXTRA, TOWN, POS> {
         }
         worked = Math.max(0, worked - 1);
         if (this.grabbingInsertedSupplies) {
+            boolean insertedAny = worldBeforeTick.timesInserted() > 0;
             if (worldBeforeTick.tryGrabbingInsertedSupplies()) {
                 this.grabbingInsertedSupplies = false;
                 this.grabbedInsertedSupplies = true;
                 worldBeforeTick.clearInsertedSupplies();
+                // The extract hooks finish the job (a diner's meal): run them once, and only after something was put in.
+                if (insertedAny) {
+                    worldBeforeTick.tryExtractWithNoItem();
+                }
             }
             return;
         }
@@ -239,6 +247,7 @@ public class JobLogic<EXTRA, TOWN, POS> {
 
         if (status.isDroppingLoot() && worldBeforeTick.tryDropLoot()) {
             this.workSpot = null;
+            redecideIfStarving(worldBeforeTick, entityCurrentJob);
             return;
         }
 
@@ -316,6 +325,17 @@ public class JobLogic<EXTRA, TOWN, POS> {
             }
         }
         return WithReason.unformatted(wrappingUp, "If worked");
+    }
+
+    /** A deposit is when a starving villager re-decides, so it goes to eat. A diner is already eating. */
+    private void redecideIfStarving(
+            JLWorld<EXTRA, TOWN, POS> world,
+            JobID currentJob
+    ) {
+        if (!world.isStarving() || DiningStages.isDiner(currentJob)) {
+            return;
+        }
+        world.changeToNextJob();
     }
 
     protected void setWorkSpot(WorkPosition<POS> spot) {

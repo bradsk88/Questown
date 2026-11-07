@@ -316,6 +316,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     public void tick(TownInterface town) {
         QuestBackfiller.backfill(this, town, this.town::getUnsafe);
+        postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
@@ -823,6 +824,53 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         questBatches.add(qq);
         QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
+    }
+
+    void postCookFollowUpIfDue(TutorialTownView view) {
+        ResourceLocation cookJob = JobID.toRL(ONBOARDING_COOK_JOB);
+        ResourceLocation cookedFood = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
+        List<MCQuest> all = questBatches.getAll();
+        boolean cookUnlocked = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.JOB_CHANGE
+                && cookJob.equals(q.getWantedId())
+                && q.isComplete());
+        if (!cookUnlocked) {
+            return;
+        }
+        if (!view.anyVillagerOnRoot(ONBOARDING_COOK_JOB.rootId())) {
+            return;
+        }
+        boolean posted = all.stream().anyMatch(q -> q.isOnboarding()
+                && q.getType() == Quest.QuestType.LOOT
+                && cookedFood.equals(q.getWantedId()));
+        if (posted) {
+            return;
+        }
+        addCookFollowUpBatch(view);
+        notifyNewQuests(view);
+    }
+
+    private void addCookFollowUpBatch(TutorialTownView view) {
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+
+        // Cooked food only.
+        MCQuest cookedFoodQuest = MCQuest.loot(
+                batchUUID, null, TagsInit.Items.VILLAGER_COOKED_FOOD.location(), COOKED_FOOD_COUNT
+        );
+        cookedFoodQuest.setFlavorText("Feed your growing village. Produce five pieces of food from the raw food you have gathered.");
+        q.addNewQuest(cookedFoodQuest);
+
+        // A skill on the cook's tree: a second recipe for the other meat the hunter brings.
+        q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB.rootId()));
+
+        // This batch brings villager 3, so the bedroom becomes a big bedroom.
+        q.addNewQuest(MCQuest.upgrade(batchUUID, null, SpecialQuests.BEDROOM, BIG_BEDROOM));
+
+        MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
+        markOnboarding(qq);
+        questBatches.add(qq);
+        QT.QUESTS_LOGGER.info("Cook follow-up batch posted (cooked food + cook skill) on cook unlock");
     }
 
     private void addQuestForNewJobRoom(

@@ -128,6 +128,8 @@ public class ResourceJobLoader {
 
         private ImmutableMap<JobID, Work> makeCookJobs(JsonObject obj) {
             ImmutableMap.Builder<JobID, Work> b = ImmutableMap.builder();
+            // Only the listed recipes join the root's starting unlocks.
+            ImmutableSet<String> starterRecipes = starterRecipes(obj);
             Ingredient ing = Ingredient.of(TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW);
             for (ItemStack item : ing.getItems()) {
                 Item iconItem = item.getItem();
@@ -156,6 +158,7 @@ public class ResourceJobLoader {
                             replaceWhen(ws.toolsRequired(), isBeef, () -> Ingredient.of(item.getItem()))
                     );
                     JobID od = new JobID("cook", Compat.getItemId(item.getItem()).getPath());
+                    boolean starter = starterRecipes.contains(od.jobId());
                     Optional<SlotPrecondition> slotPrecondition = getSlotComparator(block);
                     Work cookWork = WorksBehaviour.productionWork(
                             iconItem.getDefaultInstance(),

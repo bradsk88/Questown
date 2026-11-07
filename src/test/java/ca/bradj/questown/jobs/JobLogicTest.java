@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -69,7 +70,7 @@ class JobLogicTest {
 
         private TestWorldInteraction wi;
         private Map<Integer, Collection<WorkPosition<Position>>> allWorkSpots = ImmutableMap.of();
-        private boolean inserted;
+        boolean inserted;
 
         private TestLogicWorld(JobDefinition definition) {
             this.wi = TestWorldInteraction.forDefinition(
@@ -164,6 +165,13 @@ class JobLogicTest {
             return holdsWorkOutput;
         }
 
+        boolean starving = false;
+
+        @Override
+        public boolean isStarving() {
+            return starving;
+        }
+
         @Override
         public void tryGetSupplies() {
 
@@ -219,6 +227,23 @@ class JobLogicTest {
             );
         }
 
+        public void tickDropping(JobID job) {
+            tick(
+                    null,
+                    () -> ProductionStatus.DROPPING_LOOT,
+                    job,
+                    false,
+                    false,
+                    false,
+                    true,
+                    maxTicksOf(3000),
+                    new JobLogic.JobDetails(definition.maxState(), definition.workRequiredAtStates().get(0), 0),
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+
         /** No work spot and not at the job site, as when away on a trip. */
         public void tickAway(
                 ProductionStatus status,
@@ -268,9 +293,54 @@ class JobLogicTest {
         }
 
         Assertions.assertFalse(changedJob.get(), "the watchdog re-created the job mid-timer");
+    }
+
+    /** A deposit is when a starving villager re-decides. */
+    @Test
+    void tick_starvingTownieAsksTheBoard_afterADeposit() {
         AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertTrue(handedOff.get(), "a starving townie should re-decide after a deposit");
+    }
+
+    @Test
+    void tick_fedTownieCarriesOn_afterADeposit() {
         AtomicBoolean handedOff = new AtomicBoolean();
+        TestJobLogic logic = new TestJobLogic(droppingWorld(handedOff), DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "sword"));
+
+        Assertions.assertFalse(handedOff.get(), "a fed townie keeps its job after a deposit");
+    }
+
+    @Test
+    void tick_starvingDinerCarriesOn_afterADeposit() {
         AtomicBoolean handedOff = new AtomicBoolean();
+        TestLogicWorld world = droppingWorld(handedOff);
+        world.starving = true;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+
+        logic.tickDropping(new JobID("hunter", "dining"));
+
+        Assertions.assertFalse(handedOff.get(), "a diner must not be sent back to the board by its own hunger");
+    }
+
+    private static TestLogicWorld droppingWorld(AtomicBoolean handedOff) {
+        return new TestLogicWorld(DEFINITION) {
+            @Override
+            public boolean tryDropLoot() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+                handedOff.set(true);
+            }
+        };
     }
 
     /** A trip timer finishing on the watchdog's last tick still extracts. */
@@ -515,6 +585,56 @@ class JobLogicTest {
         Assertions.assertFalse(logic.isGrabbingInsertedSupplies());
         tickFn.run();
         Assertions.assertTrue(logic.isGrabbingInsertedSupplies());
+    }
+
+    private static int extractsAfterGivingUp(boolean insertedBeforeGivingUp) {
+        AtomicInteger extracts = new AtomicInteger();
+        TestLogicWorld world = new TestLogicWorld(DEFINITION) {
+            @Override
+            public void tryExtractWithNoItem() {
+                extracts.incrementAndGet();
+            }
+
+            @Override
+            public boolean tryGrabbingInsertedSupplies() {
+                return true;
+            }
+
+            @Override
+            public void changeToNextJob() {
+            }
+        };
+        world.inserted = insertedBeforeGivingUp;
+        TestJobLogic logic = new TestJobLogic(world, DEFINITION);
+        world.allWorkSpots = ImmutableMap.of(STATE_NEED_WIDGET, ImmutableList.of(ARBITRARY_WORKSPOT));
+
+        for (int i = 0; i < 50; i++) {
+            logic.tick(
+                    null,
+                    () -> ProductionStatus.NO_SUPPLIES,
+                    new JobID("test", "tester"),
+                    true,
+                    false,
+                    insertedBeforeGivingUp,
+                    false,
+                    getNever().withInitialNoSupplyTickLimit(1).withNoSupplyTickLimit(2),
+                    DEFAULT_DETAILS,
+                    world,
+                    (a, b) -> 0,
+                    Integer.MAX_VALUE
+            );
+        }
+        return extracts.get();
+    }
+
+    @Test
+    void tick_givingUpWithNothingInserted_neverRunsTheExtractHooks() {
+        Assertions.assertEquals(0, extractsAfterGivingUp(false), "a meal without food");
+    }
+
+    @Test
+    void tick_givingUpAfterInserting_runsTheExtractHooksOnce() {
+        Assertions.assertEquals(1, extractsAfterGivingUp(true), "the extract hooks ran every tick");
     }
 
     private static @NotNull ExpirationRules getNever() {

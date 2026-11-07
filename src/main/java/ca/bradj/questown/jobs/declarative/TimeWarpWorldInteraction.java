@@ -615,7 +615,12 @@ public class TimeWarpWorldInteraction extends
             public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
                 Collection<Integer> statesWithUnfinishedWork = Jobs.getStatesWithUnfinishedWork(
                         () -> ImmutableList.of(() -> ImmutableList.of(
-                                roomBlock)), bp -> workStates, (bp) -> true
+                                roomBlock)), bp -> workStates, (bp) -> true,
+                        state -> DeclarativeJobs.declaresUnfinishedWork(
+                                state, maxState, checks.getWorkForStep(state) != null,
+                                checks.getIngredientsForStep(state) != null
+                                        && !checks.getIngredientsForStep(state).isEmpty()
+                        )
                 );
                 ImmutableList.Builder<Integer> b = ImmutableList.builder();
                 statesWithUnfinishedWork.forEach(state -> {
@@ -670,7 +675,7 @@ public class TimeWarpWorldInteraction extends
 
             @Override
             public boolean hasNonSupplyItems() {
-                return JobsClean.hasNonSupplyItems(
+                return SupplyItems.hasNonSupplyItems(
                         heldItems.get(),
                         state.get(),
                         checks.getAllRequiredIngredients(),
@@ -709,14 +714,6 @@ public class TimeWarpWorldInteraction extends
                 tool,
                 MCHeldItem::fromTown
         );
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     /**

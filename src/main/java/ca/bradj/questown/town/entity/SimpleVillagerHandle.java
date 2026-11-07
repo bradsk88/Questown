@@ -42,7 +42,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     // Unserialized
     final Map<UUID, DATA> customData = new HashMap<>();
-    private final Map<UUID, Long> mostRecentDowntimeTick = new HashMap<>();
+    private final Map<UUID, DowntimeState> downtime = new HashMap<>();
     private final Map<UUID, Long> mostRecentFoodAttempt = new HashMap<>();
     private final Map<UUID, Boolean> starving = new HashMap<>();
 
@@ -108,6 +108,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         this.delegator = del;
         this.configs = config;
         this.hungerEnabled = config.hungerEnabled;
+        // Registered here, not in initialize: a newly placed flag never calls initialize.
+        addHungryListener(e -> {
+            // At or below zero: a villager reloaded below zero must be flagged again.
+            if (UtilClean.getOrDefault(this.fullness, delegator.getUUID(e), configs.baseFullness) <= 0) {
+                starving.put(delegator.getUUID(e), true);
+            }
+        });
     }
 
     public void initialize(
@@ -304,6 +311,13 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void fillHunger(UUID uuid) {
         fillHunger(uuid, 1.0f);
+    }
+
+    /** A meal: adds {@code percent} of max fullness, up to the max. Unlike {@link #fillHunger}, it never lowers it. */
+    public void eat(UUID uuid, float percent) {
+        int current = Util.getOrDefault(fullness, uuid, configs.baseFullness);
+        float after = Math.min(1.0f, Math.max(0, current) / (float) configs.baseFullness + percent);
+        fillHunger(uuid, after);
     }
 
     public void fillHunger(
@@ -608,6 +622,12 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     public void handleMorning(long tick) {
         forEach(delegator.getSleepModule()::stopSleeping);
+        if (QT.DEV_LOGS) {
+            forEach(v
+                    -> QT.FLAG_LOGGER.dev("[morning] wake-broadcast reached {} sleeping={}",
+                                   delegator.getUUID(v),
+                                   delegator.getSleepModule().isSleeping(v)));
+        }
         makeAllTotallyHungry();
 //        long tick = Util.getTick(town.getServerLevelUnsafe());
         forEach(v -> registerMostRecentDowntime(delegator.getUUID(v), tick));
@@ -667,10 +687,30 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             UUID from,
             long currentTick
     ) {
-        // TODO[Traits]: Consider augmenting downtime frequency for individual villagers
-        Long maxTicksBeforeDowntime = configs.maxTicksBeforeDowntime;
-        Long mostRecent = UtilClean.getOrDefault(mostRecentDowntimeTick, from, -maxTicksBeforeDowntime);
-        return (currentTick - mostRecent) >= maxTicksBeforeDowntime;
+        // TODO[Traits]: Consider augmenting downtime frequency for individual villagers.
+        return downtimeState(from).isReadyForRest(currentTick);
+    }
+
+    /** Ready to rest with nothing else to do: only the time since the last rest counts. */
+    public boolean isReadyForDowntimeIfIdle(
+            UUID from,
+            long currentTick
+    ) {
+        return downtimeState(from).isReadyForIdleRest(currentTick);
+    }
+
+    private DowntimeState downtimeState(UUID from) {
+        return downtime.getOrDefault(from, DowntimeState.fresh(configs.maxTicksBeforeDowntime));
+    }
+
+    /** Records that a villager just rested. */
+    public void markRested(UUID ownerUUID, long tick) {
+        downtime.put(ownerUUID, downtimeState(ownerUUID).rest(tick));
+    }
+
+    /** Records that a villager just took real work, which earns a later rest. */
+    public void markWorked(UUID ownerUUID, long tick) {
+        downtime.put(ownerUUID, downtimeState(ownerUUID).work(tick));
     }
 
     public void registerMostRecentDowntime(

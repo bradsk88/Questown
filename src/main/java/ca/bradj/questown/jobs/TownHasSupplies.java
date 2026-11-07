@@ -22,6 +22,7 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
     private final Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms;
     private final Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks;
     private final Function<ITEM, HELD> convert;
+    private final Supplier<Boolean> townHasAnyJobBlock;
 
     public TownHasSupplies(
             Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
@@ -30,7 +31,20 @@ public class TownHasSupplies<HELD, ITEM extends Item<ITEM>, C extends ContainerT
             Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
             Function<ITEM, HELD> convert
     ) {
+        this(ingredients, tools, rooms, roomsHaveWorkableBlocks, convert, () -> true);
+    }
+
+    /** @param townHasAnyJobBlock whether the town has any block this job could work at, in any state */
+    public TownHasSupplies(
+            Function<Integer, PredicateCollection<HELD, HELD>> ingredients,
+            Function<Integer, PredicateCollection<ITEM, ITEM>> tools,
+            Supplier<ImmutableList<ContainersClean.JobSite<C>>> rooms,
+            Supplier<? extends Map<Integer, ? extends RoomsWithWorkableStatefulBlocks<?>>> roomsHaveWorkableBlocks,
+            Function<ITEM, HELD> convert,
+            Supplier<Boolean> townHasAnyJobBlock
+    ) {
         super("town has supplies");
+        this.townHasAnyJobBlock = townHasAnyJobBlock;
         this.ingredients = ingredients;
         this.tools = tools;
         this.rooms = () -> rooms.get().stream().collect(ImmutableList.toImmutableList());
