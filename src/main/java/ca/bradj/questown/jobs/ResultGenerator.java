@@ -26,4 +26,23 @@ public interface ResultGenerator<T> {
             }
         };
     }
+
+    /** For result types whose own cycle yields nothing: {@code uses_special_rules} and {@code via_other_job}. */
+    static <T> ResultGenerator<T> forSpecialType(String resultType) {
+        if (!"via_other_job".equals(resultType)) {
+            return alwaysEmpty();
+        }
+        return new ResultGenerator<>() {
+            @Override
+            public Iterable<T> generate(ServerLevel level, Collection<T> heldItems) {
+                return ImmutableList.of();
+            }
+
+            @Override
+            public boolean isResultAlwaysEmpty() {
+                // It does produce, just through another job.
+                return false;
+            }
+        };
+    }
 }

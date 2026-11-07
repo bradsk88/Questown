@@ -16,10 +16,13 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -41,6 +44,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     private static final int SLOTS_PER_PAGE = GRID_COLUMNS * GRID_ROWS;
 
     private final List<Ingredient> work;
+    private final List<Ingredient> categories;
     private final List<RequestSlot> requestSlots;
     private final JEI.NineNine background;
     private final JEI.NineNine cardBackground;
@@ -134,6 +138,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
     }
 
     private List<Slot> slots = new ArrayList<>();
+    private final Map<Slot, Ingredient> slotRequests = new IdentityHashMap<>();
 
     private boolean isCategory(Ingredient ing) {
         return categories.contains(ing);
@@ -223,6 +228,7 @@ public class AddWorkScreen extends CompatContainerScreen<AddWorkContainer> imple
         Slot element = new Slot(dummyInv, slotIndex, iconX, y + 1);
         element.set(itemStack);
         b.add(element);
+        slotRequests.put(element, request);
     }
 
     private void renderPageNum(

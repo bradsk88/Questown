@@ -9,6 +9,10 @@ import ca.bradj.questown.town.quests.MCQuestBatch;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.quests.QuestBatch;
 import ca.bradj.questown.town.special.SpecialQuests;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
+import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.serialization.MCRoom;
+import com.google.common.collect.ImmutableList;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.Bootstrap;
@@ -419,6 +423,16 @@ class TutorialPhaseGateTest {
         quests.postCookFollowUpIfDue(view);
 
         assertFalse(hasCookFollowUpQuest(quests.questBatches.getAll()));
+    }
+
+    @Test
+    void cookFollowUp_waitsForTheMorningJobChange() {
+        // The food and skill quests wait for a villager who is actually a cook.
+        TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
+                .villagerRoots("hunter", "gatherer").build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
 
         quests.postCookFollowUpIfDue(view);
 
@@ -428,15 +442,26 @@ class TutorialPhaseGateTest {
     @Test
     void cookFollowUp_postedOnceTheCookIsUnlocked() {
         TownQuests quests = questsAtPhase2_5();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2)
+                .villagerRoots("hunter", "cook").build();
+        quests.addTutorialBatches(view);
+        quests.questBatches.markRecipeAsComplete(null, JobID.toRL(TownQuests.ONBOARDING_COOK_JOB));
 
         quests.postCookFollowUpIfDue(view);
 
         List<MCQuest> all = quests.questBatches.getAll();
         assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.LOOT
+                        && q.getWantedId().equals(TagsInit.Items.VILLAGER_COOKED_FOOD.location())
+                        && q.getCountNeeded() == TownQuests.COOKED_FOOD_COUNT
+        ), "follow-up must carry Cooked Food x4");
+        assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.SKILL_UNLOCK
                         && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
         ), "follow-up must carry the cook skill-unlock quest");
         // The follow-up brings villager 3, so the bedroom becomes a big bedroom.
+        ResourceLocation bedroom = new ResourceLocation("questown", "bedroom");
+        ResourceLocation bigBedroom = new ResourceLocation("questown", "big_bedroom");
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.ROOM
                         && bigBedroom.equals(q.getWantedId())
@@ -542,6 +567,23 @@ class TutorialPhaseGateTest {
         quests.questBatches.markRecipeAsComplete(null, new ResourceLocation("questown", "farm"));
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.WOODEN_PICKAXE));
         quests.questBatches.markRecipeAsComplete(null, Compat.getItemId(Items.COAL));
+    }
+
+    @Test
+    void whenMinerBeatDone_itIsNotPostedAgain() {
+        // The miner lesson posts once.
+        TownQuests quests = questsWithTwoJobChangesDone();
+        TestTutorialTownView view = TestTutorialTownView.builder()
+                .villagerCount(3)
+                .build();
+
+        quests.addTutorialBatches(view);
+        quests.addTutorialBatches(view);
+
+        ResourceLocation minerJob = JobID.toRL(new JobID("miner", "coal"));
+        assertEquals(1, quests.questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && minerJob.equals(q.getWantedId()))
+                .count(), "the miner beat is posted once");
     }
 
     @Test
@@ -725,6 +767,7 @@ class TutorialPhaseGateTest {
         Set<String> knownPhaseNames = Set.of(
                 TutorialTownView.PHASE_KICKOFF,
                 TutorialTownView.PHASE_HUNTER_GATHERER,
+                TutorialTownView.PHASE_EMPTY_ROOMS,
                 TutorialTownView.PHASE_JOB_CHANGE_FOOD,
                 TutorialTownView.PHASE_MINER,
                 TutorialTownView.PHASE_NEW_JOB_ROOM,
@@ -764,9 +807,7 @@ class TutorialPhaseGateTest {
 
     @Test
     void campfireBatch_isNotProceduralBatch() {
-        // Regression: placing a campfire (the very first step) was instantly
-        // broadcasting "your village is thriving" because campfire batch
-        // completion was counted as a procedural batch milestone.
+        // The campfire batch isn't a procedural batch, so it doesn't count toward the milestones.
         MCQuestBatch campfireBatch = new MCQuestBatch(null, null, new NoOpReward());
         campfireBatch.addNewQuest(null, SpecialQuests.CAMPFIRE);
         assertFalse(TownQuests.isProceduralBatch(campfireBatch));

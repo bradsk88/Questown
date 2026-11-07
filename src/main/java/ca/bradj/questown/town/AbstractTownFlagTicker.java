@@ -37,6 +37,8 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             TICK_DATA data
     ) {
         if (runAnyInitializers(data)) {
+            // An initializing flag is alive: keep its sub-blocks from removing themselves.
+            notifySubBlocksOfTick(data);
             return;
         }
 

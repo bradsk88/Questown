@@ -12,6 +12,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.DataSlot;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements VillagerTabsEmbedding {
@@ -33,6 +34,8 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return menus.changeMenu;
     }
 
+    private final String promisedRoot;
+
     public record FlagBop(int count) {
         public static final FlagBop NONE = new FlagBop(0);
     }
@@ -49,6 +52,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             boolean alreadyPending
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
+        this.promisedRoot = promisedRoot;
         this.flagBop = flagBop;
         gathererInventoryYOffset = 8;
         this.jobId = jobId;

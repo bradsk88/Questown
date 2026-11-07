@@ -54,6 +54,10 @@ public class TownFlagMenus {
         BlockPos flagPos = inputFlagInfo.flagPos();
         TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
         TownInterface flag = flagEntity;
+        if (OpenFlagMenuMessage.VILLAGERS.equals(type)) {
+            // Clear the villagers tab's red dot before building the screen's data.
+            flagEntity.markVillagersTabSeen();
+        }
         if (OpenFlagMenuMessage.QUESTS.equals(type)) {
             flagEntity.markQuestsSeen();
         }

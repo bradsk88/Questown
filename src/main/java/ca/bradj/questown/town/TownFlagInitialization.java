@@ -48,6 +48,8 @@ public interface TownFlagInitialization {
     CompoundTag serializeEconomics();
     CompoundTag serializeBoardAutoRequest();
 
+    CompoundTag serializeVillagersTabSeen();
+
     CompoundTag serializeQuestsSeen();
 
     CompoundTag serializeBopWithdrawn();

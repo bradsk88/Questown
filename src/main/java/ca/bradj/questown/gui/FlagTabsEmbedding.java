@@ -44,6 +44,7 @@ public interface FlagTabsEmbedding {
                     buf.readBoolean(),
                     buf.readBoolean(),
                     buf.readBoolean(),
+                    buf.readBoolean(),
                     buf.readBoolean()
             );
         }

@@ -672,6 +672,23 @@ class SimpleVillagerHandleTest {
     }
 
     @Test
+    public void scheduleJobRootChange_instantWithGuarantee_appliesNowAndReturnsTheRoot() {
+        // An onboarding spend applies at once.
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID cook = new JobID("cook", "extract");
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, true, Optional.of(cook));
+
+        Assertions.assertEquals(Optional.of(cook), pending);
+        Assertions.assertEquals(List.of(cook), t.jobChanges, "applied at the spend, not at morning");
+        Assertions.assertFalse(handle.isJobChangePending(v));
+        Assertions.assertTrue(handle.getGuaranteedRoots().isEmpty(), "the guarantee is consumed");
+    }
+
+    @Test
     public void register_replacesACopyThatLeftTheWorld() {
         // A reloaded villager is a new object with the same UUID; the old copy isn't kept.
         TestDelegator t = new TestDelegator();

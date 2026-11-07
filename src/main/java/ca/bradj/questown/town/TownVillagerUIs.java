@@ -487,6 +487,25 @@ public class TownVillagerUIs {
         return new JobChangeConfirmMenu.FlagBop(flag.getBopCount());
     }
 
+    private static boolean hidesJobChange(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return false;
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        return flag != null && flag.hidesJobChangeFrom(e.getJobId());
+    }
+
+    private static String promisedRoot(ServerPlayer sender, VisitorMobEntity e) {
+        if (e.getFlagPos() == null) {
+            return "";
+        }
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        if (flag == null) {
+            return "";
+        }
+        return flag.promisedJobChange(e.getUUID()).map(JobID::rootId).orElse("");
+    }
+
     private static void openMenu(
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,

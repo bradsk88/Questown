@@ -31,9 +31,17 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
     private boolean onboarding;
     // Only procedural batches can be discarded.
     private boolean discardable;
+    // The producer a top-need room quest was posted for, or null.
+    @Nullable
+    private String topNeedProducer;
 
     Quest() {
         this(null, null, null, null, null, 1);
+    }
+
+    /** The room this quest completed on, or null. */
+    public @Nullable ROOM completedOn() {
+        return completedOn;
     }
 
     @Override
@@ -161,6 +169,14 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
 
     public void setDiscardable(boolean discardable) {
         this.discardable = discardable;
+    }
+
+    public Optional<String> topNeedProducer() {
+        return Optional.ofNullable(topNeedProducer);
+    }
+
+    public void setTopNeedProducer(@Nullable String producerRoot) {
+        this.topNeedProducer = producerRoot;
     }
 
     /** Copies what a rebuild on load doesn't: the onboarding flag and the flavor text. */

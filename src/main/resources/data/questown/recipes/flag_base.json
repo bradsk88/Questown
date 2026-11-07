@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    " C ",
+    "CSC"
+  ],
+  "key": {
+    "C": {
+      "item": "minecraft:cobblestone"
+    },
+    "S": {
+      "tag": "minecraft:saplings"
+    }
+  },
+  "result": {
+    "item": "questown:flag_base"
+  }
+}
