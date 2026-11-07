@@ -33,7 +33,8 @@ public class ClientAccess {
             Collection<JobID> unlockedJobs,
             Collection<JobID> unlockableJobs,
             JobID currentJob,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showInventoryTab
     ) {
         return openScreen(() -> new VillagerAdvancementsScreen(
                 flagPos,
@@ -41,7 +42,8 @@ public class ClientAccess {
                 unlockedJobs,
                 unlockableJobs,
                 currentJob,
-                showBlockOfProgressTab
+                showBlockOfProgressTab,
+                showInventoryTab
         ));
     }
 

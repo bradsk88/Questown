@@ -254,6 +254,18 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public ImmutableSet<JobID> getUnlockableSkills(UUID villagerUUID) {
+                return villagerHandle.uis.unlockableSkills(villagerUUID);
+            }
+
+            @Override
+            public int getVillagerLevel(
+                    UUID villagerUUID
+            ) {
+                return villagerHandle.getLevel(villagerUUID);
+            }
+
+            @Override
             public void addExperience(
                     UUID uuid,
                     int exp

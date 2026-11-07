@@ -82,6 +82,21 @@ public class MCQuestBatch extends QuestBatch<ResourceLocation, MCRoom, MCQuest, 
             }
 
             @Override
+            public MCQuest newSkillUnlockQuest(@Nullable UUID ownerId, ResourceLocation treeRootId) {
+                // A named skill quest keeps its skill on load.
+                return MCQuest.namedSkill(treeRootId)
+                              .map(s -> MCQuest.namedSkillUnlock(batchUUID, dep(ownerId), s))
+                              .orElseGet(() -> MCQuest.skillUnlock(batchUUID, dep(ownerId), MCQuest.skillTreeRoot(treeRootId)));
+            }
+
+            @Override
+            public MCQuest newVillagerLevelQuest(@Nullable UUID ownerId, ResourceLocation id) {
+                VillagerLevelQuests.Target t = VillagerLevelQuests.target(id).orElseThrow(
+                        () -> new IllegalArgumentException("Not a villager-level quest id: " + id));
+                return MCQuest.villagerLevel(batchUUID, dep(ownerId), t.root(), t.level());
+            }
+
+            @Override
             public MCQuest newConcurrentJobsQuest(@Nullable UUID ownerId, Collection<ResourceLocation> jobIds) {
                 return MCQuest.concurrentJobs(batchUUID, jobIds);
             }

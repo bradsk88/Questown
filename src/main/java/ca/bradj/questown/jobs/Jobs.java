@@ -3,8 +3,8 @@ package ca.bradj.questown.jobs;
 import ca.bradj.questown.blocks.TakeFn;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
+import ca.bradj.questown.gui.villager.advancements.VillagerAdvancements;
 import ca.bradj.questown.integration.minecraft.MCContainer;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
@@ -167,7 +167,7 @@ public class Jobs {
             ItemsHolder<MCHeldItem> journal,
             ImmutableList<? extends Predicate<MCTownItem>> isItemNeeded
     ) {
-        return town.findMatchingContainer(item -> JobsClean.shouldTakeItem(
+        return town.findMatchingContainer(item -> SupplyItems.shouldTakeItem(
                 journal.getCapacity(), isItemNeeded, journal.getItems(), item
         )) != null;
     }
@@ -181,7 +181,7 @@ public class Jobs {
             RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingIngredientsOrTools,
             Collection<MCRoom> roomsWithCompletedProduct
     ) {
-        EntityCurrentJobSite<MCRoom> in = JobsClean.getEntityCurrentJobSite(
+        EntityCurrentJobSite<MCRoom> in = DeclarativeJobs.getEntityCurrentJobSite(
                 Positions.FromBlockPos(entityBlockPos), roomsNeedingIngredientsOrTools,
                 roomsWithCompletedProduct,
                 (room) -> (room.yCoord > entityBlockPos.getY() - 5) && (room.yCoord < entityBlockPos.getY() + 5),
@@ -205,7 +205,7 @@ public class Jobs {
             ResourceLocation workRoomId,
             Function<BlockPos, @Nullable Integer> ticksSource
     ) {
-        return JobsClean.isUnfinishedTimeWorkPresent(
+        return DeclarativeJobs.isUnfinishedTimeWorkPresent(
                 () -> ImmutableList.copyOf(town.getRoomsMatching(workRoomId)),
                 ticksSource
         );
@@ -215,12 +215,14 @@ public class Jobs {
     public static Collection<Integer> getStatesWithUnfinishedWork(
             Supplier<Collection<? extends Supplier<Collection<BlockPos>>>> town,
             Function<BlockPos, State> ticksSource,
-            Predicate<BlockPos> canClaim
+            Predicate<BlockPos> canClaim,
+            Function<Integer, Boolean> workDeclaredAt
     ) {
-        return JobsClean.getStatesWithUnfinishedWork(
+        return DeclarativeJobs.getStatesWithUnfinishedWork(
                 town.get(),
                 ticksSource,
-                canClaim
+                canClaim,
+                workDeclaredAt
         );
     }
 
@@ -244,7 +246,7 @@ public class Jobs {
 
                             @Override
                             public String toString() {
-                                return v.toJson().toString();
+                                return v.toString();
                             }
                         },
                         (inner) -> v.isEmpty(),
@@ -305,7 +307,7 @@ public class Jobs {
     public static ImmutableList<Component> getComponentsForTooltip(JobID job) {
         return ImmutableList.of(
                 getRootNameComponent(job),
-                Compat.literal(job.jobId())
+                getVariantNameComponent(job)
         );
     }
 
@@ -313,6 +315,7 @@ public class Jobs {
         return Compat.translatable("jobs." + job.rootId());
     }
 
+    /** The variant's name: a product job's item name, else its lang key, else {@link JobNames#variant}. */
     public static @NotNull Component getVariantNameComponent(JobID job) {
         ResourceLocation product = JobNames.product(job, iconId(job));
         if (product != null) {
@@ -321,6 +324,14 @@ public class Jobs {
         return Compat.translatableWithFallback(
                 "jobs." + job.rootId() + "." + job.jobId(), JobNames.variant(job.jobId())
         );
+    }
+
+    /** The job's icon: from the loaded jobs on the server, else the copy sent to the client. */
+    private static @Nullable ResourceLocation iconId(JobID job) {
+        if (Works.isInitialized() && Works.ids().contains(job)) {
+            return Compat.getItemId(Works.get(job).get().icon.getItem());
+        }
+        return VillagerAdvancements.getIconId(job);
     }
 
     public static String getNiceString(ImmutableList<JobID> value) {
@@ -368,13 +379,8 @@ public class Jobs {
                 continue;
             }
             // TODO: Unit tests of this logic!
-            if (mct.isLocked()) {
-                dropper.log("Villager is not putting away {} because it is locked", mct.toShortString());
-                continue;
-            }
-
-            if (ItemsInit.KNOWLEDGE.get().equals(mct.get().get())) {
-                dropper.removeItem(mct);
+            if (mct.staysWithVillager()) {
+                dropper.log("Villager is not putting away {} because it is locked or goes to the flag", mct.toShortString());
                 continue;
             }
 

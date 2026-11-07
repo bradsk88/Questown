@@ -139,7 +139,9 @@ public class VillagerMenus {
             Collection<Boolean> slotLocks,
             int invSize,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         invMenu = new InventoryAndStatusMenu(
                 windowId,

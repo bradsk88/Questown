@@ -155,6 +155,11 @@ public interface VillagerHolder {
             JobID id
     );
 
+    /** The villager's level; 1 by default. */
+    int getVillagerLevel(
+            UUID villagerUUID
+    );
+
     void addExperience(
             UUID uuid,
             int exp
@@ -178,6 +183,8 @@ public interface VillagerHolder {
     );
 
     boolean isUnlocked(JobID jobID);
+
+    ImmutableSet<JobID> getUnlockableSkills(UUID villagerUUID);
 
     /** Each villager's unlocked jobs. */
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs();

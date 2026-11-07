@@ -5,6 +5,7 @@ import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.ShowTutorialToastMessage;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;

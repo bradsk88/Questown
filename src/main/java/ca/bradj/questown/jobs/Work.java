@@ -45,10 +45,15 @@ public class Work {
     /** True when the job joins its root's starting unlocks ({@code unlocked_with_root_job}). */
     private boolean unlockedWithRootJob;
 
+    /** The villager level at which this job can be unlocked. Only affects jobs not unlocked yet. */
+    private int availableAtLevel = DEFAULT_AVAILABLE_AT_LEVEL;
     /** XP per completion, or null for the formula. */
     private @Nullable Integer experience;
     /** {@code prefer_requested}: a full-day trip rolls twice and keeps requested items. */
     private boolean prefersRequestedLoot;
+
+    /** The first level at which the skills tab appears. */
+    public static final int DEFAULT_AVAILABLE_AT_LEVEL = 2;
 
     public Work(
             JobID id,
@@ -120,6 +125,15 @@ public class Work {
 
     public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
         this.unlockedWithRootJob = unlockedWithRootJob;
+        return this;
+    }
+
+    public int getAvailableAtLevel() {
+        return availableAtLevel;
+    }
+
+    public Work withAvailableAtLevel(int availableAtLevel) {
+        this.availableAtLevel = availableAtLevel;
         return this;
     }
 
