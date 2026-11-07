@@ -331,6 +331,7 @@ public class RealtimeWorldInteraction extends
             MCExtra mcExtra
     ) {
         VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
+        boolean res;
         if (wtu == null) {
             res = true;
         } else {
@@ -338,6 +339,7 @@ public class RealtimeWorldInteraction extends
         }
         return res;
     }
+
 
     @Override
     public int timesInserted(MCExtra mcExtra) {
