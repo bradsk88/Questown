@@ -142,18 +142,6 @@ public class TestExecutor {
         this.warpAmount = warpAmount;
         this.blueprint = blueprint;
         this.warpOnly = warpOnly;
-        clearProficiencyTestSeams();
-    }
-
-    /**
-     * Both proficiency test seams are process-global, so a scenario that leaves one set would
-     * silently skew the next one's measurements rather than fail it. Clearing on construction
-     * (not teardown) is what makes that impossible: a scenario that throws mid-run cannot poison
-     * its successor, because the successor cleans up before it starts.
-     */
-    private static void clearProficiencyTestSeams() {
-        AbstractWorldInteraction.resetProficiencyBearingActionsForTest();
-        ServerJobsRegistry.clearProficiencyIdOverridesForTest();
     }
 
     private int effectiveWarpAmount() {

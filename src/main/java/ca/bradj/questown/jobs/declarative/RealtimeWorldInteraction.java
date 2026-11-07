@@ -97,20 +97,6 @@ public class RealtimeWorldInteraction extends
         this.townFlagPos = townFlagPos;
     }
 
-    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
-        return b.build();
-    }
-
-    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
-        return b.build();
-    }
-
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
         return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
