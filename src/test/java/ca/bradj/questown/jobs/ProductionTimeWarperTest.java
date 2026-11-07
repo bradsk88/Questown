@@ -167,6 +167,33 @@ class ProductionTimeWarperTest {
     }
 
     @Test
+    void simulateDropLoot_shouldLeaveUndepositedItemsInInventory_IfTownCanOnlyTakeSome() {
+        // When the town takes only some items, the rest stay with the villager.
+        ArrayList<TestItem> townItems = new ArrayList<>();
+
+        ProductionTimeWarper.Result<TestItem> res = ProductionTimeWarper.<TestItem, TestItem>
+                simulateDropLoot(
+                        new ProductionTimeWarper.Result<>(
+                                ProductionStatus.DROPPING_LOOT,
+                                ImmutableList.of(
+                                        new TestItem("bread"),
+                                        new TestItem("stick")
+                                )
+                        ),
+                        heldItems -> {
+                            townItems.addAll(heldItems.subList(0, 1));
+                            return heldItems.subList(1, heldItems.size());
+                        },
+                        () -> new TestItem("")
+                );
+        Assertions.assertIterableEquals(ImmutableList.of(new TestItem("bread")), townItems);
+        Assertions.assertIterableEquals(ImmutableList.of(
+                new TestItem("stick"),
+                new TestItem("")
+        ), res.items());
+        Assertions.assertEquals(ProductionStatus.DROPPING_LOOT, res.status());
+    }
+    @Test
     void dropIntoContainers_ShouldReturnAllInputItems_IfNoContainers() {
         ImmutableList<TestItem> items = ImmutableList.of(
                 new TestItem("bread")
