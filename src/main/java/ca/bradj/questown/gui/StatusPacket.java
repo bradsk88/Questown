@@ -29,6 +29,7 @@ public record StatusPacket(
     ) {
         this(jobId, texts, image, leaverReturnTick, leaverReturnTotal, -1);
     }
+
     /** For screens without trip info. */
     public StatusPacket(
             JobID jobId,
@@ -46,6 +47,7 @@ public record StatusPacket(
         b.writeResourceLocation(statusPacket.image);
         b.writeVarLong(statusPacket.leaverReturnTick);
         b.writeVarInt(statusPacket.leaverReturnTotal);
+        b.writeFloat(statusPacket.workProgress);
     }
 
     public static StatusPacket fromNetwork(FriendlyByteBuf b) {

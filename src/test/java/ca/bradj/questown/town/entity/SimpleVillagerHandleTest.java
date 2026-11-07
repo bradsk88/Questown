@@ -308,6 +308,63 @@ class SimpleVillagerHandleTest {
         Assertions.assertEquals(ImmutableMap.of(), handle.getBlockOfProgressLatches());
     }
 
+    // A stats listener hears only its own villager.
+    @Test
+    public void statsListener_hearsOnlyItsOwnVillager() {
+        TestDelegator t = new TestDelegator();
+        UUID hunter = UUID.randomUUID();
+        UUID cook = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(hunter, 100, cook, 100),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(hunter, 4),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(hunter);
+        handle.register(cook);
+        List<Integer> heardLevels = new ArrayList<>();
+        handle.addStatsListener(hunter, stats -> heardLevels.add(stats.level()));
+
+        handle.tick(Signals.NOON);
+
+        Assertions.assertFalse(heardLevels.isEmpty(), "the hunter's own hunger tick should notify");
+        Assertions.assertEquals(List.of(4), heardLevels);
+    }
+
+    // The town-wide listener hears every villager.
+    @Test
+    public void anyStatsListener_hearsEveryVillager() {
+        TestDelegator t = new TestDelegator();
+        UUID hunter = UUID.randomUUID();
+        UUID cook = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = new SimpleVillagerHandle<>(
+                t,
+                new SimpleVillagerHandle.Configs(100, true, 1, 1, 100, 10, 100, 0.5f, 100, 100, 23000)
+        );
+        handle.initialize(
+                ImmutableMap.of(hunter, 100, cook, 100),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                true
+        );
+        handle.register(hunter);
+        handle.register(cook);
+        int[] heard = {0};
+        handle.addAnyStatsListener(() -> heard[0]++);
+
+        handle.tick(Signals.NOON);
+
+        Assertions.assertEquals(2, heard[0]);
+    }
+
     // A meal never lowers fullness.
     @Test
     public void eat_halfMeal_neverLowersFullness() {

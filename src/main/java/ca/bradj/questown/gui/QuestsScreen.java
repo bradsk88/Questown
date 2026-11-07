@@ -74,6 +74,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.tabs = tabs;
     }
 
+    /** Open quests, or the completed ones once the player asks for them. */
     @Override
     protected ImmutableList<UIQuest> cardsData() {
         if (showingCompleted) {
@@ -605,7 +606,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     public List<Rect2i> getExtraAreas() {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, backgroundHeight));
+        return ImmutableList.of(new Rect2i(x, y, backgroundWidth, panelHeight()));
     }
 
     @Override

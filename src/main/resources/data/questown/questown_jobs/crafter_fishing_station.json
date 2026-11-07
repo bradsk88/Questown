@@ -39,5 +39,8 @@
         "questown:associate_item_with_town"
       ]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/crafting_table_top.png"}
   ]
 }

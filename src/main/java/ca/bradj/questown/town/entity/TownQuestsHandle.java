@@ -243,24 +243,34 @@ public class TownQuestsHandle implements QuestsHolder {
             UUID batchID,
             ServerPlayer sender
     ) {
+        if (!removeBatch(batchID)) {
+            return;
+        }
+        if (!unsafeGetTown().getAllQuests().isEmpty()) {
+            showQuestsUI(sender);
+            return;
+        }
+        sender.closeContainer();
+    }
+
+    @Override
+    public boolean removeBatch(UUID batchID) {
         @NotNull TownFlagBlockEntity t = unsafeGetTown();
         for (MCQuestBatch b : t.quests.getBatches()) {
-            if (batchID.equals(b.getBatchUUID())) {
-                if (t.quests.questBatches.decline(b)) {
-                    t.quests.playerDiscardedLastBatch = true;
-                    QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
-                    addReplacementQuestBatch(t, b);
-                    t.setChanged();
-                    if (!t.getAllQuests().isEmpty()) {
-                        showQuestsUI(sender);
-                    } else {
-                        sender.closeContainer();
-                    }
-                    t.messages.batchRemoved();
-                }
-                return;
+            if (!batchID.equals(b.getBatchUUID())) {
+                continue;
             }
+            if (!t.quests.questBatches.decline(b)) {
+                return false;
+            }
+            t.quests.playerDiscardedLastBatch = true;
+            QT.QUESTS_LOGGER.debug("Quest batch removed: {}", b);
+            addReplacementQuestBatch(t, b);
+            t.setChanged();
+            t.messages.batchRemoved();
+            return true;
         }
+        return false;
     }
 
     private void addReplacementQuestBatch(
@@ -272,15 +282,20 @@ public class TownQuestsHandle implements QuestsHolder {
             return;
         }
 
+        // The replacement must not repost what was just declined.
+        ImmutableSet<ResourceLocation> declinedFrom = b.getAll().stream()
+                .map(MCQuest::fromRecipeID)
+                .flatMap(Optional::stream)
+                .collect(ImmutableSet.toImmutableSet());
         if (b.getOwner() != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner()));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, b.getOwner(), declinedFrom));
             return;
         }
 
         QT.QUESTS_LOGGER.error("Quest batch owner was null, assigning next batch to someone else.");
         UUID owner = t.getRandomVillager();
         if (owner != null) {
-            t.addMorningReward(new AddRandomUpgradeQuest(t, owner));
+            t.addMorningReward(new AddRandomUpgradeQuest(t, VillagerUUID.from(owner), declinedFrom));
             return;
         }
 

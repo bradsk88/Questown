@@ -26,6 +26,9 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
     private ImmutableRect2i hngBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i moodBar = new ImmutableRect2i(0, 0, 0, 0);
     private ImmutableRect2i dmgBar = new ImmutableRect2i(0, 0, 0, 0);
+    // The effects line's box and names while it is cut short, so a hover can list them all.
+    private ImmutableRect2i effectsLine = new ImmutableRect2i(0, 0, 0, 0);
+    private List<String> truncatedEffects = List.of();
 
     public VillagerStatsScreen(
             VillagerStatsMenu menu,
@@ -73,6 +76,11 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
                 mouseY,
                 key -> this.showTooltip(Compat.translatable(key))
         )) {
+            return;
+        }
+
+        if (!truncatedEffects.isEmpty() && JEI.isCoordInBox(mouseX, mouseY, effectsLine)) {
+            this.showTooltip(truncatedEffects.stream().map(n -> Compat.visualOrder(Compat.literal(n))).toList());
             return;
         }
 
@@ -154,6 +162,14 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
                 title,
                 (int) (100f * menu.getExperienceValue() / (float) menu.getExperienceTarget())
         );
+        truncatedEffects = List.of();
+        // One line; a long list ends in "..." and shows whole on hover.
+        String shown = Compat.fitToWidth(this.font, line, backgroundWidth - 16);
+        rc.darkText(Compat.literal(shown), bgX + 8, y);
+        effectsLine = new ImmutableRect2i(bgX + 8, y, this.font.width(shown), this.font.lineHeight);
+        if (!shown.equals(line)) {
+            truncatedEffects = List.copyOf(names);
+        }
     }
 
     private void renderMood(

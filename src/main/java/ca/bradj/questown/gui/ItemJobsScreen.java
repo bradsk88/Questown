@@ -95,6 +95,10 @@ public class ItemJobsScreen extends Screen {
     }
 
     private ItemStack getFirst() {
+        // No known producer yet: a loot job's drops show only once the town has seen them.
+        if (jobs.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
         UIJob j = jobs.get(delegate.getCurrentPageIndex());
         ImmutableList<ItemStack> r = j.result();
         if (r.isEmpty()) {

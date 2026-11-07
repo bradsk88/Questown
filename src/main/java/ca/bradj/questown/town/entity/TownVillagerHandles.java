@@ -157,6 +157,15 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void switchJob(VillagerUUID villagerUUID, JobID job, boolean afterTrip) {
+                if (afterTrip) {
+                    villagerHandle.switchJobAfterTrip(villagerUUID, job);
+                    return;
+                }
+                villagerHandle.switchJobNow(villagerUUID, job);
+            }
+
+            @Override
             public void assignJob(
                     VillagerUUID villagerUUID,
                     JobID job
@@ -323,6 +332,11 @@ public class TownVillagerHandles {
                     boolean value
             ) {
                 villagerHandle.delegate.setJobChangePending(getUUID(vuid), value);
+            }
+
+            @Override
+            public @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid) {
+                return villagerHandle.peekSwitchAfterTrip(vuid);
             }
 
             @Override

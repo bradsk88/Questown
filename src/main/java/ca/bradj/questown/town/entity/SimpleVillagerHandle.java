@@ -5,6 +5,7 @@ import ca.bradj.questown.commands.DebugLogArgument;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
+import ca.bradj.questown.jobs.RootRoll;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.Signals;
 import ca.bradj.questown.jobs.declarative.DowntimeWork;
@@ -23,6 +24,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class SimpleVillagerHandle<DATA, ENTITY> {
@@ -220,7 +222,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     private void tickDamage() {
         tickThing(
-                damage, 0, e -> applyHealFactor(e, 100), 0, (newVal, e) -> {
+                damage, 0, e -> applyHealFactor(e, healingPerFlagTick()), 0, (newVal, e) -> {
                 }
         );
     }
@@ -261,7 +263,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             int newVal = Math.max(min, oldVal - amount.apply(e));
             map.put(u, newVal);
             if (newVal != oldVal) {
-                listeners.forEach(l -> l.accept(getStats(u)));
+                notifyStatsListeners(u);
             }
             then.accept(newVal, e);
         });
@@ -275,7 +277,8 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         int experienceTarget = (int) getExpForCurrentLevel(uuid);
         return new VillagerStatsData(
                 // TODO[Traits]: Track max unique fullness level per villager
-                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent);
+                fullnessPercent, experienceNum, experienceTarget, delegator.getMood(uuid), damagePercent,
+                getLevel(uuid), delegator.getMoodEffectIds(uuid));
     }
 
     private float getExpForCurrentLevel(UUID uuid) {
@@ -364,7 +367,10 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     ) {
         // TODO: Get max fullness from villager
         int newHunger = (int) (percent * configs.baseFullness);
-        QT.VILLAGER_LOGGER.info("Fullness changed from {} to {}", fullness.get(uuid), newHunger);
+        Integer oldHunger = fullness.get(uuid);
+        if (oldHunger == null || oldHunger != newHunger) {
+            QT.VILLAGER_LOGGER.info("Fullness changed from {} to {} for {}", oldHunger, newHunger, uuid);
+        }
         fullness.put(uuid, newHunger);
         if (percent > 0) {
             starving.put(uuid, false);
@@ -425,16 +431,33 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         return entities.contains(visitorMobEntity);
     }
 
-    public void addStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.add(l);
+    public void addStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        this.listeners.computeIfAbsent(villager, k -> new ArrayList<>()).add(l);
+    }
+
+    public void addAnyStatsListener(Runnable l) {
+        this.anyStatsListeners.add(l);
+    }
+
+    private void notifyStatsListeners(UUID villager) {
+        anyStatsListeners.forEach(Runnable::run);
+        List<Consumer<VillagerStatsData>> ls = listeners.get(villager);
+        if (ls == null || ls.isEmpty()) {
+            return;
+        }
+        VillagerStatsData stats = getStats(villager);
+        List.copyOf(ls).forEach(l -> l.accept(stats));
     }
 
     public void addHungryListener(Consumer<ENTITY> l) {
         this.hungryListeners.add(l);
     }
 
-    public void removeStatsListener(Consumer<VillagerStatsData> l) {
-        this.listeners.remove(l);
+    public void removeStatsListener(UUID villager, Consumer<VillagerStatsData> l) {
+        List<Consumer<VillagerStatsData>> ls = this.listeners.get(villager);
+        if (ls != null) {
+            ls.remove(l);
+        }
     }
 
     public Collection<ENTITY> entities() {
@@ -489,7 +512,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (exists(visitorMobEntity)) {
             return;
         }
-        QT.FLAG_LOGGER.error("Visitor mob's parent has no record of entity. Removing visitor");
+        QT.FLAG_LOGGER.error(
+                "Visitor mob's parent has no record of entity. Removing visitor. uuid={} handleSize={}",
+                delegator.getUUID(visitorMobEntity),
+                this.entities.size()
+        );
         delegator.discardEntity(visitorMobEntity);
     }
 
@@ -567,7 +594,21 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
     }
 
     public void register(ENTITY vEntity) {
-        QT.FLAG_LOGGER.info("Registered entity with town {}: {}", delegator.getUUID(vEntity), vEntity);
+        QT.FLAG_LOGGER.info("Registered villager {} with the town (arrival or reload): {}", delegator.getUUID(vEntity), vEntity);
+        // One entry per villager: a reloaded entity has the same UUID.
+        UUID id = delegator.getUUID(vEntity);
+        // A copy still in the world wins over one that loads later.
+        boolean liveCopyListed = this.entities.stream().anyMatch(
+                e -> e != vEntity && delegator.getUUID(e).equals(id) && !delegator.isRemoved(e)
+        );
+        if (liveCopyListed) {
+            QT.FLAG_LOGGER.info("Discarding a duplicate entity for townie {}: a live copy is already registered", id);
+            delegator.discardEntity(vEntity);
+            return;
+        }
+        if (this.entities.removeIf(e -> e != vEntity && delegator.getUUID(e).equals(id))) {
+            QT.FLAG_LOGGER.info("Replaced a stale entity for townie {} on re-registration", id);
+        }
         this.add(vEntity);
         delegator.addChangeListener(
                 vEntity, () -> {
@@ -594,11 +635,6 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         if (newExp >= target) {
             Integer newLvl = levels.compute(uuid, (x, cur) -> cur == null ? 2 : cur + 1);
             experience.put(uuid, newExp % target);
-            delegator.broadcastMessage(
-                    "message.villager.leveled_up",
-                    UtilClean.truncateMiddle(uuid),
-                    newLvl
-            );
             broadcastLevelUp(uuid, newLvl);
             hasBlockOfProgress.put(uuid, true);
         }
@@ -766,9 +802,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
             jobChangesPending.put(delegator.getUUID(v), false);
             return;
         }
-        ImmutableList<JobID> shuffled = delegator.shuffle(
-                ImmutableSet.copyOf(allOtherJobs)
-        );
+        ImmutableList<JobID> shuffled = delegator.shuffle(allOtherJobs);
         JobID newJob = shuffled.get(0);
         if (delegator.getJobId(v).sameRoot(newJob)) {
             QT.logBug("Root change resulted in same root. From {} to {}.", delegator.getJobId(v), newJob);

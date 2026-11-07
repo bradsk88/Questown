@@ -33,6 +33,9 @@ public interface QuestsHolder {
 
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
+    /** Discards a batch as the remove button does. False when there is no such open batch. */
+    boolean removeBatch(UUID batchID);
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
     void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
