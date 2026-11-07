@@ -1,5 +1,8 @@
 package ca.bradj.questown.town.entity;
 
+import ca.bradj.questown.jobs.gatherer.Loots;
+import ca.bradj.questown.jobs.BoardIdleExits;
+
 import ca.bradj.questown.InventoryFullStrategy;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
@@ -69,9 +72,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
+import java.util.Optional;
 import net.minecraftforge.event.entity.EntityEvent;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
@@ -105,7 +106,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
-    int bopCount = 0;
+    // Deposited Blocks of Progress, oldest first, each keeping the job that earned it.
+    final NonNullList<ItemStack> bopStacks = NonNullList.create();
     boolean tutorialBopGranted = false;
     int completedProceduralBatches = 0;
     private boolean flagpoleBuilt = false;
@@ -161,15 +163,113 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     @Override
     public int getBlocksOfProgress() {
-        return bopCount;
+        return getBopCount();
     }
 
-    public boolean isFlagpoleBuilt() {
-        return flagpoleBuilt;
+    public int getBopCount() {
+        return bopStacks.size();
     }
 
-    public void setFlagpoleBuilt(boolean built) {
-        this.flagpoleBuilt = built;
+    /** The job that earned each deposited Block of Progress, oldest first; "" for none. */
+    public ImmutableList<String> depositedBopRootJobs() {
+        return bopStacks.stream()
+                .map(s -> BlockOfProgress.getEarnedBy(s)
+                        .map(j -> j.rootId())
+                        .orElse(""))
+                .collect(ImmutableList.toImmutableList());
+    }
+
+    public enum JobChangeResult {
+        REQUESTED, NO_BOP, NO_VILLAGER
+    }
+
+    /** The job a Block of Progress spend on this villager is promised to give, if any. */
+    public Optional<JobID> promisedJobChange(UUID villagerUUID) {
+        return quests.onboardingJobChangeGuarantee(VillagerUUID.from(villagerUUID));
+    }
+
+    /** Spends a Block of Progress on a job change: decides the job now and completes a matching job-change quest. An onboarding change applies now, others in the morning. */
+    public Optional<JobID> requestJobRootChange(
+            UUID villagerUUID,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
+    ) {
+        Optional<JobID> promised = promisedJobChange(villagerUUID);
+        Optional<JobID> effectiveGuarantee = promised.or(() -> guaranteedRoot);
+        boolean now = instant || promised.isPresent();
+        Optional<JobID> pending =
+                getVillagerHandle().scheduleJobRootChange(villagerUUID, now, effectiveGuarantee);
+        pending.ifPresent(root ->
+                quests.markJobChangeCompleteAtSpend(VillagerUUID.from(villagerUUID), root)
+        );
+        return pending;
+    }
+
+    /** Dev-only: the change-job tab's spend, with the flag's oldest Block of Progress. */
+    public JobChangeResult spendBopToRequestJobChange(UUID villagerUUID) {
+        boolean inTown = getVillagerHandle().entities().stream()
+                .anyMatch(e -> e.getUUID().equals(villagerUUID));
+        if (!inTown) {
+            return JobChangeResult.NO_VILLAGER;
+        }
+        Optional<net.minecraft.world.item.ItemStack> consumed = takeOldestBop();
+        if (consumed.isEmpty()) {
+            return JobChangeResult.NO_BOP;
+        }
+        requestJobRootChange(villagerUUID, false, Optional.empty());
+        return JobChangeResult.REQUESTED;
+    }
+
+    /** The flag's oldest Block of Progress, without taking it. */
+    public Optional<net.minecraft.world.item.ItemStack> peekOldestBop() {
+        return bopStacks.isEmpty() ? Optional.empty() : Optional.of(bopStacks.get(0));
+    }
+
+    /** Takes {@code n} of the flag's Blocks of Progress, oldest first, or none if it has fewer. */
+    public boolean takeBops(int n) {
+        if (bopStacks.size() < n) {
+            return false;
+        }
+        for (int i = 0; i < n; i++) {
+            takeOldestBop();
+        }
+        return true;
+    }
+
+    /** Takes the flag's oldest Block of Progress. */
+    public Optional<net.minecraft.world.item.ItemStack> takeOldestBop() {
+        if (bopStacks.isEmpty()) {
+            return Optional.empty();
+        }
+        net.minecraft.world.item.ItemStack taken = bopStacks.remove(0);
+        setChanged();
+        syncBopFull();
+        return Optional.of(taken);
+    }
+
+    public enum SkillUnlockResult {
+        UNLOCKED, NO_BOP, NOT_UNLOCKABLE
+    }
+
+    /** Spends one of the flag's Blocks of Progress on a skill, as the skills tab does. The skill must be one the tab offers the villager. */
+    public SkillUnlockResult spendBopToUnlockSkill(UUID villagerUUID, JobID id) {
+        if (!getVillagerHandle().getUnlockableSkills(villagerUUID).contains(id)) {
+            return SkillUnlockResult.NOT_UNLOCKABLE;
+        }
+        if (takeOldestBop().isEmpty()) {
+            return SkillUnlockResult.NO_BOP;
+        }
+        unlockSkillFromPlayer(villagerUUID, id);
+        return SkillUnlockResult.UNLOCKED;
+    }
+
+    /** For tests: adds Blocks of Progress to the flag directly. */
+    public void grantBlockOfProgressForTest(int amount) {
+        for (int i = 0; i < amount; i++) {
+            bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
+        setChanged();
+        syncBopFull();
     }
 
 
@@ -693,15 +793,23 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return true;
         }
 
-        JobID fallback = fallbackSelector.tryFallback(
-                1, villager.getJobId(), canFit, canAlwaysStart, requestedResults, td,
-                possibleWork.getFor(villager.getJobId()),
-                jobs -> Compat.shuffle(jobs.iterator(), getServerLevel())
-        );
-        if (fallback != null) {
-            changeJob.accept(fallback);
+        // Nothing to do: rest, if the last rest is old enough.
+        if (villagerHandle.isReadyForDowntimeIfIdle(ownerVUID, tick) && !DowntimeWork.matches(currentJob)) {
+            changeJob.accept("idle-escape", DowntimeWork.getIdForRoot(currentJob.rootId()));
             return true;
         }
+        // A diner that has eaten and has no work relaxes.
+        if (DiningStages.isDiner(currentJob) && !villagerHandle.isStarving(ownerVUID)) {
+            changeJob.accept("diner-ate", DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
+        if (BoardIdleExits.depositFinished(currentJob)) {
+            changeJob.accept("bop-deposited", DowntimeWork.getIdForRoot(currentJob.rootId()));
+            return true;
+        }
+        getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.JOB_POSSIBILITIES_COMPUTE).log(
+                "[board] {} {} stays: no branch applied", ownerVUID, currentJob
+        );
         return false;
     }
 
@@ -1024,7 +1132,41 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     public FlagTabsEmbedding.FlagInfo getInfo() {
         boolean hasIncomplete = quests.getAll().stream().anyMatch(q -> !q.isComplete());
-        return FlagTabsEmbedding.FlagInfo.withQuestNotification(getBlockPos(), bopCount > 0, hasIncomplete);
+        boolean questsTabAttention = hasIncomplete && seenQuests.hasUnseen(quests.incompleteQuestKeys());
+        // The villagers and economics tabs appear with the first villager.
+        boolean showVillagers = !getVillagers().isEmpty();
+        boolean showEcon = showVillagers;
+        return new FlagTabsEmbedding.FlagInfo(
+                getBlockPos(),
+                showVillagers,
+                true,
+                showEcon,
+                getBopCount() > 0,
+                questsTabAttention,
+                isBopFull(),
+                !givenBonusFood,
+                FlagTabsEmbedding.FlagInfo.villagersTabAttention(showVillagers, villagersTabSeen),
+                !bopWithdrawn
+        );
+    }
+
+    /** Whether the flag holds as many Blocks of Progress as it can. */
+    public boolean isBopFull() {
+        BlockState state = getBlockState();
+        return state.hasProperty(TownFlagBlock.BOP_FULL) && state.getValue(TownFlagBlock.BOP_FULL);
+    }
+
+    /** Brings the full-flag block state in line with the deposited Blocks of Progress. */
+    public void syncBopFull() {
+        setBopFull(getBopCount() >= TownFlagBOPItemHandler.CAP);
+    }
+
+    private void setBopFull(boolean value) {
+        ServerLevel level = getServerLevel();
+        if (level == null || !getBlockState().hasProperty(TownFlagBlock.BOP_FULL)) {
+            return;
+        }
+        level.setBlock(getBlockPos(), getBlockState().setValue(TownFlagBlock.BOP_FULL, value), Block.UPDATE_ALL);
     }
 
     public void ejectBlockOfProgress(ServerPlayer sender) {

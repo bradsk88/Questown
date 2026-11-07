@@ -31,6 +31,7 @@ package ca.bradj.questown.jobs.declarative;
  */
 
 import ca.bradj.questown.jobs.ItemsHolder;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
@@ -405,6 +406,12 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
 
     /** Whether the villager holds an item no state of this job uses: its work output. */
     @SuppressWarnings({"unchecked", "rawtypes"})
+    private boolean holdsWorkOutput(Dependencies<POS, ?, HELD_ITEM, ?, ROOM, MATCH, EXTRA, ?> deps) {
+        IntFunction ingredientsAt = deps::item;
+        IntFunction toolsAt = deps::tools;
+        HeldWorkOutput output = HeldWorkOutput.ofStates(maxState, ingredientsAt, toolsAt);
+        return output.anyOutput((Iterable) ((ItemsHolder) deps.getJournal()).getItems());
+    }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE> EntityInvStateProvider<Integer> defaultEntityInvProvider(

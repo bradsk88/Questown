@@ -25,20 +25,19 @@ public record GiveBOPMessage(BlockPos flagPos) {
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+            if (!(sender.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
                 return;
             }
-            flag.get().ejectBlockOfProgress(sender);
+            flag.ejectBlockOfProgress(sender);
+            flag.menus.showUI(sender, OpenFlagMenuMessage.BOP, flag.getInfo(), flag.getBlocksOfProgress());
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

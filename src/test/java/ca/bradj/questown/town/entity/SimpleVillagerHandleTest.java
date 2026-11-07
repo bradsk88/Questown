@@ -8,7 +8,10 @@ import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -16,6 +19,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 class SimpleVillagerHandleTest {
+
+    // The morning job change loads a diner class that needs vanilla bootstrapped.
+    @BeforeAll
+    static void bootstrap() {
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
 
     class TestSleepModule implements VillagerSleepModule<UUID> {
 
@@ -50,9 +60,14 @@ class SimpleVillagerHandleTest {
         List<String> logs = new ArrayList<>();
         List<String> broadcast = new ArrayList<>();
         Map<UUID, String> names = new HashMap<>();
+        int changes = 0;
         Map<UUID, Boolean> dining = new HashMap<>();
+        JobID overnightOverride = null;
+        List<JobID> unlocked = new ArrayList<>();
         List<UUID> discarded = new ArrayList<>();
         List<UUID> removedEntities = new ArrayList<>();
+        ImmutableList<JobID> defaultWork = ImmutableList.of();
+        List<JobID> starterRequestsPosted = new ArrayList<>();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
 
         @Override
@@ -133,7 +148,7 @@ class SimpleVillagerHandleTest {
 
         @Override
         public Optional<JobID> getOvernightJobOverride() {
-            return Optional.empty();
+            return Optional.ofNullable(overnightOverride);
         }
 
         @Override
@@ -161,7 +176,6 @@ class SimpleVillagerHandleTest {
                 UUID v,
                 int ticks
         ) {
-
         }
 
         @Override
@@ -174,7 +188,17 @@ class SimpleVillagerHandleTest {
                 UUID v,
                 JobID newJob
         ) {
+            unlocked.add(newJob);
+        }
 
+        @Override
+        public ImmutableList<JobID> getDefaultWork(JobID root) {
+            return defaultWork;
+        }
+
+        @Override
+        public void postStarterRequests(JobID root) {
+            starterRequestsPosted.add(root);
         }
 
         @Override
@@ -360,6 +384,7 @@ class SimpleVillagerHandleTest {
         }
         Assertions.assertTrue(handle.isStarving(villager));
     }
+
     @Test
     public void testTickHungerShouldNotifyHungerListenerAfterTenTicksIfInitializedToZeroFullness() {
         TestDelegator t = new TestDelegator();
@@ -375,7 +400,8 @@ class SimpleVillagerHandleTest {
                         100,
                         0.5f,
                         100,
-                        100
+                        100,
+                        23000
                 )
         );
         UUID villager = UUID.randomUUID();
@@ -413,7 +439,8 @@ class SimpleVillagerHandleTest {
                         100,
                         0.5f,
                         100,
-                        100
+                        100,
+                        23000
                 )
         );
         UUID villager = UUID.randomUUID();
@@ -495,6 +522,34 @@ class SimpleVillagerHandleTest {
         );
     }
 
+    @Test
+    public void scheduleJobRootChange_withGuarantee_forcesThatRootOnMorning() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+        Assertions.assertTrue(
+                handle.isJobChangePending(v),
+                "a non-instant root change marks the pending flag"
+        );
+
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                1, t.jobChanges.size(),
+                "exactly one job change applied at morning"
+        );
+        Assertions.assertEquals(
+                guarantee, t.jobChanges.get(0),
+                "the guaranteed root is applied even though the never-empty override/shuffle would not find it"
+        );
+        Assertions.assertTrue(
+                handle.getGuaranteedRoots().isEmpty(),
+                "the guarantee is consumed once applied"
+        );
+    }
 
     @Test
     public void register_replacesACopyThatLeftTheWorld() {
@@ -528,6 +583,204 @@ class SimpleVillagerHandleTest {
         Assertions.assertSame(recovered, handle.entities().iterator().next(), "the live (warped) copy stays listed");
         Assertions.assertEquals(1, t.discarded.size(), "the late duplicate is discarded");
         Assertions.assertSame(lateChunkCopy, t.discarded.get(0));
+    }
+
+    @Test
+    public void morningRootChange_unlocksTheNewRootsDefaultWork() {
+        // A cook made with a Block of Progress gets its root's starting jobs.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        JobID fuel = new JobID("cook", "fuel");
+        JobID mutton = new JobID("cook", "mutton");
+        t.defaultWork = ImmutableList.of(extract, fuel, mutton);
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(extract));
+        handle.handleMorning(0);
+
+        Assertions.assertTrue(
+                t.unlocked.containsAll(List.of(extract, fuel, mutton)),
+                "every default job of the new root is unlocked, got " + t.unlocked
+        );
+    }
+
+    @Test
+    public void morningRootChange_postsTheNewRootsStarterRequests() {
+        // And the food request on the board.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(extract));
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(List.of(extract), t.starterRequestsPosted);
+    }
+
+    @Test
+    public void assignJob_makesTheSameWorkerAsARootChange() {
+        // Assigning a job does what a Block of Progress job change does.
+        TestDelegator t = new TestDelegator();
+        JobID extract = new JobID("cook", "extract");
+        JobID fuel = new JobID("cook", "fuel");
+        JobID mutton = new JobID("cook", "mutton");
+        t.defaultWork = ImmutableList.of(extract, fuel, mutton);
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.assignJob(v, mutton, 0);
+
+        Assertions.assertTrue(
+                t.unlocked.containsAll(List.of(extract, fuel, mutton)),
+                "every default job of the root is unlocked, got " + t.unlocked
+        );
+        Assertions.assertEquals(List.of(mutton), t.jobChanges);
+        Assertions.assertEquals(List.of(mutton), t.starterRequestsPosted);
+    }
+
+    @Test
+    public void scheduleJobRootChange_guaranteeBeatsOvernightOverride() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                guarantee, t.jobChanges.get(0),
+                "a blessed BOP's guarantee applies before the overnight quest override"
+        );
+    }
+
+    @Test
+    public void scheduleJobRootChange_noGuarantee_fallsBackToOvernightOverride() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+        handle.handleMorning(0);
+        Assertions.assertEquals(
+                t.overnightOverride, t.jobChanges.get(0),
+                "with no guarantee, the overnight override still applies"
+        );
+    }
+
+    @Test
+    public void plainSchedule_replacesAStaleGuarantee() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        handle.scheduleJobRootChange(v, 0, false, Optional.of(new JobID("hunter", "hunter")));
+        Assertions.assertFalse(handle.getGuaranteedRoots().isEmpty());
+        handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+        Assertions.assertTrue(
+                handle.getGuaranteedRoots().isEmpty(),
+                "re-scheduling without a guarantee replaces the stale one"
+        );
+    }
+
+    // The job is rolled at the spend; the morning applies it.
+
+    @Test
+    public void scheduleJobRootChange_blessedSpend_returnsGuaranteeAsPendingRoot() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+        JobID guarantee = new JobID("hunter", "hunter");
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, false, Optional.of(guarantee));
+
+        Assertions.assertEquals(
+                Optional.of(guarantee), pending,
+                "a blessed spend decides its guaranteed root at the spend moment"
+        );
+    }
+
+    @Test
+    public void scheduleJobRootChange_ordinarySpend_noCandidateRoots_storesNothing() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        handle.register(v);
+
+        Optional<JobID> pending = handle.scheduleJobRootChange(v, 0, false, Optional.empty());
+
+        Assertions.assertTrue(
+                pending.isEmpty(),
+                "with no candidate root the spend decides nothing (morning re-roll remains)"
+        );
+        Assertions.assertTrue(handle.getPreRolls().isEmpty(), "no pre-roll is stored");
+        Assertions.assertTrue(
+                handle.isJobChangePending(v),
+                "the change is still pending for the morning"
+        );
+    }
+
+    @Test
+    public void handleMorning_appliesStoredPreRoll() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        JobID preRoll = new JobID("cook", "cook");
+
+        // Set up as a saved spend would be.
+        handle.initialize(
+                Map.of(v, 10), Map.of(),
+                ImmutableMap.of(), ImmutableMap.of(),
+                ImmutableMap.of(v, true), true,
+                ImmutableMap.of(),
+                ImmutableMap.of(v, preRoll)
+        );
+        handle.register(v);
+
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(1, t.jobChanges.size(), "exactly one job change applied at morning");
+        Assertions.assertEquals(
+                preRoll, t.jobChanges.get(0),
+                "the root decided at the spend moment is applied at morning"
+        );
+        Assertions.assertTrue(handle.getPreRolls().isEmpty(), "the pre-roll is consumed once applied");
+    }
+
+    @Test
+    public void handleMorning_overnightOverrideBeatsStoredPreRoll() {
+        TestDelegator t = new TestDelegator();
+        t.overnightOverride = new JobID("gatherer", "gatherer");
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID v = UUID.randomUUID();
+        JobID preRoll = new JobID("cook", "cook");
+
+        handle.initialize(
+                Map.of(v, 10), Map.of(),
+                ImmutableMap.of(), ImmutableMap.of(),
+                ImmutableMap.of(v, true), true,
+                ImmutableMap.of(),
+                ImmutableMap.of(v, preRoll)
+        );
+        handle.register(v);
+
+        handle.handleMorning(0);
+
+        Assertions.assertEquals(1, t.jobChanges.size());
+        Assertions.assertEquals(
+                t.overnightOverride, t.jobChanges.get(0),
+                "the tutorial override still beats the pre-roll at dawn (blessed > override > pre-roll)"
+        );
     }
 
     // Rest is earned by working.
@@ -669,4 +922,5 @@ class SimpleVillagerHandleTest {
                 "rested long enough with truly no work -> rest instead of idling forever"
         );
     }
+
 }

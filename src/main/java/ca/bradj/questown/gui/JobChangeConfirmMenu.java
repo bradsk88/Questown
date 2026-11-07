@@ -32,6 +32,12 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return menus.changeMenu;
     }
 
+    public record FlagBop(int count) {
+        public static final FlagBop NONE = new FlagBop(0);
+    }
+
+    private final FlagBop flagBop;
+
     public <S extends IStatus<S>> JobChangeConfirmMenu(
             int windowId,
             Container gathererInv,
@@ -42,6 +48,7 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
             boolean alreadyPending
     ) {
         super(MenuTypesInit.CONFIRM_JOB_CHANGE.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
+        this.flagBop = flagBop;
         gathererInventoryYOffset = 8;
         this.jobId = jobId;
         layoutSlots(gathererInv);
@@ -71,7 +78,21 @@ public class JobChangeConfirmMenu extends AbstractTabbedVillagerMenu implements 
         return false;
     }
 
-    public boolean isBlessed() {
-        return tx.hasBlockOfProgress() && tx.isBlessed();
+    /** The job an open onboarding job-change quest promises, if any. */
+    public Optional<String> getPromisedRoot() {
+        return promisedRoot.isEmpty() ? Optional.empty() : Optional.of(promisedRoot);
+    }
+
+    /** True when the slot is empty and the flag has a Block of Progress to spend. */
+    public boolean usesFlagBop() {
+        return !tx.hasBlockOfProgress() && flagBop.count() > 0;
+    }
+
+    public boolean hasBlockOfProgress() {
+        return tx.hasBlockOfProgress() || usesFlagBop();
+    }
+
+    public int flagBopCount() {
+        return flagBop.count();
     }
 }

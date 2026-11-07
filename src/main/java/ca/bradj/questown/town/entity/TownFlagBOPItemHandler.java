@@ -9,10 +9,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import ca.bradj.questown.loader.ItemHandler;
 import org.jetbrains.annotations.NotNull;
 
-public class TownFlagBOPItemHandler implements IItemHandler {
+import java.util.function.Consumer;
+
+public class TownFlagBOPItemHandler implements ItemHandler {
+
+    /** The most Blocks of Progress the flag holds; more are lost. */
+    public static final int CAP = 64;
 
     private final TownFlagBlockEntity town;
 
@@ -24,14 +29,19 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             TownFlagBlockEntity flag,
             ServerPlayer recipient
     ) {
-        flag.bopCount--;
+        // The oldest deposit comes out first.
+        if (flag.bopStacks.isEmpty()) {
+            return;
+        }
+        ItemStack v = flag.bopStacks.remove(0);
+        flag.markBopWithdrawn();
         flag.setChanged();
-        ItemStack v = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
+        flag.syncBopFull();
         BlockPos bp = flag.getTownFlagBasePos();
         flag.messages.broadcastMessage(
                 "messages.player.took_bop",
                 recipient.getName(),
-                ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
+                Compat.getItemName(v),
                 Util.getTinyString(bp)
         );
         if (recipient.getInventory().add(v)) {
@@ -47,15 +57,15 @@ public class TownFlagBOPItemHandler implements IItemHandler {
 
     @Override
     public int getSlots() {
-        return 64;
+        return CAP;
     }
 
     @Override
     public @NotNull ItemStack getStackInSlot(int i) {
-        if (i >= town.bopCount) {
+        if (i >= town.getBopCount()) {
             return ItemStack.EMPTY;
         }
-        return new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get());
+        return town.bopStacks.get(i);
     }
 
     @Override
@@ -64,16 +74,36 @@ public class TownFlagBOPItemHandler implements IItemHandler {
             @NotNull ItemStack itemStack,
             boolean simulate
     ) {
+        if (itemStack.isEmpty()) {
+            // An empty stack is not a deposit.
+            return itemStack;
+        }
         if (!isItemValid(i, itemStack)) {
             return itemStack;
         }
-        itemStack.shrink(1);
-        if (!simulate) {
-            town.bopCount++;
-            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.bopCount);
+        return depositOne(itemStack, simulate, stored -> {
+            town.bopStacks.add(stored);
+            town.syncBopFull();
+            QT.FLAG_LOGGER.debug("Flag now contains {} BOPs", town.getBopCount());
+            // One message with a line break, since two would arrive 100 ticks apart.
             town.messages.broadcastMessage("messages.bop.earned");
+        });
+    }
+
+    /** Takes one item off {@code from} and stores a copy of it. Returns what is left of {@code from}. */
+    static ItemStack depositOne(
+            ItemStack from,
+            boolean simulate,
+            Consumer<ItemStack> store
+    ) {
+        // Copy before shrinking, or the copy is empty.
+        ItemStack stored = ca.bradj.questown.mc.Compat.copyWithCount(from, 1);
+        if (simulate) {
+            return ca.bradj.questown.mc.Compat.copyWithCount(from, from.getCount() - 1);
         }
-        return itemStack;
+        from.shrink(1);
+        store.accept(stored);
+        return from;
     }
 
     @Override
@@ -99,9 +129,17 @@ public class TownFlagBOPItemHandler implements IItemHandler {
         if (i >= getSlots()) {
             return false;
         }
-        if (i < town.bopCount) {
+        if (i < town.getBopCount()) {
             return false;
         }
         return itemStack.is(ItemsInit.BLOCK_OF_PROGRESS.get());
+    }
+    @Override
+    public void setStackInSlot(int slot, @NotNull ItemStack stack) {
+        throw new UnsupportedOperationException("BOP handler is deposit-only; setStackInSlot is not supported.");
+    }
+
+    @Override
+    public void setChanged() {
     }
 }

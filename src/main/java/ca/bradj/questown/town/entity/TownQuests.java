@@ -503,6 +503,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 return Tutorial.SKIPPED;
             }
             addQuestsForJobChangeAndFood(view);
+            // This batch has the first room upgrade, so open the upgrades lesson.
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
         }
@@ -1201,6 +1203,40 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                 batch.markRecipeAsComplete(null, q.getWantedId());
             }
         }
+    }
+
+    /** Completes the villager's job-change quest at the spend, if its job matches the decided one and it isn't another villager's. */
+    public boolean markJobChangeCompleteAtSpend(
+            VillagerUUID villager,
+            JobID pendingRoot
+    ) {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() != Quest.QuestType.JOB_CHANGE || q.isComplete()) {
+                    continue;
+                }
+                JobID wantedJobId = JobID.fromRL(q.getWantedId());
+                boolean matches = wantedJobId.equals(pendingRoot) || wantedJobId.sameRoot(pendingRoot);
+                if (!matches) {
+                    continue;
+                }
+                VillagerUUID owner = q.getOwner();
+                if (owner != null && !owner.equals(villager)) {
+                    continue;
+                }
+                q.setOwner(villager);
+                batch.setOwner(villager);
+                batch.markRecipeAsComplete(null, q.getWantedId());
+                QT.QUESTS_LOGGER.info(
+                        "JOB_CHANGE quest {} completed at BOP spend for {} (pending root {})",
+                        q.getWantedId(),
+                        villager,
+                        pendingRoot
+                );
+                return true;
+            }
+        }
+        return false;
     }
 
     public void processConcurrentJobs(ImmutableMap<VillagerUUID, JobID> villagerJobs) {

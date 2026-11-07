@@ -44,6 +44,19 @@ import java.util.stream.Stream;
 
 public class DeclarativeJobs {
 
+    /** Reads records as a job with {@code maxState} does: one out of range belongs to another job and reads as fresh. A missing record stays missing. */
+    static <P> Function<P, @Nullable State> inRange(
+            Function<P, @Nullable State> raw,
+            int maxState
+    ) {
+        return pos -> {
+            State s = raw.apply(pos);
+            if (s != null && s.processingState() > maxState) {
+                return State.freshAtState(0);
+            }
+            return s;
+        };
+    }
     public static final IProductionStatusFactory<ProductionStatus> STATUS_FACTORY = new IProductionStatusFactory<>() {
         @Override
         public ProductionStatus fromJobBlockState(int s) {

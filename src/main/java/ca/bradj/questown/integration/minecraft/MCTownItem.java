@@ -1,6 +1,7 @@
 package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.core.init.TagsInit;
+import ca.bradj.questown.items.BlockOfProgressItem;
 import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableSet;
@@ -82,6 +83,11 @@ public class MCTownItem implements ca.bradj.questown.jobs.Item<MCTownItem> {
     @Override
     public boolean isFood() {
         return Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(new ItemStack(item));
+    }
+
+    @Override
+    public boolean isBlockOfProgress() {
+        return item instanceof BlockOfProgressItem;
     }
 
     public Item get() {

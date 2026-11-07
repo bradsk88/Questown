@@ -19,7 +19,9 @@ import ca.bradj.questown.town.quests.Completable;
 import ca.bradj.questown.town.quests.Reward;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
+import com.mojang.math.Vector3f;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -267,6 +269,10 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }
+
+    // The flag sparkles cyan while it holds Blocks of Progress.
+    private static final DustParticleOptions CYAN_SPARKLE =
+            new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);
 
     private void spawnBopParticlesIfNeeded(ServerLevel sl, BlockPos pos, TownFlagBlockEntity e) {
         if (e.bopCount <= 0) {

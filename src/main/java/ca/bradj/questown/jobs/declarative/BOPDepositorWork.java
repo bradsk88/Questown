@@ -47,6 +47,8 @@ public class BOPDepositorWork {
             Items.AIR.getDefaultInstance()
     );
     public static final int PAUSE_FOR_ACTION = 1;
+    /** The deposit walks to storage and then to the flag, so it gets the production jobs' time limit. */
+    public static final long MAX_TICKS = 3000L;
 
     public static Work asWork(
             String rootId
@@ -103,7 +105,7 @@ public class BOPDepositorWork {
                         () -> Long.MAX_VALUE,
                         () -> Long.MAX_VALUE,
                         jobId -> jobId,
-                        Compat.configGet(Config.MAX_TICKS_WITHOUT_DINING_TABLE),
+                        () -> MAX_TICKS,
                         WorkSeekerJob::getIDForRoot
                 )
         );

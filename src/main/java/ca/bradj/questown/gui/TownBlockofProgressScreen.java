@@ -17,10 +17,13 @@ import net.minecraft.world.item.ItemStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Map;
 
-public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlockofProgressMenu> {
+public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockofProgressMenu> {
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_MARGIN = 6;
     private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
@@ -41,17 +44,17 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         super.imageHeight = 220;
 
         this.background = JEI.getRecipeBackground();
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.blocks_of_progress");
     }
 
     @Override
     protected void init() {
         super.init();
-        this.unlockButton = this.addRenderableWidget(new Button(
-                0, 0, backgroundWidth - 8, 20, Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
-            Minecraft.getInstance().setScreen(null);
-        }));
+        this.unlockButton = this.addRenderableWidget(Compat.button(
+                Compat.translatable("menu.block_of_progress.take"), (p_96776_) -> {
+            p_96776_.active = false;
+            QuestownNetwork.sendToServer(new GiveBOPMessage(menu.getFlagInfo().flagPos()));
+        }, 0, 0, backgroundWidth - 8, BUTTON_HEIGHT));
     }
 
     @Override
@@ -68,24 +71,14 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
     }
 
     @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
+    protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        unlockButton.x = buttonX + 4;
+        unlockButton.y = buttonY;
+        unlockButton.visible = menu.blocksOfProgressCount > 0;
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        unlockButton.x = buttonX + 4;
-        unlockButton.y = buttonY;
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         bgY += 8;
@@ -93,14 +86,14 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
         int iconsX = (width / 2) - (8 * ct);
         for (int i = 0; i < ct; i++) {
             ItemStack defaultInstance = ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance();
-            RenderUtil.renderItemScaled(itemRenderer, 3, defaultInstance, iconsX + (16 * i), bgY + 2);
+            RenderUtil.renderItemScaled(Compat.itemRenderer(), 1.2f, defaultInstance, iconsX + (16 * i), bgY + 2);
         }
         bgY += 24;
-        renderText(poseStack, bgX, bgY);
+        renderText(ctx, bgX, bgY);
     }
 
     private void renderText(
-            PoseStack poseStack,
+            RenderContext ctx,
             int bgX,
             int bgY
     ) {
@@ -116,36 +109,56 @@ public class TownBlockofProgressScreen extends AbstractContainerScreen<TownBlock
                     menu.blocksOfProgressCount
             );
         }
-        bgY += Compat.drawDarkTextWrap(
-                font,
-                poseStack,
+        bgY += ctx.darkTextWrap(
                 topLeft.withY(bgY),
                 tWidth,
                 text
         );
         bgY += 8;
-        bgY += Compat.drawDarkTextWrap(
-                font,
-                poseStack,
+        // List the deposited Blocks of Progress by the job that earned them.
+        Map<String, Integer> byRoot = new java.util.LinkedHashMap<>();
+        for (String root : menu.bopRootJobs) {
+            if (!root.isEmpty()) {
+                byRoot.merge(root, 1, Integer::sum);
+            }
+        }
+        if (!byRoot.isEmpty()) {
+            String detail = byRoot.entrySet().stream()
+                    .map(e -> net.minecraft.client.resources.language.I18n.get("jobs." + e.getKey())
+                            + " \u00d7" + e.getValue())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            bgY += ctx.darkTextWrap(
+                    topLeft.withY(bgY),
+                    tWidth,
+                    Compat.translatable("menu.block_of_progress.earned_by", detail)
+            );
+            bgY += 8;
+        }
+        // A full flag loses any more Blocks of Progress, so warn in red.
+        if (menu.getFlagInfo().bopFull()) {
+            bgY += ctx.redTextWrap(
+                    topLeft.withY(bgY),
+                    tWidth,
+                    Compat.translatable("menu.block_of_progress.full")
+            );
+            bgY += 8;
+        }
+        bgY += ctx.darkTextWrap(
                 topLeft.withY(bgY),
                 tWidth,
                 Compat.translatable("menu.block_of_progress.many_uses")
         );
-        this.buttonY = bgY;
+        // Bottom-aligned, so the extra lines never move the button.
+        this.buttonY = (this.height - backgroundHeight) / 2 + backgroundHeight - BUTTON_HEIGHT - BUTTON_MARGIN;
         this.buttonX = bgX;
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        this.tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.tabs.draw(ctx, bgX, bgY);
     }
 
     @Override

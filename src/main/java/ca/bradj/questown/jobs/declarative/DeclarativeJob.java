@@ -1074,7 +1074,9 @@ public class DeclarativeJob extends
     @Override
     public Iterable<MCHeldItem> getItemsForDrop() {
         if (!FetcherHack.isFetcher(jobId)) {
-            return super.getItemsForDrop();
+            return HeldWorkOutput.<MCHeldItem, MCTownItem>ofStates(
+                    maxState, checks::getIngredientsForStep, checks::getToolsForStep
+            ).itemsToDrop(super.getItemsForDrop());
         }
         return FetcherHack.getItemsForDrop(super.getItemsForDrop(), successTarget);
     }
