@@ -620,6 +620,7 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
 
     /** The villager's name for chat: "Villager 1", or a shortened UUID. */
     private String chatName(UUID villagerUUID) {
+        String label = delegator.displayNameFor(villagerUUID);
         return label.isEmpty() ? UtilClean.truncateMiddle(villagerUUID) : label;
     }
 

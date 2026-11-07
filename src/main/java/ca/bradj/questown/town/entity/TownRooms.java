@@ -121,7 +121,10 @@ public class TownRooms implements
             if (recipe.isPresent()) {
                 name = Matches.getTopMatch(this::recipesFromLevel, recipe.get());
             }
-            entity.messages.roomCreated(name.orElse(null), doorPos);
+            // A matched room was already announced; only an unmatched one gets its own line.
+            if (name.isEmpty()) {
+                entity.messages.roomCreated(null, doorPos);
+            }
         }
     }
 

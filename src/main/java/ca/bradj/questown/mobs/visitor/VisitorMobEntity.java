@@ -842,8 +842,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         ListTag items = p_21450_.getList("items", Tag.TAG_COMPOUND);
         List<MCHeldItem> itemz = items
                 .stream()
-                .map(v -> ItemStack.of((CompoundTag) v))
-                .map(MCHeldItem::fromMCItemStack)
+                .map(v -> {
+                    CompoundTag tag = (CompoundTag) v;
+                    // An empty compound is an empty slot.
+                    ItemStack stack = tag.isEmpty()
+                            ? net.minecraft.world.item.ItemStack.EMPTY
+                            : ca.bradj.questown.mc.Compat.loadItem(getLevel(), tag);
+                    return MCHeldItem.fromMCItemStack(stack);
+                })
                 .toList();
         job.get().initializeItems(itemz);
         entityData.set(status, p_21450_.getString("status"));

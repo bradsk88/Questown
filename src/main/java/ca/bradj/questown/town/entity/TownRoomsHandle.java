@@ -7,6 +7,7 @@ import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.blocks.entity.BlockAsRoomEntity;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.core.UtilClean;
+import ca.bradj.questown.core.init.BlocksInit;
 import ca.bradj.questown.roomrecipes.Matches;
 import ca.bradj.questown.roomrecipes.Spaces;
 import ca.bradj.questown.town.UnsafeTown;
@@ -76,7 +77,13 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             return getBlockMetaRooms(t, blockRoom.get());
         }
         if (SpecialQuests.TOWN_GATE.equals(recipeId)) {
-            return getWelcomeMatMetaRooms(t);
+            java.util.Collection<RoomRecipeMatch<MCRoom>> gateOut = getWelcomeMatMetaRooms(t);
+            return gateOut;
+        }
+        if (SpecialQuests.JOB_BOARD.equals(recipeId)) {
+            // A placed job board registers as its own block room, so map the board quest to it.
+            return getBlockMetaRooms(t, RoomBlock.getRoomId(
+                    (RoomBlock) BlocksInit.JOB_BOARD_BLOCK.get()));
         }
         if (SpecialQuests.TOWN_FLAG.equals(recipeId)) {
             return ImmutableList.of(getFlagMetaRoom(t));
