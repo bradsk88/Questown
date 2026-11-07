@@ -21,22 +21,29 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
+public class WorkScreen extends CompatContainerScreen<TownWorkContainer> implements ScrollableScreen {
     private static final int backgroundWidth = 176;
-    private static final int backgroundHeight = 166;
+    // The bottom band holds the auto-request toggle.
+    private static final int backgroundHeight = 182;
     private static final int borderPadding = 6;
 
     private static final int buttonWidth = 13;
     private static final int buttonHeight = 13;
 
-    private static final int TEXT_COLOR = 0x404040;
+    private static final int TEXT_COLOR = 0xFF404040;
+    private static final int PAUSED_TEXT_COLOR = 0xFF8B8B8B;
 
     private static final int CARD_PADDING = 1;
     private static final int PAGE_PADDING = 10;
     private static final int CARD_WIDTH = (backgroundWidth) - (PAGE_PADDING * 2);
     private static final int CARD_HEIGHT = 42;
 
-    private static final int MAX_CARDS_PER_PAGE = (backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING);
+    // Cards sit between the page header and the toggle band, three per page.
+    private static final int CARDS_TOP = PAGE_PADDING * 3;
+    private static final int CHECKBOX_SIZE = 13;
+    private static final int TOGGLE_BAND = CHECKBOX_SIZE + borderPadding + 4;
+    private static final int MAX_CARDS_PER_PAGE =
+            (backgroundHeight - CARDS_TOP - TOGGLE_BAND) / (CARD_HEIGHT + CARD_PADDING);
 
     private final List<UIWork> work;
     private final JEI.NineNine background;
@@ -91,7 +98,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         addWorkScreen = new AddWorkScreen(menu.addWorkContainer, playerInv, title);
         this.addMoreBtn = JEI.guiIconButtonSmall(
                 btnX, 0, buttonWidth, buttonHeight, plusIcon, b -> addMoreWork()
-        );
+                );
     }
 
     @Override
@@ -115,7 +122,6 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
 
-    @Override
     public boolean mouseScrolled(
             double scrollX,
             double scrollY,
@@ -132,7 +138,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
                 return true;
             }
         }
-        return super.mouseScrolled(scrollX, scrollY, scrollDelta);
+        return false;
     }
 
     @Override
@@ -149,20 +155,12 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
     @Override
-    public void render(
-            PoseStack poseStack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        this.renderBackground(poseStack);
-        super.render(poseStack, mouseX, mouseY, partialTicks);
-
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = ((this.width - backgroundWidth) / 2);
         int y = (this.height - backgroundHeight) / 2;
         int pageStringY = y + PAGE_PADDING;
 
-        renderPageNum(poseStack, x);
+        renderPageNum(ctx, x);
 
         y = pageStringY + PAGE_PADDING;
 
@@ -172,6 +170,19 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         x = x + PAGE_PADDING;
         y = y + PAGE_PADDING;
 
+        if (work.isEmpty()) {
+            // An empty board explains requests, and points at the town's top missing item if it has one.
+            Coordinate emptyTop = new Coordinate(x, y + PAGE_PADDING);
+            int headlineHeight = ctx.darkTextWrap(emptyTop, backgroundWidth - (PAGE_PADDING * 2),
+                    Compat.translatable("job_board.empty.1"));
+            String topNeed = menu.getTopUnmetNeedName();
+            Component second = topNeed == null || topNeed.isEmpty()
+                    ? Compat.translatable("job_board.empty.2")
+                    : Compat.translatable("job_board.empty.top_need");
+            int hintY = emptyTop.y() + headlineHeight + (int) (font.lineHeight * 1.5);
+            ctx.darkTextWrap(emptyTop.withY(hintY), backgroundWidth - (PAGE_PADDING * 2),
+                    second);
+        }
 
         Compat.resetShaderColor();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
@@ -183,42 +194,64 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             if (jobPosting == null) {
                 continue;
             }
-            this.cardBackground.draw(poseStack, x, cardY, CARD_WIDTH, CARD_HEIGHT);
-            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            ctx.drawNineNine(this.cardBackground, x, cardY, CARD_WIDTH, CARD_HEIGHT);
+            Compat.resetShaderColor();
 
             int iconY = cardY + CARD_HEIGHT - 24;
-            ImmutableList<Slot> slotz = renderJobCardIcons(poseStack, jobPosting, x, iconY, mouseX, mouseY);
+            ImmutableList<Slot> slotz = renderJobCardIcons(ctx, jobPosting, x, iconY, mouseX, mouseY);
             b.addAll(slotz);
 
             int idX = x + PAGE_PADDING;
             int idY = iconY - 10;
-            this.font.draw(poseStack, Compat.translatable("job_board.default_name"), idX, idY, TEXT_COLOR);
+            // A paused request (storage holds enough) is greyed.
+            int nameColor = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
+            ctx.text(Ingredients.getName(jobPosting.getResultWanted().asIngredient()), idX, idY, nameColor, false);
 
-            int removeX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
-            this.font.drawShadow(
-                    poseStack,
-                    Compat.literal("x"),
-                    removeX + borderPadding - 1,
-                    iconY + borderPadding - 1,
-                    0xFFFFFF
+            // x top right, - and + bottom right.
+            int rightX = idX + CARD_WIDTH - (PAGE_PADDING * 2) - buttonWidth;
+            int removeY = idY - borderPadding + 1;
+            ctx.lightText(
+                    "x",
+                    rightX + borderPadding - 1,
+                    idY
             );
             highlightAndTooltip(
-                    poseStack,
+                    ctx,
                     mouseX,
                     mouseY,
-                    removeX,
-                    iconY,
+                    rightX,
+                    removeY,
                     Compat.translatable("job_board.remove_work")
             );
-            this.removes.put(new Position(removeX, iconY), () -> menu.sendRemoveRequest(jobPosting));
+            this.removes.put(new Position(rightX, removeY), () -> menu.sendRemoveRequest(jobPosting));
+
+            renderStockAndLimit(ctx, jobPosting, rightX, iconY, mouseX, mouseY);
         }
         slots.clear();
         slots.addAll(b.build());
 
         // Render the page buttons
-        this.addMoreBtn.render(poseStack, mouseX, mouseY, partialTicks);
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.addMoreBtn, mouseX, mouseY, partialTicks);
+
+        int panelTop = (this.height - backgroundHeight) / 2;
+        int tgX = x + PAGE_PADDING;
+        int tgY = panelTop + backgroundHeight - borderPadding - CHECKBOX_SIZE;
+        boolean on = menu.isBoardAutoRequest();
+        Component toggleLabel = Compat.translatable("job_board.auto_request");
+        // The box and the label both take the hover and the click.
+        int toggleWidth = CHECKBOX_SIZE + 4 + this.font.width(toggleLabel);
+        boolean hovered = mouseX >= tgX && mouseY >= tgY && mouseX < tgX + toggleWidth
+                && mouseY < tgY + CHECKBOX_SIZE;
+        ctx.checkbox(tgX, tgY, CHECKBOX_SIZE, on, hovered);
+        ctx.text(toggleLabel, tgX + CHECKBOX_SIZE + 4, tgY + (CHECKBOX_SIZE - 8) / 2, TEXT_COLOR, false);
+        if (hovered) {
+            this.showTooltip(
+                    Compat.translatable(on ? "job_board.auto_request.tooltip.on" : "job_board.auto_request.tooltip.off")
+            );
+        }
+        wideRegions.put(new Position(tgX, tgY), new WideRegion(toggleWidth, this::toggleAutoRequest));
+        ctx.renderWidget(this.previousPage, mouseX, mouseY, partialTicks);
+        ctx.renderWidget(this.nextPage, mouseX, mouseY, partialTicks);
     }
 
     private List<Slot> slots = new ArrayList<>();
@@ -229,7 +262,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         menu.sendLimitStep(jobPosting, delta);
     }
     private ImmutableList<Slot> renderJobCardIcons(
-            PoseStack poseStack,
+            RenderContext ctx,
             UIWork recipe,
             int x,
             int y,
@@ -242,9 +275,14 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
         int iconX = x + 8;
 
-        ItemStack itemStack = Ingredients.render(itemRenderer, ing, iconX, y);
+        ItemStack itemStack = Ingredients.representativeItemStack(ing);
         if (itemStack != null) {
-            highlightAndTooltip(poseStack, mouseX, mouseY, iconX, y, itemStack.getItem().getName(itemStack));
+            ctx.renderItemAndDecorations(itemStack, iconX, y);
+            Component name = itemStack.getItem().getName(itemStack);
+            Component tooltip = recipe.isStocked()
+                    ? Compat.translatable("job_board.request_stocked", Ingredients.getName(ing), recipe.getLimit())
+                    : name;
+            highlightAndTooltip(ctx, mouseX, mouseY, iconX, y, tooltip);
             Slot element = new Slot(dummyInv, 0, iconX, y + 1);
             element.set(itemStack);
             b.add(element);
@@ -253,7 +291,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
     private void highlightAndTooltip(
-            PoseStack poseStack,
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             int iconX,
@@ -262,9 +300,9 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     ) {
         if (mouseX >= iconX && mouseY >= iconY && mouseX < iconX + 16 && mouseY < iconY + 17) {
             // transparent white square behind hovered item slot
-            fill(poseStack, iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
+            ctx.fill(iconX, iconY + 1, iconX + 16, iconY + 17, 0x80FFFFFF);
             // render hovered item's name as a tooltip
-            renderTooltip(poseStack, tooltipText, mouseX, mouseY);
+            this.showTooltip(tooltipText);
         }
     }
 
@@ -295,55 +333,35 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     }
 
     private void renderPageNum(
-            PoseStack poseStack,
+            RenderContext ctx,
             int x
     ) {
         // Draw page numbers
-        fill(
-                poseStack,
+        ctx.fill(
                 x + borderPadding + buttonWidth,
                 nextPage.y,
                 x + backgroundWidth - borderPadding - buttonWidth,
                 nextPage.y + buttonHeight,
                 0x30000000
         );
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
         ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
     @Override
-    protected void renderBg(
-            PoseStack poseStack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        this.background.draw(poseStack, x, y, backgroundWidth, backgroundHeight);
-    }
-
-    private void renderSlot(
-            PoseStack poseStack,
-            Slot slot,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
-        ItemStack stack = slot.getItem();
-        if (!stack.isEmpty()) {
-            this.minecraft.getItemRenderer().renderGuiItem(stack, slot.x, slot.y);
-            this.minecraft.getItemRenderer().renderGuiItemDecorations(this.font, stack, slot.x, slot.y, "");
-        }
+        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
     }
 
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) work.size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }
@@ -357,6 +375,13 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
 
     private void addMoreWork() {
         this.minecraft.setScreen(addWorkScreen);
+    }
+
+    private void toggleAutoRequest() {
+        // Flip at once; the server re-opens the board with the real state.
+        boolean next = !menu.isBoardAutoRequest();
+        menu.setBoardAutoRequest(next);
+        menu.sendToggleBoardAutoRequest();
     }
 
     @Override

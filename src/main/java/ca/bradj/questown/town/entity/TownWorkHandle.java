@@ -69,7 +69,11 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         nextTick.add(sl -> {
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
-                QT.FLAG_LOGGER.error("Registered job board was not found in world at {}", matPos);
+                // A registration with no board (it was broken): log it; it drops out at the next save.
+                QT.FLAG_LOGGER.info(
+                        "Job board registration at {} no longer matches a board in the world; dropping stale entry",
+                        matPos
+                );
                 return;
             }
 
@@ -110,7 +114,10 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
         BlockPos flagPos = parent.getTownFlagBasePos();
         WorksBehaviour.TownData td = parent.getTownData();
-        ImmutableSet<Ingredient> allOutputs = ServerJobsRegistry.getAllOutputs(td);
+        ImmutableSet<Ingredient> producible = ServerJobsRegistry.getAllOutputs(td, parent.getVillagerHandle()::isUnlocked);
+        List<ResourceLocation> categories = offeredCategories(producible);
+        ImmutableSet<Ingredient> allOutputs = ImmutableSet.copyOf(RequestCategories.withoutCategories(
+                producible, TownWorkHandle::tagOf, categories));
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
@@ -124,18 +131,26 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                             @NotNull Inventory inv,
                             @NotNull Player p
                     ) {
-                        AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, flagPos);
+                        AddWorkContainer r = new AddWorkContainer(windowId, allOutputs, categories, flagPos);
+                        // With no requests, send the top missing item for the empty board's hint.
+                        String topNeed = requestedResults.isEmpty()
+                                ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
+                                : "";
                         return new TownWorkContainer(
-                                windowId, requestedResults.stream().map(UIWork::new).toList(), r,
-                                flagPos, skipToAdd
+                                windowId, requestedResults.stream().map(w -> new UIWork(w, stocked.contains(w), stockOf(w), limits.get(w))).toList(), r,
+                                flagPos, skipToAdd, parent.isBoardAutoRequest(), topNeed
                         );
                     }
                 }, data -> {
                     AddWorkContainer.writeWorkResults(allOutputs, data);
                     AddWorkContainer.writeFlagPosition(flagPos, data);
-                    TownWorkContainer.writeWork(requestedResults, data);
+                    TownWorkContainer.writeWork(requestedResults, stocked, this::stockOf, limits::get, data);
                     TownWorkContainer.writeFlagPosition(flagPos, data);
                     data.writeBoolean(skipToAdd);
+                    data.writeBoolean(parent.isBoardAutoRequest());
+                    data.writeUtf(requestedResults.isEmpty()
+                            ? (parent.topUnmetNeedName() == null ? "" : parent.topUnmetNeedName())
+                            : "");
                 }
         );
     }
@@ -159,11 +174,23 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     @Override
     public void requestWork(WorkRequest e) {
-        this.requestedResults.add(e);
+        // A request already on the board isn't added again.
+        if (requestedResults.contains(e)) {
+            QT.FLAG_LOGGER.debug("Request already on the board, not duplicated: {}", e);
+            return;
+        }
+        // New requests go on top.
+        requestedResults.add(0, e);
         this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
     }
 
+    void restoreRequest(WorkRequest e) {
+        if (requestedResults.contains(e)) {
+            return;
+        }
+        requestedResults.add(e);
+    }
     @Override
     public void removeWorkRequest(WorkRequest of) {
         this.requestedResults.remove(of);
