@@ -166,18 +166,22 @@ public class TownFlagState {
             return storedState;
         }
 
-        ticksPassed = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
-
-        ticksPassed = Signals.calculateProductiveTicks(dayTime, ticksPassed);
-        if (ticksPassed <= 0) {
-            QT.FLAG_LOGGER.info("Time warp contained no productive ticks (all nighttime)");
-            return storedState;
+        // Villagers work on the working budget; world processes run on the full clock.
+        long wallClockTicks = Math.min(ticksPassed, Config.TIME_WARP_MAX_TICKS.get());
+        long productiveTicks = Signals.calculateProductiveTicks(dayTime, wallClockTicks);
+        Signals.ProductiveWallClockTimeline timeline =
+                Signals.buildProductiveWallClockTimeline(dayTime, wallClockTicks);
+        if (productiveTicks <= 0) {
+            QT.FLAG_LOGGER.info(
+                    "Time warp window is all night ({} wall-clock ticks): running passive effects only",
+                    wallClockTicks
+            );
         }
 
         // Create Work implementation that bridges to entity methods
         Work w = createWork(e, sl);
 
-        // Collect real room block positions for warp rules
+        // Room block positions for the warp rules, walls included.
         ImmutableList.Builder<BlockPos> roomPosBuilder = ImmutableList.builder();
         for (MCRoom room : e.roomsHandle.getAllRoomsIncludingMetaAndFarms()) {
             room.getSpaces().stream()
@@ -209,8 +213,10 @@ public class TownFlagState {
                 new MCAdvanceTime(Config.MAX_DOWNTIME_TICKS.get());
         MCAdvanceTime.Result<MCTownState> result = advancer.advanceTime(
                 storedState,
-                ticksPassed,
+                productiveTicks,
+                wallClockTicks,
                 dayTime,
+                timeline::wallClockOffsetAt,
                 ImportantTicks.adaptWork(w),
                 MCAdvanceTime.createWarperFactory(w, e.getBlockPos(), roomPositions, warpWorld),
                 null, // cookResolver - not yet implemented
@@ -324,6 +330,17 @@ public class TownFlagState {
         };
     }
 
+    /** Grants the XP the warp recorded, once, after the villagers are back. One grant per villager, so a warp levels a villager at most once. */
+    private static void grantWarpExperience(TownFlagBlockEntity e, MCTownState state) {
+        Map<UUID, Integer> earned = state.recordedExperience();
+        if (earned.isEmpty()) {
+            return;
+        }
+        earned.forEach((uuid, xp) -> e.getVillagerHandle().addExperience(uuid, xp));
+        QT.FLAG_LOGGER.info("[warp] experience granted: {}", earned);
+        state.clearRecordedExperience();
+    }
+
     static void recoverMobs(
             TownFlagBlockEntity e,
             ServerLevel sl
@@ -376,8 +393,16 @@ public class TownFlagState {
         }
 
         long start = System.currentTimeMillis();
-        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long gt = level.getDayTime();
+        if (!flagTag.contains(NBT_TIME_WARP_REFERENCE_TICK)) {
+            // A new flag's first tick: start the clock here, rather than warping through the whole world age.
+            flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            this.initialized = true;
+            this.lastTickWallMs = System.currentTimeMillis();
+            profileTick(start);
+            return false;
+        }
+        long lastTick = flagTag.getLong(NBT_TIME_WARP_REFERENCE_TICK);
         long timeSinceWake = Math.max(
                 0,
                 gt - lastTick
@@ -385,13 +410,33 @@ public class TownFlagState {
         boolean waking = timeSinceWake > 10 || !initialized;
         this.initialized = true;
 
+        long nowMs = System.currentTimeMillis();
+        // The flag was ticking a moment ago, so the town was awake: a time jump is a sleep or /time set, not an absence.
+        boolean townAwake = lastTickWallMs != 0 && (nowMs - lastTickWallMs) < 5000;
+        this.lastTickWallMs = nowMs;
+
         if (waking) {
-            warp(e, flagTag, level, timeSinceWake);
+            if (townAwake) {
+                flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+            } else {
+                // A real absence: catch up the daytime only; villagers sleep at night.
+                long warpTicks = daytimeTicks(lastTick, gt);
+                if (warpTicks > 10) {
+                    warp(e, flagTag, level, warpTicks, timeSinceWake);
+                } else {
+                    flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
+                }
+                runMissedMorning(e, lastTick, gt, level.getGameTime());
+            }
         } else {
             flagTag.putLong(NBT_TIME_WARP_REFERENCE_TICK, gt);
         }
 
-        // TODO[Performance]: Run less often?
+        if (!isDueForContainerScan()) {
+            profileTick(start);
+            return false;
+        }
+
         Iterator<ContainerTarget<MCContainer, MCTownItem>> matchIter = TownContainers.findAllContainersMatching(
                 e,
                 item -> true
@@ -403,11 +448,34 @@ public class TownFlagState {
         return changes;
     }
 
+    /** Runs the one morning a flag that wasn't ticking missed, after the catch-up warp. */
+    private void runMissedMorning(TownFlagBlockEntity e, long lastTick, long now, long gameTime) {
+        if (!ca.bradj.questown.town.MissedMorning.missedDuringAbsence(lastTick, now)) {
+            return;
+        }
+        QT.FLAG_LOGGER.info("Running the morning the town slept through while no player was near (from {} to {})", lastTick, now);
+        e.morningTick(gameTime);
+    }
+
     MCTownState warp(
             TownFlagBlockEntity e,
             CompoundTag flagTag,
             ServerLevel level,
             long timeSinceWake
+    ) {
+        return warp(e, flagTag, level, timeSinceWake, timeSinceWake);
+    }
+
+    /**
+     * @param warpTicks    the ticks of work to simulate
+     * @param elapsedTicks the real time passed, for the "while you were away" summary
+     */
+    MCTownState warp(
+            TownFlagBlockEntity e,
+            CompoundTag flagTag,
+            ServerLevel level,
+            long warpTicks,
+            long elapsedTicks
     ) {
         long levelDayTime = level.getDayTime();
 
@@ -416,15 +484,20 @@ public class TownFlagState {
 
         MCTownState newState = null;
         try {
-            newState = TownFlagState.advanceTime(parent, level, timeSinceWake);
+            newState = TownFlagState.advanceTime(parent, level, warpTicks);
             if (newState != null) {
+                for (MCHeldItem extracted : newState.recordedLootExtractions()) {
+                    e.getQuestHandle().processLootQuests(extracted.get());
+                }
+                newState.clearRecordedLootExtractions();
                 e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Storing state on {}: {}", e.getUUID(), newState);
                 Compat.getBlockStoredTagData(e).put(NBT_TOWN_STATE, TownStateSerializer.INSTANCE.store(newState));
                 TownFlagState.recoverMobs(parent, level);
+                grantWarpExperience(parent, newState);
                 TownFlagState.restoreWarpVisuals(level, newState);
                 parent.getKnowledgeHandle().registerFoundLoots(newState.knowledge());
 
-                sendWarpSummary(e, level, timeSinceWake, beforeItems);
+                sendWarpSummary(e, level, elapsedTicks, beforeItems);
             }
         } catch (Exception ex) {
             if (Config.CRASH_ON_FAILED_WARP.get()) {
@@ -519,7 +592,7 @@ public class TownFlagState {
         }
 
         long daysAway = timeSinceWake / 24000;
-        String dayStr = daysAway == 1 ? "1 day" : daysAway + " days";
+        String dayStr = ca.bradj.questown.town.AwayDuration.describe(timeSinceWake);
 
         StringBuilder items = new StringBuilder();
         int count = 0;
@@ -549,6 +622,26 @@ public class TownFlagState {
             );
         }
     }
+
+    /** Ticks in {@code [from, to)} that fall in the working day, {@code [0, 12000)}. */
+    static long daytimeTicks(long from, long to) {
+        if (to <= from) {
+            return 0;
+        }
+        long total = 0;
+        long startDay = Math.floorDiv(from, 24000L);
+        long endDay = Math.floorDiv(to - 1, 24000L);
+        for (long d = startDay; d <= endDay; d++) {
+            long segStart = Math.max(from, d * 24000L);
+            long segEnd = Math.min(to, d * 24000L + 12000L);
+            if (segEnd > segStart) {
+                total += segEnd - segStart;
+            }
+        }
+        return total;
+    }
+
+    private long lastTickWallMs;
 
     private void profileTick(long startTime) {
         if (Config.TICK_SAMPLING_RATE.get() > 0) {
@@ -583,11 +676,11 @@ public class TownFlagState {
                 QT.FLAG_LOGGER.error("Entity is null at {}, but was expected to be a container", bp);
                 continue;
             }
-            LazyOptional<IItemHandler> cap = entity.getCapability(Compat.itemHandler());
-            if (!cap.isPresent()) {
+            Optional<ItemHandler> opt = Loader.handlerOf(entity);
+            if (opt.isEmpty()) {
                 continue;
             }
-            int newValue = determineValue(cap.resolve().get());
+            int newValue = determineValue(opt.get());
             if (listenedBlocks.containsKey(bp)) {
                 Integer oldValue = listenedBlocks.get(bp);
                 if (!oldValue.equals(newValue)) {

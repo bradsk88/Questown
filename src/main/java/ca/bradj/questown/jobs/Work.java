@@ -158,6 +158,7 @@ public class Work {
                 specialGlobalRules
         );
         work.experience = experience;
+        return work;
     }
 
     public @Nullable ResourceLocation applyStatusTextureOverride(IStatus<?> status) {
@@ -216,6 +217,11 @@ public class Work {
 
     public Warper<ServerLevel, MCTownState> warper(WorksBehaviour.WarpInput input) {
         return warper.apply(input.withSlotPrecondition(slotPrecondition));
+    }
+
+    /** Whether this job's block is at {@code pos}, by block and properties only, whatever the block currently holds. */
+    public boolean isJobBlockAt(WorkLocation.BlockInfo blockInfo, BlockPos pos) {
+        return shouldInitializeWorkState.test(blockInfo, pos);
     }
 
 }

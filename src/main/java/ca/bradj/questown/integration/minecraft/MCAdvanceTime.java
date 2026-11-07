@@ -77,6 +77,7 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
 
     @Override
     protected MCTownState finalizeState(MCTownState state, long currentTick) {
+        // Keep the LOOT extractions and XP recorded during the warp.
         return new MCTownState(
                 state.villagers,
                 state.containers,
@@ -85,7 +86,10 @@ public class MCAdvanceTime extends AbstractAdvanceTime<
                 state.gates,
                 state.knowledge(),
                 state.blocksOfProgress,
-                currentTick
+                currentTick,
+                com.google.common.collect.ImmutableMap.of(),
+                new java.util.ArrayList<>(state.recordedLootExtractions()),
+                new java.util.HashMap<>(state.recordedExperience())
         );
     }
 }

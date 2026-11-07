@@ -30,7 +30,8 @@ public class SpecialRules {
     // "work" on that spot until they have finished their work, and then they will
     // "release" to plate for others to use. Other villagers will try to claim other
     // plates - ignoring claimed ones.
-    public static final String CLAIM_SPOT = "claim_spot";
+    // The job data spells this rule "claim_workspot".
+    public static final String CLAIM_SPOT = "claim_workspot";
 
     // If this rule is enabled, the villager will scan the blocks BELOW the job block
     // first, if there are any valid interaction spots on that level, they will navigate

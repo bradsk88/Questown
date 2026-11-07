@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs.declarative;
 
+import ca.bradj.questown.jobs.JobExperience;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.JobBlock;
 import ca.bradj.questown.commands.DebugLogArgument;
