@@ -312,6 +312,10 @@ public class TownContainers {
             return;
         }
         if (item.get() instanceof StockRequestItem) {
+            if (room == null) {
+                // No room to link the request to.
+                return;
+            }
             if (StockRequestItem.hasRoom(item.getItemNBT())) {
                 return;
             }

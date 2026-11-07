@@ -285,7 +285,7 @@ public class TestWorldAccess implements QTWorldAccess {
                 slots.set(i, item.copy());
                 return true;
             }
-            if (existing.sameItem(item) && existing.getCount() < existing.getMaxStackSize()) {
+            if (ca.bradj.questown.mc.Compat.isSameItem(existing, item) && existing.getCount() < existing.getMaxStackSize()) {
                 existing.grow(item.getCount());
                 return true;
             }
@@ -367,6 +367,27 @@ public class TestWorldAccess implements QTWorldAccess {
             drops.add(matchBlock.asItem().getDefaultInstance());
             chopTreeInTest(immutable, matchBlock, drops, visited);
         }
+    }
+
+    // No worldgen in tests: tree growth returns false.
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        return false;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        return List.of();
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
     }
 
     @Override

@@ -8,6 +8,7 @@ import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
+import net.minecraft.core.BlockPos;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -191,6 +192,63 @@ public abstract class TownState<
                 blocksOfProgress,
                 worldTimeAtSleep
         );
+    }
+
+    /** Moves one matching item from another container into the one at {@code targetPos}, returning the new state. Null when the target is missing or full, or nothing else holds a match. */
+    public @Nullable SELF withItemRelocatedTo(
+            Predicate<I> ingredientCheck,
+            BlockPos targetPos
+    ) {
+        int targetIdx = indexOfContainerAt(targetPos);
+        if (targetIdx < 0) {
+            return null;
+        }
+        if (containers.get(targetIdx).isFull()) {
+            return null;
+        }
+        int sourceIdx = -1;
+        for (int i = 0; i < containers.size(); i++) {
+            if (i == targetIdx) {
+                continue;
+            }
+            if (containers.get(i).hasItem(ingredientCheck::test)) {
+                sourceIdx = i;
+                break;
+            }
+        }
+        if (sourceIdx < 0) {
+            return null;
+        }
+        Map.Entry<ContainerTarget<C, I>, I> removed = containers.get(sourceIdx).withItemRemoved(ingredientCheck);
+        if (removed == null) {
+            return null;
+        }
+        ContainerTarget<C, I> newTarget = containers.get(targetIdx).withItemAdded(removed.getValue());
+        if (newTarget == null) {
+            return null;
+        }
+        ImmutableList.Builder<ContainerTarget<C, I>> b = ImmutableList.builder();
+        for (int i = 0; i < containers.size(); i++) {
+            if (i == sourceIdx) {
+                b.add(removed.getKey());
+            } else if (i == targetIdx) {
+                b.add(newTarget);
+            } else {
+                b.add(containers.get(i));
+            }
+        }
+        return newTownState(
+                villagers, b.build(), workStates, workTimers, gates, blocksOfProgress, worldTimeAtSleep
+        );
+    }
+
+    private int indexOfContainerAt(BlockPos pos) {
+        for (int i = 0; i < containers.size(); i++) {
+            if (containers.get(i).getBlockPos().equals(pos)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public Map.Entry<SELF, I> withContainerItemRemoved(Predicate<I> itemCheck) {
