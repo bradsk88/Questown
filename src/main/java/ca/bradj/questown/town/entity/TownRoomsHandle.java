@@ -114,7 +114,8 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         t.subBlocks.register(pos);
         MCRoom room = Spaces.metaRoomAround(pos, Config.META_ROOM_DIAMETER.get());
         Map<BlockPos, Block> blocks = RecipeDetection.getBlocksInRoom(town.getServerLevelUnsafe(), room, false);
-        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()));
+        // No chat line here; the block room announces itself.
+        t.roomRecipeCreated(room, new RoomRecipeMatches<>(room, ImmutableList.of(blockId), blocks.entrySet()), false);
         t.setChanged();
         broadcastBlockRoomCreated(blockId, pos, t);
     }
@@ -244,8 +245,7 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
 
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
-        long beds = roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
-                            .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+        long beds = bedBlockCount();
         if (beds == 0 && numVillagers == 0) {
             return false;
         }
@@ -260,13 +260,22 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
 
     @Override
     public Collection<RoomRecipeMatch<MCRoom>> getMatches(Predicate<RoomRecipeMatch<MCRoom>> include) {
-        return this.roomsMap.getAllMatches(include);
+        Collection<RoomRecipeMatch<MCRoom>> matches;
+        // The welcome mat's own room counts for the town gate, even when no door room matched it.
+        java.util.List<RoomRecipeMatch<MCRoom>> result = new java.util.ArrayList<>(roomsMap.getAllMatches(include));
+        boolean hasGate = result.stream().anyMatch(m -> m.anyMatch(SpecialQuests.TOWN_GATE));
+        if (!hasGate) {
+            java.util.List<RoomRecipeMatch<MCRoom>> matRooms = getWelcomeMatMetaRooms(town.getUnsafe());
+            matRooms.stream()
+                    .filter(include)
+                    .forEach(result::add);
+        }
+        return result;
     }
 
     public void registerDoor(BlockPos clickedPos) {
         @NotNull TownFlagBlockEntity t = town.getUnsafe();
         roomsMap.registerDoor(Positions.FromBlockPos(clickedPos), clickedPos.getY() - t.getY());
-        t.setChanged();
     }
 
     @Override
