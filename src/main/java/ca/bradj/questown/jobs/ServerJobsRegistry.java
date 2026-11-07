@@ -183,6 +183,10 @@ public class ServerJobsRegistry {
             Ingredient wantedResult,
             @Nullable Ingredient apply
     ) {
+        if (apply == null) {
+            // A job with no initial request answers no request.
+            return false;
+        }
         for (ItemStack item : apply.getItems()) {
             if (wantedResult.test(item)) {
                 return true;

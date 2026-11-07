@@ -9,7 +9,8 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
-import ca.bradj.questown.integration.jobs.QTNativeRule;
+
+import java.util.List;
 
 public class ChopDownTree extends JobPhaseModifier implements QTNativeRule {
 
@@ -18,12 +19,37 @@ public class ChopDownTree extends JobPhaseModifier implements QTNativeRule {
             CONTEXT ctxInput,
             BeforeExtractEvent<CONTEXT> event
     ) {
-        CONTEXT context = super.beforeExtract(ctxInput, event);
-        BlockPos treeTrunk = event.workSpot();
-        for (ItemStack drop : event.world().chopTree(treeTrunk)) {
-            context = event.entity().tryGiveItem(context, MCHeldItem.fromTown(drop), InventoryFullStrategy.REMOVE_FROM_WORLD);
+        List<ItemStack> drops = chopFirstTree(event);
+        if (drops.isEmpty()) {
+            return null;
         }
-        return context;
+        CONTEXT context = ctxInput;
+        CONTEXT outContext = null;
+        for (ItemStack drop : drops) {
+            CONTEXT o = event.entity().tryGiveItem(
+                    context, MCHeldItem.fromTown(drop), InventoryFullStrategy.REMOVE_FROM_WORLD
+            );
+            if (o != null) {
+                context = o;
+                outContext = o;
+            }
+        }
+        return outContext;
+    }
+
+    /** Chops the work spot's tree, or else the first log among the job's block positions. */
+    private <CONTEXT> List<ItemStack> chopFirstTree(BeforeExtractEvent<CONTEXT> event) {
+        List<ItemStack> atWorkSpot = event.world().chopTree(event.workSpot());
+        if (!atWorkSpot.isEmpty()) {
+            return atWorkSpot;
+        }
+        for (BlockPos candidate : event.jobBlockPositions().get()) {
+            List<ItemStack> drops = event.world().chopTree(candidate);
+            if (!drops.isEmpty()) {
+                return drops;
+            }
+        }
+        return List.of();
     }
 
     @Override
