@@ -33,12 +33,23 @@ public interface QuestsHolder {
 
     void addBatchOfQuestsForVisitor(@Nullable VillagerUUID visitorUUID);
 
+    void addEmptyRoomBatch();
+
     /** Discards a batch as the remove button does. False when there is no such open batch. */
     boolean removeBatch(UUID batchID);
 
+    /** Posts the basics batch (job board and storeroom), when the empty-room quest completes. */
+    void addBasicsBatch();
+
+    /** Posts day 2's first-work-request quest, when the basics batch completes. */
+    void addFirstWorkRequestBatch();
+
     Collection<MCQuestBatch> getAllBatchesForVillager(UUID uuid);
 
-    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID);
+    /** Progress of each open ITEM or LOOT quest, for the "(n/m)" on its card. */
+    Map<ResourceLocation, Integer> openQuestProgress();
+
+    void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom);
 
     void addItemQuest(
             ResourceLocation itemId,

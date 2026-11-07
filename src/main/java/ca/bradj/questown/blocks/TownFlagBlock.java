@@ -281,47 +281,127 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(
-            BlockState p_60503_,
+    public void setPlacedBy(
+            Level level,
+            BlockPos pos,
+            BlockState state,
+            net.minecraft.world.entity.LivingEntity placer,
+            ItemStack stack
+    ) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        // A player who places a flag gets a map centred on it.
+        if (!(level instanceof ServerLevel) || !(placer instanceof ServerPlayer player)) {
+            return;
+        }
+        if (level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+            flag.grantStarterMap(player);
+        }
+    }
+
+    public InteractionResult useWithoutItem(
+            BlockState blockState,
+            Level level,
+            BlockPos pos,
+            Player player,
+            BlockHitResult hitResult
+    ) {
+        InteractionHand hand = player.getOffhandItem().isEmpty() ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        return useFlag(level, pos, player, hand);
+    }
+
+    public ca.bradj.questown.mc.ItemInteractionResult useItemOn(
+            ItemStack stack,
+            BlockState blockState,
             Level level,
             BlockPos pos,
             Player player,
             InteractionHand hand,
-            BlockHitResult p_60508_
+            BlockHitResult hitResult
+    ) {
+        // A Block of Progress used on the flag goes back into it.
+        if (stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+            if (level instanceof ServerLevel && player instanceof ServerPlayer sp
+                    && level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag) {
+                flag.returnBopFromPlayer(sp, stack);
+            }
+            return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(level.isClientSide());
+        }
+        InteractionResult r = useFlag(level, pos, player, hand);
+        if (r == InteractionResult.PASS) {
+            return ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        }
+        return ca.bradj.questown.mc.ItemInteractionResult.sidedSuccess(true);
+    }
+
+    private InteractionResult useFlag(
+            Level level,
+            BlockPos pos,
+            Player player,
+            InteractionHand hand
     ) {
         if (!(level instanceof ServerLevel sl)) {
             return InteractionResult.sidedSuccess(true);
         }
 
-        Optional<TownFlagBlockEntity> oEntity = level.getBlockEntity(pos, TilesInit.TOWN_FLAG.get());
-        if (oEntity.isEmpty()) {
+        if (!(level.getBlockEntity(pos) instanceof TownFlagBlockEntity entity)) {
             return InteractionResult.sidedSuccess(true);
         }
-        TownFlagBlockEntity entity = oEntity.get();
 
-        InteractionResult sidedSuccess = convertItemInHand(sl, (ServerPlayer) player, hand, entity);
-        if (sidedSuccess != null) {
-            return sidedSuccess;
+        BlockState flagState = level.getBlockState(pos);
+        FlagPhase phase = flagState.hasProperty(PHASE) ? flagState.getValue(PHASE) : FlagPhase.ACTIVE;
+        switch (FlagClickAction.of(entity.isDeedAvailable(), phase)) {
+            case COLLECT_DEED -> {
+                entity.collectDeed((ServerPlayer) player);
+                return InteractionResult.sidedSuccess(false);
+            }
+            case DORMANT_CHOICES -> {
+                QuestownNetwork.sendToPlayer((ServerPlayer) player, new OpenDormantFlagMessage(pos));
+                return InteractionResult.sidedSuccess(false);
+            }
+            case FLAG_MENU -> {
+            }
         }
 
-        if (oEntity.get().isInitialized()) {
-            if (shouldPreSelectBopTab(entity, (ServerPlayer) player)) {
-                entity.menus.showUI(
-                        (ServerPlayer) player,
-                        OpenFlagMenuMessage.BOP,
-                        entity.getInfo(),
-                        entity.getBlocksOfProgress()
-                );
-            } else {
-                oEntity.get().getVillagerHandle().showMultiStatusUI((ServerPlayer) player);
-            }
+        if (entity.isInitialized()) {
+            FlagTabsEmbedding.FlagInfo info = entity.getInfo();
+            String tab = FlagTabs.initialFlagTab(
+                    entity.isBopFull(),
+                    info.villagersTabAttention(),
+                    info.bopTabAttention() && shouldPreSelectBopTab(entity, (ServerPlayer) player),
+                    info.questsTabAttention(),
+                    info.showEconTab() && info.bonusFoodAvailable()
+            );
+            entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
+            // Any flag tab counts for the chicken's "look at the flag" lesson.
+            ChickenArcUiObservations.markFlagUiOpened(level, pos);
         } else {
-            if (!oEntity.get().isInitializing()) {
-                oEntity.get().initializeFreshFlag(true);
+            if (!entity.isInitializing()) {
+                entity.initializeFreshFlag(true);
             }
             player.displayClientMessage(Compat.translatable("messages.town_flag.loading"), false);
         }
         return InteractionResult.sidedSuccess(false);
     }
 
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        ca.bradj.questown.mc.ItemInteractionResult qtItem = useItemOn(qtPlayer.getItemInHand(qtHand), qtState, qtLevel, qtPos, qtPlayer, qtHand, qtHit);
+        if (qtItem.consumesAction()) {
+            return qtItem.result();
+        }
+        if (qtItem != ca.bradj.questown.mc.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
+    }
 }

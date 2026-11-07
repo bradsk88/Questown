@@ -17,6 +17,7 @@ import ca.bradj.roomrecipes.recipes.RoomRecipe;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -113,7 +114,12 @@ public class UIQuest implements Comparable<UIQuest> {
             rMapB.put(RoomBlock.getRoomId(vv), vv.asRecipe());
         });
         level.getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
-        ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
+        // The job board quest's card shows the job board itself, not the sign in its room recipe.
+        rMapB.put(SpecialQuests.JOB_BOARD, RoomRecipes.standard(
+                SpecialQuests.JOB_BOARD,
+                NonNullList.withSize(1, Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()))
+        ));
+        ImmutableMap<ResourceLocation, RoomRecipe> rMap = ImmutableMap.copyOf(rMapB);
 
         return aQ.stream().map(z -> {
             Quest<ResourceLocation, MCRoom> v = z.getKey();
@@ -156,6 +162,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case JOB_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case FIRST_WORK_REQUEST -> ImmutableList.of();
             case UNKNOWN -> ImmutableList.of();
         };
     }
@@ -231,6 +238,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractRootJobName());
             case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
+            case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
             case UNKNOWN -> Compat.literal("ERROR");
         };
     }

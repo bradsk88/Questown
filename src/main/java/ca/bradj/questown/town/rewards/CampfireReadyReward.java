@@ -1,0 +1,73 @@
+package ca.bradj.questown.town.rewards;
+
+import ca.bradj.questown.core.init.RewardsInit;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.interfaces.TownInterface;
+import ca.bradj.questown.town.quests.MCReward;
+import net.minecraft.nbt.CompoundTag;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Objects;
+
+/** The campfire quest's reward: the "your camp is ready" toast, in the first evening. */
+public class CampfireReadyReward extends MCReward {
+
+    public static final String ID = "campfire_ready";
+
+    public static final String TOAST_TITLE_KEY = ca.bradj.questown.gui.CampReadyToast.TITLE_KEY;
+    public static final String TOAST_DESCRIPTION_KEY = "tutorial.campfire_ready.description";
+
+    private final TownInterface town;
+
+    public CampfireReadyReward(
+            RewardType<? extends MCReward> rType,
+            @NotNull TownInterface entity
+    ) {
+        super(rType);
+        this.town = entity;
+    }
+
+    public CampfireReadyReward(
+            @NotNull TownInterface entity
+    ) {
+        this(RewardsInit.CAMPFIRE_READY.get(), entity);
+    }
+
+    @Override
+    protected @NotNull RewardApplier getApplier() {
+        // The toast belongs to the evening; this covers a quest finished after dusk.
+        return () -> ((TownFlagBlockEntity) town).showCampReadyToastIfDue();
+    }
+
+    @Override
+    public boolean addsQuestsWhenApplied() {
+        return false;
+    }
+
+    @Override
+    protected CompoundTag serializeNbt() {
+        return new CompoundTag();
+    }
+
+    @Override
+    protected void deserializeNbt(
+            TownInterface entity,
+            CompoundTag tag
+    ) {
+    }
+
+    @Override
+    public String toString() {
+        return "CampfireReadyReward{town=" + town + '}';
+    }
+
+    @Override
+    public String toNiceString() {
+        return "CampfireReadyToast";
+    }
+
+    @Override
+    public boolean contains(@NotNull RewardType<?> reward) {
+        return Objects.equals(RewardsInit.CAMPFIRE_READY.get().id, reward.id);
+    }
+}

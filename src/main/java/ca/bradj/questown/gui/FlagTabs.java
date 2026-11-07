@@ -157,10 +157,10 @@ public class FlagTabs extends Tabs implements SubUI {
 
     public static ImmutableList<TabDecision> computeTabDecisions(FlagTabsEmbedding.FlagInfo fi) {
         ImmutableList.Builder<TabDecision> b = ImmutableList.builder();
-        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), false));
-        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.hasIncompleteQuests()));
+        b.add(new TabDecision("tooltips.villagers", fi.showVillagersTab(), fi.villagersTabAttention()));
+        b.add(new TabDecision("tooltips.quests", fi.showQuestsTab(), fi.questsTabAttention()));
         b.add(new TabDecision("tooltips.economics", fi.showEconTab(), false));
-        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
+        b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), fi.bopTabAttention()));
         b.add(new TabDecision("tooltips.crafting", true, false));
         b.add(new TabDecision("tooltips.settings", true, false));
         return b.build();

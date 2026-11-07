@@ -76,6 +76,10 @@ public class ApproachTownTrigger extends SimpleCriterionTrigger<ApproachTownTrig
             ServerPlayer player,
             Triggers trickID
     ) {
+        // A console or command block passes no player.
+        if (player == null) {
+            return;
+        }
         super.trigger(player, instance -> instance.matches(trickID));
     }
 
