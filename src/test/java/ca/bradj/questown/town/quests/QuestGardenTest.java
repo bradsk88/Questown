@@ -39,8 +39,8 @@ class QuestGardenTest {
         }
 
         @Override
-        protected boolean hasBedAlready(List<String> strings) {
-            return batch.contains("bed");
+        protected int bedQuestCount(List<String> strings) {
+            return (int) strings.stream().filter(s -> s.equals("bed")).count();
         }
 
         @Override
@@ -86,7 +86,7 @@ class QuestGardenTest {
                 Integer.MAX_VALUE
         );
         Assertions.assertTrue(qg.grow(
-                () -> false,
+                () -> 1,
                 () -> {
                     Assertions.fail("Test should not access rooms needs");
                     return null;
@@ -103,8 +103,6 @@ class QuestGardenTest {
         );
     }
 
-    // TODO: Test 0, 1, 2
-
     @Test
     public void testShouldAcceptNeededRoom_IfDoNotNeedBed_AndNeededRoomsAreSize1() {
         AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
@@ -113,7 +111,7 @@ class QuestGardenTest {
                 Integer.MAX_VALUE
         );
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 () -> ImmutableList.of(new RoomNeed<>("baker", 1, 1)),
                 () -> {
                     Assertions.fail("Test should not access recipes");
@@ -140,7 +138,7 @@ class QuestGardenTest {
             }
         };
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 () -> ImmutableList.of(
                         new RoomNeed<>("baker", 1, 1),
                         new RoomNeed<>("mineshaft", 1, 1)
@@ -171,7 +169,7 @@ class QuestGardenTest {
         };
         // No needed rooms
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -195,7 +193,7 @@ class QuestGardenTest {
             }
         };
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -204,7 +202,7 @@ class QuestGardenTest {
                 )
         ));
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -213,7 +211,7 @@ class QuestGardenTest {
                 )
         ));
         Assertions.assertFalse(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -239,7 +237,7 @@ class QuestGardenTest {
             }
         };
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -248,7 +246,7 @@ class QuestGardenTest {
                 )
         ));
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -257,7 +255,7 @@ class QuestGardenTest {
                 )
         ));
         Assertions.assertFalse(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> ImmutableList.of(
                         "kitchen",
@@ -297,14 +295,14 @@ class QuestGardenTest {
                 "deluxe_cafe"
         );
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> allRooms
         ));
         Assertions.assertEquals(0, qg.getCostSoFar());
 
         Assertions.assertTrue(qg.grow(
-                () -> true,
+                () -> 0,
                 ImmutableList::of, // No needed rooms
                 () -> allRooms
         ));
@@ -312,7 +310,7 @@ class QuestGardenTest {
     }
 
     @Test
-    public void testShouldAcceptMaxOneBed() {
+    public void testShouldAcceptOneBedPerGrowTick_WhenOnlyOneMissing() {
 
         ImmutableMap<String, Integer> costs = ImmutableMap.of(
                 "soup_pot", 1,
@@ -335,7 +333,7 @@ class QuestGardenTest {
                 "deluxe_cafe"
         );
         Assertions.assertTrue(qg.grow(
-                () -> false, // Not enough beds
+                () -> 1,
                 ImmutableList::of, // No needed rooms
                 () -> allRooms
         ));
@@ -347,7 +345,7 @@ class QuestGardenTest {
         );
 
         Assertions.assertTrue(qg.grow(
-                () -> false, // Not enough beds
+                () -> 1,
                 ImmutableList::of, // No needed rooms
                 () -> allRooms
         ));

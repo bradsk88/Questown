@@ -97,9 +97,33 @@ public class ServerJobsRegistry {
         return StatusArt.getTexture(job, status);
     }
 
-    private static boolean isSpecial(JobID job) {
-        Optional<SpecialJob> first = specialJobs.stream().filter(id -> id.idTest.test(job)).findFirst();
-        return first.isPresent();
+    /** The status text for a villager: while it is not working, the item it is blocked on replaces the second line. */
+    public static @NotNull ImmutableList<Component> getStatusText(
+            JobID job,
+            IStatus<?> status,
+            VisitorMobEntity townie
+    ) {
+        Component need = hasDoneAllRequests(townie)
+                ? Compat.translatable("message.questown.townie_status.requests_done")
+                : TownieNeedDetail.of(townie);
+        boolean keep = StatusNeedLine.keepsOwnLines(isWorking(status), DiningStages.isDiner(job));
+        return ImmutableList.copyOf(StatusNeedLine.lines(getStatusText(job, status), need, keep));
+    }
+
+    private static boolean hasDoneAllRequests(VisitorMobEntity townie) {
+        return townie.getTown() != null && townie.getTown().getPossibleWork().hasDoneAllRequests(townie.getUUID());
+    }
+
+    public static ImmutableList<Ingredient> getNeededItems(VisitorMobEntity townie) {
+        ImmutableList<Ingredient> wants = getWantedResourcesProvider(townie.getJobId())
+                .apply(Jobs.getHeldItems(townie.getInventory()));
+        return ImmutableList.copyOf(StatusNeedLine.neededItems(
+                wants, townie.getUnmetItemIngredient(), StatusNeedLine.keepsOwnLines(
+                        isWorking(townie.getStatusForServer()), DiningStages.isDiner(townie.getJobId()))));
+    }
+
+    private static boolean isWorking(@Nullable IStatus<?> status) {
+        return StatusNeedLine.isWorking(status);
     }
 
     public static @NotNull ImmutableList<Component> getStatusText(
@@ -134,10 +158,7 @@ public class ServerJobsRegistry {
     ) {
         Optional<SpecialJob> sj = specialJobs.stream().filter(v -> v.idTest.test(job)).findFirst();
         if (sj.isPresent()) {
-            Work work = sj.get().reference().apply(job);
-            if (work != null) {
-                return work;
-            }
+            return sj.get().reference().apply(job);
         }
         Supplier<Work> workSupplier = getWorkSupplier(job);
         if (workSupplier == null) {
@@ -170,7 +191,7 @@ public class ServerJobsRegistry {
             }
             ResourceLocation name = Compat.getItemId(w.icon.getItem());
             name = Util.ifNull(name, Questown.ResourceLocationError);
-            if (matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
+            if (countDeclaredInitialRequest && matches(wantedResult, w.initialRequest.apply(data.serverLevel()))) {
                 b.put(w.id, Util.ifNull(name, Questown.ResourceLocationError));
                 continue;
             }
@@ -197,8 +218,43 @@ public class ServerJobsRegistry {
         return false;
     }
 
+    public record ProducerDeclaration(JobID job, @Nullable Ingredient product) {
+    }
+
+    public static Set<String> rootsThatCanMake(
+            @Nullable ServerLevel sl,
+            Ingredient wanted
+    ) {
+        List<ProducerDeclaration> declared = new ArrayList<>(Works.regularJobs().size());
+        for (Map.Entry<JobID, Supplier<Work>> entry : Works.regularJobs()) {
+            Work work = entry.getValue().get();
+            if (work.initialRequest == null) {
+                continue;
+            }
+            try {
+                declared.add(new ProducerDeclaration(entry.getKey(), work.initialRequest.apply(sl)));
+            } catch (RuntimeException re) {
+                QT.JOB_LOGGER.error("Failed to resolve the declared product of {}", entry.getKey(), re);
+            }
+        }
+        return rootsThatCanMake(declared, wanted);
+    }
+
+    public static Set<String> rootsThatCanMake(
+            Iterable<ProducerDeclaration> declaredProducts,
+            Ingredient wanted
+    ) {
+        Set<String> roots = new HashSet<>();
+        for (ProducerDeclaration declared : declaredProducts) {
+            if (matches(wanted, declared.product())) {
+                roots.add(declared.job().rootId());
+            }
+        }
+        return roots;
+    }
+
     /**
-     * @throws NullPointerException if job does not exist
+     * False when the child has no Work (seeking work) or no parent.
      */
     public static boolean isParentOf(
             JobID parent,

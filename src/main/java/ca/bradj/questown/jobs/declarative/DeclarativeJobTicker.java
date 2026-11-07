@@ -30,6 +30,8 @@ package ca.bradj.questown.jobs.declarative;
  * in addition to unit tests of isolated utility methods.
  */
 
+import ca.bradj.questown.jobs.ItemsHolder;
+import java.util.function.Predicate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.integration.jobs.UnsafeVillagerData;
 import ca.bradj.questown.jobs.*;
@@ -401,6 +403,9 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
         };
     }
 
+    /** Whether the villager holds an item no state of this job uses: its work output. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE> EntityInvStateProvider<Integer> defaultEntityInvProvider(
             Dependencies<POS, RECIPE, HELD_ITEM, ?, ROOM, MATCH, EXTRA, ?> deps
@@ -426,6 +431,11 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             @Override
             public Map<Integer, SupplyItemStatus> getSupplyItemStatus() {
                 return DeclarativeJobTicker.getSupplyItemStatuses(deps);
+            }
+
+            @Override
+            public boolean holdsWorkOutput() {
+                return DeclarativeJobTicker.this.holdsWorkOutput(deps);
             }
         };
     }

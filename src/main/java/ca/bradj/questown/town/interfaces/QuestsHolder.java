@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.interfaces;
 
 import ca.bradj.questown.core.VillagerUUID;
+import ca.bradj.questown.integration.minecraft.MCTownItem;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
@@ -40,6 +41,9 @@ public interface QuestsHolder {
             ResourceLocation itemId,
             int count
     );
+
+    // Credits LOOT quests matching an item a villager just brought back.
+    void processLootQuests(MCTownItem extracted);
 
     Optional<JobID> overnightJobOverride();
 }

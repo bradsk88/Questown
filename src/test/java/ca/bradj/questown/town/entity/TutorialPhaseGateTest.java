@@ -1,6 +1,7 @@
 package ca.bradj.questown.town.entity;
 
 import ca.bradj.questown.core.advancements.TutorialTrigger;
+import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.quests.MCQuest;
@@ -124,6 +125,7 @@ class TutorialPhaseGateTest {
 
         assertEquals(TownQuests.Tutorial.APPLIED, result);
         List<MCQuest> all = quests.questBatches.getAll();
+        // The hunter's food quest is a LOOT quest on raw food.
         assertTrue(all.stream().anyMatch(q ->
                 Compat.getItemId(Items.MUTTON).equals(q.getWantedId())
         ));

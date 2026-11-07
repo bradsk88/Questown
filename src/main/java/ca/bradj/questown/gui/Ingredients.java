@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
+import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -120,6 +120,15 @@ public class Ingredients {
     public static Ingredient fromRL(ResourceLocation value) {
         @Nullable Item l = ForgeRegistries.ITEMS.getValue(value);
         return Ingredient.of(l);
+    }
+
+    /** The item with this id, or else the tag; an unknown id matches nothing. */
+    public static Ingredient asIngredient(ResourceLocation value) {
+        Item asItem = Loader.itemFromId(value);
+        if (asItem != null) {
+            return Ingredient.of(asItem);
+        }
+        return Ingredient.of(Compat.itemTag(value));
     }
 
     public static List<Ingredient> fromItems(ImmutableList<ItemStack> result) {

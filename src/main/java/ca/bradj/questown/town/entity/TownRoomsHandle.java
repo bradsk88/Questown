@@ -230,6 +230,11 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
         return b.build();
     }
 
+    private long bedBlockCount() {
+        return roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
+                       .filter(v -> Ingredient.of(ItemTags.BEDS).test(new ItemStack(v.asItem()))).count();
+    }
+
     boolean hasEnoughBeds(long numVillagers) {
         // TODO: This returns false positives if called before entities have been loaded from tile data
         long beds = roomsMap.getAllMatches(v -> true).stream().flatMap(v -> v.getContainedBlocks().values().stream())
@@ -238,6 +243,12 @@ public class TownRoomsHandle implements RoomsHolder, Supplier<TownFlagBlockEntit
             return false;
         }
         return (beds / 2) >= numVillagers;
+    }
+
+    /** How many more whole beds the town needs for its villagers; 0 when there are enough. */
+    int missingBeds(long numVillagers) {
+        long completeBeds = bedBlockCount() / 2;
+        return (int) Math.max(0L, numVillagers - completeBeds);
     }
 
     @Override

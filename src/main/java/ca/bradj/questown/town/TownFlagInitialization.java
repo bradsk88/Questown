@@ -46,4 +46,6 @@ public interface TownFlagInitialization {
     void initEconomicsForNewFlag();
 
     CompoundTag serializeEconomics();
+    CompoundTag serializeFirstHunterLootGuaranteeFired();
+
 }
