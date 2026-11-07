@@ -10,6 +10,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.RoomTrigger;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
+import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.ItemEconomicsData;
@@ -128,6 +129,48 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     @NotNull
+    private static final ImmutableSet<ResourceLocation> STORAGE_ROOMS = ImmutableSet.of(
+            SpecialQuests.STORE_ROOM_SMALL,
+            new ResourceLocation("questown", "store_room_medium"),
+            new ResourceLocation("questown", "store_room_big"),
+            new ResourceLocation("questown", "store_room_huge"),
+            new ResourceLocation("questown", "storeage_facility")
+    );
+
+    /** When {@code reward} brings a villager, adds the bedroom quests its bed needs and a storage room quest. */
+    static void provisionArrival(
+            TownInterface town,
+            MCReward reward,
+            Collection<ResourceLocation> wanted,
+            Consumer<ResourceLocation> addRoomQuest
+    ) {
+        ServerLevel level = town.getServerLevel();
+        ArrivalProvisions plan = ArrivalProvisions.plan(
+                reward.contains(RewardsInit.VISITOR.get()),
+                town.missingBedsWithArrivals(1),
+                (int) wanted.stream().filter(id -> QuestBatchSeed.isBedRoom(level, id)).count(),
+                wanted.stream().anyMatch(STORAGE_ROOMS::contains)
+        );
+        for (int i = 0; i < plan.bedQuests(); i++) {
+            addRoomQuest.accept(SpecialQuests.BEDROOM);
+        }
+        if (plan.storageQuest()) {
+            addRoomQuest.accept(SpecialQuests.STORE_ROOM_SMALL);
+        }
+        if (!ArrivalProvisions.NONE.equals(plan)) {
+            QT.QUESTS_LOGGER.info("Batch brings a villager: added {} bedroom quest(s), storage quest: {}",
+                    plan.bedQuests(), plan.storageQuest());
+        }
+    }
+
+    private static void provisionArrival(TutorialTownView view, MCQuestBatch batch) {
+        view.provisionArrival(
+                batch.getReward(),
+                batch.getAll().stream().map(Quest::getWantedId).toList(),
+                id -> batch.addNewQuest(null, id)
+        );
+    }
+
     public static MCRewardList defaultQuestCompletionRewards(TownInterface town) {
         // This is where a lot of the "progression" logic for Questown happens.
         // Changing this may significantly affect the feel of the game.
@@ -430,6 +473,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             PendingReward pr = questRequests.pop();
             MCDelayedReward rw = new MCDelayedReward(town, pr.reward());
             MCQuestBatch q = pop.get(rw, pr.owner());
+            provisionArrival(town, rw, q.getAll().stream().map(Quest::getWantedId).toList(),
+                    id -> q.addNewQuest(null, id));
             q.getAll().forEach(quest -> quest.setDiscardable(true));
             questBatches.add(q);
             QT.QUESTS_LOGGER.debug("Precompiled quest batch was given to {}: {}", pr.owner(), q.toNiceString());

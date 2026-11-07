@@ -85,8 +85,9 @@ public class WelcomeMatBlock extends TownFlagSubBlock<WelcomeMatBlock.Entity> {
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Welcome mat is not associated to an existing flag");
-            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
-            return Blocks.AIR.defaultBlockState();
+            TownFlagBlock.tellPlacerNotLinked(ctx, "message.welcome_mat.not_linked");
+            // Null cancels the placement and keeps the stack.
+            return null;
         }
 
         parent.registerWelcomeMat(matPos);

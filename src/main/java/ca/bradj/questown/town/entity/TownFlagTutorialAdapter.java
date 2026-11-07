@@ -20,6 +20,7 @@ import net.minecraft.world.item.Items;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static ca.bradj.questown.town.entity.TownQuests.defaultQuestCompletionRewards;
 

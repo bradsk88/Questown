@@ -10,6 +10,15 @@ import java.util.List;
 
 class TestTutorialTownView implements TutorialTownView {
 
+    // Tutorial tests leave batches as built; ArrivalProvisionsTest covers the provisioning.
+    @Override
+    public void provisionArrival(
+            ca.bradj.questown.town.quests.MCReward reward,
+            java.util.Collection<net.minecraft.resources.ResourceLocation> wanted,
+            java.util.function.Consumer<net.minecraft.resources.ResourceLocation> addRoomQuest
+    ) {
+    }
+
     private int villagerCount;
     private boolean tutorialBopGranted;
     private int bopGranted;

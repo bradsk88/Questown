@@ -50,7 +50,9 @@ import java.util.Optional;
 
 import static net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART;
 
-public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing, IForgeBlock {
+public class HospitalBedBlock extends HorizontalDirectionalBlock implements EntityBlock, Healing {
+    public static final MapCodec<HospitalBedBlock> CODEC = MapCodec.unit(HospitalBedBlock::new);
+
     public static final BooleanProperty OCCUPIED = BlockStateProperties.OCCUPIED;
     public static final String ITEM_ID = "hospital_bed";
     protected static final int HEIGHT = 9;
@@ -67,9 +69,19 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     private final DyeColor color;
 
     public HospitalBedBlock() {
-        this(DyeColor.BLACK, BlockBehaviour.Properties.of(Material.WOOL, (p_152613_) -> {
-            return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT ? DyeColor.BLACK.getMaterialColor() : MaterialColor.WOOL;
-        }).sound(SoundType.WOOD).strength(0.2F).noOcclusion());
+        this(
+            DyeColor.BLACK,
+            Compat.P.of()
+                .mapColor((p_152613_) -> {
+                    return p_152613_.getValue(BedBlock.PART) == BedPart.FOOT
+                        ? MapC.BLACK.vanilla()
+                        : MapC.WOOL.vanilla();
+                })
+                .sound(SoundType.WOOD)
+                .strength(0.2F)
+                .noOcclusion()
+                .impl()
+        );
     }
 
     public HospitalBedBlock(DyeColor p_49454_, BlockBehaviour.Properties p_49455_) {
@@ -84,7 +96,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         return blockstate.getBlock() instanceof net.minecraft.world.level.block.BedBlock ? blockstate.getValue(FACING) : null;
     }
 
-    public InteractionResult use(BlockState p_49515_, Level p_49516_, BlockPos p_49517_, Player p_49518_, InteractionHand p_49519_, BlockHitResult p_49520_) {
+    public InteractionResult useWithoutItem(BlockState p_49515_, Level p_49516_, BlockPos p_49517_, Player p_49518_, BlockHitResult p_49520_) {
         if (p_49516_.isClientSide) {
             return InteractionResult.CONSUME;
         } else {
@@ -103,7 +115,7 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
                     p_49516_.removeBlock(blockpos, false);
                 }
 
-                p_49516_.explode((Entity)null, DamageSource.badRespawnPointExplosion(), (ExplosionDamageCalculator)null, (double)p_49517_.getX() + 0.5D, (double)p_49517_.getY() + 0.5D, (double)p_49517_.getZ() + 0.5D, 5.0F, true, Explosion.BlockInteraction.DESTROY);
+                p_49516_.explode((Entity)null, net.minecraft.world.damagesource.DamageSource.badRespawnPointExplosion(), (ExplosionDamageCalculator)null, (double)p_49517_.getX() + 0.5D, (double)p_49517_.getY() + 0.5D, (double)p_49517_.getZ() + 0.5D, 5.0F, true, net.minecraft.world.level.Explosion.BlockInteraction.DESTROY);
                 return InteractionResult.SUCCESS;
             } else if (p_49515_.getValue(OCCUPIED)) {
                 if (!this.kickVillagerOutOfBed(p_49516_, p_49517_)) {
@@ -208,8 +220,9 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
         BlockPos matPos = ctx.getClickedPos();
         if (parent == null) {
             QT.BLOCK_LOGGER.error("Hospital bed is not associated to an existing flag");
-            sl.addFreshEntity(new ItemEntity(sl, matPos.getX(), matPos.getY(), matPos.getZ(), ctx.getItemInHand()));
-            return Blocks.AIR.defaultBlockState();
+            TownFlagBlock.tellPlacerNotLinked(ctx, "message.hospital_bed.not_linked");
+            // Null cancels the placement and keeps the stack.
+            return null;
         }
 
         parent.getHealingHandle().registerHealingBed(blockpos, blockpos1, Config.HOSPITAL_BED_HEAL_MULTIPLIER.get());
@@ -353,12 +366,17 @@ public class HospitalBedBlock extends HorizontalDirectionalBlock implements Enti
     }
 
     @Override
-    public boolean isBed(
-            BlockState state,
-            BlockGetter level,
-            BlockPos pos,
-            @org.jetbrains.annotations.Nullable Entity player
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
     ) {
-        return true;
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }

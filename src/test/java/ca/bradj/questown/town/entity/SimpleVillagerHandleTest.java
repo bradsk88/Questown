@@ -4,6 +4,7 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Signals;
+import ca.bradj.questown.town.MoodEffects;
 import ca.bradj.questown.town.rooms.TownPosition;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,6 +53,18 @@ class SimpleVillagerHandleTest {
         public boolean isSleeping(UUID e) {
             return false;
         }
+
+        Set<UUID> bedded = new HashSet<>();
+
+        @Override
+        public boolean hasBed(UUID e) {
+            return bedded.contains(e);
+        }
+
+        @Override
+        public boolean bedsKnown() {
+            return true;
+        }
     }
 
     class TestDelegator implements Delegator<UUID> {
@@ -69,6 +82,7 @@ class SimpleVillagerHandleTest {
         ImmutableList<JobID> defaultWork = ImmutableList.of();
         List<JobID> starterRequestsPosted = new ArrayList<>();
         private VillagerSleepModule<UUID> sleepModule = new TestSleepModule();
+        final Map<UUID, Map<net.minecraft.resources.ResourceLocation, Long>> moodEffects = new HashMap<>();
 
         @Override
         public JobID getJobId(UUID vEntity) {
@@ -182,6 +196,15 @@ class SimpleVillagerHandleTest {
         @Override
         public float getMood(UUID uuid) {
             return 0.5f;
+        }
+
+        @Override
+        public void applyMoodEffect(
+                UUID uuid,
+                net.minecraft.resources.ResourceLocation effect,
+                long untilTick
+        ) {
+            moodEffects.computeIfAbsent(uuid, u -> new HashMap<>()).put(effect, untilTick);
         }
 
         @Override
@@ -1020,4 +1043,78 @@ class SimpleVillagerHandleTest {
         );
     }
 
+    @Test
+    public void handleMorning_appliesSleeplessToTowniesWithoutBedLastNight() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedless = UUID.randomUUID();
+        UUID bedded = UUID.randomUUID();
+        ((TestSleepModule) t.sleepModule).bedded.add(bedded);
+        handle.register(bedless);
+        handle.register(bedded);
+
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+
+        handle.handleMorning(24000L);
+
+        Assertions.assertEquals(
+                24000L + 23000L,
+                t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS),
+                "the bedless townie gets SLEEPLESS expiring after its configured duration"
+        );
+        Assertions.assertFalse(
+                t.moodEffects.getOrDefault(bedded, Map.of()).containsKey(MoodEffects.SLEEPLESS),
+                "the townie with an assigned bed gets no SLEEPLESS"
+        );
+    }
+
+    @Test
+    public void sleeplessCapture_rearmsOnTheNextNight() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedless = UUID.randomUUID();
+        handle.register(bedless);
+
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(24000L);
+        Assertions.assertEquals(47000L, t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS));
+
+        // Still bedless the second night: a fresh expiry.
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(48000L);
+        Assertions.assertEquals(
+                48000L + 23000L,
+                t.moodEffects.get(bedless).get(MoodEffects.SLEEPLESS),
+                "a second consecutive bedless night re-applies SLEEPLESS with a new expiry"
+        );
+    }
+
+    @Test
+    public void handleMorning_noBedlessTownies_appliesNothing() {
+        TestDelegator t = new TestDelegator();
+        SimpleVillagerHandle<String, UUID> handle = newHandle(t);
+        UUID bedded = UUID.randomUUID();
+        ((TestSleepModule) t.sleepModule).bedded.add(bedded);
+        handle.register(bedded);
+
+        handle.tick(Signals.MORNING);
+        handle.tick(Signals.NOON);
+        handle.tick(Signals.EVENING);
+        handle.tick(Signals.NIGHT);
+        handle.handleMorning(24000L);
+
+        Assertions.assertTrue(
+                t.moodEffects.isEmpty(),
+                "no mood effect is applied when every townie had a bed"
+        );
+    }
 }

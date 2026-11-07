@@ -298,6 +298,9 @@ public class Config {
         MOOD_EFFECT_DURATION_ATE_COMFORTABLY = BUILDER.comment(
                 "When villagers eat comfortably"
         ).defineInRange("AteComfortably", 3000L, 0L, 24000L);
+        MOOD_EFFECT_DURATION_SLEEPLESS = BUILDER.comment(
+                "How long the sleepless debuff lasts after a villager had no bed for the night"
+        ).defineInRange("Sleepless", 23000L, 0L, 48000L);
 
         // End Mood Effect Durations
         BUILDER.pop();

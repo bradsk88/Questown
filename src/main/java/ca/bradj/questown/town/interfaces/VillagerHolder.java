@@ -220,4 +220,9 @@ public interface VillagerHolder {
     boolean gaveUpDiningRecently(VillagerUUID uuid, long currentTick);
 
     void toggleHunger();
+
+    /** Whether the villager has a bed in a matched room. */
+    boolean hasBed(VisitorMobEntity v);
+
+    boolean hasMoodEffect(UUID uuid, ResourceLocation effect);
 }
