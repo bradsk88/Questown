@@ -1,5 +1,6 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.OpenFlagMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
@@ -22,9 +23,15 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo showBOPTab
+            @Nullable Runnable settingsScreenFn,
+            FlagTabsEmbedding.FlagInfo showBOPTab,
+            @Nullable String activeTabKey
     ) {
-        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, showBOPTab));
+        super(build(questsScreenFn, villagerScreenFn, econScreenFn, bopScreenFn, craftingScreenFn, settingsScreenFn, showBOPTab, activeTabKey));
+    }
+
+    private static boolean isSelected(String titleKey, @Nullable String activeTabKey) {
+        return activeTabKey != null && activeTabKey.equals(titleKey);
     }
 
     private static @NotNull ImmutableList<Tab> build(
@@ -33,27 +40,27 @@ public class FlagTabs extends Tabs implements SubUI {
             @Nullable Runnable econScreenFn,
             @Nullable Runnable bopScreenFn,
             @Nullable Runnable craftingScreenFn,
-            FlagTabsEmbedding.FlagInfo fi
+            @Nullable Runnable settingsScreenFn,
+            FlagTabsEmbedding.FlagInfo fi,
+            @Nullable String activeTabKey
     ) {
         ImmutableList.Builder<Tab> b = ImmutableList.builder();
         if (fi.showVillagersTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.PLAYER_HEAD.getDefaultInstance(), x + 10, y + 7),
                     setScreen(villagerScreenFn),
                     "tooltips.villagers",
-                    villagerScreenFn == null,
-                    false
+                    isSelected("tooltips.villagers", activeTabKey),
+                    fi.villagersTabAttention()
             ));
         }
         if (fi.showQuestsTab()) {
             b.add(new Tab(
-                    (rc, x, y) -> rc.itemRenderer()
-                                    .renderAndDecorateItem(Items.BOOK.getDefaultInstance(), x + 10, y + 7),
+                    (rc, x, y) -> Compat.renderItemAndDecorations(rc.gui(), Items.BOOK.getDefaultInstance(), x + 10, y + 7),
                     setScreen(questsScreenFn),
                     "tooltips.quests",
-                    questsScreenFn == null,
-                    fi.hasIncompleteQuests()
+                    isSelected("tooltips.quests", activeTabKey),
+                    fi.questsTabAttention()
             ));
         }
         if (fi.showEconTab()) {
@@ -65,8 +72,8 @@ public class FlagTabs extends Tabs implements SubUI {
                     },
                     setScreen(econScreenFn),
                     "tooltips.economics",
-                    econScreenFn == null,
-                    false
+                    isSelected("tooltips.economics", activeTabKey),
+                    fi.bonusFoodAvailable()
             ));
         }
         if (fi.showBlockOfProgressTab()) {
@@ -80,8 +87,8 @@ public class FlagTabs extends Tabs implements SubUI {
                     ),
                     setScreen(bopScreenFn),
                     "tooltips.blocks_of_progress",
-                    bopScreenFn == null,
-                    true
+                    isSelected("tooltips.blocks_of_progress", activeTabKey),
+                    fi.bopTabAttention()
             ));
         }
         b.add(new Tab(
@@ -113,11 +120,19 @@ public class FlagTabs extends Tabs implements SubUI {
             FlagTabsEmbedding.FlagInfo fp,
             String type
     ) {
-        Runnable fn = () -> QuestownNetwork.CHANNEL.sendToServer(new OpenFlagMenuMessage(fp, type));
+        Runnable fn = () -> {
+            QT.LOGGER.info("[gui] flag menu request: {}", type);
+            QuestownNetwork.sendToServer(new OpenFlagMenuMessage(fp, type));
+        };
         return fn;
     }
 
     public static FlagTabs forMenu(FlagTabsEmbedding menu) {
+        return forMenu(menu, null);
+    }
+
+    /** Like {@link #forMenu(FlagTabsEmbedding)}, with the open tab highlighted. */
+    public static FlagTabs forMenu(FlagTabsEmbedding menu, @Nullable String activeTabKey) {
         Collection<String> enabledTabs = menu.getEnabledTabs();
 
         Function<String, Runnable> factory = typ -> {
@@ -132,7 +147,9 @@ public class FlagTabs extends Tabs implements SubUI {
                 factory.apply(OpenFlagMenuMessage.ECONOMICS),
                 factory.apply(OpenFlagMenuMessage.BOP),
                 factory.apply(OpenFlagMenuMessage.CRAFTING),
-                menu.getFlagInfo()
+                factory.apply(OpenFlagMenuMessage.SETTINGS),
+                menu.getFlagInfo(),
+                activeTabKey
         );
     }
 

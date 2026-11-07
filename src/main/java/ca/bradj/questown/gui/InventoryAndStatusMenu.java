@@ -35,6 +35,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
 
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
+    private final boolean showInventoryTab;
 
     public static InventoryAndStatusMenu ForClientSide(
             int windowId,
@@ -54,7 +55,9 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             UUID villagerUUID,
             JobID jobId,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
         super(MenuTypesInit.GATHERER_INVENTORY.get(), gathererInv, inv, windowId, flagPos, villagerUUID);
         this.jobId = jobId;
@@ -62,6 +65,7 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
         layoutSlots(gathererInv);
         this.addDataSlot(this.statusSlot = DataSlot.standalone());
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showInventoryTab = showInventoryTab;
     }
 
     public boolean stillValid(Player p_38874_) {
@@ -80,17 +84,19 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
             return;
         }
         ResourceLocation tex = ServerJobsRegistry.getTexture(jobId, newStatus);
-        @NotNull ImmutableList<Component> text = ServerJobsRegistry.getStatusText(jobId, newStatus);
+        @NotNull ImmutableList<Component> text = townie == null
+                ? ServerJobsRegistry.getStatusText(jobId, newStatus)
+                : ServerJobsRegistry.getStatusText(jobId, newStatus, townie);
         if (newStatus instanceof ProductionStatus ps) {
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusArtMessage(jobId, ps, tex)
             );
             if (text.isEmpty()) {
                 return;
             }
-            QuestownNetwork.CHANNEL.send(
-                    PacketDistributor.PLAYER.with(() -> sp),
+            QuestownNetwork.sendToPlayer(
+                    sp,
                     new SyncStatusTextMessage(ps, new StatusPacket(jobId, text, tex))
             );
         }
@@ -108,7 +114,18 @@ public class InventoryAndStatusMenu extends AbstractTabbedVillagerMenu implement
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

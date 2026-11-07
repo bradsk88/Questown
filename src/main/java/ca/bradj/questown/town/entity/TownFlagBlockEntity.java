@@ -574,6 +574,33 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return getBlockPos();
     }
 
+    public boolean hasShownCampReadyToast(UUID player) {
+        return campReadyToastShown.contains(player);
+    }
+
+    public boolean wantsJobChangeFrom(JobID villagerJob) {
+        return quests.wantsJobChangeFrom(villagerJob);
+    }
+
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        return quests.hidesJobChangeFrom(villagerJob);
+    }
+
+    /** A villager died: remove it from the saved roster. */
+    public void retireVillager(UUID villager) {
+        villagerHandle.retireDisplayNumber(villager);
+        setChanged();
+    }
+
+    public boolean hasVillagers() {
+        return townVillagerCount() > 0;
+    }
+
+    /** Arrived villagers: the live ones or the saved roster, whichever is larger. */
+    private long townVillagerCount() {
+        return Math.max(villagerHandle.size(), villagerHandle.knownVillagerCount());
+    }
+
     public boolean hasVillagerArrivingInMorning() {
         return morningRewards.hasPendingSpawnVisitor();
     }

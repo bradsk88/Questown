@@ -106,6 +106,15 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         this.quests.add(this.questFactory.newLootQuest(dep(ownerId), itemId, count));
     }
 
+    /** Day 2's first-work-request quest. Use this, not {@link #addNewQuest}. */
+    public void addFirstWorkRequestQuest(@Nullable VillagerUUID ownerId) {
+        this.quests.add(this.questFactory.newFirstWorkRequestQuest(dep(ownerId)));
+    }
+
+    public void addConcurrentJobsQuest(@Nullable VillagerUUID ownerId, Collection<KEY> jobIds) {
+        this.quests.add(this.questFactory.newConcurrentJobsQuest(dep(ownerId), jobIds));
+    }
+
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.quests);
     }

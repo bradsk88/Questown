@@ -16,10 +16,13 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
 
     private static final Collection<String> ENABLED_TABS = FlagTabs.allExcept(OpenFlagMenuMessage.QUESTS);
 
+    private final QuestScreenSummary summary;
+
     public TownQuestsContainer(
             int windowId,
             Collection<UIQuest> quests,
             FlagInfo flag,
+            QuestScreenSummary summary,
             Runnable triggerAdvancement
     ) {
         this(windowId, quests, flag, summary, triggerAdvancement, Map.of());
@@ -38,6 +41,16 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
         triggerAdvancement.run();
     }
 
+    @Override
+    public boolean isAllComplete() {
+        return summary.allComplete();
+    }
+
+    @Override
+    public boolean isMorningRewardPending() {
+        return summary.pendingReward();
+    }
+
     public static TownQuestsContainer ForClient(
             int windowId,
             Inventory inv,
@@ -50,10 +63,14 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
     public static void write(
             FriendlyByteBuf data,
             List<UIQuest> quests,
-            BlockPos pos
+            BlockPos pos,
+            QuestScreenSummary summary,
+            Map<UUID, String> villagerDisplayNames
     ) {
         writeQuests(data, quests);
         writeFlagPos(data, pos);
+        data.writeBoolean(summary.allComplete());
+        data.writeBoolean(summary.pendingReward());
         writeVillagerNames(data, villagerDisplayNames);
     }
 

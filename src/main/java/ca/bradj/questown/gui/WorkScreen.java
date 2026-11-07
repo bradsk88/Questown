@@ -5,8 +5,6 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.JEI;
 import ca.bradj.roomrecipes.core.space.Position;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.gui.drawable.IDrawableStatic;
 import mezz.jei.common.util.ImmutableRect2i;
 import mezz.jei.common.util.MathUtil;
@@ -175,6 +173,7 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
         y = y + PAGE_PADDING;
 
 
+        Compat.resetShaderColor();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
             int row = i - startIndex;

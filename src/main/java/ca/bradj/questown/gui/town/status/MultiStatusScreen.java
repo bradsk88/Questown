@@ -1,17 +1,20 @@
 package ca.bradj.questown.gui.town.status;
 
+import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.OpenJobMessage;
+import ca.bradj.questown.core.network.OpenVillagerMenuMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.*;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -25,18 +28,24 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
 
     private static final UUID MORNING_ARRIVAL_SENTINEL = new UUID(0, 0);
 
-    private final Map<UUID, Collection<StatusPacket>> statusSmoothingQueue = new HashMap<>();
+    private final StatusSmoother statusSmoother = new StatusSmoother();
     private final FlagTabs tabs;
 
+    /**
+     * @param pendingJobChange villagers whose job changes next morning
+     * @param switchAfterTrip  the job each villager switches to after its trip
+     */
     public record SyncedData(Map<UUID, StatusPacket> villagerStatuses,
                              Map<UUID, ImmutableList<net.minecraft.world.item.Item>> items,
-                             boolean villagerArrivingInMorning) {
+                             boolean villagerArrivingInMorning,
+                             Set<UUID> pendingJobChange,
+                             Map<UUID, JobID> switchAfterTrip) {
         public JobID getJob(UUID uuid) {
             return Util.orNull(villagerStatuses.get(uuid), StatusPacket::jobId);
         }
     }
 
-    static SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false);
+    static public SyncedData syncedData = new SyncedData(new HashMap<>(), new HashMap<>(), false, Set.of(), Map.of());
 
     public MultiStatusScreen(
             MultiStatusMenu menu,
@@ -51,52 +60,52 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                     }
                 }, Compat.literal("")
         );
-        this.tabs = FlagTabs.forMenu(menu);
+        this.tabs = FlagTabs.forMenu(menu, "tooltips.villagers");
     }
 
     @Override
-    public void render(
-            PoseStack stack,
+    protected void renderScreenExtras(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             float partialTicks
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - super.backgroundHeight()) / 2;
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
-        tabs.draw(new RenderContext(itemRenderer, stack), bgX, bgY);
-        this.renderTooltip(stack, mouseX, mouseY);
+        tabs.draw(ctx, bgX, bgY);
     }
 
     @Override
     protected ImmutableList<UUID> cardsData() {
-        ImmutableList<UUID> villagers = ImmutableList.copyOf(syncedData.villagerStatuses.keySet());
-        if (!syncedData.villagerArrivingInMorning()) {
-            return villagers;
-        }
-        return ImmutableList.<UUID>builder().addAll(villagers).add(MORNING_ARRIVAL_SENTINEL).build();
+        return ArrivalCard.order(ImmutableList.copyOf(syncedData.villagerStatuses.keySet()),
+                MORNING_ARRIVAL_SENTINEL, syncedData.villagerArrivingInMorning(), cardsPerPage());
     }
 
     @Override
     protected List<Component> renderCardContent(
-            PoseStack poseStack,
+            RenderContext ctx,
             Card<UUID> card,
             int mouseX,
             int mouseY
     ) {
         if (MORNING_ARRIVAL_SENTINEL.equals(card.data())) {
-            font.draw(poseStack, Compat.translatable("gui.status.villager_arriving_morning"),
-                    card.coords().leftXPadded(), card.coords().topYPadded(), 0x808080);
+            // With no villagers yet, name the arrival on its own.
+            String key = syncedData.villagerStatuses.isEmpty()
+                    ? "gui.status.villager_arriving_morning.first"
+                    : "gui.status.villager_arriving_morning";
+            CardCoordinates cc = card.coords();
+            ctx.textWrap(new Coordinate(cc.leftXPadded(), cc.topYPadded()),
+                    cc.rightXPadded() - cc.leftXPadded(), Compat.translatable(key), 0xFF808080);
             return null;
         }
-        renderStatus(poseStack, card.coords(), card.data());
-        renderInventory(card.coords(), card.data());
-        renderFace(poseStack, card.coords(), card.data());
+        renderStatus(ctx, card.coords(), card.data());
+        renderInventory(ctx, card.coords(), card.data());
+        renderFace(ctx, card.coords(), card.data());
         return null;
     }
 
     private void renderInventory(
+            RenderContext ctx,
             CardCoordinates coords,
             UUID uuid
     ) {
@@ -105,31 +114,69 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         for (Item item : items) {
             int destX = iconX + SMALL_PADDING;
             int destY = coords.topYPadded() + BIG_PADDING;
-            this.itemRenderer.renderAndDecorateItem(new ItemStack(item), destX, destY);
+            Compat.renderItemAndDecorations(ctx.gui(), new ItemStack(item), destX, destY);
             iconX += 16;
         }
     }
 
     private void renderFace(
-            PoseStack stack,
+            RenderContext ctx,
             CardCoordinates coords,
             UUID uuid
     ) {
         int x = coords.leftXPadded();
         int destY = coords.topYPadded();
-        Util.blitFace(stack, uuid, x, destY);
+        Util.blitFace(ctx.gui(), uuid, x, destY);
         int nameX = x + Util.faceWidth + 4;
-        Compat.drawDarkText(
-                font,
-                stack,
-                Compat.translatable(syncedData.villagerStatuses.get(uuid).jobId().rootId()),
-                nameX,
-                destY
-        );
+        ctx.darkText(Compat.literal(fitTitle(uuid, getStatusX(coords) - nameX - 2)), nameX, destY);
+    }
+
+    /** The card title, or the short form when the full one would run under the status art. */
+    private String fitTitle(UUID uuid, int width) {
+        String title = cardTitle(uuid);
+        JobID becomes = syncedData.switchAfterTrip().get(uuid);
+        if (becomes == null || font.width(title) <= width) {
+            return title;
+        }
+        return PendingJobChangeMark.afterTripTitleShort(becomesName(uuid, becomes).getString());
+    }
+
+    /** The job title, marked for a morning change, or naming the job after a trip. */
+    private static String cardTitle(UUID uuid) {
+        String job = jobTitle(uuid);
+        JobID becomes = syncedData.switchAfterTrip().get(uuid);
+        if (becomes != null) {
+            return PendingJobChangeMark.afterTripTitle(job, becomesName(uuid, becomes).getString());
+        }
+        return PendingJobChangeMark.title(job, syncedData.pendingJobChange().contains(uuid));
+    }
+
+    private static Component becomesName(UUID uuid, JobID becomes) {
+        JobID now = syncedData.getJob(uuid);
+        if (now != null && now.sameRoot(becomes)) {
+            return Jobs.getVariantNameComponent(becomes);
+        }
+        return Jobs.getRootNameComponent(becomes);
+    }
+
+    private static String jobTitle(UUID uuid) {
+        return Compat.translatable("jobs." + syncedData.villagerStatuses.get(uuid).jobId().rootId()).getString();
+    }
+
+    private static boolean isOverCard(CardCoordinates coords, int mouseX, int mouseY) {
+        Coordinate tl = coords.topLeft();
+        Coordinate br = coords.bottomRight();
+        return UtilClean.isCoordInBox(mouseX, mouseY, tl.x(), tl.y(), br.x() - tl.x(), br.y() - tl.y());
+    }
+
+    private boolean isOverJobTitle(CardCoordinates coords, UUID uuid, int mouseX, int mouseY) {
+        int nameX = coords.leftXPadded() + Util.faceWidth + 4;
+        int w = font.width(cardTitle(uuid) + "*");
+        return UtilClean.isCoordInBox(mouseX, mouseY, nameX, coords.topYPadded(), w, font.lineHeight);
     }
 
     private void renderStatus(
-            PoseStack stack,
+            RenderContext ctx,
             PagedCardScreen.CardCoordinates coords,
             UUID uuid
     ) {
@@ -141,8 +188,51 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
         int destX = getStatusX(coords);
         int destY = getStatusY(coords);
         @NotNull StatusPacket status = getSmoothedStatus(uuid);
-        RenderSystem.setShaderTexture(0, status.image());
-        blit(stack, destX, destY, 0, 0, drawWidth, drawHeight, texWidth, texHeight);
+        // 32x32 art: give the art's own size, or only a sliver is drawn.
+        Util.blit(ctx.gui(), status.image(), destX, destY, 0, 0, drawWidth, drawHeight, drawWidth, drawHeight);
+        if (!renderLeaverReturnBar(ctx, status, destX, destY)) {
+            renderWorkBar(ctx, status, destX, destY);
+        }
+    }
+
+    private static void renderWorkBar(RenderContext ctx, StatusPacket status, int x, int y) {
+        if (status.workProgress() < 0) {
+            return;
+        }
+        drawStatusBar(ctx, status.workProgress(), x, y);
+    }
+
+    private static void drawStatusBar(RenderContext ctx, double fraction, int x, int y) {
+        int barWidth = 30;
+        int barHeight = 3;
+        int bx = x + 1;
+        int by = y + 32 - 1 - barHeight;
+        ctx.fill(bx, by, bx + barWidth, by + barHeight, 0x80202020);
+        int filled = (int) Math.round(fraction * barWidth);
+        if (filled > 0) {
+            ctx.fill(bx, by, bx + filled, by + barHeight, 0xFF40C040);
+        }
+    }
+
+    /** Draws the bar for a villager away on a trip, counting down from the client's clock. @return whether it drew */
+    private boolean renderLeaverReturnBar(
+            RenderContext ctx,
+            StatusPacket status,
+            int x,
+            int y
+    ) {
+        if (status.leaverReturnTick() <= 0 || status.leaverReturnTotal() <= 0) {
+            return false;
+        }
+        Level level = Minecraft.getInstance().level;
+        if (level == null) {
+            return false;
+        }
+        long remaining = status.leaverReturnTick() - level.getGameTime();
+        double fraction = Math.min(1.0, Math.max(0.0,
+                1.0 - remaining / (double) status.leaverReturnTotal()));
+        drawStatusBar(ctx, fraction, x, y);
+        return true;
     }
 
     private static int getStatusY(CardCoordinates coords) {
@@ -156,25 +246,12 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
     }
 
     private @NotNull StatusPacket getSmoothedStatus(UUID villagerUUID) {
-        Collection<StatusPacket> q = UtilClean.getOrDefaultCollection(
-                statusSmoothingQueue,
-                villagerUUID,
-                EvictingQueue.create(5),
-                true
-        );
-        q.add(syncedData.villagerStatuses.get(villagerUUID));
-        statusSmoothingQueue.put(villagerUUID, q);
-        HashMap<StatusPacket, Integer> counter = new HashMap<>();
-        for (StatusPacket iStatus : q) {
-            counter.compute(iStatus, (ignored, oldCt) -> oldCt == null ? 1 : oldCt + 1);
-        }
-        return counter.entrySet().stream().max(Comparator.comparingInt(Map.Entry::getValue)).map(Map.Entry::getKey)
-                      .orElseThrow();
+        return statusSmoother.smooth(villagerUUID, syncedData.villagerStatuses.get(villagerUUID));
     }
 
     @Override
-    protected void renderTooltip(
-            @NotNull PoseStack stack,
+    protected void renderTooltipContent(
+            RenderContext ctx,
             int mouseX,
             int mouseY
     ) {
@@ -186,23 +263,40 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
                 bgY,
                 mouseX,
                 mouseY,
-                key -> super.renderTooltip(stack, Compat.translatable(key), mouseX, mouseY)
+                key -> this.showTooltip(Compat.translatable(key))
         )) {
             return;
         }
 
         for (Card<UUID> v : cards()) {
-            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
             CardCoordinates coords = v.coords();
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) {
+                if (!syncedData.villagerStatuses.isEmpty() && isOverCard(coords, mouseX, mouseY)) {
+                    this.showTooltip(Compat.translatable("gui.status.villager_arriving_morning.tooltip"));
+                    return;
+                }
+                continue;
+            }
+            JobID becomes = syncedData.switchAfterTrip().get(v.data());
+            if (becomes != null && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
+                ImmutableList<Component> jc = Jobs.getComponentsForTooltip(becomes);
+                this.showTooltip(Compat.translatable("gui.status.switch_after_trip",
+                        Compat.translatable("menu.common.job_name", jc.get(0), jc.get(1))));
+                return;
+            }
+            if (syncedData.pendingJobChange().contains(v.data()) && isOverJobTitle(coords, v.data(), mouseX, mouseY)) {
+                this.showTooltip(Compat.translatable("menu.unlock_root.already_pending"));
+                return;
+            }
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(mouseX, mouseY, x, y, 32, 32)) {
                 @NotNull StatusPacket status = getSmoothedStatus(v.data());
-                super.renderTooltip(stack, status.texts(), Optional.empty(), mouseX, mouseY);
+                renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, status.texts());
                 return;
             }
         }
-        super.renderTooltip(stack, mouseX, mouseY);
+        super.renderTooltipContent(ctx, mouseX, mouseY);
     }
 
     @Override
@@ -221,12 +315,27 @@ public class MultiStatusScreen extends AbstractPagedCardScreen<MultiStatusMenu, 
             int x = getStatusX(coords);
             int y = getStatusY(v.coords());
             if (UtilClean.isCoordInBox(p_97748_, p_97749_, x, y, 32, 32)) {
-                QuestownNetwork.CHANNEL.sendToServer(new OpenJobMessage(
+                QuestownNetwork.sendToServer(new OpenJobMessage(
                         menu.getFlagInfo().flagPos(), syncedData.getJob(v.data())
                 ));
                 return true;
             }
         };
+
+        // A click opens that villager's menu without the inventory tab.
+        for (Card<UUID> v : cards()) {
+            if (MORNING_ARRIVAL_SENTINEL.equals(v.data())) continue;
+            CardCoordinates c = v.coords();
+            if (p_97748_ < c.leftX() || p_97748_ > c.rightX() || p_97749_ < c.topY() || p_97749_ > c.bottomY()) {
+                continue;
+            }
+            BlockPos flagPos = menu.getFlagInfo().flagPos();
+            QuestownNetwork.sendToServer(new OpenVillagerMenuMessage(
+                    flagPos.getX(), flagPos.getY(), flagPos.getZ(),
+                    v.data(), OpenVillagerMenuMessage.INITIAL, false
+            ));
+            return true;
+        }
 
         return super.mouseClicked(p_97748_, p_97749_, p_97750_);
     }

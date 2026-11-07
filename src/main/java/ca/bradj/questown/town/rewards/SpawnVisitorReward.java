@@ -55,6 +55,11 @@ public class SpawnVisitorReward extends MCReward {
         return () -> spawnVisitorNearby(town, villagerUUID);
     }
 
+    /** Dev and tests: spawns a new villager for this flag. */
+    public static void spawnNew(TownInterface town) {
+        spawnVisitorNearby(town, null);
+    }
+
     private static void spawnVisitorNearby(
             TownInterface entity,
             @Nullable VillagerUUID villagerUUID
