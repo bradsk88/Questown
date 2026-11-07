@@ -77,6 +77,7 @@ public class ClientAccess {
     public static void openSkillDetails(UIJob job, BlockPos flagPos, java.util.UUID villager, boolean locked, int flagBops) {
         openScreen(() -> ItemJobsScreen.forSkill(job, flagPos, villager, locked, flagBops));
     }
+
     public static void syncJobsForCommands(
             ImmutableList<JobID> jobs
     ) {
