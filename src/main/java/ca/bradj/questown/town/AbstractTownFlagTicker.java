@@ -218,27 +218,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         // Do morning logic via morningTick().
     }
 
-    protected abstract void addQuests(
-            TICK_DATA data,
-            VILLAGERS v
-    );
-
-    private boolean isMissingCompletableQuests(TICK_DATA e) {
-        Collection<Pair<Completable, Reward>> all = getAllQuestsWithRewards(e);
-        if (all.stream().anyMatch(v -> !v.a().isComplete())) {
-            return false;
-        }
-        Collection<Reward> rewards = getMorningRewards(e);
-        if (rewards.stream().anyMatch(Reward::addsQuestsWhenApplied)) {
-            return false;
-        }
-        return true;
-    }
-
-    protected abstract ImmutableList<Pair<Completable, Reward>> getAllQuestsWithRewards(TICK_DATA e);
-
-    protected abstract ImmutableList<Reward> getMorningRewards(TICK_DATA e);
-
     protected abstract ImmutableList<VILLAGERS> getVillagers(TICK_DATA data);
 
     protected abstract boolean runAnyInitializers(TICK_DATA data);

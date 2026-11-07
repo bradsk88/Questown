@@ -165,6 +165,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                     visitorUUID
             );
             QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
+            addBatchForVisitor(town, quests, visitorUUID);
             return;
         }
 
@@ -190,6 +191,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         QT.QUESTS_LOGGER.info("No upgrade paths could be determined.");
         QT.QUESTS_LOGGER.info("Skipping generation. The flag entity will generate a random batch instead.");
+        addBatchForVisitor(town, quests, visitorUUID);
     }
 
     public static void addJobQuest(
@@ -240,6 +242,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return ing.stream()
                   .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(ForgeRegistries.ITEMS::getKey)
                                   .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
+    }
+
+    /** Batch requests waiting to become procedural batches. */
+    int pendingBatchRequests() {
+        return questRequests.size();
     }
 
     public static void addBatchForVisitor(
@@ -963,6 +970,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    /** Chapter advancements at 5, 10 and 20 completed procedural batches. */
     private void fireChapterMilestonesIfNeeded() {
         TownFlagBlockEntity t = town.getUnsafe();
         t.completedProceduralBatches++;
@@ -1145,6 +1153,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
                         .filter(v -> v.getValue().equals(wantedJobId))
                         .map(v -> v.getKey())
                         .toList();
+                if (matches.isEmpty()) {
+                    // A template job id is never registered; match on the root instead.
+                    matches = villagerJobs
+                            .entrySet()
+                            .stream()
+                            .filter(v -> v.getValue().sameRoot(wantedJobId))
+                            .map(v -> v.getKey())
+                            .toList();
+                }
                 if (matches.isEmpty()) {
                     continue;
                 }

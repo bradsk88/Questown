@@ -37,8 +37,7 @@ public class MCInstantReward extends MCReward implements MCRewardContainer {
     ) {
         super(rType);
         this.town = town;
-        QT.QUESTS_LOGGER.warn(
-                "An \"instant\"-type reward is being loaded from disk. This is probably harmless, but is also unexpected.");
+        // An instant reward already applied on disk is normal on every load.
     }
 
     @Override
