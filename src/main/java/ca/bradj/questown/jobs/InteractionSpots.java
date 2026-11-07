@@ -1,0 +1,80 @@
+package ca.bradj.questown.jobs;
+
+import ca.bradj.roomrecipes.adapter.Positions;
+import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import ca.bradj.roomrecipes.rooms.XWall;
+import ca.bradj.roomrecipes.rooms.ZWall;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
+import java.util.function.Predicate;
+
+/** Where a villager stands to use a block in a room: a cell it can stand on, never inside a wall. */
+public final class InteractionSpots {
+
+    private InteractionSpots() {
+    }
+
+    /** The door-side neighbour if standable, else the first standable neighbour, else (in a 1x1 room) the door; null if none. */
+    public static @Nullable BlockPos find(
+            BlockPos bp,
+            Room room,
+            Predicate<BlockPos> isStandable
+    ) {
+        // A job block built into the wall is used from inside the room.
+        if (isWallCell(bp, room)) {
+            for (Direction dd : Direction.Plane.HORIZONTAL) {
+                BlockPos n = bp.relative(dd);
+                if (isInteriorCell(n, room) && isStandable.test(n)) {
+                    return n;
+                }
+            }
+        }
+        Direction d = doorDirectionFromCenter(room);
+        if (isStandable.test(bp.relative(d))) {
+            return bp.relative(d);
+        }
+        for (Direction dd : Direction.Plane.HORIZONTAL) {
+            if (isStandable.test(bp.relative(dd))) {
+                return bp.relative(dd);
+            }
+        }
+        if (InclusiveSpaces.calculateArea(room.getSpaces()) == 9) {
+            return Positions.ToBlock(room.getDoorPos(), bp.getY());
+        }
+        return null;
+    }
+
+    private static boolean isInteriorCell(BlockPos bp, Room room) {
+        return room.getSpaces().stream().anyMatch(s -> s.getWestX() < bp.getX() && bp.getX() < s.getEastX()
+                && s.getNorthZ() < bp.getZ() && bp.getZ() < s.getSouthZ());
+    }
+
+    private static boolean isWallCell(BlockPos bp, Room room) {
+        boolean inBounds = room.getSpaces().stream().anyMatch(s -> s.getWestX() <= bp.getX() && bp.getX() <= s.getEastX()
+                && s.getNorthZ() <= bp.getZ() && bp.getZ() <= s.getSouthZ());
+        return inBounds && !isInteriorCell(bp, room);
+    }
+
+    public static Direction doorDirectionFromCenter(Room room) {
+        Optional<XWall> backXWall = room.getBackXWall();
+        if (backXWall.isPresent() && backXWall.get().getZ() > room.doorPos.z) {
+            return Direction.NORTH;
+        }
+        if (backXWall.isPresent()) {
+            return Direction.SOUTH;
+        }
+
+        Optional<ZWall> backZWall = room.getBackZWall();
+        if (backZWall.isPresent() && backZWall.get().getX() > room.doorPos.x) {
+            return Direction.WEST;
+        }
+        if (backZWall.isPresent()) {
+            return Direction.EAST;
+        }
+        return Direction.NORTH;
+    }
+}

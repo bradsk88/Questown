@@ -56,6 +56,11 @@ public class WallDetection {
         return false;
     }
 
+    /** True when the cell is open at the feet, as opposed to filled by something like a chest. */
+    public static boolean IsFloorOpen(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y));
+    }
+
     public static boolean IsEmpty(ServerLevel level, Position dp, int y) {
         BlockPos bp = Positions.ToBlock(dp, y);
         BlockPos abp = bp.above();

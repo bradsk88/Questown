@@ -1,22 +1,25 @@
 package ca.bradj.questown.mobs.visitor;
 
+import ca.bradj.questown.jobs.WalkTargets;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.tags.ITag;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+/** Villager pathfinding: vanilla's, but lit campfires and fences are blocked, fence gates are walkable, and water under a roof is allowed. */
 @SuppressWarnings("NullableProblems")
 public class VillagerPathNavigation extends GroundPathNavigation {
     public VillagerPathNavigation(
@@ -29,78 +32,106 @@ public class VillagerPathNavigation extends GroundPathNavigation {
     }
 
     @Override
-    protected PathFinder createPathFinder(int p_26453_) {
-        this.nodeEvaluator = new WalkNodeEvaluator() {
+    public Path createPath(BlockPos pos, int accuracy) {
+        BlockPos door = doorAtOrJustAbove(pos);
+        if (door != null) {
+            return createPath(ImmutableSet.of(door), 8, false, accuracy);
+        }
+        BlockPos beside = besideSolidStack(pos);
+        if (beside != null) {
+            return createPath(ImmutableSet.of(beside), 8, false, accuracy);
+        }
+        return super.createPath(pos, accuracy);
+    }
 
-            @Override
-            public BlockPathTypes getBlockPathType(
-                    BlockGetter getr,
-                    int x,
-                    int y,
-                    int z
-            ) {
-                BlockPos pos = new BlockPos(x, y, z);
-                FluidState fs = getr.getFluidState(pos);
-                if (!fs.isEmpty()) {
-                    BlockState above = getr.getBlockState(pos.above());
-                    if (above.isAir()) {
-                        BlockState roof = getr.getBlockState(pos.above()
-                                                                .above());
-                        if (!roof.isAir()) {
-                            return BlockPathTypes.BLOCKED;
-                        }
-                    }
-                }
-
-                TagKey<Block> fenceGates = BlockTags.FENCE_GATES;
-                ITag<Block> gates = getTag(fenceGates);
-                if (gates.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.DOOR_WOOD_CLOSED;
-                }
-
-                ITag<Block> fences = getTag(BlockTags.FENCES);
-                if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-                if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-
-                return super.getBlockPathType(getr, x, y, z);
+    /** A target under a stack of blocks: stand beside it, at its level, rather than on top. A single block keeps vanilla's lift. */
+    private @Nullable BlockPos besideSolidStack(BlockPos pos) {
+        if (!ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos)) || !ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos.above()))) {
+            return null;
+        }
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            BlockPos n = pos.relative(d);
+            if (isDoor(n)) {
+                return lowerHalf(n);
             }
+            if (WalkTargets.isStandable(level, n)) {
+                return n;
+            }
+        }
+        return null;
+    }
 
+    private @Nullable BlockPos doorAtOrJustAbove(BlockPos pos) {
+        if (isDoor(pos)) {
+            return lowerHalf(pos);
+        }
+        if (!ca.bradj.questown.mc.Compat.isSolid(level.getBlockState(pos))) {
+            return null;
+        }
+        BlockPos above = pos.above();
+        return isDoor(above) ? lowerHalf(above) : null;
+    }
+
+    private boolean isDoor(BlockPos pos) {
+        return level.getBlockState(pos).getBlock() instanceof DoorBlock;
+    }
+
+    private BlockPos lowerHalf(BlockPos doorPos) {
+        BlockState state = level.getBlockState(doorPos);
+        if (state.getValue(DoorBlock.HALF) == DoubleBlockHalf.UPPER) {
+            return doorPos.below();
+        }
+        return doorPos;
+    }
+
+    @Override
+    protected PathFinder createPathFinder(int maxVisitedNodes) {
+        this.nodeEvaluator = new WalkNodeEvaluator() {
             @Override
-            protected BlockPathTypes evaluateBlockPathType(
-                    BlockGetter getr,
-                    boolean p_77615_,
-                    boolean p_77616_,
-                    BlockPos pos,
-                    BlockPathTypes defaultType
-            ) {
-                defaultType = super.evaluateBlockPathType(getr, p_77615_, p_77616_, pos, defaultType);
-
-                if (defaultType == BlockPathTypes.FENCE && (getr.getBlockState(pos)
-                                                                .getBlock() instanceof FenceGateBlock)) {
-                    return BlockPathTypes.DOOR_OPEN;
-                }
-
-                ITag<Block> fences = getTag(BlockTags.FENCES);
-                if (fences.contains(getr.getBlockState(pos).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-                if (fences.contains(getr.getBlockState(pos.below()).getBlock())) {
-                    return BlockPathTypes.BLOCKED;
-                }
-
-                return defaultType;
+            public BlockPathTypes getBlockPathType(BlockGetter context, int x, int y, int z) {
+                BlockPos pos = new BlockPos(x, y, z);
+                return overridePathType(context, pos, super.getBlockPathType(context, x, y, z));
             }
         };
         this.nodeEvaluator.setCanPassDoors(true);
-        return new PathFinder(this.nodeEvaluator, p_26453_);
+        return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
     }
 
-    @SuppressWarnings("DataFlowIssue")
-    private static @NotNull ITag<Block> getTag(TagKey<Block> fenceGates) {
-        return ForgeRegistries.BLOCKS.tags().getTag(fenceGates);
+    private BlockPathTypes overridePathType(BlockGetter context, BlockPos pos, BlockPathTypes type) {
+        // A lit campfire burns villagers that walk through it, so block it.
+        BlockState state = context.getBlockState(pos);
+        if (CampfireBlock.isLitCampfire(state)) {
+            return BlockPathTypes.BLOCKED;
+        }
+
+        FluidState fs = context.getFluidState(pos);
+        if (!fs.isEmpty()) {
+            BlockState above = context.getBlockState(pos.above());
+            if (above.isAir()) {
+                BlockState roof = context.getBlockState(pos.above()
+                                                        .above());
+                if (!roof.isAir()) {
+                    return BlockPathTypes.BLOCKED;
+                }
+            }
+        }
+
+        if (state.is(BlockTags.FENCE_GATES)) {
+            return BlockPathTypes.DOOR_WOOD_CLOSED;
+        }
+
+        if (state.is(BlockTags.FENCES)) {
+            return BlockPathTypes.BLOCKED;
+        }
+        if (context.getBlockState(pos.below()).is(BlockTags.FENCES)) {
+            return BlockPathTypes.BLOCKED;
+        }
+
+        // A fence gate can be opened.
+        if (type == BlockPathTypes.FENCE && state.getBlock() instanceof FenceGateBlock) {
+            return BlockPathTypes.DOOR_OPEN;
+        }
+
+        return type;
     }
 }

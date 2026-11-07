@@ -1,5 +1,6 @@
 package ca.bradj.questown.items;
 
+import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.TownFlagBlock;
 import ca.bradj.questown.core.init.BlocksInit;
@@ -37,8 +38,15 @@ public class FalseDoorItem extends Item {
             return InteractionResult.CONSUME;
         }
         if (ctx.getLevel() instanceof ServerLevel sl) {
-            sl.setBlockAndUpdate(ctx.getClickedPos().above(), BlocksInit.FALSE_DOOR_BLOCK.get().defaultBlockState());
             TownFlagBlockEntity parent = TownFlagBlock.GetParentFromNBT(sl, ctx.getItemInHand());
+            if (parent == null) {
+                QT.ITEM_LOGGER.error(
+                        "False door placement aborted at {}: parent flag not found (chunk unloaded?); door not placed",
+                        ctx.getClickedPos().above()
+                );
+                return InteractionResult.FAIL;
+            }
+            sl.setBlockAndUpdate(ctx.getClickedPos().above(), BlocksInit.FALSE_DOOR_BLOCK.get().defaultBlockState());
             parent.getRoomHandle().registerDoor(ctx.getClickedPos().above());
             return InteractionResult.CONSUME;
         }
