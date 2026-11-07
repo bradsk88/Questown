@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class TownMessages {
+    private final BroadcastPacer<Component> pacer = new BroadcastPacer<>(BROADCAST_SPACING_TICKS);
     private ServerLevel level;
 
     public void initialize(ServerLevel t) {
@@ -57,6 +58,14 @@ public class TownMessages {
 
     public void roomRecipeCreated(
             MCRoom roomDoorPos,
+            Optional<ResourceLocation> match
+    ) {
+        roomRecipeCreated(roomDoorPos.getDoorPos(), match);
+    }
+
+    /** "Created X at location [x, z]". */
+    public void roomRecipeCreated(
+            Position where,
             Optional<ResourceLocation> match
     ) {
         broadcastMessage(

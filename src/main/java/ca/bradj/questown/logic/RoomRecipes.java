@@ -51,13 +51,19 @@ public class RoomRecipes {
             Level level,
             ResourceLocation id
     ) {
-        List<RoomRecipe> recipes = getAllRecipes(level);
-        for (RoomRecipe r : recipes) {
-            if (id.equals(r.getId())) {
-                return Optional.of(r);
-            }
+        return RecipeRef.recipeById(level.getRecipeManager(), RecipesInit.ROOM, id);
+    }
+
+    /** {@link #getById}, or the built-in recipe of a special room (town gate, flag, campfire). */
+    public static Optional<RoomRecipe> getByIdOrSpecial(
+            Level level,
+            ResourceLocation id
+    ) {
+        Optional<RoomRecipe> r = getById(level, id);
+        if (r.isPresent()) {
+            return r;
         }
-        return Optional.empty();
+        return Optional.ofNullable(SpecialQuests.getSpecialQuests().get(id));
     }
 
     @NotNull
@@ -143,7 +149,8 @@ public class RoomRecipes {
 
     private static JsonObject getAsJsonObject(Ingredient js) {
         try {
-            return js.toJson().getAsJsonObject();
+            com.google.gson.JsonElement j = ca.bradj.questown.mc.Compat.ingredientToJson(js);
+            return j.getAsJsonObject();
         } catch (IllegalStateException e) {
             throw new IllegalStateException("Not a JSON object: " + js, e);
         }
@@ -171,6 +178,24 @@ public class RoomRecipes {
             return false;
         }
         return found;
+    }
+
+    /** The recipes that upgrade the given one: they cover every ingredient group of it, and are not the recipe itself. The caller picks one. */
+    public static <K> List<K> upgradeCandidates(
+            Collection<List<String>> fromIng,
+            Map<K, ? extends Collection<List<String>>> allRecipes
+    ) {
+        ImmutableList.Builder<K> b = ImmutableList.builder();
+        for (Map.Entry<K, ? extends Collection<List<String>>> e : allRecipes.entrySet()) {
+            Collection<List<String>> toIng = e.getValue();
+            if (toIng.equals(fromIng)) {
+                continue;
+            }
+            if (containsAllTags(fromIng, toIng)) {
+                b.add(e.getKey());
+            }
+        }
+        return b.build();
     }
 
     public static RoomRecipe standard(

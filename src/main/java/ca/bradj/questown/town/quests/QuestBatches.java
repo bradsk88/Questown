@@ -180,15 +180,19 @@ public class QuestBatches<
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
-                    case CONCURRENT_JOBS -> e.addNewQuest(owner, q.getWantedId());
+                    case JOB_UNLOCK -> e.addJobUnlockQuest(q.getWantedId());
+                    case CONCURRENT_JOBS -> e.addConcurrentJobsQuest(owner, q.getConcurrentJobIds());
+                    case FIRST_WORK_REQUEST -> e.addFirstWorkRequestQuest(owner);
+                    case SKILL_UNLOCK -> e.addSkillUnlockQuest(owner, q.getWantedId());
+                    case VILLAGER_LEVEL -> e.addVillagerLevelQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
-                    e.markRecipeAsComplete(q.completedOn, q.getWantedId());
+                    // The saved quest was already rewarded, so replay it rather than complete it again.
+                    e.markRecipeAsCompleteForReplay(q.completedOn, q.getWantedId());
                     completedQuests.remove(iq);
                 }
-                eqb.add(q);
             });
             bld.add(e);
         });
@@ -253,19 +257,12 @@ public class QuestBatches<
             @Nullable ROOM room,
             KEY recipeId
     ) {
-        for (BATCH b : batches) {
-            if (room != null && b.getAll().stream()
-                 .filter(Quest::isComplete)
-                 .filter(v -> recipeId.equals(v.getWantedId()))
-                 .anyMatch(v -> room.equals(v.completedOn))
-            ) {
-                QT.QUESTS_LOGGER.debug(
-                        "Quest was already marked complete: {} for door {}",
-                        recipeId,
-                        room.doorPos
-                );
-                return;
-            }
+        // A re-issued quest for the same recipe can still complete on the same room.
+        boolean openForRecipe = batches.stream()
+                .anyMatch(b -> b.getAll().stream()
+                        .anyMatch(v -> !v.isComplete() && recipeId.equals(v.getWantedId())));
+        if (!openForRecipe) {
+            return;
         }
         for (BATCH b : batches) {
             if (b.markRecipeAsComplete(room, recipeId)) {

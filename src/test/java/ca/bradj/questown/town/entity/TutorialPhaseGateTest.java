@@ -226,6 +226,13 @@ class TutorialPhaseGateTest {
                 && q.getType() == Quest.QuestType.ITEM
         ));
         assertFalse(hasCookFollowUpQuest(all), "phase 2.5 batch must not carry the cook follow-up quests");
+        // The cook needs kitchen_small, so the batch carries that room quest.
+        ResourceLocation kitchenSmall = new ResourceLocation("questown", "kitchen_small");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ROOM
+                        && q.getWantedId().equals(kitchenSmall)
+        ), "phase 2.5 batch must carry the kitchen_small room quest");
+        ResourceLocation storeRoomMedium = new ResourceLocation("questown", "store_room_medium");
     }
 
     @Test
@@ -321,17 +328,12 @@ class TutorialPhaseGateTest {
     void whenOneJobChangeDone_noAdvance() {
         TownQuests quests = questsAtPhase2_5();
 
-        // Only the hunter job change is done, second one not added yet
-        // But we need 3 villagers for it to proceed past the villager check
         TestTutorialTownView view = TestTutorialTownView.builder()
                 .villagerCount(3)
-                .jobForTutorial(new JobID("farmer", "wheat"))
                 .build();
 
-        // This should add the second job change quest (phase 2.5), not advance to phase 4
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
         assertEquals(TownQuests.Tutorial.APPLIED, result);
-        // The count of JOB_CHANGE quests should be 2 now (hunter + farmer)
         long jobChangeCount = quests.questBatches.getAll().stream()
                 .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE)
                 .count();

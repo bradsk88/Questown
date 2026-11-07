@@ -1,6 +1,7 @@
 {
   "type": "roomrecipes:room",
   "recipe_strength": 1,
+  "farm": false,
   "ingredients": [
     {
       "item": "questown:plate_block"
