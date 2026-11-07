@@ -99,7 +99,18 @@ public class RealtimeWorldInteraction extends
 
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
-        return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        int base = mcExtra.town().getVillagerHandle().getWorkSpeed(uuid);
+        float mult = proficiencyMultiplier(
+                getProficiencyId(),
+                id -> mcExtra.town().getVillagerHandle().getProficiency(uuid, id)
+        );
+        return applyProficiencyToWorkSpeed(base, mult);
+    }
+
+    @Override
+    protected @Nullable String getProficiencyId() {
+        return ca.bradj.questown.jobs.ServerJobsRegistry.getProficiencyId(getJobId());
     }
 
     @Override
@@ -108,6 +119,21 @@ public class RealtimeWorldInteraction extends
             Integer timeToAugment
     ) {
         return mcExtra.town().getVillagerHandle().getAffectedTime(mcExtra.entity().getUUID(), timeToAugment);
+    }
+
+    @Override
+    protected Boolean onWorkActionCompleted(
+            MCExtra mcExtra,
+            Boolean town
+    ) {
+        String profId = getProficiencyId();
+        if (profId == null) {
+            return town;
+        }
+        java.util.UUID uuid = mcExtra.entity().getUUID();
+        var handle = mcExtra.town().getVillagerHandle();
+        handle.setProficiencies(uuid, levelProficiencies(handle.getProficiencies(uuid), profId));
+        return town;
     }
 
     @Override

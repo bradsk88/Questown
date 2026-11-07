@@ -42,6 +42,7 @@ public class Work {
     private Overrides overrides;
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
+    private @Nullable String proficiencyId;
     /** True when the job joins its root's starting unlocks ({@code unlocked_with_root_job}). */
     private boolean unlockedWithRootJob;
 
@@ -98,6 +99,11 @@ public class Work {
         return specialGlobalRules;
     }
 
+    /** The job's proficiency id, or null when proficiency does not apply (no speed-up, no leveling). Jobs can share one. */
+    public @Nullable String getProficiencyId() {
+        return proficiencyId;
+    }
+
     public boolean isUnlockedWithRootJob() {
         return unlockedWithRootJob;
     }
@@ -123,6 +129,11 @@ public class Work {
             return initial;
         }
         return candidates.stream().findFirst();
+    }
+
+    public Work withProficiencyId(@Nullable String proficiencyId) {
+        this.proficiencyId = proficiencyId;
+        return this;
     }
 
     public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
@@ -189,6 +200,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
@@ -217,6 +229,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
@@ -254,6 +267,7 @@ public class Work {
                 specialGlobalRules
         );
         work.overrides = overrides;
+        work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
@@ -269,6 +283,7 @@ public class Work {
         );
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
+        work.proficiencyId = proficiencyId;
         work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;

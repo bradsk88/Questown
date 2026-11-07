@@ -162,6 +162,15 @@ public abstract class AbstractWorldInteraction<
             protected int getWorkSpeedOf10(EXTRA extra) {
                 return self.getWorkSpeedOf10(extra);
             }
+
+            @Override
+            protected TOWN onWorkActionCompleted(
+                    EXTRA extra,
+                    TOWN town
+            ) {
+                countProficiencyBearingActionForTest(self.getProficiencyId());
+                return self.onWorkActionCompleted(extra, town);
+            }
         };
         this.claimSpots = claimSpots;
     }
@@ -303,6 +312,86 @@ public abstract class AbstractWorldInteraction<
 
     protected JobID getJobId() {
         return jobId;
+    }
+
+    /** For autotests: completed work actions of jobs with a proficiency, counted on both paths. Global, so only a one-worker test can read it. */
+    private static long proficiencyBearingActionsForTest = 0;
+
+    private static void countProficiencyBearingActionForTest(@Nullable String proficiencyId) {
+        if (proficiencyId == null) {
+            return;
+        }
+        proficiencyBearingActionsForTest++;
+    }
+
+    /** The job's proficiency id, or null. Both real paths must override this; the null default makes a new subclass level nothing. */
+    protected @Nullable String getProficiencyId() {
+        return null;
+    }
+
+    /** Scales a work speed (out of 10) by a proficiency multiplier, kept within 1 to 10. */
+    static int applyProficiencyToWorkSpeed(
+            int baseOf10,
+            float multiplier
+    ) {
+        return Math.max(1, Math.min(10, Math.round(baseOf10 * multiplier)));
+    }
+
+    /** The work-speed multiplier for the job's proficiency (1 when it has none), the same in real time and during a warp. */
+    static float proficiencyMultiplier(
+            @Nullable String proficiencyId,
+            Function<String, Float> levelForId
+    ) {
+        if (proficiencyId == null) {
+            return 1f;
+        }
+        return Proficiency.multiplierFor(
+                levelForId.apply(proficiencyId),
+                Config.PROFICIENCY_MIN_MULTIPLIER.get().floatValue(),
+                Config.PROFICIENCY_MAX_MULTIPLIER.get().floatValue()
+        );
+    }
+
+    /** One completed work action on the villager's proficiencies, with the configured gain and decay. */
+    protected Map<String, Float> levelProficiencies(
+            Map<String, Float> current,
+            @Nullable String proficiencyId
+    ) {
+        return levelProficiencies(
+                current,
+                proficiencyId,
+                Config.PROFICIENCY_GAIN_PER_TICK.get().floatValue(),
+                Config.PROFICIENCY_DECAY_PER_TICK.get().floatValue()
+        );
+    }
+
+    /** As above, with the gain, decay and interval passed in. */
+    protected Map<String, Float> levelProficiencies(
+            Map<String, Float> current,
+            @Nullable String proficiencyId,
+            float gainPerTick,
+            float decayPerTick
+    ) {
+        if (proficiencyId == null) {
+            return current;
+        }
+        return Proficiency.levelUp(current, proficiencyId, gainPerTick, decayPerTick, interval);
+    }
+
+    public static long getProficiencyBearingActionsForTest() {
+        return proficiencyBearingActionsForTest;
+    }
+
+    public static void resetProficiencyBearingActionsForTest() {
+        proficiencyBearingActionsForTest = 0;
+    }
+
+    /** Called once per completed work action; the default leaves {@code town} unchanged. */
+    protected TOWN onWorkActionCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);

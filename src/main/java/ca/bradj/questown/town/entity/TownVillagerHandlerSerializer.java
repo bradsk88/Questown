@@ -34,6 +34,7 @@ public class TownVillagerHandlerSerializer {
     private static final String NBT_GUARANTEED_ROOTS = "guaranteed_roots";
     private static final String NBT_PRE_ROLL_ROOTS = "pre_roll_roots";
     private static final String NBT_BOP_LATCHES = "block_of_progress_latches";
+    private static final String NBT_PROFICIENCIES = "proficiencies";
     private static final String NBT_DISPLAY_NUMBERS = "display_numbers";
     private static final String NBT_DISPLAY_HIGHEST = "display_numbers_highest";
 
@@ -94,13 +95,26 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, JobID> preRolls = deserializeMap(
                 compound, NBT_PRE_ROLL_ROOTS, t -> JobID.fromTag((CompoundTag) ((CompoundTag) t).getCompound(NBT_VALUE))
         );
+        ImmutableMap<UUID, ImmutableMap<String, Float>> proficiencies = deserializeMap(
+                compound, NBT_PROFICIENCIES, t -> {
+                    CompoundTag pt = ((CompoundTag) t).getCompound(NBT_PROFICIENCIES);
+                    ImmutableMap.Builder<String, Float> b2 = ImmutableMap.builder();
+                    for (String key : pt.getAllKeys()) {
+                        b2.put(key, pt.getFloat(key));
+                    }
+                    return b2.build();
+                }
+        );
+
         ImmutableMap<UUID, Integer> displayNumbers = deserializeMap(compound, NBT_DISPLAY_NUMBERS, simpleInt);
         int highestDisplayNumber = compound.getInt(NBT_DISPLAY_HIGHEST);
 
         villagerHandle.initialize(
-                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending,
+                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending, proficiencies,
                 guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
         );
+        // A villager with an undelivered Block of Progress still goes to the flag after a reload.
+        villagerHandle.restoreBlockOfProgress(deserializeMap(compound, NBT_BOP_LATCHES, simpleBool));
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
@@ -204,6 +218,13 @@ public class TownVillagerHandlerSerializer {
         serializeMap(
                 compound, NBT_PRE_ROLL_ROOTS, villagerHandle.getPreRolls(),
                 (CompoundTag t, JobID j) -> t.put(NBT_VALUE, JobID.toTag(j))
+        );
+        serializeMap(
+                compound, NBT_PROFICIENCIES, villagerHandle.getAllProficiencies(), (t, m) -> {
+                    CompoundTag pt = new CompoundTag();
+                    m.forEach(pt::putFloat);
+                    t.put(NBT_PROFICIENCIES, pt);
+                }
         );
         serializeMap(compound, NBT_BOP_LATCHES, villagerHandle.getBlockOfProgressLatches(), simpleBool);
         serializeMap(compound, NBT_DISPLAY_NUMBERS, villagerHandle.getDisplayNumbers(), simpleInt);
