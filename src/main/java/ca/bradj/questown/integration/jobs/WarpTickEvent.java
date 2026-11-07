@@ -10,17 +10,12 @@ import java.util.function.Supplier;
  * Event record for warp-interleaved hooks. Passed to
  * {@link JobPhaseModifier#onWarpTick} between villager
  * warp steps during time warp.
+ * <p>{@code currentTick} is absolute game time: use it only in differences. {@code tickDelta} is the
+ * ticks since the last call. Don't mix the two in one expression.
  *
- * @param world              World access (QTWorldAccess,
- *                           not ServerLevel) for testability
- * @param currentTick        The current simulated game tick
- * @param tickDelta          Ticks elapsed since last invocation.
- *                           Hooks should compute effects
- *                           proportionally to this value,
- *                           not assume any particular call
- *                           frequency.
- * @param workBlockPositions Tracked job block positions from
- *                           the town's work state registry
+ * @param currentTick        the current simulated game tick
+ * @param tickDelta          ticks since the last call, nights included; scale effects by it
+ * @param workBlockPositions the town's job block positions
  */
 public record WarpTickEvent(
         QTWorldAccess world,

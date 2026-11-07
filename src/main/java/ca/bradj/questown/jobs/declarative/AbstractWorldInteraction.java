@@ -1,18 +1,23 @@
 package ca.bradj.questown.jobs.declarative;
 
 import ca.bradj.questown.QT;
-import ca.bradj.questown.items.EffectMetaItem;
-import ca.bradj.questown.items.KnowledgeMetaItem;
+import ca.bradj.questown.core.Config;
+import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
 import ca.bradj.questown.logic.PredicateCollection;
+import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.ImmutableWorkStateContainer;
 import ca.bradj.questown.town.workstatus.State;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import org.apache.logging.log4j.util.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -280,10 +285,13 @@ public abstract class AbstractWorldInteraction<
         return reset.apply(ts);
     }
 
-    protected abstract void iterate(
+    /** Pushes the items onto {@code push}, at most {@code Config.BASE_MAX_LOOP} of them. */
+    protected void iterate(
             Iterable<HELD_ITEM> newItemsSource,
             Function<HELD_ITEM, HELD_ITEM> push
-    );
+    ) {
+        Util.iterate(newItemsSource, push::apply);
+    }
 
     private @NotNull Function<TOWN, TOWN> getResetFunc(
             EXTRA inputs,
@@ -295,6 +303,10 @@ public abstract class AbstractWorldInteraction<
             return ts;
         };
         return reset;
+    }
+
+    protected JobID getJobId() {
+        return jobId;
     }
 
     protected abstract int getWorkSpeedOf10(EXTRA extra);
@@ -354,14 +366,21 @@ public abstract class AbstractWorldInteraction<
         );
     }
 
+    /** The server level behind {@code extra}, or null when there is none. */
+    protected @Nullable ServerLevel getServerLevel(EXTRA extra) {
+        return null;
+    }
+
+    protected ArrayList<WorkPosition<POS>> shuffle(
+            EXTRA extra,
+            Collection<WorkPosition<POS>> workSpots
+    ) {
+        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), getServerLevel(extra)));
+    }
+
     protected abstract WorkOutput<TOWN, WorkPosition<POS>> getWithSurfaceInteractionPos(
             EXTRA extra,
             WorkOutput<TOWN, WorkPosition<POS>> v
-    );
-
-    protected abstract ArrayList<WorkPosition<POS>> shuffle(
-            EXTRA extra,
-            Collection<WorkPosition<POS>> workSpots
     );
 
     public @Nullable WorkOutput<@Nullable TOWN, WorkPosition<POS>> tryWorking(
@@ -489,6 +508,14 @@ public abstract class AbstractWorldInteraction<
         return checks.getQuantityForStep(state, 0);
     }
 
+    /** Called once per completed job cycle. The warp records XP here; real time pays it elsewhere. */
+    protected TOWN onJobCompleted(
+            EXTRA extra,
+            TOWN town
+    ) {
+        return town;
+    }
+
     protected TOWN tryExtractProduct(
             @NotNull EXTRA inputs,
             POS position
@@ -510,6 +537,7 @@ public abstract class AbstractWorldInteraction<
             if (town != null) {
                 town = getResetFunc(inputs, position).apply(town);
                 triggerCompletionAdvancement(inputs, position);
+                town = onJobCompleted(inputs, town);
                 jobCompletedListeners.forEach(r -> r.accept(jobId));
             }
             return town;
@@ -583,6 +611,29 @@ public abstract class AbstractWorldInteraction<
             return currentState;
         }
         return postExtractHook(currentState, rules, inputs, getTownPos(inputs), item);
+    }
+
+    /** Applies the once-per-town loot guarantees: the helper chicken's Worldly Seeds, and the first hunter's raw food. */
+    // TODO: Have each guarantee's path declare it as a special rule that is processed here, so this class
+    //  names no particular path.
+    protected Iterable<MCHeldItem> withLootGuarantees(
+            @Nullable TownFlagBlockEntity flag,
+            Iterable<MCHeldItem> results
+    ) {
+        results = ChickenArcLootGuarantee.maybePrepend(flag, results);
+        results = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), results);
+        return results;
+    }
+
+    /** The town flag at {@code pos}, or null. */
+    protected static @Nullable TownFlagBlockEntity flagBlockEntityAt(
+            @Nullable ServerLevel level,
+            @Nullable BlockPos pos
+    ) {
+        if (level == null || pos == null) {
+            return null;
+        }
+        return level.getBlockEntity(pos) instanceof TownFlagBlockEntity flag ? flag : null;
     }
 
     protected abstract POS getTownPos(EXTRA inputs);
