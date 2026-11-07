@@ -1,0 +1,67 @@
+package ca.bradj.questown.mobs.visitor;
+
+import net.minecraft.resources.ResourceLocation;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** The skin pool holds the vanilla character skins and the mod's own, and a UUID always picks the same one. */
+class TownieSkinsTest {
+
+    @Test
+    void pool_is_the_vanilla_skins_plus_six_custom() {
+        List<ResourceLocation> pool = TownieSkins.pool();
+        assertEquals(ca.bradj.questown.mc.Compat.vanillaCharacterSkins().size() + 6, pool.size());
+    }
+
+    @Test
+    void vanilla_entries_are_the_versions_character_skins() {
+        List<ResourceLocation> vanilla = TownieSkins.pool().stream()
+                .filter(l -> l.getNamespace().equals("minecraft"))
+                .toList();
+        assertEquals(ca.bradj.questown.mc.Compat.vanillaCharacterSkins(), vanilla);
+    }
+
+    @Test
+    void custom_skins_stay_in_the_pool() {
+        List<ResourceLocation> pool = TownieSkins.pool();
+        Set<String> paths = pool.stream().map(ResourceLocation::getPath).collect(Collectors.toSet());
+        for (int i = 1; i <= 6; i++) {
+            assertTrue(paths.contains("textures/entity/" + i + ".png"),
+                    "custom skin " + i + " missing from the pool");
+        }
+    }
+
+    @Test
+    void pick_is_deterministic_and_stays_in_the_pool() {
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        assertEquals(TownieSkins.pick(a), TownieSkins.pick(a), "same UUID -> same skin");
+        assertTrue(TownieSkins.pool().contains(TownieSkins.pick(a)));
+        assertTrue(TownieSkins.pool().size() > 1);
+    }
+
+    @Test
+    void pick_handles_a_min_value_hash() {
+        // A UUID hashing to Integer.MIN_VALUE still picks a valid skin.
+        UUID min = UUID.randomUUID();
+        int expected = Math.floorMod(min.hashCode(), TownieSkins.pool().size());
+        assertEquals(TownieSkins.pool().get(expected), TownieSkins.pick(min));
+    }
+
+    @Test
+    void vanilla_and_custom_pick_differently() {
+        UUID u = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        ResourceLocation p1 = TownieSkins.pick(u);
+        ResourceLocation p2 = TownieSkins.pick(u);
+        assertEquals(p1, p2);
+        assertNotEquals(TownieSkins.pool().get(0), TownieSkins.pool().get(1));
+    }
+}
