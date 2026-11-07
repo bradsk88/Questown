@@ -46,15 +46,29 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
+        ctx.enqueueWork(() -> {
             // Work that needs to be thread-safe (most work)
-            ServerPlayer sender = ctx.get().getSender(); // the client that sent this packet
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
             // Do stuff
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
+            Optional<TownFlagBlockEntity> flag = Optional.ofNullable(sender.getLevel().getBlockEntity(flagPos)).filter(TownFlagBlockEntity.class::isInstance).map(TownFlagBlockEntity.class::cast);
             if (flag.isEmpty()) {
                 QT.GUI_LOGGER.error("No flag at position {}. Quest will not be removed.", flagPos);
+                return;
+            }
+            // The skills tab hides jobs above the villager's level, but a packet can still name one.
+            int level = flag.get().getVillagerHandle().getVillagerLevel(villagerUUID);
+            int availableAtLevel = ca.bradj.questown.jobs.ServerJobsRegistry.getAvailableAtLevel(id);
+            if (availableAtLevel > level) {
+                QT.GUI_LOGGER.info(
+                        "Refusing unlock of {} for {} at level {}: the job's available_at_level "
+                                + "({}) is not reached yet",
+                        id,
+                        villagerUUID,
+                        level,
+                        availableAtLevel
+                );
                 return;
             }
             if (confirmFirst) {
@@ -89,7 +103,6 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             AdvancementsInit.TUTORIAL_TRIGGER.trigger(sender, TutorialTrigger.Triggers.FirstBopSpend);
             unlockJob(flag, sender);
         });
-        ctx.get().setPacketHandled(true);
 
     }
 
@@ -97,10 +110,11 @@ public record UnlockJobMessage(BlockPos flagPos, UUID villagerUUID, JobID id, bo
             Optional<TownFlagBlockEntity> flag,
             ServerPlayer sender
     ) {
-        flag.get().getVillagerHandle().unlockJob(villagerUUID, id);
+        flag.get().unlockSkillFromPlayer(villagerUUID, id);
         String key = "messages.jobs.unlocked_by_mod";
-        MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villagerUUID);
-        for (Player player : sender.level.players()) {
+        String villager = flag.get().getVillagerHandle().labelFor(villagerUUID);
+        MutableComponent msg = Compat.translatable(key, sender.getName(), id.toNiceString(), villager);
+        for (Player player : sender.getLevel().players()) {
             Compat.sendMessage((ServerPlayer) player, msg);
         }
     }

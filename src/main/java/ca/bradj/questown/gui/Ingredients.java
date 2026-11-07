@@ -16,6 +16,16 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 public class Ingredients {
+    private static com.google.gson.JsonElement toJson(Ingredient item) {
+        // 1.20.6 can't encode an empty ingredient; write it as {"items":[]}.
+        if (item.isEmpty()) {
+            com.google.gson.JsonObject empty = new com.google.gson.JsonObject();
+            empty.add("items", new com.google.gson.JsonArray());
+            return empty;
+        }
+        return ca.bradj.questown.mc.Compat.ingredientToJson(item);
+    }
+
     public static Component getName(Ingredient item) {
         JsonElement j = toJson(item);
         String tag = getTag(j);

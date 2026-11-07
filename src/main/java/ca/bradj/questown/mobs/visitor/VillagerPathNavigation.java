@@ -1,6 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
 import ca.bradj.questown.jobs.WalkTargets;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
@@ -31,6 +32,7 @@ public class VillagerPathNavigation extends GroundPathNavigation {
         setCanPassDoors(true);
     }
 
+    /** A target in a doorway stays there, instead of being lifted to the roof over the door. */
     @Override
     public Path createPath(BlockPos pos, int accuracy) {
         BlockPos door = doorAtOrJustAbove(pos);

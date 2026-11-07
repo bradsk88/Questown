@@ -74,7 +74,7 @@ public class VillagerLearningHandle<JOB_ID> {
                     break;
                 }
                 if (uniqueRoot.equals(jobId)) {
-                    continue; // TODO: Test for this condition missing
+                    continue;
                 }
                 if (isParentOf.test(uniqueRoot, jobId)) {
                     attemptsUsed++;
