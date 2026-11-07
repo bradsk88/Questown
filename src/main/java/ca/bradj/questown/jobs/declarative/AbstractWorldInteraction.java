@@ -5,6 +5,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.jobs.*;
 import ca.bradj.questown.jobs.production.ProductionStatus;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
@@ -26,6 +27,7 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class AbstractWorldInteraction<
         EXTRA, POS, INNER_ITEM extends Item<INNER_ITEM>, HELD_ITEM extends HeldItem<HELD_ITEM, INNER_ITEM>,
@@ -623,6 +625,46 @@ public abstract class AbstractWorldInteraction<
         results = ChickenArcLootGuarantee.maybePrepend(flag, results);
         results = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), results);
         return results;
+    }
+
+    /** A trip brings back at most this many items. */
+    private static final int LEAVER_CAPACITY = 6;
+
+    /** A full-day trip ({@code prefer_requested}) rolls twice and keeps the second roll's requested items. Other trips keep the first roll. */
+    protected Iterable<MCHeldItem> withRequestedLootPreference(
+            @Nullable TownFlagBlockEntity flag,
+            ServerLevel level,
+            Iterable<MCHeldItem> rolled,
+            Supplier<Iterable<MCHeldItem>> secondRoll
+    ) {
+        if (flag == null || !prefersRequestedLoot()) {
+            return rolled;
+        }
+        ImmutableList<WorkRequest> requests = flag.getWorkHandle().getBoardRequests().toWork();
+        if (requests.isEmpty()) {
+            return rolled;
+        }
+        List<MCHeldItem> out = RequestedLootPreference.prefer(
+                ImmutableList.copyOf(rolled),
+                ImmutableList.copyOf(secondRoll.get()),
+                item -> isRequested(requests, item),
+                LEAVER_CAPACITY,
+                level.random::nextInt
+        );
+        QT.JOB_LOGGER.debug("Requested-loot preference for {}: {} -> {}", getJobId(), rolled, out);
+        return out;
+    }
+
+    private boolean prefersRequestedLoot() {
+        JobID id = getJobId();
+        return Works.isInitialized() && Works.ids().contains(id) && Works.get(id).get().prefersRequestedLoot();
+    }
+
+    private static boolean isRequested(ImmutableList<WorkRequest> requests, MCHeldItem item) {
+        if (item == null || item.isEmpty()) {
+            return false;
+        }
+        return requests.stream().anyMatch(r -> r.asIngredient().test(item.get().toMCItemStack()));
     }
 
     /** The town flag at {@code pos}, or null. */

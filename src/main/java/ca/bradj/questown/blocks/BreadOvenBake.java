@@ -11,6 +11,8 @@ import java.util.List;
  * The bread oven's baking: 1 wheat and 1 coal make 1 bread over {@link #BAKE_TICKS} ticks. Changing
  * a slot restarts the bake. Used in real time and during a warp.
  */
+// TODO: Make bread take 2 wheat once a job can insert into a slot that already holds an item, or gate on
+//  a slot holding fewer than N; today an insert needs the wheat slot empty.
 public final class BreadOvenBake {
 
     public static final int BAKE_TICKS = 1000;
