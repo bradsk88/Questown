@@ -39,10 +39,9 @@ import ca.bradj.questown.town.workstatus.State;
 import ca.bradj.questown.world.MinecraftWorldAccess;
 import ca.bradj.roomrecipes.adapter.Positions;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
+import ca.bradj.questown.jobs.InteractionSpots;
 import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
-import ca.bradj.roomrecipes.rooms.XWall;
-import ca.bradj.roomrecipes.rooms.ZWall;
 import ca.bradj.roomrecipes.serialization.MCRoom;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -773,23 +772,7 @@ public class DeclarativeJob extends
     }
 
     public static Direction getDoorDirectionFromCenter(Room jobSite) {
-        Optional<XWall> backXWall = jobSite.getBackXWall();
-        if (backXWall.isPresent() && backXWall.get().getZ() > jobSite.doorPos.z) {
-            return Direction.NORTH;
-        }
-        if (backXWall.isPresent()) {
-            return Direction.SOUTH;
-        }
-
-
-        Optional<ZWall> backZWall = jobSite.getBackZWall();
-        if (backZWall.isPresent() && backZWall.get().getX() > jobSite.doorPos.x) {
-            return Direction.WEST;
-        }
-        if (backZWall.isPresent()) {
-            return Direction.EAST;
-        }
-        return Direction.NORTH;
+        return InteractionSpots.doorDirectionFromCenter(jobSite);
     }
 
     @Override
@@ -823,6 +806,12 @@ public class DeclarativeJob extends
     @Override
     protected @Nullable WorkPosition<BlockPos> findProductionSpot(ServerLevel sl) {
         return ticker.workSpot();
+    }
+
+    @Override
+    public @Nullable BlockPos getWorkSpotBlock() {
+        WorkPosition<BlockPos> spot = ticker.workSpot();
+        return spot == null ? null : spot.jobBlock();
     }
 
     @Override

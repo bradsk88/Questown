@@ -1154,6 +1154,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return pois.getVisitorJoinPos(getServerLevel(), getBlockPos());
     }
 
+    @Override
+    public Collection<BlockPos> getTownAnchors() {
+        BlockPos flagPos = getBlockPos();
+        List<BlockPos> anchors = new ArrayList<>();
+        anchors.add(flagPos);
+        anchors.addAll(pois.getWelcomeMats());
+        roomsHandle.getAllRegisteredDoors().forEach(d -> anchors.add(new BlockPos(d.x, flagPos.getY() + d.scanLevel, d.z)));
+        return anchors;
+    }
+
     // Rate-limits the wander-failure warning per stuck villager.
     private final Map<BlockPos, Long> wanderFailLogWindows = new HashMap<>();
     private static final long WANDER_FAIL_LOG_INTERVAL_TICKS = 200;

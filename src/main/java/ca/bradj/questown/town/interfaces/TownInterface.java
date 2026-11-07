@@ -41,6 +41,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     Vec3 getVisitorJoinPos();
 
+    Collection<BlockPos> getTownAnchors();
+
     /** The saved state a returning villager respawns with, taken once; empty for a new arrival. */
     Optional<ImmutableSnapshot<MCHeldItem, ?>> takeRespawnJournal(VillagerUUID villager);
 
