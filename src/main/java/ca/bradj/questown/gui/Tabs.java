@@ -51,17 +51,12 @@ public class Tabs {
             }
             int tabX = bgX + (tab.getWidth() * i);
             int tabY = bgY - tab.getHeight();
-            tab.draw(rc.stack(), tabX + X_OFFSET, tabY + Y_OFFSET);
+            tab.draw(rc.gui(), tabX + X_OFFSET, tabY + Y_OFFSET);
             tabs.get(i).renderFunc().accept(rc, tabX, tabY);
             if (tabs.get(i).hasNotification()) {
-                drawNotificationDot(rc.stack(), tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2);
+                rc.fill(tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2, tabX + tab.getWidth() + 2, tabY + Y_OFFSET + 6, 0xFFFF3333);
             }
         }
-    }
-
-    private void drawNotificationDot(PoseStack stack, int x, int y) {
-        int red = 0xFFFF3333;
-        GuiComponent.fill(stack, x, y, x + 4, y + 4, red);
     }
 
     public boolean mouseClicked(
@@ -81,8 +76,19 @@ public class Tabs {
         return false;
 
     }
+
     public boolean hasTab(String titleKey) {
         return tabs.stream().anyMatch(t -> t.titleKey().equals(titleKey));
     }
 
+    // Opens the tab with this title. False when there is no such tab.
+    public boolean openTab(String titleKey) {
+        for (Tab t : tabs) {
+            if (t.titleKey().equals(titleKey)) {
+                t.onClick().run();
+                return true;
+            }
+        }
+        return false;
+    }
 }

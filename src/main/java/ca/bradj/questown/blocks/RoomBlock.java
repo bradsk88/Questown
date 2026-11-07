@@ -22,7 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> implements EntityBlock, Roomable {
-    public RoomBlock(Properties p_49795_) {
+    public RoomBlock(BlockBehaviour.Properties p_49795_) {
 
         super(
                 p_49795_,
@@ -40,7 +40,7 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
             String namespaced = parts[1];
             String[] ps = namespaced.split("\\.");
             if (ps.length > 0) {
-                Item value = ForgeRegistries.ITEMS.getValue(Questown.ResourceLocation(ps[1]));
+                Item value = Loader.itemFromId(Questown.ResourceLocation(ps[1]));
                 if (value == null) {
                     return null;
                 }
@@ -71,6 +71,11 @@ public abstract class RoomBlock extends TownFlagSubBlock<BlockAsRoomEntity> impl
 //            return SpecialQuests.TOWN_GATE;
 //        }
         return Questown.ResourceLocation("block_room/" + rb.getDescriptionId());
+    }
+
+    /** The item dropped when this block loses its flag. It keeps the flag link, so placing it again re-attaches it. */
+    public Item getOrphanDropItem() {
+        return asItem();
     }
 
     public static boolean isBlockRoom(ResourceLocation rb) {
