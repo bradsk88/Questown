@@ -208,19 +208,16 @@ public class TimeWarpWorldInteraction extends
     }
 
     @Override
+    protected @Nullable ServerLevel getServerLevel(Inputs inputs) {
+        return inputs.level();
+    }
+
+    @Override
     protected WorkOutput<MCTownState, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
             Inputs inputs,
             WorkOutput<MCTownState, WorkPosition<BlockPos>> v
     ) {
-        return Util.workWithSurfaceInteractionPos(inputs.level(), v);
-    }
-
-    @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            Inputs inputs,
-            Collection<WorkPosition<BlockPos>> workSpots
-    ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), inputs.level));
+        return Util.workWithSurfaceInteractionPos(getServerLevel(inputs), v);
     }
 
     @Override
@@ -320,15 +317,28 @@ public class TimeWarpWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
+        // Some rules need the real level, not the warp's world view.
+        ca.bradj.questown.world.QTWorldAccess postExtractWorld = inputs.level != null
+                ? MinecraftWorldAccess.silent(inputs.level)
+                : resolveWorld(inputs);
         return PostExtractHook.run(
-                mcTownState, townPos, rules, resolveWorld(inputs), position, (ctx, itemData) -> {
+                mcTownState, townPos, rules, postExtractWorld, position, (ctx, itemData) -> {
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return ctx;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = Compat.itemDataTag(extractedItem.get().toMCItemStack());
                     itemData.forEach(t::putInt);
                     return ctx;
-                }, (in, up) -> in
+                }, (in, up) -> in,
+                (in, effect, durationTicks) -> {
+                    long expiry = Util.getTick(inputs.level) + durationTicks;
+                    return in.withVillagerData(
+                            villagerIndex,
+                            in.getVillager(villagerIndex).withEffect(new Effect(effect, expiry))
+                    );
+                },
+                extractedItem,
+                (in, foundLoot) -> in.withKnowledge(foundLoot)
         );
     }
 
@@ -340,38 +350,6 @@ public class TimeWarpWorldInteraction extends
             State fresh
     ) {
         return ts.setJobBlockState(position, fresh);
-    }
-
-    @Override
-    protected MCTownState withEffectApplied(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack s = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(s);
-        return ts.withVillagerData(
-                villagerIndex,
-                ts.getVillager(villagerIndex)
-                  .withEffect(new Effect(effect, EffectMetaItem.getEffectExpiry(s, Util.getTick(inputs.level))))
-        );
-    }
-
-    @Override
-    protected MCTownState withKnowledge(
-            @NotNull Inputs inputs,
-            MCTownState ts,
-            MCHeldItem newItem
-    ) {
-        return ts.withKnowledge(newItem);
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get().asItem());
     }
 
     @Override
