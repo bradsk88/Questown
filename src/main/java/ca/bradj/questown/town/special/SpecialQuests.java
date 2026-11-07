@@ -29,6 +29,8 @@ public class SpecialQuests {
     public static final ResourceLocation JOB_BOARD = new ResourceLocation(MOD, "job_board");
     public static final ResourceLocation STORE_ROOM_SMALL = new ResourceLocation(MOD, "store_room");
     public static final ResourceLocation EMPTY_ROOM = new ResourceLocation(MOD, "empty_room");
+    // Day 2's quest: done when the town's first work request is posted.
+    public static final ResourceLocation FIRST_WORK_REQUEST = new ResourceLocation(MOD, "special_quest.first_work_request");
     public static final ResourceLocation DINING_ROOM = new ResourceLocation(MOD, "dining_room");
     public static final ResourceLocation CLINIC = new ResourceLocation(MOD, "clinic");
 

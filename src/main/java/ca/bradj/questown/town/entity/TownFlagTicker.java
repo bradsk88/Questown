@@ -74,6 +74,11 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
     }
 
     @Override
+    protected void tickEvening(TickData tickData) {
+        tickData.entity().showCampReadyToastIfDue();
+    }
+
+    @Override
     protected void tickPOIs(TickData tickData) {
         TownFlagBlockEntity e = tickData.entity();
         ServerLevel sl = tickData.level();
@@ -295,6 +300,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
             runAnyInitializers(new TickData(sl, blockEntityPos, state, e));
             return;
         }
+        e.messages.flushBroadcasts();
         super.tick(new TickData(sl, blockEntityPos, state, e));
         spawnBopParticlesIfNeeded(sl, blockEntityPos, e);
     }

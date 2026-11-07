@@ -4,6 +4,7 @@ import ca.bradj.questown.core.init.RewardsInit;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob;
+import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCReward;
 import com.google.common.collect.ImmutableList;

@@ -56,7 +56,31 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(AddBatchOfQuestsForVisitorReward.ID))
     );
 
-    public static final RegistryObject<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
+    public static final Holder<RewardType<CampfireReadyReward>> CAMPFIRE_READY
+            = REWARD_TYPES.register(
+            CampfireReadyReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new CampfireReadyReward(rType, flag))
+                    .build(Questown.ResourceLocation(CampfireReadyReward.ID))
+    );
+
+    public static final Holder<RewardType<AddBasicsBatchReward>> BASICS_BATCH
+            = REWARD_TYPES.register(
+            AddBasicsBatchReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddBasicsBatchReward(rType, flag))
+                    .build(Questown.ResourceLocation(AddBasicsBatchReward.ID))
+    );
+
+    public static final Holder<RewardType<AddEmptyRoomBatchReward>> EMPTY_ROOM_BATCH
+            = REWARD_TYPES.register(
+            AddEmptyRoomBatchReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new AddEmptyRoomBatchReward(rType, flag))
+                    .build(Questown.ResourceLocation(AddEmptyRoomBatchReward.ID))
+    );
+
+    public static final Holder<RewardType<AddRandomUpgradeQuest>> RANDOM_UPGRADE_FOR_VILLAGER
             = REWARD_TYPES.register(
             AddRandomUpgradeQuest.ID,
             () -> RewardType.Builder
@@ -88,7 +112,21 @@ public class RewardsInit {
                     .build(Questown.ResourceLocation(AddItemQuestReward.ID))
     );
 
-    public static void register(IEventBus bus) {
-        REWARD_TYPES.register(bus);
-    }
+    public static final Holder<RewardType<PostFirstWorkRequestQuestReward>> FIRST_WORK_REQUEST
+            = REWARD_TYPES.register(
+            PostFirstWorkRequestQuestReward.ID,
+            () -> RewardType.Builder
+                    .of((rType, flag) -> new PostFirstWorkRequestQuestReward(rType, flag))
+                    .build(Questown.ResourceLocation(PostFirstWorkRequestQuestReward.ID))
+    );
+
+    public static final Holder<RewardType<GrantBlockOfProgressReward>> GRANT_BOP
+            = REWARD_TYPES.register(
+            GrantBlockOfProgressReward.ID,
+            () -> RewardType.Builder
+                    .of(GrantBlockOfProgressReward::emptyForDeserializing)
+                    .build(Questown.ResourceLocation(GrantBlockOfProgressReward.ID))
+    );
+
+    public static void boot() {}
 }
