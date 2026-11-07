@@ -2,9 +2,10 @@
   "version": 2,
   "id": "cook/extract",
   "priority": 1000,
+  "experience": 0,
   "parent": null,
   "icon": "minecraft:cooked_beef",
-  "initial_request": "minecraft:cooked_cod",
+  "initial_request": "#questown:villager_food",
   "result": {
     "type": "uses_special_rules"
   },
@@ -29,12 +30,15 @@
   "special": [
     {
       "type": "global",
-      "rules": ["always_consider", "furnace_smelt_warp"]
+      "rules": ["furnace_smelt_warp"]
     },
     {
       "type": "core_state",
       "state": "EXTRACTING_PRODUCT",
       "rules": ["questown:take_from_slot_2"]
     }
+  ],
+  "status_texture_overrides": [
+    {"type": "working", "new_texture": "minecraft:textures/block/furnace_front.png"}
   ]
 }

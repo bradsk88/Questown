@@ -77,22 +77,35 @@ public final class TownVillagerHandle {
                     VisitorMobEntity f,
                     boolean announce
             ) {
-                f.setJob(ServerJobsRegistry.getInitializedJob(
+                var job = ServerJobsRegistry.getInitializedJob(
                         town.getServerLevelUnsafe(),
                         newJob,
                         f.getJobJournalSnapshot().items(),
                         villagerUUID
-                ));
+                );
                 @NotNull TownFlagBlockEntity t = town.getUnsafe();
+                startFlagJobFresh(t, villagerUUID, job);
+                f.setJob(job);
                 t.setChanged();
                 if (announce) {
-                    t.messages.jobChanged(newJob, villagerUUID);
+                    String label = displayNameFor(villagerUUID);
+                    t.messages.jobChanged(newJob, label.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerUUID) : label);
+                }
+            }
+
+            /** Flag jobs share one work record per villager and count their states differently, so each starts fresh. */
+            private void startFlagJobFresh(TownFlagBlockEntity t, UUID villagerUUID, Object job) {
+                if (job instanceof ca.bradj.questown.jobs.declarative.DeclarativeJob dj && dj.worksAtTheFlag()) {
+                    t.getWorkStatusHandle(villagerUUID).clearState(t.getBlockPos());
                 }
             }
 
             @Override
             public void setChanged() {
-                town.getUnsafe().setChanged();
+                if (town.isInitialized()) {
+                    town.getUnsafe().setChanged();
+                }
+                // Registration while loading: nothing new to save.
             }
 
             @Override
@@ -352,6 +365,17 @@ public final class TownVillagerHandle {
             long tick
     ) {
         return delegate.isReadyForDowntime(getUuid(ownerVUID), tick);
+    }
+
+    boolean isReadyForDowntimeIfIdle(
+            VillagerUUID ownerVUID,
+            long tick
+    ) {
+        return delegate.isReadyForDowntimeIfIdle(getUuid(ownerVUID), tick);
+    }
+
+    void markWorked(VillagerUUID ownerVUID, long tick) {
+        delegate.markWorked(getUuid(ownerVUID), tick);
     }
 
     long size() {

@@ -215,6 +215,11 @@ public class IntegrationTestWorld implements JobLogic.JLWorld<Void, Boolean, Pos
     }
 
     @Override
+    public boolean isStarving() {
+        return false;
+    }
+
+    @Override
     public boolean holdsWorkOutput() {
         // Not modelled here; these scenarios hand off as soon as the cycle finishes.
         return false;

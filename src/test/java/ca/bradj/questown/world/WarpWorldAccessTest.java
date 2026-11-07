@@ -170,6 +170,14 @@ class WarpWorldAccessTest {
         assertTrue(world.getContainerSlot(FURNACE, 2).isEmpty());
     }
 
+    @Test
+    void oven_warpBranch_requiresRegistryBoundBlock_cannotReachInUnitTest() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> new ca.bradj.questown.blocks.BreadOvenBlock(),
+                "expected registry-bound failure; if this passes, replace this test with a real BreadOvenBlock default state in advanceProcessing");
+    }
+
     // -------------------------------------------------------------------------
     // advanceProcessing — position without container
     // -------------------------------------------------------------------------

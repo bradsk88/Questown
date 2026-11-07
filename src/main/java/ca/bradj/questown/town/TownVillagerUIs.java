@@ -117,6 +117,7 @@ public class TownVillagerUIs {
                 unsafeTown.getTownData(),
                 itemToShowJobsFor
         );
+        QT.GUI_LOGGER.dev("[item-jobs] producers of {}: {}", Arrays.toString(itemToShowJobsFor.getItems()), jubz.keySet());
         for (JobID job : jubz.keySet()) {
             Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
             if (!(j instanceof DeclarativeJob dj)) {

@@ -12,6 +12,7 @@ public interface TutorialTownView {
     String PHASE_KICKOFF = "kickoff";
     String PHASE_HUNTER_GATHERER = "hunterGatherer";
     String PHASE_JOB_CHANGE_FOOD = "jobChangeAndFood";
+    String PHASE_COOK_JOB = "cookJob";
     String PHASE_NEW_JOB_ROOM = "newJobRoom";
     String PHASE_4A = "phase4a";
     String PHASE_4B = "phase4b";

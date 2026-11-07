@@ -225,6 +225,33 @@ class TutorialPhaseGateTest {
                 Compat.getItemId(Items.APPLE).equals(q.getWantedId())
                 && q.getType() == Quest.QuestType.ITEM
         ));
+        assertFalse(hasCookFollowUpQuest(all), "phase 2.5 batch must not carry the cook follow-up quests");
+    }
+
+    @Test
+    void cookFollowUp_notPostedBeforeTheCookIsUnlocked() {
+        TownQuests quests = questsAtPhase2_5();
+        quests.postCookFollowUpIfDue(view);
+
+        assertFalse(hasCookFollowUpQuest(quests.questBatches.getAll()));
+
+        quests.postCookFollowUpIfDue(view);
+
+        assertFalse(hasCookFollowUpQuest(quests.questBatches.getAll()));
+    }
+
+    @Test
+    void cookFollowUp_postedOnceTheCookIsUnlocked() {
+        TownQuests quests = questsAtPhase2_5();
+
+        quests.postCookFollowUpIfDue(view);
+
+        List<MCQuest> all = quests.questBatches.getAll();
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.SKILL_UNLOCK
+                        && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
+        ), "follow-up must carry the cook skill-unlock quest");
+        // The follow-up brings villager 3, so the bedroom becomes a big bedroom.
         assertTrue(all.stream().anyMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
                 && q.getWantedId().equals(JobID.toRL(farmerJob))

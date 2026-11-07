@@ -65,8 +65,15 @@ public class WorkRequest {
         return Ingredient.of();
     }
 
+    public boolean covers(WorkRequest other) {
+        if (tag == null || other.item == null) {
+            return false;
+        }
+        return other.item.getDefaultInstance().is(tag);
+    }
+
     public void toNetwork(FriendlyByteBuf buffer) {
-        buffer.writeUtf(item == null ? "" : ForgeRegistries.ITEMS.getKey(item).toString());
+        buffer.writeUtf(item == null ? "" : Loader.itemIdOf(item).toString());
         buffer.writeUtf(tag == null ? "" : tag.location().toString());
     }
 
@@ -77,9 +84,9 @@ public class WorkRequest {
             throw new IllegalArgumentException("Invalid work request on buffer.");
         }
         if (i.isEmpty()) {
-            return new WorkRequest(new TagKey<>(Registry.ITEM_REGISTRY, new ResourceLocation(t)), null);
+            return new WorkRequest(Compat.itemTag(new ResourceLocation(t)), null);
         }
-        return new WorkRequest(null, ForgeRegistries.ITEMS.getValue(new ResourceLocation(i)));
+        return new WorkRequest(null, Loader.itemFromId(new ResourceLocation(i)));
     }
 
     @Override
