@@ -48,6 +48,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,6 +80,7 @@ import net.minecraft.world.entity.schedule.ScheduleBuilder;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.gui.Ingredients;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
@@ -127,6 +129,14 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     );
     private static final EntityDataAccessor<ItemStack> lastHeldItem = SynchedEntityData.defineId(
             VisitorMobEntity.class, EntityDataSerializers.ITEM_STACK
+    );
+    /** The villager's need as a {@link TownieNeed} name, or empty. Synced for the bubble. */
+    private static final EntityDataAccessor<String> need = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
+    );
+    /** For {@link TownieNeed#UNMET_ITEM}, the missing ingredient's string form; empty otherwise. */
+    private static final EntityDataAccessor<String> unmetItem = SynchedEntityData.defineId(
+            VisitorMobEntity.class, EntityDataSerializers.STRING
     );
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -323,7 +333,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
      */
     @SuppressWarnings("DeprecatedIsStillUsed")
     public void setJob(Job<MCHeldItem, ? extends ImmutableSnapshot<MCHeldItem, ?>, ? extends IStatus<?>> initializedJob) {
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
             QT.VILLAGER_LOGGER.error("setJob should never be called from client side");
             return;
         }
@@ -338,6 +348,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         job = () -> initializedJob;
         entityData.set(jobName, initializedJob.getJobName().translationKey());
         QT.VILLAGER_LOGGER.info("Job changed to {} for {} [from {}]", initializedJob.getId(), uuid, curJobName);
+        clearNeedWhileWorking(initializedJob.getId(), initializedJob.getStatus());
         Collection<? extends Runnable> newCleanup = oldJob.notifyListenersOfNewJob(l -> {
             Function<Void, Void> out = initializedJob.addStatusListener(l);
             return () -> out.apply(null);
@@ -394,22 +405,92 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.define(jobName, "jobs.gatherer");
         this.entityData.define(heldItem, ItemStack.EMPTY);
         this.entityData.define(lastHeldItem, ItemStack.EMPTY);
+        this.entityData.define(need, TownieNeed.NONE.name());
+        this.entityData.define(unmetItem, "");
     }
 
-    // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
-    // State management should be done via the town block. This entity should
-    // only handle cosmetic stuff like position, pose, etc.
-
-    @NotNull
-    private CompoundTag buildInitialSlotStatusesTag() {
-        CompoundTag tag = new CompoundTag();
-        ListTag statuses = new ListTag();
-        for (int i = 0; i < inventoryCapacity; i++) {
-            statuses.add(IntTag.valueOf(0));
+    /** A villager stopped for lack of storage gets the bubble at once. It wins over a missing item, and clears only itself. */
+    private void syncStorageNeed(IStatus<?> jobStatus) {
+        boolean blocked = ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(jobStatus);
+        if (blocked && (getNeed() == TownieNeed.NONE || getNeed() == TownieNeed.UNMET_ITEM || getNeed() == TownieNeed.MISSING_ROOM)) {
+            setNeed(TownieNeed.NO_STORAGE);
+        } else if (!blocked && getNeed() == TownieNeed.NO_STORAGE) {
+            setNeed(TownieNeed.NONE);
         }
-        tag.put("slots", statuses);
-        return tag;
     }
+
+    /** A missing-item or missing-room need clears the moment the villager starts working. */
+    private void clearNeedWhileWorking(JobID jobId, IStatus<?> jobStatus) {
+        TownieNeed n = getNeed();
+        if (n != TownieNeed.UNMET_ITEM && n != TownieNeed.MISSING_ROOM) {
+            return;
+        }
+        if (!ca.bradj.questown.town.TownPossibleWork.showsUnmetNeed(jobId, jobStatus)) {
+            setNeed(TownieNeed.NONE);
+        }
+    }
+
+    public void setNeed(TownieNeed newNeed) {
+        if (getLevel().isClientSide()) {
+            return;
+        }
+        if (newNeed.name().equals(this.entityData.get(need))) {
+            return;
+        }
+        QT.VILLAGER_LOGGER.debug("Townie {} need is now {}", UtilClean.truncateMiddle(getUUID()), newNeed);
+        this.entityData.set(need, newNeed.name());
+        if (!newNeed.carriesKey()) {
+            this.entityData.set(unmetItem, "");
+        }
+    }
+
+    public TownieNeed getNeed() {
+        return TownieNeed.fromName(this.entityData.get(need));
+    }
+
+    /** Server only: the item behind the {@code UNMET_ITEM} need. */
+    public void setUnmetItem(String itemKey) {
+        if (getLevel().isClientSide()) {
+            return;
+        }
+        this.entityData.set(unmetItem, itemKey == null ? "" : itemKey);
+    }
+
+    /** The item this villager is blocked on, or null. */
+    public @Nullable Ingredient getUnmetItemIngredient() {
+        if (getNeed() != TownieNeed.UNMET_ITEM) {
+            return null;
+        }
+        String key = getUnmetItem();
+        if (key.isEmpty()) {
+            return null;
+        }
+        try {
+            return Ingredients.fromString(key);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    public String getUnmetItem() {
+        return this.entityData.get(unmetItem);
+    }
+
+    /** The room a can't-reach need couldn't get into, or null. */
+    public @Nullable ResourceLocation getUnreachableRoom() {
+        if (getNeed() != TownieNeed.CANT_REACH || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
+    }
+
+    public @Nullable ResourceLocation getMissingRoom() {
+        if (getNeed() != TownieNeed.MISSING_ROOM || getUnmetItem().isEmpty()) {
+            return null;
+        }
+        return ResourceLocation.tryParse(getUnmetItem());
+    }
+
 
     @Override
     public boolean removeWhenFarAway(double p_21542_) {
@@ -430,7 +511,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             return; // TODO: Confirm this is ok
         }
 
-        if (!(level instanceof ServerLevel sl)) {
+        if (!(getLevel() instanceof ServerLevel sl)) {
             return;
         }
 
@@ -528,7 +609,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             j.initializeStatusFromEntityData(s);
         }
         j.tick(town, this, getDirection());
-        if (level.isClientSide()) {
+        if (getLevel().isClientSide()) {
             return;
         }
 
@@ -544,7 +625,10 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
             town.getVillagerHandle().validateEntity(this);
         }
 
-        boolean vis = !j.shouldDisappear(town, position());
+        if (doorGoal != null) {
+            doorGoal.tickLingeringDoor();
+        }
+        boolean vis = tripVisibility.next(this.entityData.get(visible), !j.shouldDisappear(town, position()));
         if (!vis) {
             if (job.get().getId().rootId().equals("gatherer")) {
                 AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
@@ -557,6 +641,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
         this.entityData.set(visible, vis);
         if (j.isInitialized()) {
             entityData.set(status, j.getStatusToSyncToClient());
+            syncStorageNeed(j.getStatus());
+            clearNeedWhileWorking(j.getId(), j.getStatus());
             entityData.set(
                     heldItem, j.getInventory()
                                .getItem(0)

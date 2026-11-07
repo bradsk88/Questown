@@ -331,6 +331,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
                 yield ImmutableList.of(Compat.translatable(RoomQuestTooltipKeys.forQuest(recipe.fromRecipe)));
             }
             case JOB_CHANGE -> renderJobQuestTooltip(recipe);
+            case JOB_UNLOCK -> renderJobUnlockTooltip(recipe);
             case CONCURRENT_JOBS -> ImmutableList.of(Compat.literal("Have all listed jobs active at the same time"));
             case UNKNOWN -> null;
         };

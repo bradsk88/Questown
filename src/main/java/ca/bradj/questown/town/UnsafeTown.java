@@ -20,6 +20,11 @@ public class UnsafeTown {
         this.town = t;
     }
 
+    /** True once {@link #initialize} has run. */
+    public boolean isInitialized() {
+        return town != null;
+    }
+
     // Only safe to call after initialized
     public @NotNull TownFlagBlockEntity getUnsafe() {
         if (town == null) {

@@ -101,6 +101,16 @@ public class Ingredients {
         return j.getAsJsonObject().get("tag").getAsString();
     }
 
+    /** An item for the ingredient, changing once a second, or null if nothing matches. */
+    public static @Nullable ItemStack representativeItemStack(Ingredient ing) {
+        ItemStack[] matchingStacks = ing.getItems();
+        if (matchingStacks.length == 0) {
+            return null;
+        }
+        int curSeconds = (int) (System.currentTimeMillis() / 1000);
+        return matchingStacks[curSeconds % matchingStacks.length];
+    }
+
     public static @Nullable ItemStack render(
             RenderContext ctx,
             Ingredient ing,

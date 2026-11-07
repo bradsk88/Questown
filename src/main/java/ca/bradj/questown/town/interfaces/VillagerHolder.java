@@ -7,6 +7,7 @@ import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.PoseInPlace;
 import ca.bradj.questown.town.VillagerStatsData;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -177,6 +178,9 @@ public interface VillagerHolder {
     );
 
     boolean isUnlocked(JobID jobID);
+
+    /** Each villager's unlocked jobs. */
+    ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     /** Whether this villager has unlocked the job. {@link #isUnlocked(JobID)} asks whether anyone in town has. */
     boolean isUnlocked(UUID villagerUUID, JobID jobID);

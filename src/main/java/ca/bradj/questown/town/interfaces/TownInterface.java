@@ -80,6 +80,8 @@ public interface TownInterface extends QuestBatches.VillagerProvider<MCRoom> {
 
     RoomsHolder getRoomHandle();
 
+    Optional<ResourceLocation> roomRecipeHolding(BlockPos pos);
+
     VillagerHolder getVillagerHandle();
 
     TownHealingHandle getHealHandle();

@@ -60,7 +60,14 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import ca.bradj.questown.town.rooms.AttentionBubbles;
+import ca.bradj.questown.town.rooms.DeadDoorBubbles;
+import ca.bradj.questown.town.rooms.DoorTrouble;
+import ca.bradj.questown.world.MinecraftWorldAccess;
+import com.google.common.collect.ImmutableMap;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -109,7 +116,183 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final TownKnownBiomes biomes = new TownKnownBiomes();
     TownHealingHandle healing = new TownHealingHandle();
     private final TownFlagInitialization initializer;
-    private final TownVillagerData.FallbackSelector fallbackSelector = new TownVillagerData.FallbackSelector();
+
+    private static final String NBT_DEAD_DOORS = "deadDoors";
+    private static final String NBT_ATTENTION_INCOMPLETE_QUESTS = "attentionIncompleteQuests";
+    private static final String NBT_ATTENTION_NO_WORK_REQUESTS = "attentionNoWorkRequests";
+    private static final String NBT_ATTENTION_JOB_BOARDS = "attentionJobBoards";
+    private static final String NBT_ATTENTION_STORAGE_FULL = "attentionStorageFull";
+
+    /** Registered doors with no room, and why. Synced to clients for the dead-door bubble. */
+    private Map<BlockPos, DoorTrouble> deadDoors = ImmutableMap.of();
+
+    /** The "!" bubbles' state, synced to clients: incomplete quests (over the flag), no work requests (over each job board). */
+    private boolean attentionIncompleteQuests = false;
+    private boolean attentionNoWorkRequests = false;
+    private ImmutableList<BlockPos> attentionJobBoards = ImmutableList.of();
+    /** The storage-full flag bubble's state. */
+    private boolean attentionStorageFull = false;
+    private final ca.bradj.questown.town.StorageBlockTally storageTally = new ca.bradj.questown.town.StorageBlockTally();
+
+    boolean hasIncompleteQuests() {
+        return quests.hasIncompleteQuests();
+    }
+
+    public Map<BlockPos, DoorTrouble> getDeadDoors() {
+        return deadDoors;
+    }
+
+    /** The area a registered door's room covers, for door-trouble hints; empty when it is not enclosed. */
+    public Optional<String> getRoomRangeForDoor(BlockPos doorPos) {
+        MCRoom room = null;
+        for (MCRoom r : roomsHandle.getRegisteredRooms().getAllRooms()) {
+            if (r.getDoorPos().x == doorPos.getX() && r.getDoorPos().z == doorPos.getZ()) {
+                room = r;
+                break;
+            }
+        }
+        if (room == null || room.getSpaces().isEmpty()) {
+            return Optional.empty();
+        }
+        int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE;
+        int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
+        for (InclusiveSpace s : room.getSpaces()) {
+            minX = Math.min(minX, s.getWestX());
+            maxX = Math.max(maxX, s.getEastX());
+            minZ = Math.min(minZ, s.getNorthZ());
+            maxZ = Math.max(maxZ, s.getSouthZ());
+        }
+        return Optional.of("x " + minX + ".." + maxX + ", z " + minZ + ".." + maxZ
+                + ", y " + doorPos.getY());
+    }
+
+    public void setDeadDoors(Map<BlockPos, DoorTrouble> updated) {
+        if (this.deadDoors.equals(updated)) {
+            return;
+        }
+        this.deadDoors = ImmutableMap.copyOf(updated);
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_ALL);
+        }
+    }
+
+    private void writeDeadDoors(CompoundTag tag) {
+        ListTag list = new ListTag();
+        deadDoors.forEach((pos, trouble) -> {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("x", pos.getX());
+            entry.putInt("y", pos.getY());
+            entry.putInt("z", pos.getZ());
+            entry.putString("trouble", trouble.name());
+            list.add(entry);
+        });
+        tag.put(NBT_DEAD_DOORS, list);
+    }
+
+    private void readDeadDoors(CompoundTag tag) {
+        if (!tag.contains(NBT_DEAD_DOORS)) {
+            return;
+        }
+        ImmutableMap.Builder<BlockPos, DoorTrouble> b = ImmutableMap.builder();
+        for (Tag t : tag.getList(NBT_DEAD_DOORS, Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) t;
+            b.put(
+                    new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")),
+                    DoorTrouble.fromName(entry.getString("trouble"))
+            );
+        }
+        this.deadDoors = b.build();
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tag) {
+        super.handleUpdateTag(tag);
+        readDeadDoors(tag);
+        readAttention(tag);
+    }
+
+    private void writeAttention(CompoundTag tag) {
+        tag.putBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS, hasIncompleteQuests());
+        tag.putBoolean(NBT_ATTENTION_NO_WORK_REQUESTS, workHandle.getRequestedResults().isEmpty());
+        ListTag boards = new ListTag();
+        for (BlockPos pos : workHandle.jobBoards) {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("x", pos.getX());
+            entry.putInt("y", pos.getY());
+            entry.putInt("z", pos.getZ());
+            boards.add(entry);
+        }
+        tag.put(NBT_ATTENTION_JOB_BOARDS, boards);
+        tag.putBoolean(NBT_ATTENTION_STORAGE_FULL, storageTally.isBlocker());
+    }
+
+    private void readAttention(CompoundTag tag) {
+        if (!tag.contains(NBT_ATTENTION_INCOMPLETE_QUESTS)) {
+            return;
+        }
+        this.attentionIncompleteQuests = tag.getBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS);
+        this.attentionNoWorkRequests = tag.getBoolean(NBT_ATTENTION_NO_WORK_REQUESTS);
+        this.attentionStorageFull = tag.getBoolean(NBT_ATTENTION_STORAGE_FULL);
+        ImmutableList.Builder<BlockPos> b = ImmutableList.builder();
+        for (Tag t : tag.getList(NBT_ATTENTION_JOB_BOARDS, Tag.TAG_COMPOUND)) {
+            CompoundTag entry = (CompoundTag) t;
+            b.add(new BlockPos(entry.getInt("x"), entry.getInt("y"), entry.getInt("z")));
+        }
+        this.attentionJobBoards = b.build();
+    }
+
+    /** Sends the "!" bubble state to nearby clients when it changed. Checked every 20 ticks. */
+    void syncAttentionState() {
+        if (!(level instanceof ServerLevel) || !isInitialized()) {
+            return;
+        }
+        boolean incomplete = hasIncompleteQuests();
+        boolean noRequests = workHandle.getRequestedResults().isEmpty();
+        ImmutableList<BlockPos> boards = ImmutableList.copyOf(workHandle.jobBoards);
+        storageTally.observe(countStorageBlockedVillagers(), ca.bradj.questown.jobs.Jobs.townHasSpace(this), 20);
+        boolean storageFull = storageTally.isBlocker();
+        if (incomplete == attentionIncompleteQuests
+                && noRequests == attentionNoWorkRequests
+                && boards.equals(attentionJobBoards)
+                && storageFull == attentionStorageFull) {
+            return;
+        }
+        attentionIncompleteQuests = incomplete;
+        attentionNoWorkRequests = noRequests;
+        attentionJobBoards = boards;
+        attentionStorageFull = storageFull;
+        setChanged();
+        level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+    }
+
+    /** Villagers stopped because there is no free storage. */
+    private int countStorageBlockedVillagers() {
+        int n = 0;
+        for (net.minecraft.world.entity.LivingEntity e : getVillagerHandle().entities()) {
+            if (e instanceof VisitorMobEntity v
+                    && ca.bradj.questown.jobs.production.ProductionStatus.NO_SPACE.equals(v.getStatusForServer())) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    public boolean isAttentionStorageFull() {
+        return attentionStorageFull;
+    }
+
+    public boolean isAttentionQuestsIncomplete() {
+        return attentionIncompleteQuests;
+    }
+
+    public boolean isAttentionNoWorkRequests() {
+        return attentionNoWorkRequests;
+    }
+
+    public ImmutableList<BlockPos> getAttentionBoardPositions() {
+        return attentionJobBoards;
+    }
     private final NoMCEconomics economics = new NoMCEconomics();
     final TownFlagTicker ticker = new TownFlagTicker();
 
@@ -472,9 +655,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public CompoundTag getUpdateTag() {
         CompoundTag tag = super.getUpdateTag();
-        if (this.isInitialized()) {
-            this.writeTownData(tag);
-        }
+        writeDeadDoors(tag);
+        writeAttention(tag);
         return tag;
     }
 
@@ -488,9 +670,30 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     public void onLoad() {
         super.onLoad();
         if (!(level instanceof ServerLevel sl)) {
+            // Client side: let the bubble focus find this flag's dead doors.
+            if (level != null && level.isClientSide()) {
+                DeadDoorBubbles.register(this);
+                AttentionBubbles.register(this);
+            }
             return;
         }
         initializeFreshFlag(false);
+    }
+
+    @Override
+    public void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        // Unloaded, not destroyed: sub-block listeners stop.
+        subBlocks.retire();
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (level != null && level.isClientSide()) {
+            DeadDoorBubbles.unregister(this);
+            AttentionBubbles.unregister(this);
+        }
     }
 
     public void initializeFreshFlag(boolean fullInit) {
@@ -644,6 +847,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     @Override
     public RoomsHolder getRoomHandle() {
         return roomsHandle;
+    }
+
+    @Override
+    public Optional<ResourceLocation> roomRecipeHolding(BlockPos pos) {
+        Collection<RoomRecipeMatch<MCRoom>> matches = roomsHandle.getMatches(m -> true);
+        Optional<MCRoom> room = ca.bradj.questown.town.rooms.RoomDoors.roomHolding(
+                matches.stream().map(RoomRecipeMatch::getRoom).toList(), pos);
+        return room.flatMap(r -> matches.stream()
+                                        .filter(m -> m.getRoom().equals(r))
+                                        .findFirst()
+                                        .flatMap(m -> getTopMatch(this::recipesFromLevel, m)));
     }
 
     void setUpQuestsForNewlyPlacedFlag() {

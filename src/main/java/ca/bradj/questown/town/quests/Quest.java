@@ -215,6 +215,8 @@ public class Quest<KEY, ROOM extends Room> implements Completable {
                 int count
         );
 
+        QUEST newJobUnlockQuest(KEY id);
+
         /** Day 2's first-work-request quest. Don't build it with {@link #newQuest}. */
         QUEST newFirstWorkRequestQuest(@Nullable UUID ownerId);
 

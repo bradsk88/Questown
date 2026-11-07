@@ -94,6 +94,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         Collection<MCRoom> allRooms = e.roomsHandle.getAllRoomsIncludingMetaAndFarms();
         e.jobHandle.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get());
         e.jobHandles.forEach((k, v) -> v.tick(sl, allRooms, Config.FLAG_TICK_INTERVAL.get()));
+        MiningSounds.tick(sl, e.jobHandles.values());
     }
 
     @Override
