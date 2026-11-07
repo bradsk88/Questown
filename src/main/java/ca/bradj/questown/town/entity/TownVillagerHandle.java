@@ -217,6 +217,16 @@ public final class TownVillagerHandle {
             }
 
             @Override
+            public ImmutableList<JobID> getDefaultWork(JobID root) {
+                return ServerJobsRegistry.getDefaultWork(root);
+            }
+
+            @Override
+            public void postStarterRequests(JobID root) {
+                town.getUnsafe().postStarterRequests(root);
+            }
+
+            @Override
             public ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs() {
                 return learning.getUnlockedJobs();
             }
@@ -393,6 +403,14 @@ public final class TownVillagerHandle {
 
     Map<VillagerUUID, Boolean> getJobChangesPending() {
         return UtilClean.mapKeys(delegate.getJobChangesPending(), TownVillagerHandle::fromUuid);
+    }
+
+    ImmutableMap<UUID, JobID> getGuaranteedRoots() {
+        return delegate.getGuaranteedRoots();
+    }
+
+    ImmutableMap<UUID, JobID> getPreRolls() {
+        return delegate.getPreRolls();
     }
 
     void register(VisitorMobEntity visitorMobEntity) {

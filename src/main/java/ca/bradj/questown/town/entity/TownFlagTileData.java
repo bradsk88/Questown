@@ -40,6 +40,7 @@ public class TownFlagTileData {
     private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
             "first_hunter_loot_guarantee_fired"
     );
+    private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
     public static Map<String, InitPair> initialize() {
 
@@ -57,7 +58,18 @@ public class TownFlagTileData {
         b.put(NBT_BONUS_GIVEN, initBonusGiven());
         b.put(NBT_ECONOMICS, initEconomics());
         b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
+        b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
+    }
+
+    private static InitPair initBopWithdrawn() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.bopWithdrawn = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.bopWithdrawn = false
+        );
     }
 
     private static InitPair initFirstHunterLootGuaranteeFired() {
@@ -262,6 +274,7 @@ public class TownFlagTileData {
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         write(t, NBT_ECONOMICS, flag.serializeEconomics());
         write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
+        write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }
 
     private static void write(

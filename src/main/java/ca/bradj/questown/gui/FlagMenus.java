@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -52,11 +53,13 @@ public class FlagMenus {
             FlagMenus menus = new FlagMenus();
             // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
             // It tends to cause client-side-only bugs that don't show up in the dev environment.
-            menus.initQuestsMenuClientSide(windowId, quests, flagInfo);
+            menus.initQuestsMenuClientSide(windowId, quests, flagInfo, summary, villagerDisplayNames);
             menus.initMultiVillagerStatusMenuClientSide(windowId, flagInfo);
             menus.initEconClientSide(windowId, flagInfo);
-            menus.initBlocksOfProgress(windowId, flagInfo, blocksOfProgress);
-            menus.initCrafting(windowId, flagInfo);
+            menus.initBlocksOfProgress(windowId, flagInfo, bopResult.bopRootJobs());
+            menus.initCrafting(windowId, flagInfo, quests.stream().map(UIQuest::getWantedId).filter(java.util.Objects::nonNull).toList(),
+                    bopResult.bopRootJobs().size());
+            menus.settingsMenu = new FlagSettingsMenu(windowId, flagInfo);
             return menus;
         } catch (Exception e) {
             QT.GUI_LOGGER.error("Failed to open town quests container: {}", e.getMessage());
@@ -102,7 +105,11 @@ public class FlagMenus {
     ) {
         HashMap<UUID, StatusPacket> b = new HashMap<>();
         HashMap<UUID, ImmutableList<Item>> b2 = new HashMap<>();
+        HashSet<UUID> pending = new HashSet<>();
         for (VisitorMobEntity v : es) {
+            if (v.getTown() != null && v.getTown().getVillagerHandle().isJobChangePending(v.getVUID())) {
+                pending.add(v.getUUID());
+            }
             if (b.containsKey(v.getUUID()) || b2.containsKey(v.getUUID())) {
                 QT.FLAG_LOGGER.error("Villager {} detected twice. This is probably a bug!", v.getUUID());
             }

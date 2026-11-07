@@ -361,6 +361,8 @@ public class RealtimeWorldInteraction extends
                 new MinecraftWorldAccess(inputs.town().getServerLevel()),
                 (in, i, s) -> {
                     inputs.entity().tryGiveItem(i, s);
+                    // A product a rule takes is an extraction too.
+                    onLootExtracted(inputs, i);
                     return in;
                 },
                 position,

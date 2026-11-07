@@ -20,16 +20,18 @@ public class BopTransactionSyncer {
         this.getSlot = getSlot;
     }
 
-    public static void syncConsumedBOP(
+    public static @NotNull ItemStack syncConsumedBOP(
             ServerPlayer sender
     ) {
-        // Also clear the BOP slot in the open menu, if present, to prevent it being returned to the player
+        // Clear the open menu's BOP slot too, so it is not handed back. Returns what was consumed.
+        ItemStack consumed = ItemStack.EMPTY;
         if (sender.containerMenu instanceof JobChangeConfirmMenu menu) {
-            menu.tx.clearBopSlot();
+            consumed = menu.tx.takeBopSlot();
         }
         if (sender.containerMenu instanceof JobUnlockConfirmMenu menu) {
-            menu.tx.clearBopSlot();
+            consumed = menu.tx.takeBopSlot();
         }
+        return consumed;
     }
 
     private @NotNull Slot getBopSlot(
@@ -46,11 +48,10 @@ public class BopTransactionSyncer {
         return getBopSlot().getItem();
     }
 
-    public void clearBopSlot() {
+    public @NotNull ItemStack takeBopSlot() {
+        ItemStack stack = getBopSlotItem();
         getBopSlot().set(ItemStack.EMPTY);
+        return stack;
     }
 
-    public boolean isBlessed() {
-        return BlockOfProgress.isBlessed(getBopSlotItem());
-    }
 }

@@ -136,6 +136,14 @@ public class TownVillagerHandles {
             }
 
             @Override
+            public void assignJob(
+                    VillagerUUID villagerUUID,
+                    JobID job
+            ) {
+                villagerHandle.delegate.assignJob(getUUID(villagerUUID), job, villagerHandle.getTick());
+            }
+
+            @Override
             public void changeJobForVillager(
                     UUID villagerUUID,
                     JobID newJob,
@@ -233,12 +241,21 @@ public class TownVillagerHandles {
             }
 
             @Override
-            public void scheduleJobRootChange(
+            public Optional<JobID> scheduleJobRootChange(
                     UUID villagerUUID,
                     boolean instant
             ) {
+                return scheduleJobRootChange(villagerUUID, instant, Optional.empty());
+            }
+
+            @Override
+            public Optional<JobID> scheduleJobRootChange(
+                    UUID villagerUUID,
+                    boolean instant,
+                    Optional<JobID> guaranteedRoot
+            ) {
                 long tick = villagerHandle.getTick();
-                villagerHandle.delegate.scheduleJobRootChange(villagerUUID, tick, instant);
+                return villagerHandle.delegate.scheduleJobRootChange(villagerUUID, tick, instant, guaranteedRoot);
             }
 
             @Override

@@ -10,9 +10,10 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean instant) {
+public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean instant,
+                                   /** Spend the flag's oldest Block of Progress (opened from the flag). */
+                                   boolean fromFlag) {
 
     public static void encode(
             JobRootChangeMessage msg,
@@ -21,29 +22,36 @@ public record JobRootChangeMessage(BlockPos flagPos, UUID villagerUUID, boolean 
         buffer.writeBlockPos(msg.flagPos);
         buffer.writeUUID(msg.villagerUUID);
         buffer.writeBoolean(msg.instant());
+        buffer.writeBoolean(msg.fromFlag());
     }
 
     public static JobRootChangeMessage decode(FriendlyByteBuf buffer) {
         BlockPos flagPos = buffer.readBlockPos();
         UUID uuid = buffer.readUUID();
         boolean instant = buffer.readBoolean();
-        return new JobRootChangeMessage(flagPos, uuid, instant);
+        return new JobRootChangeMessage(flagPos, uuid, instant, buffer.readBoolean());
     }
 
     public void handle(
-            Supplier<NetworkEvent.Context> ctx
+            Channel.Context ctx
     ) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            Optional<TownFlagBlockEntity> flag = sender.getLevel().getBlockEntity(flagPos, TilesInit.TOWN_FLAG.get());
-            if (flag.isEmpty()) {
+        ctx.enqueueWork(() -> {
+            ServerPlayer sender = (ServerPlayer) ctx.sender();
+            if (!(sender.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag)) {
                 QT.GUI_LOGGER.error("No flag at position {}. Job root will not be changed.", flagPos);
                 return;
             }
-            BopTransactionSyncer.syncConsumedBOP(sender);
-            flag.get().getVillagerHandle().scheduleJobRootChange(villagerUUID, instant);
+            // The job comes from an open job-change quest, else at random.
+            if (fromFlag) {
+                if (flag.takeOldestBop().isEmpty()) {
+                    QT.GUI_LOGGER.info("Flag has no Block of Progress; job root of {} not changed", villagerUUID);
+                    return;
+                }
+            } else {
+                BopTransactionSyncer.syncConsumedBOP(sender);
+            }
+            flag.requestJobRootChange(villagerUUID, instant, Optional.empty());
         });
-        ctx.get().setPacketHandled(true);
 
     }
 }

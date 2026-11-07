@@ -3,14 +3,11 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.core.init.AdvancementsInit;
-import ca.bradj.questown.gui.ItemEconomicsData;
-import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.core.init.items.ItemsInit;
+import net.minecraft.world.item.ItemStack;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
-import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.gatherer.GathererUnmappedNoToolWorkQtrDay;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.town.CoreProgression;
 import ca.bradj.questown.town.quests.*;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.GrantBlockOfProgressReward;
@@ -22,6 +19,7 @@ import net.minecraft.world.item.Items;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 
 import static ca.bradj.questown.town.entity.TownQuests.defaultQuestCompletionRewards;
 
@@ -51,8 +49,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
 
     @Override
     public void grantBop(int amount) {
-        flag.bopCount += amount;
+        for (int i = 0; i < amount; i++) {
+            flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
         flag.setChanged();
+        flag.syncBopFull();
     }
 
     @Override
@@ -79,28 +80,6 @@ class TownFlagTutorialAdapter implements TutorialTownView {
         AdvancementsInit.TUTORIAL_TRIGGER.triggerForNearestPlayer(sl, trigger, flag.getBlockPos());
     }
 
-    @Override
-    public ResourceLocation getExoticWood() {
-        return getExoticWoodForTown(flag);
-    }
-
-    @Override
-    @Nullable
-    public JobID chooseJobForTutorial(MCQuestBatches questBatches) {
-        WorksBehaviour.TownData data = flag.getTownData();
-        CoreProgression<JobID, ResourceLocation> prog = new CoreProgression<>(
-                flag.getEconomicsHandle().getAggregatedItems(null),
-                GathererUnmappedNoToolWorkQtrDay.ID::equals,
-                jobs -> Compat.shuffle(jobs.iterator(), flag.getServerLevel()).get(0),
-                j -> producesFood(j),
-                (j, needs) -> resourceImpact(needs, data, j)
-        );
-        return prog.getFirstJobChange(
-                ServerJobsRegistry.getAllRootJobs(),
-                ServerJobsRegistry::getRoomForJobId,
-                q -> questBatches.includes(v -> q.equals(v.getWantedId()))
-        );
-    }
 
     @Override
     public ResourceLocation getRoomForJob(JobID job) {

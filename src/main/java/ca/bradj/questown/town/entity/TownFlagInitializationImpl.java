@@ -7,10 +7,14 @@ import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.TownEconomicsSerializer;
 import ca.bradj.questown.town.quests.MCMorningRewards;
 import ca.bradj.questown.town.quests.MCQuestBatches;
+import ca.bradj.questown.core.init.items.ItemsInit;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -82,9 +86,15 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     @Override
     public CompoundTag serializeBOP() {
         CompoundTag t = new CompoundTag();
-        t.putInt("count", flag.bopCount);
+        ListTag stacks = new ListTag();
+        for (ItemStack bop : flag.bopStacks) {
+            // Skip empty entries from older saves.
+            if (!bop.isEmpty()) {
+                stacks.add(ca.bradj.questown.mc.Compat.saveItem(flag.getLevel(), bop));
+            }
+        }
+        t.put("stacks", stacks);
         t.putBoolean("tutorial_bop_granted", flag.tutorialBopGranted);
-        t.putBoolean("flagpole_built", flag.isFlagpoleBuilt());
         t.putInt("completed_procedural_batches", flag.completedProceduralBatches);
         return t;
     }
@@ -101,6 +111,8 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
         }
+        // The full-flag block state can be stale against the loaded count.
+        flag.syncBopFull();
     }
 
     @Override
@@ -177,6 +189,13 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeEconomics() {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
+    @Override
+    public CompoundTag serializeBopWithdrawn() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isBopWithdrawn());
+        return t;
+    }
+
     @Override
     public CompoundTag serializeFirstHunterLootGuaranteeFired() {
         CompoundTag t = new CompoundTag();

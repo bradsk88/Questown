@@ -78,6 +78,12 @@ public interface VillagerHolder {
             boolean announce
     );
 
+    /** Makes the villager a {@code job} worker now, as a Block of Progress job change does. {@link #changeJobForVillager} only sets the job. */
+    void assignJob(
+            VillagerUUID villagerUUID,
+            JobID job
+    );
+
     /**
      * @deprecated Use VillagerUUID version
      */
@@ -130,9 +136,17 @@ public interface VillagerHolder {
 
     void clearBlockOfProgress(UUID uuid);
 
-    void scheduleJobRootChange(
+    /** Schedules a job change and returns the job rolled now; empty when instant or when there is no candidate. */
+    Optional<JobID> scheduleJobRootChange(
             UUID villagerUUID,
             boolean instant
+    );
+
+    /** As above, with a promised job that is used instead of a random one. */
+    Optional<JobID> scheduleJobRootChange(
+            UUID villagerUUID,
+            boolean instant,
+            Optional<JobID> guaranteedRoot
     );
 
     boolean isUnlocked(JobID jobID);

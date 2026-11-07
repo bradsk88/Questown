@@ -132,11 +132,12 @@ public class WorkSeekerJob extends DeclarativeJob {
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        // A level-up's Block of Progress goes to the flag at any hour.
+        if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
+            town.changeJobForVisitorFromBoard(ownerUUID, getId());
+        }
         return switch (super.getSignal(Util.getDayTime(town.getServerLevel()))) {
             case MORNING, NOON, UNDEFINED -> {
-                if (town.getVillagerHandle().hasBlockOfProgress(ownerUUID)) {
-                    town.changeJobForVisitorFromBoard(ownerUUID, getId());
-                }
                 if (town.getPossibleWork().getFor(getId()).isEmpty()) {
                     if (!registeredUnmet && !statusFactory.noWorkPossible().equals(journal.getStatus())) {
                         journal.changeStatus(statusFactory.noWorkPossible());

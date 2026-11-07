@@ -73,7 +73,7 @@ public class FlagTabs extends Tabs implements SubUI {
             b.add(new Tab(
                     (rc, x, y) -> RenderUtil.renderItemScaled(
                             rc.itemRenderer(),
-                            2,
+                            0.8f,
                             ItemsInit.BLOCK_OF_PROGRESS.get().getDefaultInstance(),
                             x + 10,
                             y + 7
@@ -140,6 +140,33 @@ public class FlagTabs extends Tabs implements SubUI {
         b.add(new TabDecision("tooltips.blocks_of_progress", fi.showBlockOfProgressTab(), true));
         b.add(new TabDecision("tooltips.crafting", true, false));
         return b.build();
+    }
+
+    /**
+     */
+    public static String initialFlagTab(
+            boolean bopFull,
+            boolean villagersTabAttention,
+            boolean bopTabUnseen,
+            boolean questsTabAttention,
+            boolean economicsTabAttention
+    ) {
+        if (bopFull) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (villagersTabAttention) {
+            return OpenFlagMenuMessage.VILLAGERS;
+        }
+        if (bopTabUnseen) {
+            return OpenFlagMenuMessage.BOP;
+        }
+        if (questsTabAttention) {
+            return OpenFlagMenuMessage.QUESTS;
+        }
+        if (economicsTabAttention) {
+            return OpenFlagMenuMessage.ECONOMICS;
+        }
+        return OpenFlagMenuMessage.VILLAGERS;
     }
 
     public static Collection<String> allExcept(String except) {

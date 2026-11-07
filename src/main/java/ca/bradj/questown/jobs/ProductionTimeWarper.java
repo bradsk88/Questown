@@ -27,7 +27,7 @@ public class ProductionTimeWarper {
             @NotNull ImmutableList<ContainerTarget<C, I>> containers
     ) {
         Stack<H> stack = new Stack<>();
-        itemz.stream().filter(v -> !v.isEmpty() && !v.isLocked()).forEach(stack::add);
+        itemz.stream().filter(v -> !v.isEmpty() && !v.staysWithVillager()).forEach(stack::add);
         QT.JOB_LOGGER.debug("[dropIntoContainers] Items to drop: {} (count={})",
                 stack.stream().map(h -> h.get().getShortName()).toList(), stack.size());
         int droppedCount = 0;
@@ -192,7 +192,7 @@ public class ProductionTimeWarper {
 
         ImmutableList<H> unlockedItems = ImmutableList.copyOf(
                 input.items.stream()
-                        .filter(v -> !v.isLocked())
+                        .filter(v -> !v.staysWithVillager())
                         .toList()
         );
         Iterator<H> undeposited = addToTownOrReturn.apply(unlockedItems)
@@ -201,7 +201,7 @@ public class ProductionTimeWarper {
                 .iterator();
         ImmutableList.Builder<H> b = ImmutableList.builder();
         for (H item : input.items) {
-            if (item.isLocked()) {
+            if (item.staysWithVillager()) {
                 b.add(item);
                 continue;
             }

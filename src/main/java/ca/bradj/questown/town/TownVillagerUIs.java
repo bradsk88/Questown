@@ -424,6 +424,15 @@ public class TownVillagerUIs {
     }
 
 
+    /** The flag's Blocks of Progress, for a panel opened from the flag. */
+    private static JobChangeConfirmMenu.FlagBop flagBop(ServerPlayer sender, VisitorMobEntity e) {
+        TownFlagBlockEntity flag = e.getFlagPos() == null ? null : TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
+        if (flag == null) {
+            return JobChangeConfirmMenu.FlagBop.NONE;
+        }
+        return new JobChangeConfirmMenu.FlagBop(flag.getBopCount());
+    }
+
     private static void openMenu(
             ServerPlayer sender,
             TriFunction<Integer, Inventory, Player, AbstractContainerMenu> shower,

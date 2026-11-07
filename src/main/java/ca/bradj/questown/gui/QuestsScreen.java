@@ -363,6 +363,10 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     ) {
         Collection<Ingredient> ingredients = recipe.getIngredients();
         ingredients = RoomRecipes.filterSpecialBlocks(ingredients);
+        if (recipe.getType() == Quest.QuestType.JOB_CHANGE) {
+            // Job-change quests always need a Block of Progress, so the card leaves it out.
+            ingredients = ImmutableList.of();
+        }
 
         return RenderUtil.stripOfRequestableItems(
                 (ing, coord) -> Ingredients.render(itemRenderer, ing, coord.x(), coord.y()),

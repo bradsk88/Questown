@@ -26,6 +26,11 @@ public class GathererJournalTest {
         }
 
         @Override
+        public boolean isBlockOfProgress() {
+            return "block_of_progress".equals(value);
+        }
+
+        @Override
         public TestItem shrink() {
             return new TestItem("");
         }

@@ -43,11 +43,10 @@ public class BlacksmithsTableBlock extends Block {
         // TODO: Also drop stuff inside
         //  Maybe something like onHurt() { town.dropInsertedItems(this.pos) }
         //  So the first hit from a player will cause the items to pop out.
-        return ImmutableList.of(ItemsInit.ORE_PROCESSING_BLOCK.get().getDefaultInstance());
+        return ImmutableList.of(new ItemStack(asItem()));
     }
 
-    @Override
-    public InteractionResult use(
+    public InteractionResult useWithoutItem(
             BlockState blockState,
             Level level,
             BlockPos pos,
@@ -66,5 +65,20 @@ public class BlacksmithsTableBlock extends Block {
         // TODO: Generic handling
 
         return InteractionResult.PASS;
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult use(
+            net.minecraft.world.level.block.state.BlockState qtState,
+            net.minecraft.world.level.Level qtLevel,
+            net.minecraft.core.BlockPos qtPos,
+            net.minecraft.world.entity.player.Player qtPlayer,
+            net.minecraft.world.InteractionHand qtHand,
+            net.minecraft.world.phys.BlockHitResult qtHit
+    ) {
+        if (qtHand == net.minecraft.world.InteractionHand.MAIN_HAND) {
+            return useWithoutItem(qtState, qtLevel, qtPos, qtPlayer, qtHit);
+        }
+        return net.minecraft.world.InteractionResult.PASS;
     }
 }
