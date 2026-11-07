@@ -1218,6 +1218,10 @@ public class DeclarativeJob extends
             TownInterface town,
             IProductionStatusFactory<ProductionStatus> statusFactory
     ) {
+        if (FetcherHack.isFetcher(jobId)) {
+            // The fetcher's status (get request, fetch, deliver) doesn't fit the shared pipeline, so it is computed here.
+            return FetcherHack.computeStatusOverride(town, journal.getItems());
+        }
         return null; // Default: use standard status computation
     }
 }

@@ -135,8 +135,12 @@ public class SpecialRules {
             "furnace_smelt_warp";
 
     public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
+
     // With dev logs on, the villager's status decisions for this job are logged with the reasons
     // behind them.
     public static final String LOG_STATUS_REASONS = "log_status_reasons";
 
+    // During a warp, moves a requested item from another chest into the chest that holds its stock request.
+    public static final String RELOCATE_REQUESTED_ITEM_WARP =
+            "relocate_requested_item_warp";
 }
