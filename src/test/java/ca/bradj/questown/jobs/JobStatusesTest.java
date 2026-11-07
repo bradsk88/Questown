@@ -316,7 +316,7 @@ class JobStatusesTest {
         TestStatus s = JobStatuses.usualRoutine(
                 TestStatus.IDLE,
                 true,
-                new ConstInventory(false, true, HAS_ALL_SUPPLIES),
+                new ConstInventory(false, false, HAS_ALL_SUPPLIES),
                 new ConstTown(false, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY
@@ -411,6 +411,21 @@ class JobStatusesTest {
                 TestStatus.IDLE,
                 true,
                 new ConstInventory(true, true, ImmutableMap.of()),
+                new ConstTown(true, true, true),
+                jobWithItemWorkOnly,
+                TestStatus.FACTORY
+        );
+        Assertions.assertEquals(TestStatus.DROPPING_LOOT, s);
+    }
+
+    @Test
+    void StatusShouldBe_DroppingLoot_WhenHoldingOutput_BeforeUsingItemsForANewCycle() {
+        TestStatus s = JobStatuses.usualRoutine(
+                TestStatus.IDLE,
+                true,
+                new ConstInventory(false, true, ImmutableMap.of(
+                        TestStatus.ITEM_WORK, true
+                )),
                 new ConstTown(true, true, true),
                 jobWithItemWorkOnly,
                 TestStatus.FACTORY

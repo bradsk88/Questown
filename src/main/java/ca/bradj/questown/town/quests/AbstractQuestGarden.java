@@ -40,7 +40,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
      * @return true if growth occurred
      */
     public boolean grow(
-            Supplier<Boolean> hasEnoughBeds,
+            Supplier<Integer> missingBeds,
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
@@ -53,7 +53,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return false;
         }
 
-        boolean added = doGrow(hasEnoughBeds, neededRooms, allRecipes);
+        boolean added = doGrow(missingBeds, neededRooms, allRecipes);
         if (this.ticksSoFar > maxTicks) {
             return false;
         }
@@ -63,7 +63,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
     protected abstract boolean isOvergrown();
 
     private boolean doGrow(
-            Supplier<Boolean> hasEnoughBeds,
+            Supplier<Integer> missingBeds,
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {

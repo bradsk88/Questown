@@ -198,6 +198,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
 
         return switch (recipe.getType()) {
             case ITEM -> renderItemQuestTooltip(recipe);
+            case LOOT -> renderLootQuestTooltip(recipe);
             case ROOM -> {
                 if (SpecialQuests.CAMPFIRE.equals(recipe.getWantedId())) {
                     yield ImmutableList.of(Compat.translatable("menu.quests.campfire_quest"));
@@ -214,6 +215,15 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         int size = recipe.getIngredients().size();
         Component name = Compat.getItemName(recipe.getWantedId());
         return ImmutableList.of(Compat.translatable("menu.quests.item_quest", size, name));
+    }
+
+    // A LOOT quest is done by a villager bringing the item back, not by putting it in storage.
+    private static ImmutableList<Component> renderLootQuestTooltip(UIQuest recipe) {
+        int size = recipe.getIngredients().size();
+        Component name = recipe.getIngredients().isEmpty()
+                ? Compat.getItemName(recipe.getWantedId())
+                : Ingredients.getName(recipe.getIngredients().iterator().next());
+        return ImmutableList.of(Compat.translatable("menu.quests.loot_quest", size, name));
     }
 
     private static ImmutableList<Component> renderJobQuestTooltip(UIQuest recipe) {

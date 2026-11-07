@@ -44,6 +44,16 @@ public class UIQuest implements Comparable<UIQuest> {
     );
     public final Quest.QuestStatus status;
     private final ResourceLocation wantedId;
+
+
+    /** A LOOT quest's name: its tag's name, or the wanted item's own name. */
+    public static MutableComponent lootName(ResourceLocation wantedId) {
+        String key = LootQuestNames.key(wantedId);
+        if (key == null) {
+            return Compat.getItemName(wantedId).copy();
+        }
+        return Compat.translatable(key);
+    }
     private final Quest.QuestType type;
     private final ImmutableList<Ingredient> ingredients;
     public final ResourceLocation fromRecipe;
@@ -52,6 +62,7 @@ public class UIQuest implements Comparable<UIQuest> {
     private final String jobName;
     @Nullable
     private final String flavorText;
+    /** Progress toward the quest's count (stored items for ITEM, items brought back for LOOT), or null. */
     public final boolean isBroken;
 
     public UIQuest(

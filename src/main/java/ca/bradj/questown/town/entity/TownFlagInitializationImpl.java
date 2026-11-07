@@ -177,4 +177,11 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeEconomics() {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
+    @Override
+    public CompoundTag serializeFirstHunterLootGuaranteeFired() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());
+        return t;
+    }
+
 }

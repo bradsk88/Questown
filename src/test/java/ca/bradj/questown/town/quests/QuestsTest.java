@@ -57,6 +57,15 @@ class QuestsTest {
             }
 
             @Override
+            public TestQuest newLootQuest(
+                    @Nullable UUID ownerId,
+                    Integer itemId,
+                    int count
+            ) {
+                throw new UnsupportedOperationException("Not implemented");
+            }
+
+            @Override
             public TestQuest completed(Room room, TestQuest input) {
                 TestQuest testQuest;
                 if (input.fromRecipeID().isPresent()) {

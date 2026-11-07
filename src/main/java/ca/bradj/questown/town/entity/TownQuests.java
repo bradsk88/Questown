@@ -48,6 +48,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -405,6 +406,33 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
+
+
+
+    /** The first need with a producer the town could unlock, and that producer; a null need means none. */
+
+    /** The first most-needed item a job not yet unlocked could make. Needs with no producer, or only unlocked ones, are skipped. */
+    static TopNeedChoice chooseTopNeed(
+            List<ItemEconomicsData> needs,
+            Function<String, Set<String>> producerRootsFor,
+            Set<String> unlockedRoots
+    ) {
+        for (ItemEconomicsData need : needs) {
+            String key = need.ingredientKey();
+            if (key == null || key.isEmpty()) {
+                continue;
+            }
+            Set<String> roots = producerRootsFor.apply(key);
+            if (roots == null || roots.isEmpty()) {
+                continue;
+            }
+            String producer = chooseProducerRoot(roots, null, unlockedRoots);
+            if (producer != null) {
+                return new TopNeedChoice(need, producer);
+            }
+        }
+        return new TopNeedChoice(null, null);
+    }
     public boolean isWaitingForHunterGathererTutorial() {
         if (questBatches.getAllBatches().size() > 3) {
             return false;
@@ -1127,6 +1155,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.processItemQuests(allStacks, this::questMatchesStack, TownQuests.TRACKER);
     }
 
+    /** Progress of each open ITEM or LOOT quest: items in town storage for ITEM, items brought back for LOOT. */
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {
         // TODO: Consider putting on QuestBatches and testing
         for (MCQuestBatch batch : questBatches.getAllBatches()) {

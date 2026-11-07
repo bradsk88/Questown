@@ -76,8 +76,9 @@ public class QuestBatches<
             BiPredicate<KEY, ITEM> questMatchesStack,
             Tracker<ITEM_KEY, ITEM, QUEST> tracker
     ) {
+        // Only open ITEM quests complete here; items in stock never close a LOOT quest.
         List<QUEST> stacksToFind = getAll().stream()
-                                           .filter(v -> v.getType() == Quest.QuestType.ITEM)
+                                           .filter(v -> v.getType() == Quest.QuestType.ITEM && !v.isComplete())
                                            .collect(Collectors.toCollection(ArrayList::new));
         if (stacksToFind.isEmpty()) {
             return;
@@ -86,7 +87,6 @@ public class QuestBatches<
         Map<ITEM_KEY, Integer> itemCounts = new HashMap<>();
         for (ITEM stack : allStacks) {
             Optional<QUEST> quest = stacksToFind.stream()
-                                                // TODO: Also handle tags
                                                 .filter(v -> questMatchesStack.test(v.getWantedId(), stack))
                                                 .findFirst();
             if (quest.isEmpty()) {
@@ -94,7 +94,7 @@ public class QuestBatches<
             }
             int result = tracker.addCount(itemCounts, stack);
             if (result >= quest.get().getCountNeeded()) {
-                markRecipeAsComplete(null, quest.get().getWantedId());
+                markItemQuestAsComplete(quest.get().getWantedId());
                 stacksToFind.remove(quest.get());
                 if (stacksToFind.isEmpty()) {
                     return;
@@ -178,6 +178,7 @@ public class QuestBatches<
             v.getAll().forEach(q -> {
                 switch (q.getType()) {
                     case ITEM -> e.addItemQuest(owner, q.getWantedId(), q.getCountNeeded());
+                    case LOOT -> e.addLootQuest(owner, q.getWantedId(), q.getCountNeeded());
                     case ROOM -> e.addNewQuest(owner, q.getWantedId());
                     case JOB_CHANGE -> e.addJobChangeQuest(q.getWantedId());
                     case JOB_UNLOCK -> e.addJobUnlockQuest(q.getWantedId());
@@ -186,6 +187,10 @@ public class QuestBatches<
                     case SKILL_UNLOCK -> e.addSkillUnlockQuest(owner, q.getWantedId());
                     case VILLAGER_LEVEL -> e.addVillagerLevelQuest(owner, q.getWantedId());
                     case UNKNOWN -> QT.QUESTS_LOGGER.error("Unexpected type: {}. Skipping duplicate check.", q.getType());
+                }
+                if (q.getType() != Quest.QuestType.UNKNOWN) {
+                    // Restore what the rebuild doesn't: the onboarding flag, flavor text and LOOT progress.
+                    e.newestQuest().carrySavedStateFrom(q);
                 }
                 IdIgnoring<QUEST> iq = new IdIgnoring<>(q);
                 if (completedQuests.contains(iq)) {
@@ -251,6 +256,14 @@ public class QuestBatches<
 
     public ImmutableList<QUEST> getAll() {
         return ImmutableList.copyOf(this.batches.stream().flatMap(QuestBatch::stream).toList());
+    }
+
+    private void markItemQuestAsComplete(KEY itemId) {
+        for (BATCH b : batches) {
+            if (b.markRecipeAsComplete(null, itemId, q -> q.getType() == Quest.QuestType.ITEM)) {
+                return;
+            }
+        }
     }
 
     public void markRecipeAsComplete(

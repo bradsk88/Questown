@@ -1,4 +1,6 @@
 package ca.bradj.questown.jobs.declarative;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.QT;
 
 import ca.bradj.questown.blocks.ExtractedItemAware;
 import ca.bradj.questown.blocks.InsertedItemAware;
@@ -298,9 +300,11 @@ public class RealtimeWorldInteraction extends
     ) {
         VisitorMobEntity.WorkToUndo wtu = mcExtra.entity().getWorkToUndo();
         if (wtu == null) {
-            return true;
+            res = true;
+        } else {
+            res = tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
         }
-        return tryGiveItems(mcExtra, wtu.itemsInserted(), wtu.pos());
+        return res;
     }
 
     @Override
@@ -385,7 +389,7 @@ public class RealtimeWorldInteraction extends
             BlockPos position,
             @Nullable MCHeldItem extractedItem
     ) {
-        return PostExtractHook.run(
+        Boolean hooked = PostExtractHook.run(
                 aBoolean,
                 inputs.town().getTownFlagBasePos(),
                 rules,
@@ -395,12 +399,13 @@ public class RealtimeWorldInteraction extends
                     if (extractedItem == null || extractedItem.isEmpty()) {
                         return town;
                     }
-                    CompoundTag t = extractedItem.get().toMCItemStack().getOrCreateTag();
+                    CompoundTag t = Compat.itemDataTag(extractedItem.get().toMCItemStack());
                     itemData.forEach(t::putInt);
                     return town;
                 },
                 (in, up) -> {
-                    inputs.town().getVillagerHandle().fillHunger(inputs.entity().getUUID(), up);
+                    inputs.town().getVillagerHandle().eat(inputs.entity().getUUID(), up);
+                    return in;
                 },
                 (in, effect, durationTicks) -> {
                     long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
@@ -409,6 +414,24 @@ public class RealtimeWorldInteraction extends
                     return in;
                 }
         );
+        return hooked;
+    }
+
+    /** Closes matching LOOT quests on a non-empty extraction. */
+    @Override
+    protected void onLootExtracted(MCExtra inputs, @Nullable MCHeldItem item) {
+        if (LootExtractGuard.questCheckFires(
+                item != null && !item.isEmpty(),
+                hasExtractingProductRule())) {
+            ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+            boolean rawWasActive = FirstHunterLootGuarantee.rawFoodLootQuestActive(flag)
+                    && flag != null && "hunter".equals(getJobId() != null ? getJobId().rootId() : null)
+                    && !flag.isFirstHunterLootGuaranteeFired();
+            inputs.town().getQuestHandle().processLootQuests(item.get());
+            if (rawWasActive && FirstHunterLootGuarantee.matchesFirstHunterItem(item)) {
+                FirstHunterLootGuarantee.flipOnceBit(flag);
+            }
+        }
     }
 
     @Override
@@ -452,22 +475,6 @@ public class RealtimeWorldInteraction extends
             return position.workPos().jobBlock().above();
         }
         return position.workPos().entityFeetPos();
-    }
-
-    @Override
-    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
-            MCExtra mcExtra,
-            WorkOutput<Boolean, WorkPosition<BlockPos>> v
-    ) {
-        return Util.workWithSurfaceInteractionPos(mcExtra.town().getServerLevel(), v);
-    }
-
-    @Override
-    protected void iterate(
-            Iterable<MCHeldItem> newItemsSource,
-            Function<MCHeldItem, MCHeldItem> push
-    ) {
-        Util.iterate(newItemsSource, push::apply);
     }
 
     @Override

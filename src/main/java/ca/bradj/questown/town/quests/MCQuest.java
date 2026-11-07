@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,26 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
     public static final Serializer SERIALIZER = new Serializer();
 
     @Nullable String concurrentJobIdsEncoded;
+
+    /** How many of the wanted item villagers have brought back while this quest was open. Saved. */
+    private int lootExtracted;
+
+    public int addExtracted(int n) {
+        lootExtracted += n;
+        return lootExtracted;
+    }
+
+    public int getExtracted() {
+        return lootExtracted;
+    }
+
+    @Override
+    protected void carrySavedStateFrom(Quest<?, ?> saved) {
+        super.carrySavedStateFrom(saved);
+        if (saved instanceof MCQuest mcq) {
+            this.lootExtracted = mcq.lootExtracted;
+        }
+    }
 
     MCQuest() {
         super();
@@ -69,6 +90,16 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             int count
     ) {
         return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.ITEM, count);
+    }
+
+    // A LOOT quest completes on items villagers bring back from work, not on items in a chest.
+    public static MCQuest loot(
+            UUID batchUUID,
+            @Nullable VillagerUUID ownerId,
+            ResourceLocation itemId,
+            int count
+    ) {
+        return new MCQuest(batchUUID, ownerId, itemId, null, QuestType.LOOT, count);
     }
 
     public static MCQuest jobChange(
@@ -160,6 +191,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_DISCARDABLE = "discardable";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
+        private static final String NBT_LOOT_EXTRACTED = "loot_extracted";
         private static final String NBT_COMPLETED_ON_DOORPOS_X = "doorpos_x";
         private static final String NBT_COMPLETED_ON_DOORPOS_Y = "doorpos_y";
         private static final String NBT_COMPLETED_ON_DOORPOS_Z = "doorpos_z";
@@ -197,6 +229,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (quest instanceof MCQuest mcq && mcq.concurrentJobIdsEncoded != null) {
                 ct.putString(NBT_CONCURRENT_JOB_IDS, mcq.concurrentJobIdsEncoded);
+            }
+            if (quest instanceof MCQuest mcq && mcq.lootExtracted > 0) {
+                ct.putInt(NBT_LOOT_EXTRACTED, mcq.lootExtracted);
             }
             return ct;
         }
@@ -254,6 +289,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (nbt.contains(NBT_CONCURRENT_JOB_IDS)) {
                 quest.concurrentJobIdsEncoded = nbt.getString(NBT_CONCURRENT_JOB_IDS);
+            }
+            if (nbt.contains(NBT_LOOT_EXTRACTED)) {
+                quest.lootExtracted = nbt.getInt(NBT_LOOT_EXTRACTED);
             }
             return quest;
         }
