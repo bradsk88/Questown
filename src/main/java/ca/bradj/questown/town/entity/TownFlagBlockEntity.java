@@ -690,6 +690,55 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return false;
     }
 
+    private static boolean carriesBlockOfProgress(VisitorMobEntity villager) {
+        Container inv = villager.getInventory();
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (inv.getItem(i).is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Stores the villager's carried work output before it eats. @return true when the town has no chest, so the villager waits here */
+    private boolean depositCarriedWorkOutput(VisitorMobEntity villager) {
+        Container inventory = villager.getInventory();
+        List<MCTownItem> carried = new ArrayList<>();
+        List<Integer> carriedSlots = new ArrayList<>();
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.isEmpty() || stack.is(ItemsInit.BLOCK_OF_PROGRESS.get())) {
+                continue;
+            }
+            carried.add(MCTownItem.fromMCItemStack(stack));
+            carriedSlots.add(slot);
+        }
+        if (carried.isEmpty()) {
+            return false;
+        }
+        ContainerTarget<MCContainer, MCTownItem> chest = TownContainers.findClosestMatching(
+                this, MCTownItem::isEmpty, villager.blockPosition(), carried);
+        if (chest == null) {
+            return true;
+        }
+        int deposited = 0;
+        for (MCTownItem item : carried) {
+            ContainerTarget<MCContainer, MCTownItem> updated = chest.withItemAdded(item);
+            if (updated == null) {
+                break;
+            }
+            chest = updated;
+            deposited++;
+        }
+        for (int i = 0; i < deposited; i++) {
+            inventory.setItem(carriedSlots.get(i), ItemStack.EMPTY);
+        }
+        if (deposited > 0) {
+            inventory.setChanged();
+        }
+        return false;
+    }
+
     public WorksBehaviour.TownData getTownData() {
         return new WorksBehaviour.TownData(
                 getServerLevel(),
@@ -697,6 +746,20 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         biomes.getAllInTown(),
                         prefix
                 )
+        );
+    }
+
+    /** {@link #getTownData} for what players see: a trip job only claims what its own loot tables can drop. */
+    public WorksBehaviour.TownData getTownDataForDisplay() {
+        ServerLevel level = getServerLevel();
+        return new WorksBehaviour.TownData(
+                level,
+                prefix -> {
+                    ImmutableSet<String> drops = Loots.previewForPrefix(level.getServer().getResourceManager(), prefix);
+                    return knowledgeHandle.getAllKnownGatherResults(biomes.getAllInTown(), prefix).stream()
+                            .filter(item -> drops.contains(Compat.getItemId(item.get()).toString()))
+                            .collect(ImmutableSet.toImmutableSet());
+                }
         );
     }
 
