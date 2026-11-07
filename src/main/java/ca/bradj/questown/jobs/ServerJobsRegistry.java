@@ -1,5 +1,7 @@
 package ca.bradj.questown.jobs;
 
+import ca.bradj.questown.jobs.requests.RequestOutputs;
+
 import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.StatusNeedLine;
 import ca.bradj.questown.mobs.visitor.TownieNeedDetail;
@@ -186,6 +188,21 @@ public class ServerJobsRegistry {
             WorksBehaviour.TownData data,
             Ingredient wantedResult
     ) {
+        return jobsThatProduce(data, wantedResult, true);
+    }
+
+    public static ImmutableMap<JobID, ResourceLocation> getJobsKnownToProduce(
+            WorksBehaviour.TownData data,
+            Ingredient wantedResult
+    ) {
+        return jobsThatProduce(data, wantedResult, false);
+    }
+
+    private static ImmutableMap<JobID, ResourceLocation> jobsThatProduce(
+            WorksBehaviour.TownData data,
+            Ingredient wantedResult,
+            boolean countDeclaredInitialRequest
+    ) {
         ImmutableMap.Builder<JobID, ResourceLocation> b = ImmutableMap.builder();
         for (Supplier<Work> value : Works.values()) {
             Work w = value.get();
@@ -254,6 +271,11 @@ public class ServerJobsRegistry {
             }
         }
         return roots;
+    }
+
+    public static @Nullable JobID getParentOf(JobID child) {
+        Work work = getWork(child, false);
+        return work == null ? null : work.parentID;
     }
 
     /**
@@ -652,6 +674,22 @@ public class ServerJobsRegistry {
                 return entity;
             }
         };
+    }
+
+    public static boolean answersUnpaused(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.toWork().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
+    }
+
+    public static boolean answersPaused(
+            WorksBehaviour.TownData town,
+            JobID p,
+            BoardRequests requests
+    ) {
+        return requests.paused().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
     }
 
     private static boolean isSpecialJob(JobID p) {

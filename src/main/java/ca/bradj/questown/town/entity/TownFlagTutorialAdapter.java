@@ -44,6 +44,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     }
 
     @Override
+    public boolean anyVillagerOnRoot(String rootId) {
+        return flag.getVillagerHandle().getJobs().stream().anyMatch(j -> rootId.equals(j.rootId()));
+    }
+
+    @Override
     public boolean tutorialBopGranted() {
         return flag.tutorialBopGranted;
     }
@@ -90,88 +95,48 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     @Override
     public MCReward makeReward(String phaseName) {
         return switch (phaseName) {
-            case TutorialTownView.PHASE_KICKOFF -> new MCRewardList(
-                    flag,
-                    new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random())),
-                    new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null))
-            );
-            case TutorialTownView.PHASE_HUNTER_GATHERER -> {
-                VillagerUUID nextVisitorUUID = VillagerUUID.random();
-                yield new MCRewardList(
-                        flag,
-                        new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random())),
-                        new AddBatchOfQuestsForVisitorReward(flag, VillagerUUID.get(nextVisitorUUID))
-                );
-            }
-            case TutorialTownView.PHASE_NEW_JOB_ROOM, TutorialTownView.PHASE_7 ->
-                    new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
+            case TutorialTownView.PHASE_KICKOFF -> new MCInstantReward(flag, new AddBatchOfQuestsForVisitorReward(flag, null));
+            // Villagers 2 and 3 always arrive, so the miner lesson is always reached.
+            case TutorialTownView.PHASE_HUNTER_GATHERER, TutorialTownView.PHASE_JOB_CHANGE_FOOD -> arrivalWithQuestBatch();
+            // The cook-job batch pays the Block of Progress the cook skill costs.
+            case TutorialTownView.PHASE_COOK_JOB -> new MCInstantReward(flag, new GrantBlockOfProgressReward(flag, 1));
+            // Path batches: some bring a villager, with no quest batch of its own.
+            case TutorialTownView.PHASE_PATH_ARRIVAL -> arrivalOnly();
+            case TutorialTownView.PHASE_PATH -> new MCRewardList(flag);
+            // The miner batch brings villager 4, the one a path's first job change uses.
+            case TutorialTownView.PHASE_MINER -> arrivalOnly();
+            case TutorialTownView.PHASE_NEW_JOB_ROOM -> new MCDelayedReward(flag, defaultQuestCompletionRewards(flag));
             default -> new AddBatchOfQuestsForVisitorReward(flag, null);
         };
     }
 
-    private boolean producesFood(JobID j) {
-        return ServerJobsRegistry.getResults(flag.getTownData(), j).stream().anyMatch(
-                i -> Ingredient.of(ca.bradj.questown.core.init.TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
-        );
-    }
-
-    private Collection<ItemEconomicsData> resourceImpact(
-            ImmutableList<ItemEconomicsData> needs,
-            WorksBehaviour.TownData data,
-            JobID j
+    @Override
+    public void provisionArrival(
+            MCReward reward,
+            Collection<ResourceLocation> wanted,
+            Consumer<ResourceLocation> addRoomQuest
     ) {
-        ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(data, j);
-        return needs.stream().filter(v -> results.stream().anyMatch(z -> sameItem(v, z))).toList();
+        TownQuests.provisionArrival(flag, reward, wanted, addRoomQuest);
     }
 
-    private static boolean sameItem(ItemEconomicsData v, MCTownItem z) {
-        return ca.bradj.questown.gui.Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
+    @Override
+    public void revealSkill(JobID skill) {
+        flag.getTownVillagerHandle().revealSkill(skill);
     }
 
-    static ResourceLocation chooseExoticWood(String biomePath) {
-        Map<String, ResourceLocation> nativeWoods = Map.of(
-                "forest", Compat.getItemId(Items.OAK_LOG),
-                "birch", Compat.getItemId(Items.BIRCH_LOG),
-                "taiga", Compat.getItemId(Items.SPRUCE_LOG),
-                "jungle", Compat.getItemId(Items.JUNGLE_LOG),
-                "savanna", Compat.getItemId(Items.ACACIA_LOG),
-                "dark_forest", Compat.getItemId(Items.DARK_OAK_LOG),
-                "mangrove", Compat.getItemId(Items.MANGROVE_LOG)
+    private MCReward arrivalOnly() {
+        return new MCDelayedReward(flag, new SpawnVisitorReward(flag, VillagerUUID.random()));
+    }
+
+    /** A morning arrival with its quest batch, which belongs to the villager who arrives. */
+    private MCReward arrivalWithQuestBatch() {
+        VillagerUUID nextVisitorUUID = VillagerUUID.random();
+        return new MCRewardList(
+                flag,
+                new MCDelayedReward(flag, new SpawnVisitorReward(flag, nextVisitorUUID)),
+                new AddBatchOfQuestsForVisitorReward(flag, UUID.fromString(VillagerUUID.getStringUUID(nextVisitorUUID)))
         );
-
-        ImmutableList<ResourceLocation> allWoods = ImmutableList.of(
-                Compat.getItemId(Items.OAK_LOG),
-                Compat.getItemId(Items.BIRCH_LOG),
-                Compat.getItemId(Items.SPRUCE_LOG),
-                Compat.getItemId(Items.JUNGLE_LOG),
-                Compat.getItemId(Items.ACACIA_LOG),
-                Compat.getItemId(Items.DARK_OAK_LOG)
-        );
-
-        ResourceLocation nativeWood = null;
-        for (Map.Entry<String, ResourceLocation> entry : nativeWoods.entrySet()) {
-            if (biomePath.contains(entry.getKey())) {
-                nativeWood = entry.getValue();
-                break;
-            }
-        }
-
-        for (ResourceLocation wood : allWoods) {
-            if (!wood.equals(nativeWood)) {
-                return wood;
-            }
-        }
-
-        return Compat.getItemId(Items.DARK_OAK_LOG);
     }
 
-    private static ResourceLocation getExoticWoodForTown(TownFlagBlockEntity t) {
-        if (!(t.getLevel() instanceof ServerLevel sl)) {
-            return Compat.getItemId(Items.DARK_OAK_LOG);
-        }
-        String biome = sl.getBiome(t.getBlockPos()).unwrapKey()
-                          .map(k -> k.location().getPath())
-                          .orElse("plains");
-        return chooseExoticWood(biome);
-    }
+
 }

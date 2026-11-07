@@ -9,6 +9,8 @@ import ca.bradj.questown.gui.TownWorkContainer;
 import ca.bradj.questown.gui.UIWork;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
+import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.jobs.requests.RequestCategories;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.WorkHandle;
@@ -16,6 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
@@ -23,6 +26,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,7 +34,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
+import ca.bradj.questown.jobs.requests.RequestLimits;
+import com.google.common.collect.ImmutableMap;
 import java.util.List;
 import java.util.Stack;
 import java.util.function.Consumer;
@@ -48,7 +54,14 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     ) {
     }
 
-    final Collection<WorkRequest> requestedResults = new ArrayList<>();
+    final List<WorkRequest> requestedResults = new ArrayList<>();
+
+    // Not saved: recomputed from storage.
+    private ImmutableSet<WorkRequest> stocked = ImmutableSet.of();
+    // Not saved: how much of each request storage holds, for the board's "6/8".
+    private ImmutableMap<WorkRequest, Integer> stock = ImmutableMap.of();
+    // Saved: each request's pause limit.
+    final RequestLimits<WorkRequest> limits = new RequestLimits<>();
 
     private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
 
@@ -67,6 +80,12 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
 
     public void registerJobBoard(BlockPos matPos) {
         nextTick.add(sl -> {
+            if (!sl.isLoaded(matPos)) {
+                // The board's chunk may not be back yet after a reload.
+                QT.FLAG_LOGGER.info("Job board at {} is in an unloaded chunk; retrying registration", matPos);
+                registerJobBoard(matPos);
+                return;
+            }
             BlockState bs = sl.getBlockState(matPos);
             if (!(bs.getBlock() instanceof JobBoardBlock jbb)) {
                 // A registration with no board (it was broken): log it; it drops out at the next save.
@@ -143,6 +162,7 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
                     }
                 }, data -> {
                     AddWorkContainer.writeWorkResults(allOutputs, data);
+                    AddWorkContainer.writeCategories(categories, data);
                     AddWorkContainer.writeFlagPosition(flagPos, data);
                     TownWorkContainer.writeWork(requestedResults, stocked, this::stockOf, limits::get, data);
                     TownWorkContainer.writeFlagPosition(flagPos, data);
@@ -155,8 +175,39 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         );
     }
 
+    /** The tag behind an ingredient, or null. */
+    private static @Nullable ResourceLocation tagOf(Ingredient ingredient) {
+        String tag = Ingredients.getTag(ingredient);
+        return tag == null ? null : new ResourceLocation(tag);
+    }
+
+    private static List<ResourceLocation> offeredCategories(ImmutableSet<Ingredient> outputs) {
+        List<ItemStack> producible = outputs.stream()
+                .flatMap(i -> Arrays.stream(i.getItems()))
+                .toList();
+        return RequestCategories.offered(producible, (stack, tag) -> stack.is(Compat.itemTag(tag)));
+    }
+
     public ImmutableList<WorkRequest> getRequestedResults() {
         return ImmutableList.copyOf(requestedResults);
+    }
+
+    int stockOf(WorkRequest r) {
+        return stock.getOrDefault(r, 0);
+    }
+
+    int limitOf(WorkRequest r) {
+        return limits.get(r);
+    }
+
+    void setStock(ImmutableMap<WorkRequest, Integer> nowStock) {
+        this.stock = nowStock;
+    }
+
+    @Override
+    public void setRequestLimit(WorkRequest request, int limit) {
+        int stored = limits.set(request, limit);
+        QT.FLAG_LOGGER.info("Request limit set: {} pauses at {}", request, stored);
     }
 
     @Override
@@ -185,15 +236,18 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
     }
 
+    /** A saved request, added below the ones already restored. */
     void restoreRequest(WorkRequest e) {
         if (requestedResults.contains(e)) {
             return;
         }
         requestedResults.add(e);
     }
+
     @Override
     public void removeWorkRequest(WorkRequest of) {
         this.requestedResults.remove(of);
+        this.limits.forget(of);
         this.listeners.forEach(l -> l.accept(new Change(of)));
         QT.FLAG_LOGGER.debug("Request removed from job board: {}", of);
     }

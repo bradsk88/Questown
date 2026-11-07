@@ -199,6 +199,13 @@ public class VillagerTabs extends Tabs implements SubUI {
         CHANGE_ROOT_ATTENTION.put(villager, attention);
     }
 
+    // Client side: false while onboarding hides the change-job tab.
+    private static final Map<UUID, Boolean> SHOW_CHANGE_ROOT_TAB = new HashMap<>();
+
+    static void recordShowChangeRootTab(UUID villager, boolean show) {
+        SHOW_CHANGE_ROOT_TAB.put(villager, show);
+    }
+
     public static Collection<String> hideInventory(Collection<String> tabs) {
         return tabs.stream().filter(v -> !v.equals(OpenVillagerMenuMessage.INVENTORY)).toList();
     }
