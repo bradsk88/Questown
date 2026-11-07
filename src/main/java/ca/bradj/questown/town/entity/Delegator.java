@@ -5,6 +5,7 @@ import ca.bradj.questown.jobs.JobID;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -72,6 +73,17 @@ public interface Delegator<ENTITY> {
     );
 
     float getMood(UUID uuid);
+
+    /** The villager's active mood effect ids. */
+    default ImmutableList<String> getMoodEffectIds(UUID uuid) {
+        return ImmutableList.of();
+    }
+
+    void applyMoodEffect(
+            UUID uuid,
+            ResourceLocation effect,
+            long untilTick
+    );
 
     void unlockJob(
             ENTITY v,

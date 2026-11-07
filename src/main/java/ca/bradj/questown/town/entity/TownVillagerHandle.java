@@ -58,7 +58,8 @@ public final class TownVillagerHandle {
                 Compat.configGet(Config.DAMAGE_TICKS).get(),
                 Compat.configGet(Config.NEUTRAL_MOOD).get(),
                 Compat.configGet(Config.BUFFER_TICKS_AFTER_FOOD_ATTEMPT).get(),
-                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get()
+                Compat.configGet(Config.MAX_TICKS_BETWEEN_DOWNTIME).get(),
+                Compat.configGet(Config.MOOD_EFFECT_DURATION_SLEEPLESS).get()
         );
         this.delegate = new SimpleVillagerHandle<>(
                 new Delegator<>() {
@@ -213,6 +214,19 @@ public final class TownVillagerHandle {
             @Override
             public float getMood(UUID uuid) {
                 return moods.getMood(uuid);
+            }
+
+            @Override
+            public ImmutableList<String> getMoodEffectIds(UUID uuid) {
+                return moods.getEffects().getOrDefault(uuid, ImmutableList.of()).stream()
+                        .map(e -> e.effect().toString())
+                        .distinct()
+                        .collect(ImmutableList.toImmutableList());
+            }
+
+            @Override
+            public void applyMoodEffect(UUID uuid, ResourceLocation effect, long untilTick) {
+                moods.tryApplyEffect(effect, untilTick, uuid);
             }
 
             @Override
@@ -379,6 +393,14 @@ public final class TownVillagerHandle {
 
     ImmutableMap<UUID, ImmutableList<Effect>> getMoodEffects() {
         return ImmutableMap.copyOf(moods.getEffects());
+    }
+
+    public boolean hasBed(VisitorMobEntity v) {
+        return sleep.hasBed(v);
+    }
+
+    public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
+        return moods.hasEffect(uuid, effect);
     }
 
     ImmutableMap<UUID, Integer> getDamage() {

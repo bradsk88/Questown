@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -17,8 +18,14 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     private final UnsafeTown town = new UnsafeTown(getClass());
     private final TownVillagerBedsHandle beds = new TownVillagerBedsHandle();
 
+    /** Bed claims from villagers that loaded before the town did, made once it initializes. */
+    private final List<VisitorMobEntity> pendingClaims = new ArrayList<>();
+
     public void associate(TownFlagBlockEntity t) {
         town.initialize(t);
+        List<VisitorMobEntity> pending = new ArrayList<>(pendingClaims);
+        pendingClaims.clear();
+        pending.forEach(this::claimBed);
     }
 
     @Override
@@ -41,6 +48,11 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
 
     @Override
     public void claimBed(VisitorMobEntity vEntity) {
+        if (!town.isInitialized()) {
+            // The bed map isn't ready while loading; claim later.
+            pendingClaims.add(vEntity);
+            return;
+        }
         beds.claim(vEntity, town.getUnsafe());
     }
 
@@ -52,5 +64,16 @@ public class TownVillagerSleepModule implements VillagerSleepModule<VisitorMobEn
     @Override
     public boolean isSleeping(VisitorMobEntity e) {
         return e.isSleeping();
+    }
+
+    @Override
+    public boolean hasBed(VisitorMobEntity e) {
+        return beds.getBestBed(town.getUnsafe(), e).isPresent();
+    }
+
+    @Override
+    public boolean bedsKnown() {
+        // Beds come from matched rooms, rebuilt after a load.
+        return town.isInitialized() && town.getUnsafe().getRoomHandle().getRegisteredRooms().hasScannedSinceLoad();
     }
 }

@@ -1147,35 +1147,45 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     private @NotNull Optional<BlockPos> getOutOfBed() {
         Optional<BlockPos> sleepingPos = this.getSleepingPos();
-        sleepingPos.filter(this.level::hasChunkAt).ifPresent((p_147228_) -> {
-            BlockState blockstate = this.level.getBlockState(p_147228_);
-            if (blockstate.isBed(level, p_147228_, this)) {
-                blockstate.setBedOccupied(level, p_147228_, this, false);
-                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level, p_147228_, this.getYRot())
-                                     .orElseGet(() -> {
-                                         BlockPos blockpos = p_147228_.above();
-                                         return new Vec3(
-                                                 (double) blockpos.getX() + 0.5D,
-                                                 (double) blockpos.getY() + 0.1D,
-                                                 (double) blockpos.getZ() + 0.5D
-                                         );
-                                     });
-                Vec3 vec32 = Vec3.atBottomCenterOf(p_147228_).subtract(vec31).normalize();
-                float f = (float) Mth.wrapDegrees(Mth.atan2(
-                        vec32.z,
-                        vec32.x
-                ) * (double) (180F / (float) Math.PI) - 90.0D);
-                this.setPos(vec31.x, vec31.y, vec31.z);
-                this.setYRot(f);
-                this.setXRot(0.0F);
-            }
-
-        });
+        sleepingPos.filter(p -> this.getLevel().hasChunkAt(p)).ifPresent(this::standUpBesideBed);
         Vec3 vec3 = this.position();
         this.setPose(Pose.STANDING);
         this.setPos(vec3.x, vec3.y, vec3.z);
         this.clearSleepingPos();
         return sleepingPos;
+    }
+
+    private void standUpBesideBed(BlockPos bedPos) {
+        BlockState bs = this.getLevel().getBlockState(bedPos);
+        Direction facing;
+        if (bs.getBlock() instanceof ca.bradj.questown.blocks.HospitalBedBlock) {
+            this.getLevel().setBlock(bedPos, bs.setValue(ca.bradj.questown.blocks.HospitalBedBlock.OCCUPIED, Boolean.FALSE), 3);
+            facing = this.getDirection();
+        } else if (bs.getBlock() instanceof BedBlock) {
+            this.getLevel().setBlock(bedPos, bs.setValue(BedBlock.OCCUPIED, Boolean.FALSE), 3);
+            facing = bs.getValue(BedBlock.FACING);
+        } else {
+            return;
+        }
+        Vec3 standAt = BedBlock.findStandUpPosition(this.getType(), this.getLevel(), bedPos, this.getYRot())
+                               .orElseGet(() -> doorwayOrAboveBed(bedPos));
+        Vec3 look = Vec3.atBottomCenterOf(bedPos).subtract(standAt).normalize();
+        float yRot = (float) Mth.wrapDegrees(Mth.atan2(look.z, look.x) * (double) (180F / (float) Math.PI) - 90.0D);
+        this.setPos(standAt.x, standAt.y, standAt.z);
+        this.setYRot(yRot);
+        this.setXRot(0.0F);
+    }
+
+    private Vec3 doorwayOrAboveBed(BlockPos bedPos) {
+        // No free floor beside the bed: stand in the room's doorway.
+        if (town != null) {
+            Optional<BlockPos> door = town.getRoomHandle().findDoorOfRoomContaining(bedPos);
+            if (door.isPresent()) {
+                return Vec3.atBottomCenterOf(door.get());
+            }
+        }
+        BlockPos above = bedPos.above();
+        return new Vec3(above.getX() + 0.5D, above.getY() + 0.1D, above.getZ() + 0.5D);
     }
 
     // NOTE: TRY NOT TO ADD MORE FUNCTIONALITY TO THIS ENTITY
@@ -1287,8 +1297,8 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     public void releasePoi(MemoryModuleType<GlobalPos> p_35429_) {
-        if (this.level instanceof ServerLevel) {
-            MinecraftServer minecraftserver = ((ServerLevel) this.level).getServer();
+        if (this.getLevel() instanceof ServerLevel) {
+            MinecraftServer minecraftserver = ((ServerLevel) this.getLevel()).getServer();
             this.brain.getMemory(p_35429_)
                       .ifPresent((p_186306_) -> {
                           ServerLevel serverlevel = minecraftserver.getLevel(p_186306_.dimension());
@@ -1308,7 +1318,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     protected void jumpFromGround() {
-        BlockState onBlock = level.getBlockState(blockPosition());
+        BlockState onBlock = getLevel().getBlockState(blockPosition());
         if (!job.get().isJumpingAllowed(onBlock)) {
             // Jumping destroys crops. Don't do it when we don't have to
             return;
