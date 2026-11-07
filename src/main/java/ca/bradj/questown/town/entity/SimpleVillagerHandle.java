@@ -180,6 +180,11 @@ public final class SimpleVillagerHandle<DATA, ENTITY> {
         );
     }
 
+    /** Healing for one flag tick: one game tick's worth for each tick in the interval. */
+    private int healingPerFlagTick() {
+        return TICK_FACTOR * Math.toIntExact(configs.flagTickInterval);
+    }
+
     private int applyHealFactor(
             ENTITY e,
             int input

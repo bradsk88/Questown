@@ -57,6 +57,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -70,7 +71,6 @@ import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.entity.EntityEvent;
-import net.minecraftforge.items.IItemHandler;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
@@ -108,7 +108,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     int completedProceduralBatches = 0;
     private boolean flagpoleBuilt = false;
 
-    private final LazyOptional<IItemHandler> itemHandler = LazyOptional.of(() -> new TownFlagBOPItemHandler(this));
+    public ItemHandler bopItemHandler() {
+        return new TownFlagBOPItemHandler(this);
+    }
+
     boolean givenBonusFood;
 
     @Override
@@ -782,6 +785,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         return pois.getVisitorJoinPos(getServerLevel(), getBlockPos());
     }
 
+    // Rate-limits the wander-failure warning per stuck villager.
+    private final Map<BlockPos, Long> wanderFailLogWindows = new HashMap<>();
+    private static final long WANDER_FAIL_LOG_INTERVAL_TICKS = 200;
+
     @Override
     public BlockPos getRandomWanderTarget(BlockPos avoiding) {
         if (!isInitialized()) {
@@ -793,7 +800,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return null;
         }
 
-        if (sl.isNight()) {
+        boolean night = sl.isNight();
+        if (night) {
             allRooms = roomsHandle.getRegisteredRooms().getAllRooms();
         } else {
             allRooms = roomsHandle.getAllRoomsIncludingMetaAndFarms();
@@ -809,13 +817,42 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
                         return true;
                     }
                     return false;
-                }, (p, r) -> Positions.ToBlock(p, r.yCoord)
+                }, (p, r) -> Positions.ToBlock(p, r.yCoord),
+                new TownPois.WanderDiagnostics() {
+                    @Override
+                    public void noRooms() {
+                        logWanderFailureOnce(sl, avoiding, "no wanderable rooms ({})", night ? "night" : "day");
+                    }
+
+                    @Override
+                    public void noCandidateInRoom(int roomCount, int enclosedCount) {
+                        logWanderFailureOnce(
+                                sl, avoiding,
+                                "all {} room(s) filtered out ({} enclosed position(s) checked; {})",
+                                roomCount, enclosedCount, night ? "night" : "day"
+                        );
+                    }
+                }
         );
-        if (townPos == null) {
-            QT.FLAG_LOGGER.warn("Could not find wander target avoiding {}", avoiding);
-            return townPos;
-        }
         return townPos;
+    }
+
+    private void logWanderFailureOnce(
+            ServerLevel sl,
+            BlockPos avoiding,
+            String reason,
+            Object... reasonArgs
+    ) {
+        long now = sl.getGameTime();
+        Long windowStart = wanderFailLogWindows.get(avoiding);
+        if (windowStart != null && now - windowStart < WANDER_FAIL_LOG_INTERVAL_TICKS) {
+            return;
+        }
+        wanderFailLogWindows.put(avoiding, now);
+        Object[] args = new Object[reasonArgs.length + 1];
+        System.arraycopy(reasonArgs, 0, args, 0, reasonArgs.length);
+        args[reasonArgs.length] = avoiding;
+        QT.FLAG_LOGGER.warn("Could not find wander target: " + reason + " [avoiding {}]", args);
     }
 
     public ImmutableSet<UUID> getVillagers() {

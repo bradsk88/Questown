@@ -4,6 +4,7 @@ import ca.bradj.questown.core.Config;
 import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.jobs.gatherer.*;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -32,14 +33,20 @@ public class Works {
     ) {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
-        b.put(ExplorerWork.ID, ExplorerWork::asWork);
-        b.put(GathererMappedAxeWork.ID, GathererMappedAxeWork::asWork);
-        b.put(GathererUnmappedShovelWorkQtrDay.ID, GathererUnmappedShovelWorkQtrDay::asWork);
-        b.put(GathererUnmappedShovelWorkHalfDay.ID, GathererUnmappedShovelWorkHalfDay::asWork);
-        b.put(GathererUnmappedShovelWorkFullDay.ID, GathererUnmappedShovelWorkFullDay::asWork);
+        b.put(ExplorerWork.ID, builtOnce(ExplorerWork::asWork));
+        b.put(GathererMappedAxeWork.ID, builtOnce(GathererMappedAxeWork::asWork));
+        b.put(GathererUnmappedShovelWorkQtrDay.ID, builtOnce(GathererUnmappedShovelWorkQtrDay::asWork));
+        b.put(GathererUnmappedShovelWorkHalfDay.ID, builtOnce(GathererUnmappedShovelWorkHalfDay::asWork));
+        b.put(GathererUnmappedShovelWorkFullDay.ID, builtOnce(GathererUnmappedShovelWorkFullDay::asWork));
 
         works = b.build();
         initialized = true;
+        ServerJobsRegistry.forgetWhichBlocksJobsCareAbout();
+    }
+
+    /** Builds a job's Work once per data load and shares it. A Work never changes, and it is looked up for every block on every flag tick. */
+    private static Supplier<Work> builtOnce(Supplier<Work> factory) {
+        return Suppliers.memoize(factory::get)::get;
     }
 
     public static ImmutableSet<Map.Entry<JobID, Supplier<Work>>> regularJobs() {

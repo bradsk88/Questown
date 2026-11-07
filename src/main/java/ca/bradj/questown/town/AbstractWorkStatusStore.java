@@ -8,6 +8,7 @@ import ca.bradj.roomrecipes.core.Room;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,6 +33,8 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
     private final BiFunction<TICK_SOURCE, POS, @Nullable Function<State, Boolean>> cascadingBlockRevealer;
 
     private final HashSet<ROOM> rooms = new HashSet<>();
+    private final List<ROOM> roomRotation = new ArrayList<>();
+    private final Map<ROOM, Collection<POS>> scannablePositions = new HashMap<>();
 
     private final HashMap<POS, State> jobStatuses = new HashMap<>();
     private final HashMap<POS, Long> timeJobStatuses = new HashMap<>();
@@ -161,90 +164,184 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             Collection<ROOM> allRooms,
             long ticksSinceLast
     ) {
-        // Track rooms that were just initialized this tick (to avoid double-ticking)
-        Set<ROOM> justInitialized = new HashSet<>();
+        Collection<ROOM> newRooms = registerNewRooms(allRooms);
 
-        // Initialize work states for new rooms immediately
-        for (ROOM room : allRooms) {
-            if (!rooms.contains(room)) {
-                rooms.add(room);
-                justInitialized.add(room);
-                // Initialize work states for new room right away
-                this.doTick(tickSource, room, ticksSinceLast);
-            }
-        }
-
-        if (rooms.isEmpty()) {
+        if (roomRotation.isEmpty()) {
             return;
         }
 
-        curIdx = (curIdx + 1) % rooms.size();
+        advanceBlocksWithExpiredTimers(decayTimersAndCollectExpired(ticksSinceLast));
 
-        ROOM roomToTick = (ROOM) rooms.toArray()[curIdx];
-        // Skip if this room was just initialized (already ticked above)
-        if (!justInitialized.contains(roomToTick)) {
-            this.doTick(tickSource, roomToTick, ticksSinceLast);
+        reseedStuckBlocks(tickSource, ticksSinceLast);
+
+        newRooms.forEach(room -> scanRoom(tickSource, room));
+
+        ROOM roomToScan = nextRoomInRotation();
+        if (newRooms.contains(roomToScan)) {
+            return;
+        }
+        scanRoom(tickSource, roomToScan);
+    }
+
+    /** True when a block in this state is meant to stay there, so the stuck reset leaves it alone. */
+    protected boolean isRestingState(
+            TICK_SOURCE tickSource,
+            POS pos,
+            State state
+    ) {
+        return false;
+    }
+
+    private void reseedStuckBlocks(
+            TICK_SOURCE tickSource,
+            long ticksSinceLast
+    ) {
+        for (Map.Entry<POS, State> e : new ArrayList<>(this.jobStatuses.entrySet())) {
+            POS pos = e.getKey();
+            State state = e.getValue();
+            boolean notStuck = state.processingState() == 0
+                    || this.timeJobStatuses.containsKey(pos)
+                    || isRestingState(tickSource, pos, state);
+            if (notStuck) {
+                restartStuckCount(pos);
+                continue;
+            }
+            long accumulated = this.stuckTicks.getOrDefault(pos, 0L) + ticksSinceLast;
+            if (accumulated >= TICKS_UNTIL_A_STUCK_BLOCK_IS_RESET) {
+                QT.logBug(
+                        "Work block stuck in state {} for {} ticks with no timer; reseeding to fresh",
+                        state.toShortString(), accumulated, pos
+                );
+                this.setJobBlockState(pos, State.fresh());
+            } else {
+                this.stuckTicks.put(pos, accumulated);
+            }
         }
     }
 
-    private void doTick(
-            TICK_SOURCE tickSource,
-            ROOM o,
-            long ticksSinceLast
-    ) {
-        timeJobStatuses.forEach((k, v) -> timeJobStatuses.compute(k, (kk, vv) -> vv == null ? null : vv - ticksSinceLast));
-        claims.forEach((k, v) -> claims.compute(k, (kk, vv) -> {
-            if (vv == null) {
-                return null;
+    private void restartStuckCount(POS pos) {
+        this.stuckTicks.remove(pos);
+    }
+
+    private Collection<ROOM> registerNewRooms(Collection<ROOM> allRooms) {
+        Collection<ROOM> newRooms = null;
+        for (ROOM room : allRooms) {
+            if (!rooms.add(room)) {
+                continue;
             }
-            return vv.ticked();
-        }));
-        ImmutableMap.copyOf(timeJobStatuses)
-                .entrySet()
-                .stream()
-                .filter((e) -> e.getValue() <= 0)
-                .forEach(
-                        e -> {
-                            debugLogger.log("Timer at {} expired. Moving to next state", e.getKey());
-                            modifyJobBlockState(
-                                    e.getKey(),
-                                    (pos, state) -> {
-                                        if (state == null) {
-                                            QT.logBug("State was null after timer expired");
-                                            return State.fresh();
-                                        }
-                                        return state.incrProcessing();
-                                    }
-                            );
-                            timeJobStatuses.remove(e.getKey());
-                        }
-                );
+            roomRotation.add(room);
+            if (newRooms == null) {
+                newRooms = new ArrayList<>();
+            }
+            newRooms.add(room);
+        }
+        return newRooms == null ? ImmutableList.of() : newRooms;
+    }
 
-        for (InclusiveSpace s : o.getSpaces()) {
-            for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
-                posFactory.apply(o, p).forEach(pp -> {
-                    if (jobStatuses.containsKey(pp)) {
-                        if (airCheck.apply(tickSource, pp)) {
-                            debugLogger.log("Block is gone from {}. Clearing status.", pp);
-                            jobStatuses.remove(pp);
-                        }
-                        return;
-                    }
-                    State def = this.defaultStateFactory.apply(tickSource, pp);
-                    if (def != null) {
-                        jobStatuses.put(pp, def);
-                    }
+    private ROOM nextRoomInRotation() {
+        curIdx = (curIdx + 1) % roomRotation.size();
+        return roomRotation.get(curIdx);
+    }
 
-                    @Nullable Function<State, Boolean> cas = cascadingBlockRevealer.apply(tickSource, pp);
-                    if (cas != null) {
-                        cascading.put(pp, cas);
-                        if (!cas.apply(def == null ? State.fresh() : def)) {
-                            cascading.remove(pp);
-                        }
-                    }
-                });
+    private Collection<POS> decayTimersAndCollectExpired(long ticksSinceLast) {
+        decayClaims(ticksSinceLast);
+
+        Collection<POS> expired = null;
+        for (Map.Entry<POS, Long> e : timeJobStatuses.entrySet()) {
+            if (e.getValue() == null) {
+                continue;
+            }
+            long remaining = e.getValue() - ticksSinceLast;
+            e.setValue(remaining);
+            if (remaining > 0) {
+                continue;
+            }
+            if (expired == null) {
+                expired = new ArrayList<>();
+            }
+            expired.add(e.getKey());
+        }
+        return expired == null ? ImmutableList.of() : expired;
+    }
+
+    /** Ages every work-spot claim and drops the expired ones, so a claim whose owner is gone frees up. Active villagers renew theirs. */
+    private void decayClaims(long ticksSinceLast) {
+        Iterator<Map.Entry<POS, Claim>> it = claims.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<POS, Claim> e = it.next();
+            Claim current = e.getValue();
+            if (current == null) {
+                it.remove();
+                continue;
+            }
+            Claim next = current.ticked(ticksSinceLast);
+            if (next == null) {
+                it.remove();
+                debugLogger.log("Claim at {} expired (TTL ran out) and was released", e.getKey());
+            } else {
+                e.setValue(next);
             }
         }
+    }
+
+    private void advanceBlocksWithExpiredTimers(Collection<POS> expired) {
+        for (POS pos : expired) {
+            debugLogger.log("Timer at {} expired. Moving to next state", pos);
+            modifyJobBlockState(
+                    pos,
+                    (p, state) -> {
+                        if (state == null) {
+                            QT.logBug("State was null after timer expired");
+                            return State.fresh();
+                        }
+                        return state.incrProcessing();
+                    }
+            );
+            timeJobStatuses.remove(pos);
+        }
+    }
+
+    private void scanRoom(
+            TICK_SOURCE tickSource,
+            ROOM room
+    ) {
+        for (POS pp : scannablePositionsOf(room)) {
+            final State def;
+            if (jobStatuses.containsKey(pp)) {
+                if (airCheck.apply(tickSource, pp)) {
+                    debugLogger.log("Block is gone from {}. Clearing status.", pp);
+                    jobStatuses.remove(pp);
+                }
+                continue;
+            }
+            def = this.defaultStateFactory.apply(tickSource, pp);
+            if (def != null) {
+                jobStatuses.put(pp, def);
+            }
+            @Nullable Function<State, Boolean> cas = cascadingBlockRevealer.apply(tickSource, pp);
+            if (cas == null) {
+                continue;
+            }
+            cascading.put(pp, cas);
+            if (!cas.apply(def == null ? State.fresh() : def)) {
+                cascading.remove(pp);
+            }
+        }
+    }
+
+    /** A room's positions, computed once. */
+    private Collection<POS> scannablePositionsOf(ROOM room) {
+        return scannablePositions.computeIfAbsent(room, this::computeScannablePositions);
+    }
+
+    private Collection<POS> computeScannablePositions(ROOM room) {
+        Set<POS> positions = new LinkedHashSet<>();
+        for (InclusiveSpace s : room.getSpaces()) {
+            for (Position p : InclusiveSpaces.getAllEnclosedPositions(s)) {
+                positions.addAll(posFactory.apply(room, p));
+            }
+        }
+        return ImmutableList.copyOf(positions);
     }
 
     @Override
@@ -257,13 +354,12 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             POS bp,
             Claim claim
     ) {
-        if (doClaimSpot(bp, claim)) {
+        boolean r = doClaimSpot(bp, claim);
+        if (r) {
             debugLogger.log("Spot {} claimed: {}", bp, claim);
-            return true;
         }
-        return false;
+        return r;
     }
-
     private boolean doClaimSpot(
             POS bp,
             Claim claim
@@ -293,6 +389,10 @@ public abstract class AbstractWorkStatusStore<POS, ITEM, ROOM extends Room, TICK
             return true;
         }
         Claim newClaim = makeClaim.get();
+        if (newClaim == null) {
+            // A job that claims no spots is never blocked by a claim.
+            return true;
+        }
         return prevClaim.owner().equals(newClaim.owner());
     }
 }
