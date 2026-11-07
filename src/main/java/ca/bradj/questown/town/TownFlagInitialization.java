@@ -46,10 +46,22 @@ public interface TownFlagInitialization {
     void initEconomicsForNewFlag();
 
     CompoundTag serializeEconomics();
+
+    CompoundTag serializeChickenEverSpawned();
+
     CompoundTag serializeQuestsSeen();
 
     CompoundTag serializeBopWithdrawn();
 
+    CompoundTag serializeChickenBeatState();
+
+    CompoundTag serializeChickenFirstGatherWorldlySeedsFired();
+
     CompoundTag serializeFirstHunterLootGuaranteeFired();
 
+    CompoundTag serializeChickenArcForfeit();
+
+    CompoundTag serializeChickenStructureRotation();
+
+    CompoundTag serializeChickenRotationDetected();
 }
