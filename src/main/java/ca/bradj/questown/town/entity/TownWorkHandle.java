@@ -145,6 +145,12 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     }
 
     @Override
+    public void adjustRequestLimit(WorkRequest request, int delta) {
+        int stored = limits.adjust(request, delta);
+        QT.FLAG_LOGGER.info("Request limit moved by {}: {} pauses at {}", delta, request, stored);
+    }
+
+    @Override
     public void requestWork(Item requested) {
         // TODO: Take desired quantity of product as input
         WorkRequest e = WorkRequest.of(requested);

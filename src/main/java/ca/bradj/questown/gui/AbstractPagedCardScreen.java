@@ -53,6 +53,10 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         return delegate.cards();
     }
 
+    protected int cardsPerPage() {
+        return delegate.MAX_CARDS_PER_PAGE;
+    }
+
     @Override
     protected void init() {
         super.init();

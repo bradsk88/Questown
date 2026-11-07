@@ -1,6 +1,9 @@
 package ca.bradj.questown.jobs;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.gui.StatusNeedLine;
+import ca.bradj.questown.mobs.visitor.TownieNeedDetail;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.blocks.JobBoardBlock;
 import ca.bradj.questown.core.Pair;

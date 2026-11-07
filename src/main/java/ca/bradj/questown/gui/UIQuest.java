@@ -154,6 +154,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case ROOM -> getRoomIngredients(v, rMap);
             case ITEM -> Collections.nCopies(v.getCountNeeded(), Ingredient.of(reg.getValue(v.getWantedId())));
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            case JOB_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case UNKNOWN -> ImmutableList.of();
         };

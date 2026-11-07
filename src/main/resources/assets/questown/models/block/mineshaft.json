@@ -5,8 +5,8 @@
 	"texture_size": [64, 64],
 	"textures": {
 		"1": "questown:blocks/mineshaft",
-		"2": "minecraft:block/cobblestone",
-		"particle": "minecraft:block/cobblestone"
+		"2": "minecraft:block/stone",
+		"particle": "minecraft:block/stone"
 	},
     "shade": false,
 	"elements": [

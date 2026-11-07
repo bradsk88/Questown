@@ -18,6 +18,10 @@ import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
+import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.visitor.TownieNeed;
+import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.UnsafeTown;
 import ca.bradj.questown.town.econ.NoMCEconomics;
@@ -39,6 +43,7 @@ import joptsimple.internal.Strings;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -84,6 +89,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     };
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
+    /** Whether any quest is still incomplete, for the "!" over the flag. */
+    public boolean hasIncompleteQuests() {
+        return questBatches.getAll().stream().anyMatch(q -> !q.isComplete());
+    }
+
+    /** The keys of the incomplete quests, for the quests tab's seen check. */
+    public ImmutableSet<String> incompleteQuestKeys() {
+        return questBatches.getAll().stream()
+                .filter(q -> !q.isComplete())
+                .map(q -> q.getBatchUUID() + "|" + q.getWantedId())
+                .collect(ImmutableSet.toImmutableSet());
+    }
+
     private final Stack<PendingReward> questRequests = new Stack<>();
     private final UnsafeTown town = new UnsafeTown(getClass());
     boolean playerDiscardedLastBatch;
@@ -103,6 +121,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         fireQuest.addNewQuest(null, SpecialQuests.CAMPFIRE);
 
         quests.questBatches.add(fireQuest);
+        TownFlagBlockEntity t = this.town.getUnsafe();
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
         QT.QUESTS_LOGGER.info("Posted the empty-room quest batch");
     }
 
@@ -327,6 +348,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     public void tick(TownInterface town) {
         QuestBackfiller.backfill(this, town, this.town::getUnsafe);
         postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
+
         ServerLevel level = town.getServerLevel();
         int size = getVillagers(this).size();
 
@@ -421,7 +443,26 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
 
 
+
+
+    /** The first producer root that isn't the stuck root and isn't unlocked by any villager. @param stuckRoot the root to skip, or null */
+    @Nullable
+    static String chooseProducerRoot(
+            Set<String> producerRoots,
+            @Nullable String stuckRoot,
+            Set<String> unlockedRoots
+    ) {
+        return producerRoots.stream()
+                            .filter(r -> stuckRoot == null || !r.equals(stuckRoot))
+                            .filter(r -> !unlockedRoots.contains(r))
+                            .sorted()
+                            .findFirst()
+                            .orElse(null);
+    }
+
     /** The first need with a producer the town could unlock, and that producer; a null need means none. */
+    record TopNeedChoice(@Nullable ItemEconomicsData need, @Nullable String producer) {
+    }
 
     /** The first most-needed item a job not yet unlocked could make. Needs with no producer, or only unlocked ones, are skipped. */
     static TopNeedChoice chooseTopNeed(
@@ -445,6 +486,15 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
         return new TopNeedChoice(null, null);
     }
+
+    private static Set<String> unlockedRoots(TownInterface town) {
+        Set<String> roots = new HashSet<>();
+        for (ImmutableSet<JobID> jobs : town.getVillagerHandle().getUnlockedJobs().values()) {
+            jobs.forEach(j -> roots.add(j.rootId()));
+        }
+        return roots;
+    }
+
     public boolean isWaitingForHunterGathererTutorial() {
         if (questBatches.getAllBatches().size() > 3) {
             return false;
@@ -469,6 +519,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         r = tryPhase1_campfireToKickoff(view);       if (r != null) return r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
+        r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
         r = tryPhase3_newJobRoom(view);               if (r != null) return r;
         r = tryPhase4_crafter(view);                  if (r != null) return r;
         r = tryPhase5_supplyChain(view);              if (r != null) return r;
@@ -524,6 +575,74 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             return Tutorial.SKIPPED;
         }
         return null;
+    }
+
+    /** After the cook: a room quest for the job that makes the town's most-needed item. Skipped when nothing can make it; one at a time. */
+    private @Nullable Tutorial tryPhase2_75_topNeedUnlock(TutorialTownView view) {
+        if (jobChangesComplete() < 2) {
+            return Tutorial.SKIPPED;
+        }
+        if (!town.isInitialized()) {
+            return null;
+        }
+        TownFlagBlockEntity t = town.getUnsafe();
+        TownInterface ti = town.getUnsafe();
+        NoMCEconomics econ = t.getEconomicsHandle();
+        econ.update();
+        ImmutableList<ItemEconomicsData> needs = econ.getAggregatedItems(null);
+        if (needs.isEmpty()) {
+            QT.QUESTS_LOGGER.info("Top-need batch: no unmet item needs registered; falling through");
+            return null;
+        }
+        if (topNeedBeatOpen(questBatches.getAll())) {
+            // The top-need room quest is still open: wait for it.
+            return Tutorial.SKIPPED;
+        }
+        ServerLevel level = t.getServerLevel();
+        Set<String> unlocked = unlockedRoots(ti);
+        Set<String> excluded = new HashSet<>(unlocked);
+        excluded.addAll(builtTopNeedProducers(questBatches.getAll()));
+        TopNeedChoice choice = chooseTopNeed(
+                needs,
+                key -> ServerJobsRegistry.rootsThatCanMake(level, Ingredients.fromString(key)),
+                excluded
+        );
+        if (choice.need() == null) {
+            QT.QUESTS_LOGGER.info("Top-need batch: walked {} need(s); none actionable (unlocked or built {})",
+                    needs.size(), excluded);
+            return null;
+        }
+        ItemEconomicsData top = choice.need();
+        String producer = choice.producer();
+        QT.QUESTS_LOGGER.info("Top-need batch: chose need {} (x{}) -> producer {} (unlocked {})",
+                top.ingredientKey(), top.timesNeeded(), producer, unlocked);
+        JobID rootJob = ServerJobsRegistry.getAllRootJobs().stream()
+                .filter(j -> producer.equals(j.rootId()))
+                .findFirst()
+                .orElse(new JobID(producer, producer));
+        ResourceLocation room = view.getRoomForJob(rootJob);
+        String itemName = Ingredients.getName(Ingredients.fromString(top.ingredientKey())).getString();
+
+        UUID batchUUID = UUID.randomUUID();
+        MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
+        MCQuest roomQuest = MCQuest.standalone(batchUUID, null, room);
+        roomQuest.setTopNeedProducer(producer);
+        roomQuest.setFlavorText("Your town keeps running out of " + itemName + ". A " + producer
+                + " can make it. Build the " + producer + " room and register its door so one has a place to work.");
+        q.addNewQuest(roomQuest);
+        MCQuestBatch qb = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_NEW_JOB_ROOM));
+        provisionArrival(view, qb);
+        questBatches.add(qb);
+        QT.QUESTS_LOGGER.info("Top-need batch posted: {} room {} (top need {})",
+                producer, room, top.ingredientKey());
+        notifyNewQuests(view);
+        return Tutorial.APPLIED;
+    }
+
+    private int jobChangesComplete() {
+        return (int) questBatches.getAll().stream()
+                .filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete())
+                .count();
     }
 
     private @Nullable Tutorial tryPhase3_newJobRoom(TutorialTownView view) {

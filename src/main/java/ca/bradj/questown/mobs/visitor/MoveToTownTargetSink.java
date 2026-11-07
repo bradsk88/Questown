@@ -6,6 +6,7 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.jobs.production.IProductionStatus;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableMap;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -26,6 +27,12 @@ import java.util.Optional;
 
 public class MoveToTownTargetSink extends Behavior<Mob> {
     private static final int MAX_COOLDOWN_BEFORE_RETRYING = 5;
+
+    /** Ticks a villager may fail to reach somewhere before it asks for help. Counts failure, not travel, so a long walk is never cut short. */
+    private static final int CANT_REACH_GIVEUP_TICKS = 200;
+
+    /** Unstick shoves allowed before a villager gives up on a target it can't follow its path to. */
+    private static final int MAX_UNSTICK_ATTEMPTS = 3;
     private int remainingCooldown;
     @Nullable
     private Path path;
@@ -36,6 +43,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     private int stuckTicks;
     private BlockPos entityPrevPosLastUnstick;
     private int reallyStuckTicks;
+    private int failedUnsticks;
 
     public MoveToTownTargetSink() {
         this(Compat.configGet(Config.WANDER_GIVEUP_TICKS).get(), Compat.configGet(Config.WANDER_GIVEUP_TICKS).get());
@@ -136,6 +144,8 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
     ) {
         p_23610_.getBrain().setMemory(MemoryModuleType.PATH, this.path);
         p_23610_.getNavigation().moveTo(this.path, (double) this.speedModifier);
+        // A new attempt gets every shove again.
+        failedUnsticks = 0;
     }
 
     protected void tick(
@@ -174,6 +184,20 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             return;
         }
 
+        if (hasGivenUpReaching(p_23617_, brain)) {
+            if (vme.isStrandedOutsideTown()) {
+                rescue(vme, brain, "gave up reaching its target outside the town");
+                return;
+            }
+            vme.setNeed(TownieNeed.CANT_REACH);
+            vme.setUnmetItem(unreachableRoomKey(vme, brain));
+            brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+            brain.eraseMemory(MemoryModuleType.PATH);
+            stuckTicks = 0;
+            reallyStuckTicks = 0;
+            return;
+        }
+
         BlockPos entityBlockPos = p_23618_.blockPosition();
         if (entityPrevPos != null && Jobs.isCloseTo(entityBlockPos, entityPrevPos)) {
             stuckTicks++;
@@ -191,6 +215,7 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
             Direction unstickTarget = Compat.getRandomHorizontal(p_23617_);
             QT.JOB_LOGGER.debug("Unsticking from {} by pushing MORE in direction {}", entityBlockPos, unstickTarget);
             p_23618_.push(unstickTarget.getStepX() * 2, unstickTarget.getStepY() * 2, unstickTarget.getStepZ() * 2);
+            failedUnsticks++;
             stuckTicks = 0;
             reallyStuckTicks = 0;
             brain.eraseMemory(MemoryModuleType.PATH);
@@ -206,6 +231,43 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         }
     }
 
+    /** The recipe id of the room holding the walk target, or "" outside a room. */
+    private static String unreachableRoomKey(
+            VisitorMobEntity vme,
+            Brain<?> brain
+    ) {
+        if (vme.getTown() == null) {
+            return "";
+        }
+        return brain.getMemory(MemoryModuleType.WALK_TARGET)
+                    .flatMap(w -> vme.getTown().roomRecipeHolding(w.getTarget().currentBlockPosition()))
+                    .map(ResourceLocation::toString)
+                    .orElse("");
+    }
+
+    private void clearCantReachNeed(Mob mob) {
+        failedUnsticks = 0;
+        if (!(mob instanceof VisitorMobEntity vme)) {
+            return;
+        }
+        if (vme.getNeed() == TownieNeed.CANT_REACH) {
+            vme.setNeed(TownieNeed.NONE);
+        }
+    }
+
+    private boolean hasGivenUpReaching(
+            ServerLevel level,
+            Brain<?> brain
+    ) {
+        if (failedUnsticks >= MAX_UNSTICK_ATTEMPTS) {
+            return true;
+        }
+        Optional<Long> unreachableSince = brain.getMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+        return unreachableSince.filter(
+                since -> level.getGameTime() - since > CANT_REACH_GIVEUP_TICKS
+        ).isPresent();
+    }
+
     private boolean tryComputePath(
             Mob p_23593_,
             WalkTarget p_23594_,
@@ -217,10 +279,12 @@ public class MoveToTownTargetSink extends Behavior<Mob> {
         Brain<?> brain = p_23593_.getBrain();
         if (this.reachedTarget(p_23593_, p_23594_)) {
             brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+            clearCantReachNeed(p_23593_);
         } else {
             boolean flag = this.path != null && this.path.canReach();
             if (flag) {
                 brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
+                clearCantReachNeed(p_23593_);
             } else if (!brain.hasMemoryValue(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)) {
                 brain.setMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, p_23595_);
             }

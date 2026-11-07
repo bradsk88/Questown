@@ -11,6 +11,8 @@ public interface WorkHandle {
 
     void removeWorkRequest(WorkRequest requested);
 
+    void adjustRequestLimit(WorkRequest request, int delta);
+
     boolean hasAtLeastOneBoard();
 
     ImmutableList<WorkRequest> getRequestedResults();

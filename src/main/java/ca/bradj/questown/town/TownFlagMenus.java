@@ -54,6 +54,9 @@ public class TownFlagMenus {
         BlockPos flagPos = inputFlagInfo.flagPos();
         TownFlagBlockEntity flagEntity = (TownFlagBlockEntity) sender.getLevel().getBlockEntity(flagPos);
         TownInterface flag = flagEntity;
+        if (OpenFlagMenuMessage.QUESTS.equals(type)) {
+            flagEntity.markQuestsSeen();
+        }
         FlagTabsEmbedding.FlagInfo realFlagInfo = flagEntity.getInfo();
 
         @SuppressWarnings("DataFlowIssue")
