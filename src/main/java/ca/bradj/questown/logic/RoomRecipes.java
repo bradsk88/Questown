@@ -4,10 +4,10 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.core.RecipeItemConfig;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.RecipeRef;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
-import com.electronwill.nightconfig.core.Config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.JsonObject;
@@ -98,7 +98,7 @@ public class RoomRecipes {
             RoomRecipe recipe,
             int stopAt
     ) {
-        Config allWeights = RecipeItemConfig.itemWeights.get();
+        Map<String, Integer> allWeights = RecipeItemConfig.getWeights();
         int weight = 0;
         for (Ingredient in : recipe.getIngredients()) {
             if (weight > stopAt) {
@@ -107,29 +107,27 @@ public class RoomRecipes {
             boolean foundWeight = false;
             if (getAsJsonObject(in).has("item")) {
                 String id = getAsJsonObject(in).get("item").getAsString();
-                if (allWeights.contains(String.format("%s", id))) {
-                    weight += allWeights.getInt(id);
+                Integer itemWeight = allWeights.get(id);
+                if (itemWeight != null) {
+                    weight = UtilClean.saturatingAdd(weight, itemWeight);
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for item. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("item", id);
                 }
             }
             if (getAsJsonObject(in).has("tag")) {
                 String id = getAsJsonObject(in).get("tag").getAsString();
                 String tID = String.format("#%s", id);
-                if (allWeights.contains(tID)) {
-                    weight += allWeights.getInt(tID);
+                Integer tagWeight = allWeights.get(tID);
+                if (tagWeight != null) {
+                    weight = UtilClean.saturatingAdd(weight, tagWeight);
                     foundWeight = true;
                 } else {
-                    QT.QUESTS_LOGGER.error(
-                            "No weight specified for tag. Default of 100 will be used. [{}]", id
-                    );
+                    reportUnweighted("tag", id);
                 }
             }
             if (!foundWeight) {
-                weight += Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get();
+                weight = UtilClean.saturatingAdd(weight, Compat.configGet(ca.bradj.questown.core.Config.DEFAULT_ITEM_WEIGHT).get());
             }
         }
         return weight;
