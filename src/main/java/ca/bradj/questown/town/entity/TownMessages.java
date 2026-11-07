@@ -21,7 +21,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class TownMessages {
+    // Every chat line from the flag goes through one queue, an interval apart, so a burst of events isn't a wall of chat.
+    private static final int BROADCAST_SPACING_TICKS = 100;
     private final BroadcastPacer<Component> pacer = new BroadcastPacer<>(BROADCAST_SPACING_TICKS);
+
     private ServerLevel level;
 
     public void initialize(ServerLevel t) {
@@ -37,11 +40,31 @@ public class TownMessages {
             return;
         }
 
-        QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+        Component line = Compat.translatable(key, args);
+        switch (pacer.offer(line, level.getGameTime(), this::sendNow)) {
+            case SENT -> QT.FLAG_LOGGER.info("Broadcasting message: {} {}", key, args);
+            case QUEUED -> QT.FLAG_LOGGER.info("Queued broadcast (waiting for a free slot): {} {}", key, args);
+            case DROPPED -> QT.FLAG_LOGGER.info("Dropped duplicate broadcast: {} {}", key, args);
+        }
+    }
+
+    /** Sends one queued line once the interval allows. Called every flag tick. */
+    public void flushBroadcasts() {
+        if (pacer.isEmpty()) {
+            return;
+        }
+        if (level == null) {
+            pacer.clear();
+            return;
+        }
+        pacer.flush(level.getGameTime(), this::sendNow);
+    }
+
+    private void sendNow(Component line) {
         for (ServerPlayer p : level.getServer()
                                    .getPlayerList()
                                    .getPlayers()) {
-            p.displayClientMessage(Compat.translatable(key, args), false);
+            p.displayClientMessage(line, false);
         }
     }
 
@@ -54,6 +77,11 @@ public class TownMessages {
             QuestownNetwork.sendToPlayer(p,
                     new ShowTutorialToastMessage(titleKey, descriptionKey));
         }
+    }
+
+    void sendTutorialToast(ServerPlayer p, String titleKey, String descriptionKey) {
+        QT.FLAG_LOGGER.info("Sending tutorial toast to {}: {} {}", p.getName().getString(), titleKey, descriptionKey);
+        QuestownNetwork.sendToPlayer(p, new ShowTutorialToastMessage(titleKey, descriptionKey));
     }
 
     public void roomRecipeCreated(
