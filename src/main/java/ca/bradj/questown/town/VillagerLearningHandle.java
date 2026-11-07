@@ -12,6 +12,9 @@ import java.util.function.*;
 
 public class VillagerLearningHandle<JOB_ID> {
 
+    /** Reveal every child of an unlocked job; a smaller count reveals a random few. */
+    public static final int REVEAL_ALL = Integer.MAX_VALUE;
+
     private final Collection<JOB_ID> townKnownJobs = new ArrayList<>();
     private final BiPredicate<JOB_ID, JOB_ID> isParentOf;
     private final Supplier<ImmutableList<JOB_ID>> allShuffled;

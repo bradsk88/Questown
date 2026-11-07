@@ -3,9 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.requests.WorkRequest;
-import com.google.common.collect.ImmutableList;
-import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -33,6 +31,7 @@ public class JobCycler {
             Iterable<JobID> availableJobs,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td,
             ToLongFunction<JobID> tripLength
     ) {
@@ -44,6 +43,7 @@ public class JobCycler {
             Iterable<JobID> availableJobs,
             Predicate<JobID> canAlwaysStart,
             Predicate<JobID> canFitInDay,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td,
             ToLongFunction<JobID> tripLength,
             ToIntFunction<JobID> level

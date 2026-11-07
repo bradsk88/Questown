@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Set;
 
 public class TownWorkContainer extends AbstractContainerMenu {
 
@@ -93,12 +94,24 @@ public class TownWorkContainer extends AbstractContainerMenu {
 
     public static void writeWork(
             Collection<WorkRequest> requestedResults,
+            Set<WorkRequest> stocked,
             ToIntFunction<WorkRequest> stock,
             ToIntFunction<WorkRequest> limit,
             FriendlyByteBuf data
     ) {
         data.writeInt(requestedResults.size());
-        data.writeCollection(requestedResults, (buf, w) -> w.toNetwork(buf));
+        data.writeCollection(requestedResults, (buf, w) -> {
+            w.toNetwork(buf);
+            buf.writeBoolean(stocked.contains(w));
+            buf.writeInt(stock.applyAsInt(w));
+            buf.writeInt(limit.applyAsInt(w));
+        });
+    }
+
+    public void sendLimitStep(UIWork jobPosting, int delta) {
+        QuestownNetwork.sendToServer(
+                new SetRequestLimitMessage(jobPosting.getResultWanted(), delta, flag.getX(), flag.getY(), flag.getZ())
+        );
     }
 
     public static void writeFlagPosition(

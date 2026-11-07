@@ -84,6 +84,7 @@ public class SpecialRules {
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.
     public static final String ADD_ITEM_TO_CONTAINER = "add_item_to_container";
+    public static final String DRESS_DISPLAY = "dress_display";
 
     // Global rule. By default, Questown will only allow villagers to start
     // a job if there is an abundance of supplies available. This rule causes

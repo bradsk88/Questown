@@ -1,6 +1,9 @@
 package ca.bradj.questown.town;
 
+import net.minecraft.server.packs.resources.ResourceManager;
 import ca.bradj.questown.jobs.gatherer.Loots;
+import ca.bradj.questown.loader.Loader;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.core.UtilClean;
@@ -43,57 +46,6 @@ import java.util.stream.Collectors;
 
 public class TownVillagerUIs {
 
-    public static void showMultiStatusUI(
-            ServerPlayer player,
-            FlagTabsEmbedding.FlagInfo townFlagBasePos,
-            Collection<? extends LivingEntity> entities,
-            Supplier<Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>>> questsSrc,
-            int bopCount,
-            Supplier<Boolean> morningSpawnPending
-    ) {
-        List<VisitorMobEntity> es = entities.stream().map(v -> (VisitorMobEntity) v).toList();
-
-        Compat.openScreen(
-                player, new MenuProvider() {
-                    @Override
-                    public @NotNull Component getDisplayName() {
-                        return Compat.literal("");
-                    }
-
-                    @Override
-                    public @NotNull AbstractContainerMenu createMenu(
-                            int windowId,
-                            @NotNull Inventory inv,
-                            @NotNull Player p
-                    ) {
-                        MultiStatusMenu multiStatusMenu = new MultiStatusMenu(
-                                windowId,
-                                townFlagBasePos,
-                                this::triggerAdvancement
-                        );
-                        return multiStatusMenu;
-                    }
-
-                    private void triggerAdvancement() {
-                        if (entities.isEmpty()) {
-                            return;
-                        }
-                        AdvancementsInit.ROOM_TRIGGER.triggerForNearestPlayer(
-                                player.getLevel(),
-                                RoomTrigger.Triggers.FirstOpenFlagMenu,
-                                townFlagBasePos.flagPos()
-                        );
-                    }
-                }, data -> {
-                    List<UIQuest> quests = UIQuest.fromLevel(
-                            player.getLevel(),
-                            questsSrc.get()
-                    );
-                    FlagMenus.writeAndLink(data, quests, townFlagBasePos, player, es, bopCount, morningSpawnPending);
-                }
-        );
-    }
-
     public static void showItemJobsUI(
             ServerPlayer sender,
             TownFlagBlockEntity unsafeTown,
@@ -114,8 +66,9 @@ public class TownVillagerUIs {
         ImmutableMap<ResourceLocation, RoomRecipe> rMap = rMapB.build();
 
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
-        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getAllJobsThatProduce(
-                unsafeTown.getTownData(),
+        // Jobs that make the item, not jobs that only ask for it.
+        ImmutableMap<JobID, ResourceLocation> jubz = ServerJobsRegistry.getJobsKnownToProduce(
+                unsafeTown.getTownDataForDisplay(),
                 itemToShowJobsFor
         );
         QT.GUI_LOGGER.dev("[item-jobs] producers of {}: {}", Arrays.toString(itemToShowJobsFor.getItems()), jubz.keySet());
@@ -125,7 +78,7 @@ public class TownVillagerUIs {
                 continue;
             }
 
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownData(), job);
+            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafeTown.getTownDataForDisplay(), job);
             ImmutableList<Ingredient> roomRecipe = getRoomIngredients(dj, rMap);
 
             b.add(new UIJob(
@@ -141,7 +94,29 @@ public class TownVillagerUIs {
             ));
         }
         Object msg = new ShowItemJobsMessage(itemToShowJobsFor, b.build(), unsafeTown.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
+    }
+
+    /** What a skill's details list under "Produces": a trip job's default table, most likely first; any other job, its results. */
+    private static ImmutableList<ItemStack> skillResults(
+            TownFlagBlockEntity unsafe,
+            JobID job
+    ) {
+        String table = Works.isInitialized() && Works.ids().contains(job) ? Works.get(job).get().lootTableDefault() : null;
+        if (table == null) {
+            return ServerJobsRegistry.getResults(unsafe.getTownDataForDisplay(), job).stream()
+                                     .map(v -> v.get().getDefaultInstance())
+                                     .collect(ImmutableList.toImmutableList());
+        }
+        ResourceManager rm = unsafe.getServerLevel().getServer().getResourceManager();
+        ImmutableList.Builder<ItemStack> b = ImmutableList.builder();
+        for (String id : Loots.getMostLikelyItems(rm, table)) {
+            net.minecraft.world.item.Item item = Loader.itemFromId(new ResourceLocation(id));
+            if (item != null) {
+                b.add(item.getDefaultInstance());
+            }
+        }
+        return b.build();
     }
 
     private static @NotNull ImmutableList<Ingredient> getRoomIngredients(
@@ -186,28 +161,66 @@ public class TownVillagerUIs {
                                                       .collect(ImmutableList.toImmutableList());
         ImmutableList.Builder<UIJob> b = ImmutableList.builder();
         for (JobID job : jubz) {
-            Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
-            if (!(j instanceof DeclarativeJob dj)) {
-                continue;
+            UIJob card = uiJob(unsafe, vb, job, rMap);
+            if (card != null) {
+                b.add(card);
             }
-
-            ImmutableSet<MCTownItem> results = ServerJobsRegistry.getResults(unsafe.getTownData(), job);
-            RoomRecipe r = rMap.get(dj.location().baseRoom());
-            b.add(new UIJob(
-                    j.getId(),
-                    ImmutableList.copyOf(vb.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
-                    ImmutableList.copyOf(dj.initialIngredients.values()),
-                    ImmutableList.copyOf(dj.initialTools.values()),
-                    dj.location().baseRoom(),
-                    getRoomIngredients(dj, rMap),
-                    results.stream()
-                           .map(v -> v.get().getDefaultInstance())
-                           .collect(ImmutableList.toImmutableList())
-            ));
         }
 
         Object msg = new ShowItemJobsMessage(Ingredient.of(ItemStack.EMPTY), b.build(), unsafe.getTownFlagBasePos());
-        QuestownNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> sender), msg);
+        QuestownNetwork.sendToPlayer(sender, msg);
+    }
+
+    /** Sends one skill's details, and whether it is still locked, so the screen offers Unlock or Switch. */
+    public static void showSkillDetailsUI(
+            ServerPlayer sender,
+            @NotNull TownFlagBlockEntity unsafe,
+            Collection<? extends LivingEntity> entities,
+            JobID job,
+            UUID villager,
+            boolean locked,
+            int flagBops
+    ) {
+        Map<JobID, List<UUID>> vb = new HashMap<>();
+        for (LivingEntity entity : entities) {
+            if (entity instanceof VisitorMobEntity vme) {
+                UtilClean.addOrInitializeList(vb, vme.getJobId(), vme.getUUID());
+            }
+        }
+        UIJob card = uiJob(unsafe, vb, job, roomRecipes(sender));
+        if (card == null) {
+            QT.GUI_LOGGER.error("No details for skill {}", job);
+            return;
+        }
+        QuestownNetwork.sendToPlayer(sender, new ShowSkillDetailsMessage(card, unsafe.getTownFlagBasePos(), villager, locked, flagBops));
+    }
+
+    private static ImmutableMap<ResourceLocation, RoomRecipe> roomRecipes(ServerPlayer sender) {
+        ImmutableMap.Builder<ResourceLocation, RoomRecipe> rMapB = ImmutableMap.builder();
+        SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
+        sender.getLevel().getRecipeManager().getAllRecipesFor(RecipesInit.ROOM).forEach(v -> rMapB.put(v.getId(), v));
+        return rMapB.build();
+    }
+
+    private static @Nullable UIJob uiJob(
+            TownFlagBlockEntity unsafe,
+            Map<JobID, List<UUID>> villagersByJob,
+            JobID job,
+            ImmutableMap<ResourceLocation, RoomRecipe> rMap
+    ) {
+        Job<?, ?, ?> j = ServerJobsRegistry.getUninitializedJob(job, VillagerUUID.random()).getJob();
+        if (!(j instanceof DeclarativeJob dj)) {
+            return null;
+        }
+        return new UIJob(
+                j.getId(),
+                ImmutableList.copyOf(villagersByJob.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())),
+                ImmutableList.copyOf(dj.initialIngredients.values()),
+                ImmutableList.copyOf(dj.initialTools.values()),
+                dj.location().baseRoom(),
+                getRoomIngredients(dj, rMap),
+                skillResults(unsafe, job)
+        );
     }
 
     public static void showUI(
@@ -250,7 +263,7 @@ public class TownVillagerUIs {
             type = VillagerTabs.initialTab(wantsJobChange(sender, e), showInventoryTab);
         }
 
-        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level, e.getFlagPos());
+        TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.getLevel(), e.getFlagPos());
 
         List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
                                    .map(v -> UIQuest.fromLevel(sender.getLevel(), v)).flatMap(List::stream).toList();
@@ -260,7 +273,9 @@ public class TownVillagerUIs {
 
         Consumer<ShowerData> runnable = menuShow.get(type);
         if (runnable == null) {
-            throw new IllegalArgumentException("Unexpected menu type: \"" + type + "\"");
+            // The type comes from the client: reject an unknown one.
+            QT.GUI_LOGGER.error("Unexpected menu type: \"{}\"", type);
+            return;
         }
         ShowerData d = new ShowerData(
                 sender,
