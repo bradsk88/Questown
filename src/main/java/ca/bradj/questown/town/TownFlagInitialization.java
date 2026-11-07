@@ -64,4 +64,6 @@ public interface TownFlagInitialization {
     CompoundTag serializeChickenStructureRotation();
 
     CompoundTag serializeChickenRotationDetected();
+
+    CompoundTag serializeChickenSunsetChestSpawned();
 }
