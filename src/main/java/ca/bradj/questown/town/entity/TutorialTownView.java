@@ -32,10 +32,6 @@ public interface TutorialTownView {
 
     void fireTutorialTrigger(TutorialTrigger.Triggers trigger);
 
-    ResourceLocation getExoticWood();
-
-    @Nullable
-    JobID chooseJobForTutorial(MCQuestBatches questBatches);
 
     ResourceLocation getRoomForJob(JobID job);
 

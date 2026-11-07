@@ -104,12 +104,13 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public Collection<Integer> getStatesWithUnfinishedItemlessWork() {
-        Collection<Integer> statesWithUnfinishedWork = JobsClean.getStatesWithUnfinishedWork(
+        Collection<Integer> statesWithUnfinishedWork = DeclarativeJobs.getStatesWithUnfinishedWork(
                 roomsFinder.get().stream()
                            .map(v -> (Supplier<Collection<POS>>) () -> v.getContainedBlocks().keySet().stream()
                                                                         .filter(isJobBlock).toList()).toList(),
                 getJobBlockState,
-                canClaim
+                canClaim,
+                workDeclaredAt
         );
         ImmutableList.Builder<Integer> b = ImmutableList.builder();
         statesWithUnfinishedWork.forEach(s -> {
@@ -124,9 +125,14 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
 
     @Override
     public Collection<ROOM> roomsAtState(Integer state) {
-        return roomsNeedingVillagerInput.get().get(state).stream()
-                                        .map(RoomsNeedingVillagerInput.NVIRoom::room)
-                                        .map(IRoomRecipeMatch::getRoom).toList();
+        var atState = roomsNeedingVillagerInput.get().get(state);
+        if (atState == null) {
+            // A state missing from the room map has no rooms.
+            return ImmutableList.of();
+        }
+        return atState.stream()
+                      .map(RoomsNeedingVillagerInput.NVIRoom::room)
+                      .map(IRoomRecipeMatch::getRoom).toList();
     }
 
     @Override
