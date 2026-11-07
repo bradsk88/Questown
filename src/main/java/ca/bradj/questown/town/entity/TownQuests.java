@@ -53,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -190,6 +191,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QT.QUESTS_LOGGER.info("First-work-request batch posted (day-2 board introduction)");
     }
 
+    /** Completes the first-work-request quest when the player posts a request. */
     public void markFirstWorkRequestCompleteIfActive() {
         for (MCQuestBatch batch : questBatches.getAllBatches()) {
             for (MCQuest q : batch.getAll()) {
@@ -464,6 +466,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     public void tick(TownInterface town) {
+        retireJobUnlockQuests();
         QuestBackfiller.backfill(this, town, this.town::getUnsafe);
         postCookFollowUpIfDue(TownFlagTutorialAdapter.from(this.town.getUnsafe(), questBatches));
 
@@ -559,10 +562,53 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         pendingQuests = pop; // Can't grow more (at the moment) and not needed. Push back for next tick.
     }
 
+    /** Withdraws the open JOB_UNLOCK quests left in older saves. A top-need batch keeps its room quest. */
+    void retireJobUnlockQuests() {
+        retireJobUnlockQuests(questBatches.getAllBatches(), questBatches::decline);
+    }
 
+    static void retireJobUnlockQuests(
+            Collection<MCQuestBatch> batches,
+            Consumer<MCQuestBatch> decline
+    ) {
+        for (MCQuestBatch batch : ImmutableList.copyOf(batches)) {
+            for (MCQuest q : ImmutableList.copyOf(batch.getAll())) {
+                if (q.getType() != Quest.QuestType.JOB_UNLOCK || q.isComplete()) {
+                    continue;
+                }
+                String producer = JobID.fromRL(q.getWantedId()).rootId();
+                if (q.unlockStuckRoot().isEmpty()) {
+                    tagTopNeedRoomQuests(batch, producer);
+                }
+                QT.QUESTS_LOGGER.info("Withdrawing retired JOB_UNLOCK quest for root {}", producer);
+                if (batch.withdrawQuest(q) && batch.getAll().isEmpty()) {
+                    decline.accept(batch);
+                }
+            }
+        }
+    }
 
+    private static void tagTopNeedRoomQuests(
+            MCQuestBatch batch,
+            String producer
+    ) {
+        batch.getAll().stream()
+             .filter(q -> q.getType() == Quest.QuestType.ROOM)
+             .forEach(q -> q.setTopNeedProducer(producer));
+    }
 
+    static boolean topNeedBeatOpen(Collection<? extends Quest<?, ?>> quests) {
+        return quests.stream().anyMatch(q -> !q.isComplete() && q.topNeedProducer().isPresent());
+    }
 
+    /** Producers whose top-need room the town already built, so it isn't asked for again. */
+    static Set<String> builtTopNeedProducers(Collection<? extends Quest<?, ?>> quests) {
+        Set<String> built = new HashSet<>();
+        quests.stream()
+              .filter(Quest::isComplete)
+              .forEach(q -> q.topNeedProducer().ifPresent(built::add));
+        return built;
+    }
 
     /** The first producer root that isn't the stuck root and isn't unlocked by any villager. @param stuckRoot the root to skip, or null */
     @Nullable
@@ -637,6 +683,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
         Tutorial r;
         r = tryPhase2_hunterGatherer(view);           if (r != null) return r;
+        r = tryPhase2_4_emptyRooms(view);             if (r != null) return r;
         r = tryPhase2_5_jobChangeAndFood(view);       if (r != null) return r;
         r = tryPhase2_7_miner(view);                  if (r != null) return r;
         r = tryPhase2_75_topNeedUnlock(view);         if (r != null) return r;
@@ -664,6 +711,64 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return Tutorial.APPLIED;
     }
 
+    /** A bedroom quest between the hunter-gatherer and cook batches, while villager 2 is on the way. */
+    private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
+        if (cookBatchPosted()) {
+            return null;
+        }
+        if (!hunterGathererBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        if (!emptyRoomsBatchPosted()) {
+            addNewcomerBedroomBatch(view);
+            notifyNewQuests(view);
+            return Tutorial.APPLIED;
+        }
+        if (!emptyRoomsBatchComplete()) {
+            return Tutorial.SKIPPED;
+        }
+        return null;
+    }
+
+    private boolean cookBatchPosted() {
+        return questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE).count() >= 2;
+    }
+
+    private boolean hunterGathererBatchComplete() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    /** The bedroom batch posted after the hunter-gatherer batch (an empty-room batch in older worlds). */
+    private @Nullable MCQuestBatch emptyRoomsBatch() {
+        ResourceLocation rawFood = TagsInit.Items.VILLAGER_SIMPLE_FURNACE_FOOD_RAW.location();
+        boolean afterHunterGatherer = false;
+        for (MCQuestBatch b : questBatches.getAllBatches()) {
+            if (b.getAll().stream().anyMatch(q -> q.getType() == Quest.QuestType.LOOT && rawFood.equals(q.getWantedId()))) {
+                afterHunterGatherer = true;
+                continue;
+            }
+            if (afterHunterGatherer && !b.getAll().isEmpty()
+                    && b.getAll().stream().allMatch(q -> POST_HUNTER_ROOMS.contains(q.getWantedId()))) {
+                return b;
+            }
+        }
+        return null;
+    }
+
+    private boolean emptyRoomsBatchPosted() {
+        return emptyRoomsBatch() != null;
+    }
+
+    private boolean emptyRoomsBatchComplete() {
+        MCQuestBatch b = emptyRoomsBatch();
+        return b != null && b.getAll().stream().allMatch(Quest::isComplete);
+    }
+
+    private static final Set<ResourceLocation> POST_HUNTER_ROOMS = Set.of(SpecialQuests.BEDROOM, SpecialQuests.EMPTY_ROOM);
+
     void addNewcomerBedroomBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
         MCQuestBatch.Inputs q = new MCQuestBatch.Inputs(batchUUID, null);
@@ -674,6 +779,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         questBatches.add(qq);
         QT.QUESTS_LOGGER.info("Tutorial bedroom batch added (a new bedroom before the cook batch)");
     }
+
     private @Nullable Tutorial tryPhase2_5_jobChangeAndFood(TutorialTownView view) {
         // Two villagers: the hunter, and the one who becomes the cook.
         if (view.villagerCount() < 2) {
@@ -714,6 +820,21 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         addMiner(view);
         notifyNewQuests(view);
         return Tutorial.APPLIED;
+    }
+
+    boolean atTheFork() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.getAllBatches().stream()
+                .filter(b -> b.getAll().stream().anyMatch(q -> q.isOnboarding()
+                        && q.getType() == Quest.QuestType.JOB_CHANGE
+                        && minerJob.equals(q.getWantedId())))
+                .anyMatch(b -> b.getAll().stream().allMatch(Quest::isComplete));
+    }
+
+    private boolean minerBeatPosted() {
+        ResourceLocation minerJob = JobID.toRL(ONBOARDING_MINER_JOB);
+        return questBatches.includes(q -> q.getType() == Quest.QuestType.JOB_CHANGE
+                && minerJob.equals(q.getWantedId()));
     }
 
     void addMiner(TutorialTownView view) {
@@ -856,6 +977,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     private static final ResourceLocation FARMER_JOB = JobID.toRL(new JobID("farmer", "wheat"));
     private static final ResourceLocation CRAFTING_ROOM = new ResourceLocation("questown", "crafting_room");
     private static final ResourceLocation KITCHEN_SMALL = new ResourceLocation("questown", "kitchen_small");
+    private static final ResourceLocation BIG_BEDROOM = new ResourceLocation("questown", "big_bedroom");
+    private boolean supplyChainsTriggerFired = false;
     private static final ResourceLocation STORE_ROOM_MEDIUM = new ResourceLocation("questown", "store_room_medium");
 
 
@@ -1085,6 +1208,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         QT.QUESTS_LOGGER.debug("Tutorial batch #2 was added to town: {}", qq.toNiceString());
     }
 
+    /** Posts the cook follow-up (cooked food, a cook skill, villager 3's bed) once the cook job change is done and a villager is a cook. Runs every tick. */
     void postCookFollowUpIfDue(TutorialTownView view) {
         ResourceLocation cookJob = JobID.toRL(ONBOARDING_COOK_JOB);
         ResourceLocation cookedFood = TagsInit.Items.VILLAGER_COOKED_FOOD.location();
@@ -1108,6 +1232,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         addCookFollowUpBatch(view);
         notifyNewQuests(view);
     }
+
+    /** Five meals at 200 XP each reach level 1, so the quest ends on a Block of Progress. */
+    static final int COOKED_FOOD_COUNT = 5;
 
     private void addCookFollowUpBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
@@ -1158,7 +1285,28 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             MCRoom room,
             ResourceLocation q
     ) {
+        if (isClaimedFor(room, q)) {
+            return;
+        }
         questBatches.markRecipeAsComplete(room, q);
+    }
+
+    /** Whether {@code room} is already used for a quest wanting {@code q}: a room completes only one quest per recipe. */
+    boolean isClaimedFor(MCRoom room, ResourceLocation q) {
+        if (SpecialQuests.EMPTY_ROOM.equals(q)) {
+            return isClaimedByACompletedQuest(room);
+        }
+        return questBatches.getAll().stream()
+                .filter(done -> q.equals(done.getWantedId()))
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
+    }
+
+    /** An empty-room quest needs a room no completed quest has used. */
+    boolean isClaimedByACompletedQuest(MCRoom room) {
+        return questBatches.getAll().stream()
+                .map(Quest::completedOn)
+                .anyMatch(r -> r != null && r.yCoord == room.yCoord && r.doorPos.equals(room.doorPos));
     }
 
     public void markAsConverted(
@@ -1261,6 +1409,14 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return getAll().stream().anyMatch(
                 q -> q.getType() == Quest.QuestType.JOB_CHANGE && !q.isComplete()
         );
+    }
+
+    /** The change-job tab is hidden from non-gatherers until the paths start. */
+    public boolean hidesJobChangeFrom(JobID villagerJob) {
+        if (GATHERER_ROOT.equals(villagerJob.rootId())) {
+            return false;
+        }
+        return getAll().stream().anyMatch(Quest::isOnboarding) && !atTheFork();
     }
 
     private static final String GATHERER_ROOT = "gatherer";

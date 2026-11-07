@@ -213,6 +213,13 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     }
 
     @Override
+    public CompoundTag serializeVillagersTabSeen() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isVillagersTabSeen());
+        return t;
+    }
+
+    @Override
     public CompoundTag serializeFirstHunterLootGuaranteeFired() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());

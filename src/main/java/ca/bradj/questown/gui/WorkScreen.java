@@ -184,6 +184,7 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
                     second);
         }
 
+        // Reset the colour the page header leaves behind, or the first card is tinted.
         Compat.resetShaderColor();
         ImmutableList.Builder<Slot> b = ImmutableList.builder();
         for (int i = startIndex; i < endIndex; i++) {
@@ -256,11 +257,31 @@ public class WorkScreen extends CompatContainerScreen<TownWorkContainer> impleme
 
     private List<Slot> slots = new ArrayList<>();
 
+    /** "6/8": storage holds 6, the request pauses at 8. - and + change the limit. */
+    private void renderStockAndLimit(RenderContext ctx, UIWork jobPosting, int rightX, int iconY, int mouseX, int mouseY) {
+        int plusX = rightX;
+        int minusX = plusX - buttonWidth - 2;
+        String count = jobPosting.getStock() + "/" + jobPosting.getLimit();
+        int countX = minusX - 4 - this.font.width(count);
+        int color = jobPosting.isStocked() ? PAUSED_TEXT_COLOR : TEXT_COLOR;
+        ctx.text(Compat.literal(count), countX, iconY + borderPadding - 1, color, false);
+        highlightAndTooltip(ctx, mouseX, mouseY, countX, iconY,
+                Compat.translatable("job_board.request_stock", jobPosting.getLimit()));
+
+        ctx.lightText("-", minusX + borderPadding - 1, iconY + borderPadding - 1);
+        highlightAndTooltip(ctx, mouseX, mouseY, minusX, iconY, Compat.translatable("job_board.limit_down"));
+        this.removes.put(new Position(minusX, iconY), () -> sendLimitStep(jobPosting, -1));
+
+        ctx.lightText("+", plusX + borderPadding - 1, iconY + borderPadding - 1);
+        highlightAndTooltip(ctx, mouseX, mouseY, plusX, iconY, Compat.translatable("job_board.limit_up"));
+        this.removes.put(new Position(plusX, iconY), () -> sendLimitStep(jobPosting, 1));
+    }
 
     private void sendLimitStep(UIWork jobPosting, int delta) {
         pageAfterReopen = currentPage;
         menu.sendLimitStep(jobPosting, delta);
     }
+
     private ImmutableList<Slot> renderJobCardIcons(
             RenderContext ctx,
             UIWork recipe,

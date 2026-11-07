@@ -86,6 +86,11 @@ public class TownVillagerLearningHandle {
     }
 
     public ImmutableSet<JobID> getChildJobsKnownToExist(JobID parent) {
+        return childJobsKnownToExist(jobsKnownToExist, parent);
+    }
+
+    /** Every child known under any job of the parent's root, across all villagers. */
+    static ImmutableSet<JobID> childJobsKnownToExist(Map<UUID, ? extends Map<JobID, ? extends Set<JobID>>> known, JobID parent) {
         ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
         for (Map.Entry<UUID, Map<JobID, Set<JobID>>> kjs : jobsKnownToExist.entrySet()) {
             Map<JobID, Set<JobID>> villagerKnown = kjs.getValue();
@@ -153,6 +158,14 @@ public class TownVillagerLearningHandle {
                 jobsKnownToExist.toNiceString(),
                 contributingVillager
         );
+    }
+
+    public void registerAsKnownForAll(JobID parent, JobID child) {
+        Set<UUID> villagers = new HashSet<>(unlockedJobs.keySet());
+        villagers.addAll(jobsKnownToExist.keySet());
+        for (UUID villager : villagers) {
+            registerAsKnown(villager, parent, child);
+        }
     }
 
     public void requestKnowledge(
