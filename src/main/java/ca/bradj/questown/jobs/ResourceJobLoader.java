@@ -175,6 +175,7 @@ public class ResourceJobLoader {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
                     cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
+                    cookWork = cookWork.withUnlockedWithRootJob(unlockedWithRootJob(obj));
                     b.put(od, cookWork);
                 } catch (Exception e) {
                     throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -477,6 +478,7 @@ public class ResourceJobLoader {
                 if (slotPrecondition.isPresent()) {
                     work = work.withSlotPrecondition(slotPrecondition.get());
                 }
+                work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj));
                 return work;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
@@ -1074,6 +1076,12 @@ public class ResourceJobLoader {
     /** {@code experience}: XP per completion, replacing the formula. */
     private static @Nullable Integer experience(JsonObject object) {
         return optional(object, "experience", JsonElement::getAsInt);
+    }
+
+    /** {@code unlocked_with_root_job}: a job that joins its root's starting unlocks. Absent means false. */
+    private static boolean unlockedWithRootJob(JsonObject object) {
+        Boolean flag = optional(object, "unlocked_with_root_job", JsonElement::getAsBoolean);
+        return Boolean.TRUE.equals(flag);
     }
 
     private static <X> X required(
