@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RoomRecipes {
 
@@ -124,6 +126,18 @@ public class RoomRecipes {
             }
         }
         return weight;
+    }
+
+    /** A missing weight falls back to the default; warned once per id. */
+    private static final Set<String> reportedUnweighted =
+            ConcurrentHashMap.newKeySet();
+
+    private static void reportUnweighted(String kind, String id) {
+        if (reportedUnweighted.add(kind + ":" + id)) {
+            QT.QUESTS_LOGGER.warn(
+                    "No weight specified for {}. Default of 100 will be used. [{}]", kind, id
+            );
+        }
     }
 
     private static JsonObject getAsJsonObject(Ingredient js) {

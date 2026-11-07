@@ -24,12 +24,23 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     protected void tick(
             TICK_DATA data
     ) {
+        // Profile every exit: the light ticks still scan containers.
+        long start = System.nanoTime();
+        try {
+            tickInner(data);
+        } finally {
+            profileTick(start);
+        }
+    }
+
+    private void tickInner(
+            TICK_DATA data
+    ) {
         if (runAnyInitializers(data)) {
             return;
         }
 
         Collection<VILLAGERS> villagers = getVillagers(data);
-        ensureCompletableQuestsExist(data, villagers);
 
         boolean alreadyStopped = stopped;
         stopped = allPlayersLeftArea(data, !alreadyStopped);
@@ -39,8 +50,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
             }
             storeInactiveState(data);
         }
-
-        long start = System.currentTimeMillis();
 
         // Must tick sub-blocks even with debug mode enabled,
         // because non-ticked sub-blocks will self-destruct.
@@ -57,27 +66,32 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
 
         handleIfNewMorning(data, signals);
 
-        boolean stateChanged = updateStoredData(data);
+        boolean[] stateChanged = new boolean[1];
+        TickProfile.INSTANCE.phase("updateStoredData", () -> stateChanged[0] = updateStoredData(data));
 
-        if (stateChanged) {
-            handleNewStoredData(data);
+        if (stateChanged[0]) {
+            TickProfile.INSTANCE.phase("handleNewStoredData", () -> handleNewStoredData(data));
         }
 
-        tickWorkHandle(data);
-        tickQuests(data);
-        tickBiomesHandle(data);
-        tickHealingHandle(data);
-        tickPossibleWorkHandle(data);
-        tickRoomsHandle(data);
+        TickProfile.INSTANCE.phase("workHandle", () -> tickWorkHandle(data));
+        TickProfile.INSTANCE.phase("quests", () -> tickQuests(data));
+        TickProfile.INSTANCE.phase("biomes", () -> tickBiomesHandle(data));
+        TickProfile.INSTANCE.phase("healing", () -> tickHealingHandle(data));
+        TickProfile.INSTANCE.phase("possibleWork", () -> tickPossibleWorkHandle(data));
+        TickProfile.INSTANCE.phase("roomsHandle", () -> tickRoomsHandle(data));
 
         if (!isFlagTick(data)) {
             return;
         }
 
-        updateWorkStatuses(data);
+        TickProfile.INSTANCE.phase("updateWorkStatuses", () -> updateWorkStatuses(data));
 
-        tickASAPRewards(data);
-        tickPOIs(data);
+        TickProfile.INSTANCE.phase("asapRewards", () -> tickASAPRewards(data));
+        TickProfile.INSTANCE.phase("pois", () -> tickPOIs(data));
+
+        if (signals == Signals.NIGHT || signals == Signals.EVENING) {
+            tickEvening(data);
+        }
 
         if ((signals == Signals.NIGHT || signals == Signals.EVENING) && !villagers.isEmpty()) {
             triggerFirstNightAdvancement(data);
@@ -92,8 +106,6 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         }
 
         everScanned = true;
-
-        profileTick(start);
     }
 
     protected abstract void triggerUnmetNeedsAdvancement(TICK_DATA data);
@@ -240,13 +252,16 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
     }
 
     private void profileTick(long start) {
+        long elapsedNanos = System.nanoTime() - start;
+
+        TickProfile.INSTANCE.record(elapsedNanos);
+
         if (Config.TICK_SAMPLING_RATE.get() > 0) {
-            long end = System.currentTimeMillis();
-            times.add((int) (end - start));
+            times.add((int) (elapsedNanos / 1000));
 
             if (times.size() > Config.TICK_SAMPLING_RATE.get()) {
                 double tl = times.stream().mapToInt(Integer::intValue).average().orElse(0);
-                QT.PROFILE_LOGGER.debug("Average tick length: {}", tl);
+                QT.PROFILE_LOGGER.info("Average tick length: {}us", tl);
                 times.clear();
             }
         }

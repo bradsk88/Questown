@@ -40,9 +40,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import vazkii.patchouli.api.TriPredicate;
+import ca.bradj.questown.loader.TriPredicate;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -322,6 +323,7 @@ public class ServerJobsRegistry {
     }
 
 
+    /** Whether any job cares about this block. Asked for every room cell on every flag tick, so the answer is cached by block state and whether the block above is air. */
     public static boolean shouldInitializeWithState(
             WorkLocation.BlockInfo info,
             BlockPos pos
@@ -330,6 +332,24 @@ public class ServerJobsRegistry {
         if (state.isAir()) {
             return false;
         }
+        JobInterestKey key = new JobInterestKey(state, info.state(pos.above()).isAir());
+        Boolean known = jobInterestByBlock.get(key);
+        if (known != null) {
+            return known;
+        }
+        boolean interesting = computeShouldInitializeWithState(info, pos, state);
+        jobInterestByBlock.put(key, interesting);
+        return interesting;
+    }
+
+    private record JobInterestKey(BlockState state, boolean airAbove) {
+    }
+
+    private static final Map<JobInterestKey, Boolean> jobInterestByBlock = new ConcurrentHashMap<>();
+
+    /** Clears the cache, for when the job registry is rebuilt. */
+    public static void forgetWhichBlocksJobsCareAbout() {
+        jobInterestByBlock.clear();
     }
 
     public static boolean hasGlobalRule(
@@ -349,6 +369,13 @@ public class ServerJobsRegistry {
             int processingState
     ) {
         return specialJobs.stream().anyMatch(sj -> sj.restsAt().test(block, processingState));
+    }
+
+    private static boolean computeShouldInitializeWithState(
+            WorkLocation.BlockInfo info,
+            BlockPos pos,
+            BlockState state
+    ) {
         BlockState bs = state;
         Block b = bs.getBlock();
         JobID a = new JobID("temporary", "temporary"); // TODO: Add a way to get the jobBlockTest without an ID
