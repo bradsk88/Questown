@@ -43,13 +43,15 @@ public class TownPois {
         if (this.visitorSpot == null) {
             return new Vec3(fallback.getX(), fallback.getY(), fallback.getZ());
         }
-        BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
+        // Never put an arriving villager next to the campfire, where it would catch fire.
+        var campfire = TownCycle.findCampfire(fallback, level, bs -> true);
         // TODO: No while loops. Do this logic in the tick
         for (int i = 0; i < Config.BASE_MAX_LOOP.get(); i++) {
-            if (level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())) {
-                break;
+            BlockPos vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
+            if (level.isUnobstructed(level.getBlockState(vs.below()), vs, CollisionContext.empty())
+                    && !isWithinBurnRadius(vs, campfire)) {
+                return new Vec3(vs.getX(), vs.getY(), vs.getZ());
             }
-            vs = this.visitorSpot.relative(Direction.Plane.HORIZONTAL.getRandomDirection(level.getRandom()), 2);
         }
         return new Vec3(vs.getX(), vs.getY(), vs.getZ());
     }
@@ -74,7 +76,21 @@ public class TownPois {
             Filter<R> filter,
             PositionFactory<P, R> pFact
     ) {
+        return getWanderTarget(level, all, filter, pFact, null);
+    }
+
+    /** As above, reporting why a search came back empty. */
+    public <R extends Room, P> @Nullable P getWanderTarget(
+            ServerLevel level,
+            Collection<R> all,
+            Filter<R> filter,
+            PositionFactory<P, R> pFact,
+            @Nullable WanderDiagnostics diagnostics
+    ) {
         if (all.isEmpty()) {
+            if (diagnostics != null) {
+                diagnostics.noRooms();
+            }
             return null;
         }
         R r = ImmutableList.copyOf(all).get(level.getRandom().nextInt(all.size()));
@@ -94,9 +110,21 @@ public class TownPois {
 
         ImmutableList<P> positions = b.build();
         if (positions.isEmpty()) {
+            if (diagnostics != null) {
+                diagnostics.noCandidateInRoom(all.size(), allEnclosed.size());
+            }
             return null;
         }
         return positions.get(level.getRandom().nextInt(positions.size()));
+    }
+
+    /** Why a wander-target search found nothing. */
+    public interface WanderDiagnostics {
+        /** The town has no rooms. */
+        void noRooms();
+
+        /** There are rooms, but the chosen one had no suitable position. */
+        void noCandidateInRoom(int roomCount, int enclosedCount);
     }
 
     public @Nullable BlockPos getWelcomeMatPos(@NotNull ServerLevel level) {
@@ -108,7 +136,7 @@ public class TownPois {
             int index = level.random.nextInt(copy.size());
             BlockPos mat = copy.get(index);
             if (!level.getBlockState(mat).is(BlocksInit.WELCOME_MAT_BLOCK.get())) {
-                welcomeMats.remove(index);
+                // Skip it, don't forget it: welcome mats are only re-added at placement or load.
                 continue;
             }
             return mat;
@@ -139,7 +167,7 @@ public class TownPois {
     public void tick(
             ServerLevel level,
             BlockPos flagPos,
-            int villagerCount
+            boolean campfireQuestOpen
     ) {
         // TODO: Consider adding non-room town "features" as quests
         // TODO: Don't check this so often - maybe add fireside seating that can be paired to flag block
