@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
@@ -92,6 +93,7 @@ public class ClientAccess {
     // Shown until the player sleeps.
     @Nullable
     private static net.minecraft.client.gui.components.toasts.TutorialToast activeTutorialToast;
+    private static boolean activeToastIsCampReady;
 
     public static void showTutorialToast(Component title, Component description) {
         Minecraft mc = Minecraft.getInstance();
@@ -124,6 +126,7 @@ public class ClientAccess {
             activeTutorialToast.hide();
             activeTutorialToast = null;
         }
+        activeToastIsCampReady = false;
     }
 
     public static void closeScreens() {

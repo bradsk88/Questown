@@ -56,6 +56,7 @@ public class TownFlagTileData {
     private static final String NBT_CHICKEN_ROTATION_DETECTED = QTNBT.keyify("chicken_rotation_detected");
     private static final String NBT_CHICKEN_SUNSET_CHEST_SPAWNED = QTNBT.keyify("chicken_sunset_chest_spawned");
     private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
+    private static final String NBT_VILLAGERS_TAB_SEEN = QTNBT.keyify("villagers_tab_seen");
     private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
     private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
@@ -83,6 +84,7 @@ public class TownFlagTileData {
         b.put(NBT_CHICKEN_ROTATION_DETECTED, initChickenRotationDetected());
         b.put(NBT_CHICKEN_SUNSET_CHEST_SPAWNED, initChickenSunsetChestSpawned());
         b.put(NBT_BOARD_AUTO_REQUEST, initBoardAutoRequest());
+        b.put(NBT_VILLAGERS_TAB_SEEN, initVillagersTabSeen());
         b.put(NBT_QUESTS_SEEN, initQuestsSeen());
         b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
@@ -116,6 +118,16 @@ public class TownFlagTileData {
                     return true;
                 },
                 flag -> flag.bopWithdrawn = false
+        );
+    }
+
+    private static InitPair initVillagersTabSeen() {
+        return new InitPair(
+                (tag, flag) -> {
+                    flag.villagersTabSeen = tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.villagersTabSeen = false
         );
     }
 
@@ -415,6 +427,7 @@ public class TownFlagTileData {
         write(t, NBT_CHICKEN_ROTATION_DETECTED, flag.serializeChickenRotationDetected());
         write(t, NBT_CHICKEN_SUNSET_CHEST_SPAWNED, flag.serializeChickenSunsetChestSpawned());
         write(t, NBT_BOARD_AUTO_REQUEST, flag.serializeBoardAutoRequest());
+        write(t, NBT_VILLAGERS_TAB_SEEN, flag.serializeVillagersTabSeen());
         write(t, NBT_QUESTS_SEEN, flag.serializeQuestsSeen());
         write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }
