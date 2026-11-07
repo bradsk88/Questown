@@ -44,6 +44,7 @@ public class TownFlagTileData {
     private static final String NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED = QTNBT.keyify(
             "first_hunter_loot_guarantee_fired"
     );
+    private static final String NBT_BOARD_AUTO_REQUEST = QTNBT.keyify("board_auto_request");
     private static final String NBT_QUESTS_SEEN = QTNBT.keyify("quests_seen");
     private static final String NBT_BOP_WITHDRAWN = QTNBT.keyify("bop_withdrawn");
 
@@ -63,9 +64,21 @@ public class TownFlagTileData {
         b.put(NBT_BONUS_GIVEN, initBonusGiven());
         b.put(NBT_ECONOMICS, initEconomics());
         b.put(NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, initFirstHunterLootGuaranteeFired());
+        b.put(NBT_BOARD_AUTO_REQUEST, initBoardAutoRequest());
         b.put(NBT_QUESTS_SEEN, initQuestsSeen());
         b.put(NBT_BOP_WITHDRAWN, initBopWithdrawn());
         return b.build();
+    }
+
+    private static InitPair initBoardAutoRequest() {
+        return new InitPair(
+                (tag, flag) -> {
+                    // Older flags keep the default.
+                    flag.boardAutoRequest = tag.contains("value") && tag.getBoolean("value");
+                    return true;
+                },
+                flag -> flag.boardAutoRequest = true
+        );
     }
 
     private static InitPair initBopWithdrawn() {
@@ -295,6 +308,7 @@ public class TownFlagTileData {
         write(t, NBT_BONUS_GIVEN, flag.serializeBonusGiven());
         write(t, NBT_ECONOMICS, flag.serializeEconomics());
         write(t, NBT_FIRST_HUNTER_LOOT_GUARANTEE_FIRED, flag.serializeFirstHunterLootGuaranteeFired());
+        write(t, NBT_BOARD_AUTO_REQUEST, flag.serializeBoardAutoRequest());
         write(t, NBT_QUESTS_SEEN, flag.serializeQuestsSeen());
         write(t, NBT_BOP_WITHDRAWN, flag.serializeBopWithdrawn());
     }

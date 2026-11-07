@@ -190,6 +190,12 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeEconomics() {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
+    public CompoundTag serializeBoardAutoRequest() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.isBoardAutoRequest());
+        return t;
+    }
+
     @Override
     public CompoundTag serializeBopWithdrawn() {
         CompoundTag t = new CompoundTag();
