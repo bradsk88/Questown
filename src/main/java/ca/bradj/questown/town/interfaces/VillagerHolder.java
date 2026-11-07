@@ -15,6 +15,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -39,6 +40,12 @@ public interface VillagerHolder {
             String type,
             UUID villagerId
     );
+
+    /** The villager's "Villager N" name, or empty. */
+    String displayNameFor(UUID villagerId);
+
+    /** Every villager's "Villager N" name; villagers without one are left out. */
+    Map<UUID, String> displayNamesForAll();
 
     void fillHunger(UUID uuid);
 

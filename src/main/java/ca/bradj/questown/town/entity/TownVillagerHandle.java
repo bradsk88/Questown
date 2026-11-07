@@ -44,6 +44,8 @@ public final class TownVillagerHandle {
     private final HealingModule<VisitorMobEntity> healing = new TownVillagerHealingModule();
     private final TownVillagerMoods moods = new TownVillagerMoods();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
+    /** Each villager's "Villager N" number: given on arrival, saved, never reused. */
+    private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
 
     TownVillagerHandle() {
         SimpleVillagerHandle.Configs config = new SimpleVillagerHandle.Configs(
@@ -275,7 +277,11 @@ public final class TownVillagerHandle {
             Map<UUID, ? extends Map<JobID, ? extends ImmutableCollection<JobID>>> jobsKnownToExist,
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
-            ImmutableMap<VillagerUUID, Boolean> jobChangesPending
+            ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
+            ImmutableMap<UUID, JobID> guaranteedRoots,
+            ImmutableMap<UUID, JobID> preRolls,
+            Map<UUID, Integer> displayNumbersIn,
+            int highestDisplayNumberIn
     ) {
         this.learning.initialize(unlockedJobs, jobsKnownToExist);
         delegate.initialize(
@@ -284,9 +290,54 @@ public final class TownVillagerHandle {
                 experience,
                 level,
                 UtilClean.mapKeys(jobChangesPending, TownVillagerHandle::getUuid),
-                Config.HUNGER_ENABLED.get()
+                Config.HUNGER_ENABLED.get(),
+                guaranteedRoots,
+                preRolls
         );
         moods.initialize(moodEffects);
+        this.displayNumbers.restore(displayNumbersIn, highestDisplayNumberIn);
+        // Villagers loaded before this got numbers in load order; give them their saved ones.
+        delegate.entities().forEach(this::stampNameplate);
+    }
+
+    public int displayNumberFor(UUID vuid) {
+        return displayNumbers.numberFor(vuid);
+    }
+
+    /** Gives the next number, unless the villager already has one. */
+    public void assignDisplayNumber(UUID vuid) {
+        displayNumbers.assign(vuid);
+        int displayNumber = displayNumberFor(villager.getUUID());
+        if (displayNumber <= 0) {
+            return;
+        }
+        villager.setCustomName(VillagerDisplayNumbers.nameplate(displayNumber));
+        villager.setCustomNameVisible(true);
+    }
+
+    public String displayNameFor(UUID vuid) {
+        int n = displayNumberFor(vuid);
+        if (n <= 0) {
+            return "";
+        }
+        return VillagerDisplayNumbers.nameplate(n).getString();
+    }
+
+    /** Every villager's "Villager N" name; villagers without a number are left out. */
+    public ImmutableMap<UUID, String> displayNamesForAll() {
+        ImmutableMap.Builder<UUID, String> b = ImmutableMap.builder();
+        for (Map.Entry<UUID, Integer> e : displayNumbers.byVuid().entrySet()) {
+            String name = displayNameFor(e.getKey());
+            if (!name.isEmpty()) {
+                b.put(e.getKey(), name);
+            }
+        }
+        return b.build();
+    }
+
+    Map<UUID, Integer> getDisplayNumbers() {
+        return displayNumbers.byVuid();
+        return displayNumbers.highest();
     }
 
     void recallVillagers() {
@@ -303,15 +354,6 @@ public final class TownVillagerHandle {
             Long expireOnTick,
             UUID uuid
     ) {
-        // TODO: Generalize
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER.equals(effect)) {
-            delegate.fillHunger(uuid);
-            return;
-        }
-        if (EffectMetaItem.ConsumableEffects.FILL_HUNGER_HALF.equals(effect)) {
-            delegate.fillHunger(uuid, 0.5f);
-            return;
-        }
         moods.tryApplyEffect(effect, expireOnTick, uuid);
     }
 
@@ -423,8 +465,19 @@ public final class TownVillagerHandle {
         return delegate.getPreRolls();
     }
 
+    ImmutableMap<UUID, Boolean> getBlockOfProgressLatches() {
+        return delegate.getBlockOfProgressLatches();
+    }
+
+    void restoreBlockOfProgress(Map<UUID, Boolean> latches) {
+        delegate.restoreBlockOfProgress(latches);
+    }
+
     void register(VisitorMobEntity visitorMobEntity) {
         delegate.register(visitorMobEntity);
+
+        assignDisplayNumber(visitorMobEntity.getUUID());
+        stampNameplate(visitorMobEntity);
 
 
         ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(visitorMobEntity.getJobId());
@@ -438,8 +491,12 @@ public final class TownVillagerHandle {
         delegate.addHungryListener(o);
     }
 
-    void addStatsListener(Consumer<VillagerStatsData> o) {
-        delegate.addStatsListener(o);
+    void addStatsListener(UUID villager, Consumer<VillagerStatsData> o) {
+        delegate.addStatsListener(villager, o);
+    }
+
+    void addAnyStatsListener(Runnable o) {
+        delegate.addAnyStatsListener(o);
     }
 
     ImmutableMap<VillagerUUID, ImmutableSet<JobID>> getUnlockedJobs() {

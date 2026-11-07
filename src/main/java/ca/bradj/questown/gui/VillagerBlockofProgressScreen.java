@@ -79,6 +79,9 @@ public class VillagerBlockofProgressScreen extends AbstractContainerScreen<Villa
             int bgX,
             int bgY
     ) {
+        String villagerLabel = menu.villagerDisplayName.isEmpty()
+                ? UtilClean.truncateMiddle(menu.villagerUUID)
+                : menu.villagerDisplayName;
         Coordinate topLeft = new Coordinate(bgX + 12, bgY);
         int tWidth = backgroundWidth - 16;
         int iconWidth = 32;

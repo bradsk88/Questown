@@ -8,6 +8,8 @@ import net.minecraft.world.entity.player.Inventory;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class TownQuestsContainer extends AbstractQuestsContainer implements FlagTabsEmbedding {
 
@@ -20,7 +22,19 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
             FlagInfo flag,
             Runnable triggerAdvancement
     ) {
-        super(MenuTypesInit.TOWN_QUESTS.get(), windowId, quests, flag);
+        this(windowId, quests, flag, summary, triggerAdvancement, Map.of());
+    }
+
+    public TownQuestsContainer(
+            int windowId,
+            Collection<UIQuest> quests,
+            FlagInfo flag,
+            QuestScreenSummary summary,
+            Runnable triggerAdvancement,
+            Map<UUID, String> villagerDisplayNames
+    ) {
+        super(MenuTypesInit.TOWN_QUESTS.get(), windowId, quests, flag, villagerDisplayNames);
+        this.summary = summary;
         triggerAdvancement.run();
     }
 
@@ -40,6 +54,7 @@ public class TownQuestsContainer extends AbstractQuestsContainer implements Flag
     ) {
         writeQuests(data, quests);
         writeFlagPos(data, pos);
+        writeVillagerNames(data, villagerDisplayNames);
     }
 
     @Override

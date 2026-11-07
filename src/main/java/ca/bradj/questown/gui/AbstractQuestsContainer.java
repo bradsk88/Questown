@@ -11,15 +11,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
+
+import ca.bradj.questown.core.UtilClean;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
     protected final Collection<UIQuest> quests;
     protected final FlagTabsEmbedding.FlagInfo flagInfo;
+    /** "Villager N" names by villager UUID; empty when the menu does not carry them. */
+    protected final Map<UUID, String> villagerDisplayNames;
 
     public AbstractQuestsContainer(
             MenuType<?> townQuestsContainerMenuType,
@@ -27,9 +34,65 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
             Collection<UIQuest> quests,
             FlagTabsEmbedding.FlagInfo flagInfo
     ) {
+        this(townQuestsContainerMenuType, windowId, quests, flagInfo, Map.of());
+    }
+
+    protected AbstractQuestsContainer(
+            MenuType<?> townQuestsContainerMenuType,
+            int windowId,
+            Collection<UIQuest> quests,
+            FlagTabsEmbedding.FlagInfo flagInfo,
+            Map<UUID, String> villagerDisplayNames
+    ) {
         super(townQuestsContainerMenuType, windowId);
         this.quests = quests;
         this.flagInfo = flagInfo;
+        this.villagerDisplayNames = villagerDisplayNames == null ? Map.of() : villagerDisplayNames;
+    }
+
+    public Map<UUID, String> villagerDisplayNames() {
+        return this.villagerDisplayNames;
+    }
+
+    /** The villager's "Villager N" name, or its shortened UUID. */
+    public @NotNull String villagerLabelFor(String villagerUuidString) {
+        return villagerLabelFor(this.villagerDisplayNames, villagerUuidString);
+    }
+
+    public static @NotNull String villagerLabelFor(
+            Map<UUID, String> displayNames,
+            String villagerUuidString
+    ) {
+        if (!villagerUuidString.isEmpty()) {
+            try {
+                String name = displayNames.get(UUID.fromString(villagerUuidString));
+                if (name != null && !name.isEmpty()) {
+                    return name;
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return UtilClean.truncateMiddle(villagerUuidString);
+    }
+
+    protected static void writeVillagerNames(
+            FriendlyByteBuf data,
+            Map<UUID, String> names
+    ) {
+        data.writeVarInt(names.size());
+        for (Map.Entry<UUID, String> e : names.entrySet()) {
+            data.writeUUID(e.getKey());
+            data.writeUtf(e.getValue());
+        }
+    }
+
+    public static Map<UUID, String> readVillagerNames(FriendlyByteBuf data) {
+        int n = data.readVarInt();
+        Map<UUID, String> out = new HashMap<>(Math.max(n, 1));
+        for (int i = 0; i < n; i++) {
+            out.put(data.readUUID(), data.readUtf());
+        }
+        return out;
     }
 
     protected static void writeQuests(

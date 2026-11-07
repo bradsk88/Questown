@@ -92,6 +92,7 @@ class SimpleVillagerHandleTest {
 
         @Override
         public void setChanged() {
+            changes++;
         }
 
         @Override
@@ -266,6 +267,45 @@ class SimpleVillagerHandleTest {
         String line = t.broadcast.stream().filter(b -> b.startsWith("message.villager.leveled_up_job")).findFirst().orElse("");
         Assertions.assertTrue(line.contains("jobs.tester"), t.broadcast.toString());
         Assertions.assertTrue(line.endsWith(", 2]"), line);
+    }
+
+    // The earned Block of Progress latch survives a save and load.
+    @Test
+    public void blockOfProgressLatch_survivesSaveAndLoad() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> before = handleFor(t, villager);
+        before.addExperience(villager, 1_000_000);
+        Assertions.assertTrue(before.hasBlockOfProgress(villager));
+
+        SimpleVillagerHandle<String, UUID> after = handleFor(new TestDelegator(), villager);
+        after.restoreBlockOfProgress(before.getBlockOfProgressLatches());
+
+        Assertions.assertTrue(after.hasBlockOfProgress(villager));
+    }
+
+    // A level-up marks the flag changed, so it saves.
+    @Test
+    public void levelUp_marksTheTownChanged() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        int before = t.changes;
+
+        handle.addExperience(villager, 1_000_000);
+
+        Assertions.assertTrue(t.changes > before);
+    }
+
+    @Test
+    public void blockOfProgressLatches_holdOnlyLatchedVillagers() {
+        TestDelegator t = new TestDelegator();
+        UUID villager = UUID.randomUUID();
+        SimpleVillagerHandle<String, UUID> handle = handleFor(t, villager);
+        handle.addExperience(villager, 1_000_000);
+        handle.clearBlockOfProgress(villager);
+
+        Assertions.assertEquals(ImmutableMap.of(), handle.getBlockOfProgressLatches());
     }
 
     // A meal never lowers fullness.
