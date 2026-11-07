@@ -12,23 +12,25 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collection;
 import java.util.List;
 
-public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D> extends AbstractContainerScreen<T> {
+/** Base for the paged-card screens: quests, economics and town status. */
+public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D>
+        extends CompatContainerScreen<T> implements ScrollableScreen {
 
     private final PagedCardScreen<D> delegate;
     protected final int cardHeight;
 
     public AbstractPagedCardScreen(
-            T p_97741_,
-            Inventory p_97742_,
-            Component p_97743_
+            T menu,
+            Inventory playerInventory,
+            Component title
     ) {
-        super(p_97741_, p_97742_, p_97743_);
+        super(menu, playerInventory, title);
         this.delegate = new PagedCardScreen<>(
                 () -> height,
                 () -> width,
                 this::cardsData,
                 this::setRenderColorForCard,
-                (s, c, p) -> this.renderCardContent(s, c, p.x(), p.y()),
+                (rc, c, p) -> this.renderCardContent(rc, c, p.x(), p.y()),
                 1,
                 0,
                 0
@@ -37,7 +39,7 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     protected abstract List<Component> renderCardContent(
-            PoseStack stack,
+            RenderContext ctx,
             PagedCardScreen.Card<D> dCard,
             int mouseX,
             int mouseY
@@ -58,29 +60,23 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
     }
 
     @Override
-    protected void renderBg(
-            PoseStack poseStack,
-            float v,
-            int i,
-            int i1
-    ) {
-        this.delegate.renderBg(poseStack, v, i, i1);
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
+        this.delegate.renderBg(ctx, partialTicks, mouseX, mouseY);
     }
 
     @Override
-    public void render(
-            PoseStack p_97795_,
-            int p_97796_,
-            int p_97797_,
-            float p_97798_
-    ) {
-        super.render(p_97795_, p_97796_, p_97797_, p_97798_);
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
+        renderPagedContent(ctx, mouseX, mouseY, partialTicks);
+        this.renderScreenExtras(ctx, mouseX, mouseY, partialTicks);
+        this.renderTooltipContent(ctx, mouseX, mouseY);
+    }
+
+    protected void renderPagedContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         @Nullable List<Component> tooltips = this.delegate.afterRender(
-                p_97795_,
-                font,
-                p_97796_,
-                p_97797_,
-                p_97798_,
+                ctx,
+                mouseX,
+                mouseY,
+                partialTicks,
                 cardsData(),
                 true
         );
@@ -89,12 +85,17 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
             return;
         }
 
-        renderTooltipWithDynamicWrapping(p_97795_, p_97796_, p_97797_, tooltips);
+        renderTooltipWithDynamicWrapping(ctx, mouseX, mouseY, tooltips);
     }
 
+    /** Drawn after the cards: tabs, the all-done state. */
+    protected void renderScreenExtras(RenderContext ctx, int mouseX, int mouseY, float partialTicks) { }
+
+    protected void renderTooltipContent(RenderContext ctx, int mouseX, int mouseY) { }
+
     // TODO: Move to RenderUtils for reuse
-    private void renderTooltipWithDynamicWrapping(
-            PoseStack stack,
+    protected void renderTooltipWithDynamicWrapping(
+            RenderContext ctx,
             int mouseX,
             int mouseY,
             List<Component> tooltip
@@ -103,18 +104,19 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         int rightMargin = screenWidthMargin / 2;
         int rightEdge = width - rightMargin;
         int widthRightOfCursor = Math.max(rightEdge - mouseX, 80); // Ensure at least 150px for tooltips
-        List<FormattedCharSequence> tt = tooltip.stream().map(t -> Compat.splitText(font, t, widthRightOfCursor))
+        List<FormattedCharSequence> tt = tooltip.stream()
+                                                .map(t -> Compat.splitText(ctx.font(), t, widthRightOfCursor))
                                                 .flatMap(Collection::stream).toList();
-        renderTooltip(stack, tt, mouseX, mouseY);
+        this.showTooltip(tt);
     }
 
     @Override
     public boolean mouseScrolled(
-            double p_94686_,
-            double p_94687_,
-            double p_94688_
+            double scrollX,
+            double scrollY,
+            double scrollDelta
     ) {
-        return this.delegate.mouseScrolled(p_94686_, p_94687_, p_94688_, this::isMouseOver, super::mouseScrolled);
+        return this.delegate.mouseScrolled(scrollX, scrollY, scrollDelta, this::isMouseOver, (x, y, d) -> false);
     }
 
     public List<Rect2i> getExtraAreas() {

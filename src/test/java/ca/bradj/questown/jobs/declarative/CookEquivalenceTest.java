@@ -75,6 +75,10 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Both sides must actually finish, not just agree.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
 
         Assertions.assertTrue(
                 tickerResult.productExtracted() || advancerResult.productExtracted()
@@ -112,6 +116,10 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Both sides must actually finish, not just agree.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 
     @Test
@@ -143,6 +151,10 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Both sides must actually finish, not just agree.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 
     @Test
@@ -174,5 +186,9 @@ class CookEquivalenceTest {
 
         Assertions.assertTrue(comparison.equivalent(),
                 "Ticker and Advancer should produce equivalent results.\n" + comparison.diffMessage());
+        // Both sides must actually finish, not just agree.
+        Assertions.assertTrue(
+                tickerResult.productExtracted() && advancerResult.productExtracted(),
+                "both sides must actually complete the extract, not just agree to idle");
     }
 }

@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Collection;
 import java.util.Stack;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Consumer<VillagerStatsData>,
@@ -26,6 +27,7 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
     private final DataSlot experienceTargetSlot;
     private final Stack<Runnable> closers = new Stack<>();
     private final boolean showBlockOfProgressTab;
+    private final boolean showInventoryTab;
 
     public static VillagerStatsMenu ForClientSide(
             int windowId,
@@ -39,13 +41,16 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
     public <S extends IStatus<S>> VillagerStatsMenu(
             int windowId,
-            VisitorMobEntity entity,
+            UUID villager,
             BlockPos flagPos,
             VillagerStatsData initialData,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
-        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, entity.getUUID());
+        super(MenuTypesInit.VILLAGER_STATS.get(), null, null, windowId, flagPos, villager);
         this.showBlockOfProgressTab = showBlockOfProgressTab;
+        this.showInventoryTab = showInventoryTab;
 
         this.addDataSlot(this.fullnessSlot = DataSlot.standalone());
         this.fullnessSlot.set((int) (initialData.fullnessPercent() * 100));
@@ -61,8 +66,15 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
         this.addDataSlot(this.damageSlot = DataSlot.standalone());
         this.damageSlot.set((int) (initialData.damageLevelPercent() * 100));
 
-        entity.addStatsListener(this);
-        this.closers.add(() -> entity.removeStatsListener(this));
+        this.addDataSlot(this.levelSlot = DataSlot.standalone());
+        this.levelSlot.set(initialData.level());
+        this.moodEffects = initialData.moodEffects();
+    }
+
+    /** Shows the villager's live stats, when its entity is present. */
+    public void attach(VisitorMobEntity e) {
+        e.addStatsListener(this);
+        this.closers.add(() -> e.removeStatsListener(this));
     }
 
     public static VillagerStatsData read(FriendlyByteBuf buf) {
@@ -122,7 +134,18 @@ public class VillagerStatsMenu extends AbstractTabbedVillagerMenu implements Con
 
     @Override
     public Collection<String> getEnabledTabs() {
-        return ENABLED_TABS;
+        Collection<String> tabs = showSkillsTab ? ENABLED_TABS : VillagerTabs.hideSkills(ENABLED_TABS);
+        return showInventoryTab ? tabs : VillagerTabs.hideInventory(tabs);
+    }
+
+    @Override
+    public boolean showInventoryTab() {
+        return showInventoryTab;
+    }
+
+    @Override
+    public boolean showSkillsTab() {
+        return showSkillsTab;
     }
 
     @Override

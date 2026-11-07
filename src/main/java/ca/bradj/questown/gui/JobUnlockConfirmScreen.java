@@ -17,7 +17,7 @@ import net.minecraft.world.inventory.Slot;
 
 import java.util.List;
 
-public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockConfirmMenu> {
+public class JobUnlockConfirmScreen extends CompatContainerScreen<JobUnlockConfirmMenu> {
 
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
@@ -25,7 +25,6 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
     private final JEI.NineNine background;
     private final IDrawableStatic slot;
     private int textX;
-    private FormattedText texts;
     private int gathererSlotY;
     private Button unlockButton;
 
@@ -53,51 +52,46 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
         int maybeY = ((this.height - backgroundHeight) / 2) + 32 + 16 + 8;
 
         int buttonWidth = (backgroundWidth / 2) - 8;
-        this.unlockButton = this.addRenderableWidget(new Button(
-                maybeX, maybeY, buttonWidth, 20, Compat.translatable("menu.common.unlock"), (p_96776_) -> {
-            QuestownNetwork.CHANNEL.sendToServer(new UnlockJobMessage(
-                    menu.flagPos,
-                    menu.villagerUUID,
-                    menu.jobId,
-                    false
-            ));
-            Minecraft.getInstance().setScreen(null);
-        }
+        this.unlockButton = this.addRenderableWidget(Compat.button(
+                Compat.translatable("menu.common.unlock"),
+                (p_96776_) -> {
+                    QuestownNetwork.sendToServer(new UnlockJobMessage(
+                            menu.flagPos,
+                            menu.villagerUUID,
+                            menu.jobId,
+                            false
+                    ));
+                    Minecraft.getInstance().setScreen(null);
+                },
+                maybeX, maybeY, buttonWidth, 20
         ));
-        this.addRenderableWidget(new Button(
-                maybeX + buttonWidth,
-                maybeY,
-                buttonWidth,
-                20,
+        this.addRenderableWidget(Compat.button(
                 Compat.translatable("menu.common.cancel"),
-                (p_96776_) -> Minecraft.getInstance().setScreen(null)
+                (p_96776_) -> Minecraft.getInstance().setScreen(null),
+                maybeX + buttonWidth, maybeY, buttonWidth, 20
         ));
         this.textX = maybeX + slot.getWidth() + 8;
     }
 
     @Override
-    public void render(
-            PoseStack stack,
-            int mouseX,
-            int mouseY,
-            float partialTicks
-    ) {
+    protected void renderPrologue(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         if (unlockButton != null) {
             unlockButton.active = menu.hasBlockOfProgress();
         }
-        super.renderBackground(stack);
-        super.render(stack, mouseX, mouseY, partialTicks);
+    }
+
+    @Override
+    protected void renderScreenContent(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
         int jobIconY = bgY + 6;
-        itemRenderer.renderAndDecorateItem(VillagerAdvancements.getIcon(menu.jobId), bgX + 8, jobIconY);
+        ctx.renderItemAndDecorations(VillagerAdvancements.getIcon(menu.jobId), bgX + 8, jobIconY);
         int jobIconX = bgX + 8 + slot.getWidth() + 4;
-        renderText(stack, jobIconX, jobIconY + 5, bgY + menu.gathererInventoryYOffset);
-        this.renderTooltip(stack, mouseX, mouseY);
+        renderText(ctx, jobIconX, jobIconY + 5, bgY + menu.gathererInventoryYOffset);
     }
 
     private void renderText(
-            PoseStack stack,
+            RenderContext ctx,
             int x,
             int y1,
             int y2
@@ -105,7 +99,7 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
         int bgY = y1;
         ImmutableList<Component> jc = Jobs.getComponentsForTooltip(menu.jobId);
         int textWidth = backgroundWidth - slot.getWidth() - (8 * 2);
-        List<FormattedCharSequence> parts = font.split(
+        List<FormattedCharSequence> parts = ctx.split(
                 Compat.translatable(
                         "menu.common.job_name",
                         jc.get(0),
@@ -113,31 +107,26 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
                 ), textWidth
         );
         for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
+            ctx.darkText(part, x, bgY);
             bgY += 8;
         }
         bgY = y2;
-        parts = font.split(Compat.translatable("menu.unlock_job.insert_bop"), textWidth);
+        parts = ctx.split(Compat.translatable("menu.unlock_job.insert_bop"), textWidth);
         for (FormattedCharSequence part : parts) {
-            Compat.drawDarkText(font, stack, part, x, bgY);
+            ctx.darkText(part, x, bgY);
             bgY += 8;
         }
     }
 
     @Override
-    protected void renderBg(
-            PoseStack stack,
-            float partialTicks,
-            int mouseX,
-            int mouseY
-    ) {
+    protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        this.background.draw(stack, bgX, bgY, backgroundWidth, backgroundHeight);
-        renderInventory(stack);
+        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        renderInventory(ctx);
     }
 
-    private void renderInventory(PoseStack stack) {
+    private void renderInventory(RenderContext ctx) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         int yCoord;
@@ -147,7 +136,7 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.gathererSlotY = Math.min(yCoord, gathererSlotY);
-            this.slot.draw(stack, xCoord, yCoord);
+            ctx.drawJei(this.slot, xCoord, yCoord);
         }
     }
 
@@ -160,13 +149,5 @@ public class JobUnlockConfirmScreen extends AbstractContainerScreen<JobUnlockCon
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
         return super.mouseClicked(mouseX, mouseY, p_97750_);
-    }
-
-    @Override
-    protected void renderLabels(
-            PoseStack p_97808_,
-            int p_97809_,
-            int p_97810_
-    ) {
     }
 }

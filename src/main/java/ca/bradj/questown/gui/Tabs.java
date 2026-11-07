@@ -81,4 +81,8 @@ public class Tabs {
         return false;
 
     }
+    public boolean hasTab(String titleKey) {
+        return tabs.stream().anyMatch(t -> t.titleKey().equals(titleKey));
+    }
+
 }

@@ -194,15 +194,13 @@ public final class PagedCardScreen<D> {
             List<D> cardsData
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
-        renderPageNum(
-                poseStack, font, bgX, cardsData, (s, pos, size) -> GuiComponent.fill(
-                        poseStack, pos.a(), pos.b(), size.a(), size.b(), 0x30000000
-                )
-        );
+        int totalPages = Pages.count(cardsData.size(), MAX_CARDS_PER_PAGE);
+        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+        drawSelectorStrip(ctx, previousPage, nextPage, bgX + backgroundWidth, pageString);
 
         // Render the page buttons
-        this.previousPage.render(poseStack, mouseX, mouseY, partialTicks);
-        this.nextPage.render(poseStack, mouseX, mouseY, partialTicks);
+        this.previousPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
+        this.nextPage.render(ctx.gui(), mouseX, mouseY, partialTicks);
     }
 
     private @Nullable List<Component> renderCards(
@@ -219,10 +217,10 @@ public final class PagedCardScreen<D> {
                 setRenderColorForCard.accept(card.data());
                 int x2 = card.coords().leftX();
                 int y2 = card.coords.topY();
-                this.cardBackground.draw(poseStack, x2, y2, CARD_WIDTH, cardHeight);
+                ctx.drawNineNine(this.cardBackground, x2, y2, CARD_WIDTH, cardHeight);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
-            List<Component> tt = renderCardContent.renderAndReturnTooltip(poseStack, card, mousePosition);
+            List<Component> tt = renderCardContent.renderAndReturnTooltip(ctx, card, mousePosition);
             if (tt == null) {
                 continue;
             }
@@ -246,33 +244,28 @@ public final class PagedCardScreen<D> {
         );
     }
 
-    private void renderPageNum(
-            PoseStack poseStack,
-            Font font,
-            int x,
-            List<D> cardsData,
-            TriConsumer<PoseStack, Pair<Integer, Integer>, Pair<Integer, Integer>> fill
+    /** The page selector's dark strip, with the text centred between the arrow buttons. Also used for the economics view toggle. */
+    static void drawSelectorStrip(
+            RenderContext ctx,
+            GuiIconButtonSmall previous,
+            GuiIconButtonSmall next,
+            int rightX,
+            String text
     ) {
-        // Draw page numbers
-        int xx = x + borderPadding + buttonWidth;
-        int y = nextPage.y;
-        int width = xx + backgroundWidth - borderPadding - buttonWidth;
-        int height = nextPage.y + buttonHeight;
-        fill.accept(
-                poseStack,
-                new Pair<>(xx, y),
-                new Pair<>(width, height)
-        );
-        int totalPages = (int) Math.ceil((double) cardsData.size() / MAX_CARDS_PER_PAGE);
-        String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
+        int y = next.y;
+        ctx.fill(previous.x + buttonWidth, y, rightX, y + buttonHeight, 0x30000000);
+        ImmutableRect2i area = MathUtil.union(previous.getArea(), next.getArea());
+        ImmutableRect2i textArea = MathUtil.centerTextArea(area, ctx.font(), text);
+        ctx.lightText(text, textArea.getX(), textArea.getY());
+    }
 
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, pageString);
-        Compat.drawLightText(font, poseStack, pageString, textArea.getX(), textArea.getY());
+    /** Back to page 1, after the list of cards changed. */
+    public void firstPage() {
+        currentPage = 0;
     }
 
     private void nextPage() {
-        int totalPages = (int) Math.ceil((double) cardsData.get().size() / MAX_CARDS_PER_PAGE);
+        int totalPages = Pages.count(cardsData.get().size(), MAX_CARDS_PER_PAGE);
         if (currentPage < totalPages - 1) {
             currentPage++;
         }

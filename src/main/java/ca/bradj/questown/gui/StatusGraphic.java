@@ -52,21 +52,11 @@ public class StatusGraphic {
     }
 
     public void render(
-            PoseStack stack
+            RenderContext rc
     ) {
         if (getSmoothedStatus() instanceof ProductionStatus ps) {
-            RenderSystem.setShaderTexture(0, ClientAccess.getArt(jobId, ps));
+            blit(rc.gui(), ClientAccess.getArt(jobId, ps), topLeft.get().x(), topLeft.get().y(), 0, 0, 32, 32, 32, 32);
         }
-        int srcX = 0;
-        int srcY = 0;
-        Coordinate l = topLeft.get();
-        int destX = l.x();
-        int destY = l.y();
-        int drawWidth = 32;
-        int drawHeight = 32;
-        int texWidth = 32;
-        int texHeight = 32;
-        blit(stack, destX, destY, srcX, srcY, drawWidth, drawHeight, texWidth, texHeight);
     }
 
     public boolean renderTooltip(

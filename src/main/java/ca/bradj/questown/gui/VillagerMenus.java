@@ -41,36 +41,32 @@ public class VillagerMenus {
             Player player,
             FriendlyByteBuf buf
     ) {
-        int i = buf.readInt();
-        JobID jobId = Jobs.getIdFromNetwork(buf);
-
-        int invSize = buf.readInt();
-        Collection<UIQuest> quests = VillagerQuestsContainer.readQuests(buf);
-        BlockPos flagPos = VillagerQuestsContainer.readFlagPos(buf);
-        VillagerStatsData stats = VillagerStatsMenu.read(buf);
-        VillagerEconomicsData econ = VillagerEconomicsMenu.read(buf);
-        boolean showBlockOfProgressTab = buf.readBoolean();
-        boolean alreadyPending = buf.readBoolean();
-
-        // TODO[Performance]: Rather than getting the entity, get the vUUID and slot locks
-        VisitorMobEntity e = (VisitorMobEntity) player.level.getEntity(i);
-        VillagerMenus menus = new VillagerMenus(e);
-        // Never provide these initializers with the entity, itself. Instead, pass the entity's UUID.
-        // It tends to cause client-side-only bugs that don't show up in the dev environment.
-        menus.initQuestsMenu(windowId, e.getUUID(), quests, flagPos, showBlockOfProgressTab);
-        menus.initVillagerStatsMenu(windowId, flagPos, stats, showBlockOfProgressTab);
+        VillagerMenusPayload p = VillagerMenusPayload.read(buf);
+        VillagerTabs.recordChangeRootAttention(p.villager, p.changeRootAttention);
+        VillagerTabs.recordShowChangeRootTab(p.villager, p.showChangeRootTab);
+        VillagerMenus menus = new VillagerMenus();
+        menus.initQuestsMenu(windowId, p.villager, p.quests, p.flagPos, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
+        VillagerStatsMenu statsMenu =
+                new VillagerStatsMenu(windowId, p.villager, p.flagPos, p.stats, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
+        // The villager may have despawned; the menu then shows the sent data only.
+        if (player.getLevel().getEntity(p.entityId) instanceof VisitorMobEntity local) {
+            statsMenu.attach(local);
+        }
+        menus.statsMenu = statsMenu;
         menus.initInventory(
                 windowId,
-                jobId,
+                p.jobId,
                 player,
-                e.getUUID(),
-                e.getSlotLocks(),
-                invSize,
-                flagPos,
-                showBlockOfProgressTab
+                p.villager,
+                p.slotLocks,
+                p.invSize,
+                p.flagPos,
+                p.showBlockOfProgressTab,
+                p.showSkillsTab,
+                p.showInventoryTab
         );
-        menus.initVillagerEconomicsMenu(windowId, flagPos, econ, showBlockOfProgressTab);
-        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, e.getUUID(), flagPos);
+        menus.initVillagerEconomicsMenu(windowId, p.villager, p.flagPos, p.econ, p.showBlockOfProgressTab, p.showSkillsTab, p.showInventoryTab);
+        menus.bopMenu = new VillagerBlockofProgressMenu(windowId, p.villager, p.flagPos, p.showSkillsTab, p.showInventoryTab, p.villagerDisplayName);
 
         SimpleContainer bopSlot = new SimpleContainer(1) {
             @Override
@@ -79,7 +75,19 @@ public class VillagerMenus {
             }
         };
 
-        menus.changeMenu = new JobChangeConfirmMenu(windowId, bopSlot, player.getInventory(), e.getUUID(), jobId, flagPos, alreadyPending);
+        menus.changeMenu = new JobChangeConfirmMenu(
+                windowId,
+                bopSlot,
+                player.getInventory(),
+                p.villager,
+                p.jobId,
+                p.flagPos,
+                p.jobChangeAlreadyPending,
+                p.showSkillsTab,
+                p.showInventoryTab,
+                p.promisedRoot,
+                new JobChangeConfirmMenu.FlagBop(p.flagBops)
+        );
         return menus;
     }
 
@@ -92,18 +100,35 @@ public class VillagerMenus {
             VillagerStatsData stats,
             VillagerEconomicsData econ,
             boolean showBlockOfProgressTab,
-            boolean jobChangeAlreadyPending
+            boolean showSkillsTab,
+            boolean showInventoryTab,
+            boolean jobChangeAlreadyPending,
+            String villagerDisplayName,
+            boolean changeRootAttention,
+            String promisedRoot,
+            boolean showChangeRootTab,
+            JobChangeConfirmMenu.FlagBop flagBop
     ) {
-        data.writeInt(e.getId());
-        data.writeUtf(jobId.rootId());
-        data.writeUtf(jobId.jobId());
-        data.writeInt(capacity);
-        VillagerQuestsContainer.write(data, quests, e.getFlagPos());
-        VillagerStatsMenu.write(stats, data);
-        VillagerEconomicsMenu.write(econ, data);
-        data.writeBoolean(showBlockOfProgressTab);
-        data.writeBoolean(
-                jobChangeAlreadyPending);
+        new VillagerMenusPayload(
+                e.getId(),
+                e.getUUID(),
+                jobId,
+                capacity,
+                quests,
+                e.getFlagPos(),
+                stats,
+                econ,
+                showBlockOfProgressTab,
+                showSkillsTab,
+                showInventoryTab,
+                jobChangeAlreadyPending,
+                e.getSlotLocks(),
+                villagerDisplayName == null ? "" : villagerDisplayName,
+                changeRootAttention,
+                promisedRoot,
+                showChangeRootTab,
+                flagBop.count()
+        ).write(data);
     }
 
     private InventoryAndStatusMenu initInventory(
@@ -124,7 +149,7 @@ public class VillagerMenus {
                     public int getMaxStackSize() {
                         return 1;
                     }
-                }, player.getInventory(), slotLocks, uuid, jobId, flagPos, showBlockOfProgressTab
+                }, player.getInventory(), slotLocks, uuid, jobId, flagPos, showBlockOfProgressTab, showSkillsTab, showInventoryTab
         );
         return invMenu;
     }
@@ -134,29 +159,24 @@ public class VillagerMenus {
             UUID uuid,
             Collection<UIQuest> quests,
             BlockPos flagPos,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
-        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos, showBlockOfProgressTab);
+        questsMenu = new VillagerQuestsContainer(windowId, uuid, quests, flagPos, showBlockOfProgressTab, showSkillsTab, showInventoryTab);
         return questsMenu;
-    }
-
-    public VillagerStatsMenu initVillagerStatsMenu(
-            int windowId,
-            BlockPos flagPos,
-            VillagerStatsData data,
-            boolean showBlockOfProgressTab
-    ) {
-        statsMenu = new VillagerStatsMenu(windowId, this.entity, flagPos, data, showBlockOfProgressTab);
-        return statsMenu;
     }
 
     public VillagerEconomicsMenu initVillagerEconomicsMenu(
             int windowId,
+            UUID villager,
             BlockPos flagPos,
             VillagerEconomicsData data,
-            boolean showBlockOfProgressTab
+            boolean showBlockOfProgressTab,
+            boolean showSkillsTab,
+            boolean showInventoryTab
     ) {
-        econMenu = new VillagerEconomicsMenu(windowId, this.entity, flagPos, data, showBlockOfProgressTab);
+        econMenu = new VillagerEconomicsMenu(windowId, villager, flagPos, data, showBlockOfProgressTab, showSkillsTab, showInventoryTab);
         return econMenu;
     }
 }

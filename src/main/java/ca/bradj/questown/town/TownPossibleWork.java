@@ -27,8 +27,13 @@ import com.google.common.collect.ImmutableList;
 import joptsimple.internal.Strings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.level.block.AbstractFurnaceBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.NumberFormat;
@@ -47,6 +52,9 @@ import static ca.bradj.questown.mc.Util.info;
  * For job status computation during execution, see {@link JobStatuses}.
  */
 public class TownPossibleWork {
+
+    /** The smelter fuel tag. An unlit furnace with something to smelt is reported as needing this, not as missing a room. */
+    public static final String SMELTER_FUEL_KEY = "#" + ItemTags.COALS.location().toString();
 
     private final UnsafeTown town = new UnsafeTown(getClass());
 

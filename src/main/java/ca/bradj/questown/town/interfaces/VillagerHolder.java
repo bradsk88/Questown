@@ -41,6 +41,14 @@ public interface VillagerHolder {
             UUID villagerId
     );
 
+    /** As above; with {@code showInventoryTab} false the menu has no inventory tab. */
+    void showUI(
+            ServerPlayer sender,
+            String type,
+            UUID villagerId,
+            boolean showInventoryTab
+    );
+
     /** The villager's "Villager N" name, or empty. */
     String displayNameFor(UUID villagerId);
 

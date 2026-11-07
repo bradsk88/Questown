@@ -1,7 +1,9 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.core.network.OpenItemJobsMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import net.minecraft.world.item.crafting.Ingredient;
 import ca.bradj.questown.core.network.RemoveQuestFromUIMessage;
 import ca.bradj.questown.town.special.SpecialQuests;
 import net.minecraft.core.BlockPos;
@@ -160,11 +162,24 @@ public abstract class AbstractQuestsContainer extends AbstractContainerMenu {
         return this.quests;
     }
 
+    public boolean isAllComplete() {
+        return false;
+    }
+
+    public boolean isMorningRewardPending() {
+        return false;
+    }
+
     public void sendRemoveRequest(UUID batchUUID) {
         BlockPos f = flagInfo.flagPos();
-        QuestownNetwork.CHANNEL.sendToServer(
+        QuestownNetwork.sendToServer(
                 new RemoveQuestFromUIMessage(batchUUID, f.getX(), f.getY(), f.getZ(), true)
         );
+    }
+
+    /** Opens the screen listing the jobs that make this item. */
+    public void sendOpenItemJobs(Ingredient wanted) {
+        QuestownNetwork.sendToServer(new OpenItemJobsMessage(flagInfo.flagPos(), wanted));
     }
 
     @Override
