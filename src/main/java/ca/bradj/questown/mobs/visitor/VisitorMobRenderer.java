@@ -1,7 +1,7 @@
 package ca.bradj.questown.mobs.visitor;
 
-import ca.bradj.questown.Questown;
-import com.google.common.collect.ImmutableList;
+import ca.bradj.questown.gui.Ingredients;
+import ca.bradj.questown.render.BubbleRenderer;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;

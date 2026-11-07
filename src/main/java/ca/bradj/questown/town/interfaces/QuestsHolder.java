@@ -45,6 +45,12 @@ public interface QuestsHolder {
             int count
     );
 
+    // A LOOT quest completes on items villagers bring back.
+    void addLootQuest(
+            ResourceLocation itemId,
+            int count
+    );
+
     // Credits LOOT quests matching an item a villager just brought back.
     void processLootQuests(MCTownItem extracted);
 
