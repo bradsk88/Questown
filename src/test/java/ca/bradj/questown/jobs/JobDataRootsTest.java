@@ -40,6 +40,20 @@ class JobDataRootsTest {
         Assertions.assertEquals(Map.of(), parentlessByRoot, "roots with more than one parentless job");
     }
 
+    /** Every crafter job names its own working art. */
+    @Test
+    void everyCrafterJobDeclaresItsWorkingArt() throws IOException, URISyntaxException {
+        List<String> missing = new ArrayList<>();
+        for (JsonObject job : allJobs()) {
+            String id = job.get("id").getAsString();
+            if (id.startsWith("crafter/") && !hasWorkingTexture(job)) {
+                missing.add(id);
+            }
+        }
+        Assertions.assertEquals(List.of(), missing, "crafter jobs without a \"working\" status texture");
+    }
+
+
     private static List<JsonObject> allJobs() throws IOException, URISyntaxException {
         URL dir = JobDataRootsTest.class.getClassLoader().getResource("data/questown/questown_jobs");
         Assertions.assertNotNull(dir, "job data directory on the test classpath");

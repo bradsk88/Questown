@@ -145,20 +145,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             TownQuests quests,
             VillagerUUID visitorUUID
     ) {
+        addUpgradeQuest(town, quests, visitorUUID, Set.of());
+    }
+
+    /** @param declinedFrom rooms whose upgrade the player just declined, so it isn't posted again */
+    public static void addUpgradeQuest(
+            TownInterface town,
+            TownQuests quests,
+            VillagerUUID visitorUUID,
+            Set<ResourceLocation> declinedFrom
+    ) {
         MCRewardList reward = defaultQuestCompletionRewards(town);
 
-        Collection<MCQuest> doneAndMaybeAlreadyUpgraded = quests.getAllForVillager(visitorUUID).stream()
-                                                                .filter(Quest::isComplete).toList();
-        List<MCQuest> doneAndReadyForFirstUpgrade = doneAndMaybeAlreadyUpgraded.stream()
-                                                                               // TODO: Filter out recipes that have already been slated for upgrade?
-                                                                               .filter(v -> v.fromRecipeID().isEmpty())
-                                                                               .toList();
-        Collection<MCQuest> villagerQuests = doneAndReadyForFirstUpgrade;
-
-        // Prefer upgrading non-upgraded quests, but move up to the next tier if there are none left
-        if (villagerQuests.isEmpty()) {
-            villagerQuests = doneAndMaybeAlreadyUpgraded;
-        }
+        Collection<MCQuest> villagerQuests = upgradeSources(quests.getAllForVillager(visitorUUID), declinedFrom);
 
         if (villagerQuests.isEmpty()) {
             QT.QUESTS_LOGGER.error(
@@ -241,13 +240,30 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     @NotNull
     private static List<List<String>> getItemKeyStrings(NonNullList<Ingredient> ing) {
         return ing.stream()
-                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(ForgeRegistries.ITEMS::getKey)
+                  .map(v -> Arrays.stream(v.getItems()).map(ItemStack::getItem).map(Loader::itemIdOf)
                                   .filter(Objects::nonNull).map(ResourceLocation::toString).toList()).toList();
     }
 
     /** Batch requests waiting to become procedural batches. */
     int pendingBatchRequests() {
         return questRequests.size();
+    }
+
+    /** The completed room quests an upgrade can build on: first-tier rooms if there are any, else upgraded ones, minus the declined. */
+    static List<MCQuest> upgradeSources(
+            Collection<MCQuest> villagerQuests,
+            Set<ResourceLocation> declinedFrom
+    ) {
+        List<MCQuest> done = villagerQuests.stream()
+                .filter(Quest::isComplete)
+                .filter(q -> !declinedFrom.contains(q.getWantedId()))
+                .toList();
+        // TODO: Filter out recipes that have already been slated for upgrade?
+        List<MCQuest> firstTier = done.stream().filter(q -> q.fromRecipeID().isEmpty()).toList();
+        if (firstTier.isEmpty()) {
+            return done;
+        }
+        return firstTier;
     }
 
     public static void addBatchForVisitor(
@@ -273,25 +289,21 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         quests.addBatch(batch);
     }
 
+    public static void addLootQuest(
+            TownFlagBlockEntity t,
+            TownQuests quests,
+            ResourceLocation itemId,
+            int count
+    ) {
+        @NotNull MCRewardList reward = defaultQuestCompletionRewards(t);
+        MCQuestBatch batch = new MCQuestBatch(null, null, new MCDelayedReward(t, reward));
+        batch.addLootQuest(null, itemId, count);
+        quests.addBatch(batch);
+    }
+
     public static ImmutableSet<VillagerUUID> getVillagers(TownQuests quests) {
         return ImmutableSet.copyOf(quests.questBatches.getAllBatches().stream().map(MCQuestBatch::getOwner)
                                                       .filter(Objects::nonNull).collect(Collectors.toSet()));
-    }
-
-    private static boolean sameItem(
-            ItemEconomicsData v,
-            MCTownItem z
-    ) {
-        return Ingredients.fromString(v.ingredientKey()).test(z.toMCItemStack());
-    }
-
-    private static boolean producesFood(
-            TownFlagBlockEntity town,
-            JobID j
-    ) {
-        return ServerJobsRegistry.getResults(town.getTownData(), j).stream().anyMatch(
-                i -> Ingredient.of(TagsInit.Items.VILLAGER_FOOD).test(i.toMCItemStack())
-        );
     }
 
     private static boolean isNotSpecial(ResourceLocation id) {
@@ -1033,6 +1045,13 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     private static final String GATHERER_ROOT = "gatherer";
+
+    /** The campfire quest is open. */
+    public boolean isCampfireQuestOpen() {
+        return getAll().stream().anyMatch(
+                q -> SpecialQuests.CAMPFIRE.equals(q.getWantedId()) && !q.isComplete()
+        );
+    }
 
     public ImmutableList<Quest<ResourceLocation, MCRoom>> getAll() {
         return ImmutableList.copyOf(questBatches.getAll().stream().map(v -> (Quest<ResourceLocation, MCRoom>) v)

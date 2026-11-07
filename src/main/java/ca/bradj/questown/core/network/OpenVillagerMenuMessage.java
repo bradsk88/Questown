@@ -22,6 +22,8 @@ public record OpenVillagerMenuMessage(
     public static final String CHANGE_ROOT = "change_root";
     public static final String ECONOMICS = "economics";
     public static final String BOP = "bop";
+    /** Not a tab: the server chooses which tab opens. */
+    public static final String INITIAL = "initial";
 
     public static void encode(OpenVillagerMenuMessage msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.flagX());

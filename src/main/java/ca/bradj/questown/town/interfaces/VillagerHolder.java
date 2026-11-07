@@ -27,9 +27,9 @@ import java.util.function.Consumer;
 public interface VillagerHolder {
     long size();
 
-    void addStatsListener(Consumer<VillagerStatsData> l);
+    void addStatsListener(UUID villager, Consumer<VillagerStatsData> l);
 
-    void removeStatsListener(Consumer<VillagerStatsData> villagerStatsMenu);
+    void removeStatsListener(UUID villager, Consumer<VillagerStatsData> villagerStatsMenu);
 
     Collection<LivingEntity> entities();
 
@@ -51,6 +51,15 @@ public interface VillagerHolder {
 
     /** The villager's "Villager N" name, or empty. */
     String displayNameFor(UUID villagerId);
+
+    /** How chat names a villager: its "Villager N" name, or a shortened UUID. */
+    default String labelFor(UUID villagerId) {
+        return label(displayNameFor(villagerId), villagerId);
+    }
+
+    static String label(String displayName, UUID villagerId) {
+        return displayName.isEmpty() ? ca.bradj.questown.core.UtilClean.truncateMiddle(villagerId) : displayName;
+    }
 
     /** Every villager's "Villager N" name; villagers without one are left out. */
     Map<UUID, String> displayNamesForAll();
@@ -92,6 +101,9 @@ public interface VillagerHolder {
             JobID newJob,
             boolean announce
     );
+
+    /** The player's switch from the skill tree: now (dropping any trip) or after the trip. */
+    void switchJob(VillagerUUID villagerUUID, JobID job, boolean afterTrip);
 
     /** Makes the villager a {@code job} worker now, as a Block of Progress job change does. {@link #changeJobForVillager} only sets the job. */
     void assignJob(
@@ -191,6 +203,8 @@ public interface VillagerHolder {
     );
 
     boolean isJobChangePending(VillagerUUID vuid);
+
+    @org.jetbrains.annotations.Nullable JobID getSwitchAfterTrip(VillagerUUID vuid);
 
     boolean isStarving(@Nullable VillagerUUID vuid);
 

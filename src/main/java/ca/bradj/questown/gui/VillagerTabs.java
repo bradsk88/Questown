@@ -216,6 +216,17 @@ public class VillagerTabs extends Tabs implements SubUI {
         return ImmutableList.copyOf(all.stream().filter(v -> !v.equals(except)).toList());
     }
 
+    /** The tab a villager menu opens on: change-job while it has a red dot, else inventory, or stats when there is no inventory tab. */
+    public static String initialTab(boolean changeRootAttention, boolean showInventoryTab) {
+        if (changeRootAttention) {
+            return OpenVillagerMenuMessage.CHANGE_ROOT;
+        }
+        if (showInventoryTab) {
+            return OpenVillagerMenuMessage.INVENTORY;
+        }
+        return OpenVillagerMenuMessage.STATS;
+    }
+
     public static Collection<String> all() {
         return except("");
     }
