@@ -163,9 +163,30 @@ public class TownQuestsHandle implements QuestsHolder {
     }
 
     @Override
-    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID) {
+    public void addEmptyRoomBatch() {
         TownFlagBlockEntity t = unsafeGetTown();
-        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID);
+        t.quests.addEmptyRoomBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addBasicsBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addBasicsBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addFirstWorkRequestBatch() {
+        TownFlagBlockEntity t = unsafeGetTown();
+        t.quests.addFirstWorkRequestBatch();
+        t.setChanged();
+    }
+
+    @Override
+    public void addRandomUpgradeQuestForVisitor(VillagerUUID visitorUUID, Set<ResourceLocation> declinedFrom) {
+        TownFlagBlockEntity t = unsafeGetTown();
+        TownQuests.addUpgradeQuest(t, t.quests, visitorUUID, declinedFrom);
         t.setChanged();
     }
 

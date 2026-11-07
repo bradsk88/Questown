@@ -1,6 +1,7 @@
 package ca.bradj.questown.gui;
 
-import ca.bradj.questown.Questown;
+import ca.bradj.questown.core.network.FlagCraftRecipes;
+import ca.bradj.questown.blocks.RoomBlock;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
@@ -375,7 +376,15 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         JobID job = JobID.fromRL(recipe.getWantedId());
         return ImmutableList.of(
                 Compat.translatable("menu.questown.quests.job_quest_1", job.jobId()),
-                Compat.translatable("menu.questown.quests.job_quest_2", job.rootId()),
+                Compat.translatable("menu.questown.quests.job_quest_2", Compat.translatable("jobs." + job.rootId())),
+                Compat.literal("Click for more info")
+        );
+    }
+
+    private static ImmutableList<Component> renderJobUnlockTooltip(UIQuest recipe) {
+        JobID job = JobID.fromRL(recipe.getWantedId());
+        return ImmutableList.of(
+                Compat.translatable("menu.questown.quests.job_unlock_1", Compat.translatable("jobs." + job.rootId())),
                 Compat.literal("Click for more info")
         );
     }

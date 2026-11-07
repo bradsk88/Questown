@@ -90,6 +90,7 @@ import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.sounds.SoundEvents;
 import org.jetbrains.annotations.NotNull;
@@ -845,6 +846,15 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     public void remove(RemovalReason p_146834_) {
         super.remove(p_146834_);
         if (p_146834_.equals(RemovalReason.KILLED)) {
+            QT.VILLAGER_LOGGER.info(
+                    "Townie {} died: damageSource={} directEntity={} pos=({}, {}, {})",
+                    this.getVUID(),
+                    getLastDamageSource(),
+                    getLastDamageSource() != null ? getLastDamageSource().getDirectEntity() : null,
+                    position().x,
+                    position().y,
+                    position().z
+            );
             for (int i = 0; i < getInventory().getContainerSize(); i++) {
                 getLevel().addFreshEntity(new ItemEntity(
                         getLevel(),
@@ -1062,6 +1072,7 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
     }
 
     // No door malus: vanilla treats a negative malus as impassable.
+
     @Override
     protected void registerGoals() {
         super.registerGoals();

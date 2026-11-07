@@ -34,9 +34,9 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static <B extends RoomBlock> RegistryObject<Block> register(RegistryObject<B> register) {
+    public static <B extends RoomBlock> Holder<Block> register(Holder<B> register) {
         ALL.add(register::get);
-        return (RegistryObject) register;
+        return (Holder) register;
     }
 
     @Override
@@ -55,7 +55,9 @@ public class BlockAsRoomEntity extends BlockEntity implements TownFlagSubEntity 
     }
 
     private Collection<ItemStack> dropWhenOrphaned(BlockPos flagPos) {
-        ItemStack toDrop = getBlockState().getBlock().asItem().getDefaultInstance();
+        Block b = getBlockState().getBlock();
+        ItemStack toDrop = b instanceof RoomBlock rb ? rb.getOrphanDropItem().getDefaultInstance()
+                : b.asItem().getDefaultInstance();
         TownFlagBlock.StoreParentOnNBT(toDrop, flagPos);
         return ImmutableList.of(toDrop);
     }

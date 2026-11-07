@@ -42,6 +42,9 @@ public class Work {
     private Overrides overrides;
     private boolean hasNoOutput;
     private @Nullable SlotPrecondition slotPrecondition;
+    /** True when the job joins its root's starting unlocks ({@code unlocked_with_root_job}). */
+    private boolean unlockedWithRootJob;
+
     /** XP per completion, or null for the formula. */
     private @Nullable Integer experience;
     /** {@code prefer_requested}: a full-day trip rolls twice and keeps requested items. */
@@ -88,6 +91,18 @@ public class Work {
         return specialGlobalRules;
     }
 
+    public boolean isUnlockedWithRootJob() {
+        return unlockedWithRootJob;
+    }
+
+    /** Whether a job joins its root's starting unlocks: it is a root (no parent), or it says so. */
+    public static boolean isUnlockedInitially(
+            @Nullable JobID parentID,
+            boolean unlockedWithRootJob
+    ) {
+        return parentID == null || unlockedWithRootJob;
+    }
+
     /** The first candidate unlocked with the root, else the first candidate. */
     public static <T> Optional<T> preferInitiallyUnlocked(
             List<T> candidates,
@@ -101,6 +116,11 @@ public class Work {
             return initial;
         }
         return candidates.stream().findFirst();
+    }
+
+    public Work withUnlockedWithRootJob(boolean unlockedWithRootJob) {
+        this.unlockedWithRootJob = unlockedWithRootJob;
+        return this;
     }
 
     public boolean prefersRequestedLoot() {
@@ -144,6 +164,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
     }
@@ -169,6 +190,7 @@ public class Work {
                 hasNoOutput,
                 specialGlobalRules
         );
+        work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
@@ -204,6 +226,7 @@ public class Work {
                 specialGlobalRules
         );
         work.overrides = overrides;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
         return work;
@@ -217,6 +240,7 @@ public class Work {
         );
         work.overrides = this.overrides;
         work.slotPrecondition = sp;
+        work.unlockedWithRootJob = unlockedWithRootJob;
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
         return work;

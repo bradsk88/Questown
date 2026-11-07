@@ -4,6 +4,7 @@ import ca.bradj.questown.core.VillagerUUID;
 import ca.bradj.questown.gui.QuestTypes;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.jobs.JobID;
+import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.serialization.MCRoom;
@@ -159,6 +160,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.status = QuestStatus.COMPLETED;
         q.completedOn = room;
         q.setFlavorText(this.getFlavorText());
+        q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         q.concurrentJobIdsEncoded = this.concurrentJobIdsEncoded;
         return q;
@@ -176,6 +178,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         q.ownerUUID = this.ownerUUID;
         q.status = QuestStatus.ACTIVE; // TODO: Use (and render) "lost" status?
         q.completedOn = null;
+        q.setOnboarding(this.isOnboarding());
         q.setDiscardable(this.isDiscardable());
         return q;
     }
@@ -188,6 +191,7 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
         private static final String NBT_RECIPE_ID = "recipe_id";
         private static final String NBT_FROM_RECIPE_ID = "from_recipe_id";
         private static final String NBT_FLAVOR_TEXT = "flavor_text";
+        private static final String NBT_ONBOARDING = "onboarding";
         private static final String NBT_DISCARDABLE = "discardable";
         private static final String NBT_CONCURRENT_JOB_IDS = "concurrent_job_ids";
         private static final String NBT_STATUS = "status";
@@ -223,6 +227,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             }
             if (quest.getFlavorText() != null) {
                 ct.putString(NBT_FLAVOR_TEXT, quest.getFlavorText());
+            }
+            if (quest.isOnboarding()) {
+                ct.putBoolean(NBT_ONBOARDING, true);
             }
             if (quest.isDiscardable()) {
                 ct.putBoolean(NBT_DISCARDABLE, true);
@@ -283,6 +290,9 @@ public class MCQuest extends Quest<ResourceLocation, MCRoom> {
             );
             if (nbt.contains(NBT_FLAVOR_TEXT)) {
                 quest.setFlavorText(nbt.getString(NBT_FLAVOR_TEXT));
+            }
+            if (nbt.getBoolean(NBT_ONBOARDING)) {
+                quest.setOnboarding(true);
             }
             if (nbt.getBoolean(NBT_DISCARDABLE)) {
                 quest.setDiscardable(true);
