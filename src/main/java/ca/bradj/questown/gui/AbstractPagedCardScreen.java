@@ -121,6 +121,10 @@ public abstract class AbstractPagedCardScreen<T extends AbstractContainerMenu, D
         return this.delegate.getExtraAreas();
     }
 
+    protected void firstPage() {
+        delegate.firstPage();
+    }
+
     protected int backgroundHeight() {
         return delegate.backgroundHeight;
     }

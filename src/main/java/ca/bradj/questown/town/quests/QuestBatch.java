@@ -134,6 +134,20 @@ public class QuestBatch<KEY, ROOM extends Room, QUEST extends Quest<KEY, ROOM>, 
         return true;
     }
 
+    /** On load only: marks a saved completed quest complete again without claiming its reward or firing events. */
+    public boolean markRecipeAsCompleteForReplay(@Nullable ROOM room, @Nullable KEY recipe) {
+        Stream<QUEST> matches = this.quests.stream().filter(v -> recipe.equals(v.getWantedId()));
+        Optional<QUEST> incomplete = matches.filter(v -> !v.isComplete()).findFirst();
+        if (incomplete.isEmpty()) {
+            return false;
+        }
+        QUEST quest = incomplete.get();
+        this.quests.remove(quest);
+        QUEST updated = this.questFactory.completed(room, quest);
+        this.quests.add(updated);
+        return true;
+    }
+
     public boolean canMarkRecipeAsConverted(
             KEY oldRecipeID,
             KEY newRecipeID
