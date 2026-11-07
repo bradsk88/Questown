@@ -56,9 +56,22 @@ public class WallDetection {
         return false;
     }
 
+    /** True when a two-block-tall villager can stand at {@code dp}: feet and head both passable. Rooms a villager can't enter are rejected with this. */
+    public static boolean IsWalkable(ServerLevel level, Position dp, int y) {
+        return isPassable(level, Positions.ToBlock(dp, y)) && isPassable(
+                level,
+                Positions.ToBlock(dp, y).above()
+        );
+    }
+
     /** True when the cell is open at the feet, as opposed to filled by something like a chest. */
     public static boolean IsFloorOpen(ServerLevel level, Position dp, int y) {
         return isPassable(level, Positions.ToBlock(dp, y));
+    }
+
+    private static boolean isPassable(ServerLevel level, BlockPos bp) {
+        BlockState bs = level.getBlockState(bp);
+        return bs.isAir() || bs.getCollisionShape(level, bp).isEmpty();
     }
 
     public static boolean IsEmpty(ServerLevel level, Position dp, int y) {
@@ -76,6 +89,11 @@ public class WallDetection {
         }
         return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
+
+    private static final TagKey<Block> C_GLASS_BLOCKS =
+            Compat.blockTag(new ResourceLocation("c", "glass_blocks"));
+    private static final TagKey<Block> C_GLASS_PANES =
+            Compat.blockTag(new ResourceLocation("c", "glass_panes"));
 
     public static boolean isSolid(
             BlockPos bp,

@@ -74,6 +74,7 @@ public class TownMessages {
             QT.FLAG_LOGGER.debug("Skipping tutorial toast before TownMessages was initialized: {} {}", titleKey, descriptionKey);
             return;
         }
+        QT.FLAG_LOGGER.info("Broadcasting tutorial toast: {} {}", titleKey, descriptionKey);
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             QuestownNetwork.sendToPlayer(p,
                     new ShowTutorialToastMessage(titleKey, descriptionKey));
