@@ -87,4 +87,9 @@ public interface Delegator<ENTITY> {
     ImmutableMap<UUID, ImmutableSet<JobID>> getUnlockedJobs();
 
     ImmutableSet<JobID> getChildJobsKnownToExist(JobID jobId);
+
+    /** The villager's "Villager N" name; empty when it has none. */
+    default String displayNameFor(UUID vuid) {
+        return "";
+    }
 }

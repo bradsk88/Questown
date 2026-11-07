@@ -52,6 +52,11 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
     private int currentPage = 0;
     private Map<Position, Runnable> removes = new HashMap<>();
 
+    // Wider hit boxes for the bottom-band toggles; the glyph alone is too small.
+    private record WideRegion(int width, Runnable fn) {}
+
+    private Map<Position, WideRegion> wideRegions = new HashMap<>();
+
     public WorkScreen(
             TownWorkContainer container,
             Inventory playerInv,
@@ -258,6 +263,15 @@ public class WorkScreen extends AbstractContainerScreen<TownWorkContainer> {
             double y,
             int p_97750_
     ) {
+        for (Map.Entry<Position, WideRegion> w : wideRegions.entrySet()) {
+            int buttonX = w.getKey().x;
+            int buttonY = w.getKey().z;
+            int width = w.getValue().width();
+            if (x >= buttonX && y >= buttonY && x < buttonX + width && y < buttonY + CHECKBOX_SIZE) {
+                w.getValue().fn().run();
+                return true;
+            }
+        }
         for (Map.Entry<Position, Runnable> p : removes.entrySet()) {
             int buttonX = p.getKey().x;
             int buttonY = p.getKey().z;

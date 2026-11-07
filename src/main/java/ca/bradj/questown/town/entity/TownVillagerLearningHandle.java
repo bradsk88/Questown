@@ -187,6 +187,21 @@ public class TownVillagerLearningHandle {
         return false;
     }
 
+    /** The jobs the town knows exist: revealed parents and children across villagers, plus unlocked jobs. */
+    public ImmutableSet<JobID> getTownKnownJobs() {
+        ImmutableSet.Builder<JobID> b = ImmutableSet.builder();
+        for (Map<JobID, Set<JobID>> villagerKnown : jobsKnownToExist.values()) {
+            for (Map.Entry<JobID, Set<JobID>> pc : villagerKnown.entrySet()) {
+                b.add(pc.getKey());
+                b.addAll(pc.getValue());
+            }
+        }
+        for (HashSet<JobID> ids : unlockedJobs.values()) {
+            b.addAll(ids);
+        }
+        return b.build();
+    }
+
     public boolean isUnlocked(UUID villagerUUID, JobID jobID) {
         HashSet<JobID> set = unlockedJobs.get(villagerUUID);
         return set != null && set.contains(jobID);

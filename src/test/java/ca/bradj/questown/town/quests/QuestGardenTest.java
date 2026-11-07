@@ -358,6 +358,96 @@ class QuestGardenTest {
         );
     }
 
-    // TODO: Test: Reject duplicates recipes until after reaching ideal threshold
+    /** One bed quest per grow until the batch covers the shortfall, then room quests. */
+    @Test
+    public void testShouldAcceptMultipleBeds_UntilShortfallCovered() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected String getRandomRoom(Collection<String> rooms) {
+                return rooms.iterator().next();
+            }
+        };
+        ImmutableList<String> allRooms = ImmutableList.of("soup_pot");
+        Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
+        Assertions.assertIterableEquals(ImmutableList.of("bed"), qg.get());
+        Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
+        Assertions.assertIterableEquals(ImmutableList.of("bed", "bed"), qg.get());
+        Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
+        Assertions.assertIterableEquals(ImmutableList.of("bed", "bed", "bed"), qg.get());
+        Assertions.assertTrue(qg.grow(() -> 3, ImmutableList::of, () -> allRooms));
+        Assertions.assertIterableEquals(ImmutableList.of("bed", "bed", "bed", "soup_pot"), qg.get());
+    }
 
+    /** A batch doesn't hold the same room request twice; the repeat waits for a later batch. */
+    @Test
+    public void testShouldAddNeededRoomOnce_EvenWhenNeededMultipleTimes() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        for (int i = 0; i < 3; i++) {
+            Assertions.assertTrue(qg.grow(
+                    () -> 0,
+                    () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                    () -> ImmutableList.of("kitchen", "armory", "bedroom")
+            ));
+        }
+        Assertions.assertIterableEquals(ImmutableList.of("kitchen"), qg.get());
+    }
+
+    @Test
+    public void testShouldFallBackToRandomRoom_WhenAllNeededRoomsAreAlreadyRequested() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected String getRandomRoom(Collection<String> rooms) {
+                return ImmutableList.copyOf(rooms).get(1);
+            }
+
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        Assertions.assertTrue(qg.grow(
+                () -> 0,
+                () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                () -> ImmutableList.of("kitchen", "armory", "bedroom")
+        ));
+        Assertions.assertTrue(qg.grow(
+                () -> 0,
+                () -> ImmutableList.of(new RoomNeed<>("kitchen", 3, 3)),
+                () -> ImmutableList.of("kitchen", "armory", "bedroom")
+        ));
+        Assertions.assertIterableEquals(
+                ImmutableList.of("kitchen", "armory"), qg.get()
+        );
+    }
+
+    @Test
+    public void testShouldNotRepeatRandomRoomInBatch() {
+        AbstractQuestGarden<List<String>, String> qg = new TestQuestGarden(
+                0, Integer.MAX_VALUE, Integer.MAX_VALUE
+        ) {
+            @Override
+            protected boolean questAlreadyRequested(List<String> batch, String id) {
+                return batch.contains(id);
+            }
+        };
+        for (int i = 0; i < 3; i++) {
+            Assertions.assertTrue(qg.grow(
+                    () -> 0,
+                    ImmutableList::of,
+                    () -> ImmutableList.of("kitchen", "armory")
+            ));
+        }
+        Assertions.assertIterableEquals(ImmutableList.of("kitchen"), qg.get());
+    }
 }

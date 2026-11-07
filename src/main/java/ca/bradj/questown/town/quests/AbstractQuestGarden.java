@@ -1,8 +1,7 @@
 package ca.bradj.questown.town.quests;
 
-import ca.bradj.questown.core.Config;
-
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -67,9 +66,16 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             Supplier<Collection<RoomNeed<ROOM_ID>>> neededRooms,
             Supplier<Collection<ROOM_ID>> allRecipes
     ) {
-        if (hasEnoughBeds.get() || hasBedAlready(batch)) {
+        // Post a bed quest per missing bed, then room quests.
+        int need = missingBeds.get();
+        if (need <= 0 || bedQuestCount(batch) >= need) {
             Collection<RoomNeed<ROOM_ID>> nr = neededRooms.get();
-            if (nr.isEmpty()) {
+            // A recipe already in the batch waits for a later batch.
+            List<ROOM_ID> fresh = nr.stream()
+                                    .map(RoomNeed::id)
+                                    .filter(id -> !questAlreadyRequested(batch, id))
+                                    .toList();
+            if (fresh.isEmpty()) {
                 ROOM_ID randomRoom = getRandomRoom(allRecipes.get());
                 if (shouldSkip(randomRoom)) {
                     return true;
@@ -78,13 +84,11 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
                 return true;
             }
 
-            if (nr.size() == 1) {
-                ROOM_ID id = nr.iterator().next().id();
-                addAndRecord(id);
+            if (fresh.size() == 1) {
+                addAndRecord(fresh.get(0));
                 return true;
             }
-            ROOM_ID randomNeededRoom = getRandomRoom(nr.stream().map(RoomNeed::id).toList());
-            addAndRecord(randomNeededRoom);
+            addAndRecord(getRandomRoom(fresh));
             return true;
         }
         // TODO: Can we pre-compute the next villager's name?
@@ -104,7 +108,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
         costSoFar += cost;
     }
 
-    protected abstract boolean hasBedAlready(BATCH batch);
+    protected abstract int bedQuestCount(BATCH batch);
 
     private boolean shouldSkip(
             ROOM_ID id
@@ -114,7 +118,7 @@ public abstract class AbstractQuestGarden<BATCH, ROOM_ID> {
             return true;
         }
         if (questAlreadyRequested(batch, id)) {
-            newCost = (int) (newCost * Config.DUPLICATE_QUEST_COST_FACTOR.get());
+            return true;
         }
         if (ticksSoFar < idealTicks && (newCost < maxCost / 4f)) {
             // Skip basic rooms early on

@@ -21,4 +21,9 @@ public interface IStatus<S extends IStatus<S>> {
     @Nullable String getCategoryId();
 
     boolean isBusy();
+
+    /** A villager on downtime has no status; it counts as not busy. */
+    static boolean isBusy(@Nullable IStatus<?> status) {
+        return status != null && status.isBusy();
+    }
 }

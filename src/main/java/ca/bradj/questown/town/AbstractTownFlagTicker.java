@@ -152,8 +152,17 @@ public abstract class AbstractTownFlagTicker<TICK_DATA, VILLAGERS> {
         detectMorning(data, signals);
 
         if (!mornings.empty()) {
-            onMorning(data, mornings.pop());
+            runMorning(data, mornings.pop());
         }
+    }
+
+    /** Runs the morning pass and marks this morning done, so it doesn't run twice. Use this, not onMorning. */
+    public void runMorning(
+            TICK_DATA data,
+            long newTime
+    ) {
+        isMorning = true;
+        onMorning(data, newTime);
     }
 
     /** The morning pass after a campfire sleep, on game time: a sleep moves the day time but not the game time. */
