@@ -171,7 +171,7 @@ public class Work {
     }
 
     public Work withPriority(int priority) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,
@@ -193,12 +193,13 @@ public class Work {
         work.experience = experience;
         work.prefersRequestedLoot = prefersRequestedLoot;
         work.lootTableDefault = lootTableDefault;
+        return work;
     }
 
     public Work withNeeds(
             Function<List<MCHeldItem>, Collection<Ingredient>> needz
     ) {
-        return new Work(
+        Work work = new Work(
                 id,
                 parentID,
                 icon,

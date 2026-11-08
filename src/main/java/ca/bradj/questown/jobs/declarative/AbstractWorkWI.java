@@ -65,15 +65,17 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         }
 
 
+        boolean actionCompleted = false;
         if (!bs.hasWorkLeft()) {
             this.preStateChangeCallback.accept(extra, new WorkSpot<>(bp, curState, 0, bp));
             bs = bs.incrProcessing().setWorkLeft(nextStepWork).setCount(0);
+            actionCompleted = true;
         }
-        if (nextStepTime <= 0) {
-            return setJobBlockState(extra, bp, bs);
-        } else {
-            return setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
-        }
+        // Only the write that moves into the next state starts its timer.
+        TOWN result = !actionCompleted || nextStepTime <= 0
+                ? setJobBlockState(extra, bp, bs)
+                : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
+        return result;
     }
 
     protected abstract TOWN setJobBlockStateWithTimer(

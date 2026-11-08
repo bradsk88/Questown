@@ -97,7 +97,10 @@ public class TownVillagerHandlerSerializer {
         ImmutableMap<UUID, Integer> displayNumbers = deserializeMap(compound, NBT_DISPLAY_NUMBERS, simpleInt);
         int highestDisplayNumber = compound.getInt(NBT_DISPLAY_HIGHEST);
 
-        villagerHandle.initialize(fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending);
+        villagerHandle.initialize(
+                fullness, moodEffects, damage, unlockedJobs, knownJobs, experience, level, pending,
+                guaranteedRoots, preRolls, displayNumbers, highestDisplayNumber
+        );
     }
 
     private <X> ImmutableMap<UUID, X> deserializeMap(
