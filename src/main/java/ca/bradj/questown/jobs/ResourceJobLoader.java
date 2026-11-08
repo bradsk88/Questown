@@ -178,7 +178,7 @@ public class ResourceJobLoader {
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
-                    cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
+                    cookWork = cookWork.withExperience(experience(obj));
                     cookWork = cookWork.withUnlockedWithRootJob(
                             unlockedWithRootJob(obj) || starter
                     );
@@ -388,7 +388,7 @@ public class ResourceJobLoader {
             wb = wb.withUnlockedWithRootJob(unlockedWithRootJob(object)).withAvailableAtLevel(availableAtLevel(object))
                    .withExperience(experience(object)).withPrefersRequestedLoot(prefersRequestedLoot(object))
                    .withLootTableDefault(lootTableDefault(object));
-            return wb.withProficiencyId(proficiencyId(object));
+            return wb;
         }
 
         private @Nullable Overrides overridesFromJsonV2(JsonObject object) {
@@ -512,7 +512,7 @@ public class ResourceJobLoader {
                 work = work.withUnlockedWithRootJob(unlockedWithRootJob(obj)).withAvailableAtLevel(availableAtLevel(obj))
                            .withExperience(experience(obj)).withPrefersRequestedLoot(prefersRequestedLoot(obj))
                            .withLootTableDefault(lootTableDefault(obj));
-                return work.withProficiencyId(proficiencyId(obj));
+                return work;
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to parse block: " + e.getMessage(), e);
             }
@@ -1110,10 +1110,6 @@ public class ResourceJobLoader {
             String k
     ) {
         return required(object, k, JsonElement::getAsInt);
-    }
-
-    private static @Nullable String proficiencyId(JsonObject object) {
-        return optional(object, "proficiency_id", JsonElement::getAsString);
     }
 
     /** {@code unlocked_with_root_job}: a job that joins its root's starting unlocks. Absent means false. */

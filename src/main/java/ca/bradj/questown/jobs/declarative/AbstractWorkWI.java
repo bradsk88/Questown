@@ -75,18 +75,7 @@ public abstract class AbstractWorkWI<POS, EXTRA, ITEM, TOWN> {
         TOWN result = !actionCompleted || nextStepTime <= 0
                 ? setJobBlockState(extra, bp, bs)
                 : setJobBlockStateWithTimer(extra, bp, bs, nextStepTime);
-        if (actionCompleted) {
-            return onWorkActionCompleted(extra, result);
-        }
         return result;
-    }
-
-    /** Called once per completed work action, in real time and during a warp; where proficiency levels up. May return an updated {@code town}. */
-    protected TOWN onWorkActionCompleted(
-            EXTRA extra,
-            TOWN town
-    ) {
-        return town;
     }
 
     protected abstract TOWN setJobBlockStateWithTimer(

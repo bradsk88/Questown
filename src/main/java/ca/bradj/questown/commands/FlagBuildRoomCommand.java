@@ -11,7 +11,7 @@ import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
-// Dev-only: build a room around a door, as the helper chicken does.
+// Dev-only: build a room shell around a door.
 public class FlagBuildRoomCommand {
     public static void register(CommandDispatcher<CommandSourceStack> src) {
         RequiredArgumentBuilder<CommandSourceStack, Coordinates> posArg = Commands.argument(

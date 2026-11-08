@@ -5,7 +5,6 @@ import ca.bradj.questown.loader.HolderRegistry;
 import ca.bradj.questown.loader.Loader;
 
 import ca.bradj.questown.Questown;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
@@ -26,12 +25,7 @@ public class EntitiesInit {
                     .build(new ResourceLocation(Questown.MODID, "visitor").toString())
     );
 
-    public static final Holder<EntityType<HelperChickenEntity>> HELPER_CHICKEN = ENTITY_TYPES.register(
-            "helper_chicken",
-            () -> EntityType.Builder.of(HelperChickenEntity::new, MobCategory.CREATURE)
-                    .sized(0.4f, 0.7f)
-                    .build(new ResourceLocation(Questown.MODID, "helper_chicken").toString())
-    );
+    // TODO: The helper chicken is not in this line yet. For its implementation see #409, #410, #411 and #412.
 
     public static void boot() {}
 }

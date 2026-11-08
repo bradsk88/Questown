@@ -4,9 +4,6 @@ import ca.bradj.questown.QT;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.UIQuest;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcConditions;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
-import ca.bradj.questown.mobs.helperchicken.ChickenBeatState;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.entity.TownFlags;
@@ -27,7 +24,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.crafting.Ingredient;
 
-/** Dev-only, read-only: what a player sees on right-clicking a flag or the helper chicken. Inspecting counts as looking, for the chicken's lessons. */
+/** Dev-only, read-only: what a player sees on right-clicking a flag. */
 public class QtDevInspectCommand {
 
     public static void register(
@@ -55,9 +52,7 @@ public class QtDevInspectCommand {
         inspect.then(Commands.literal("doors")
                 .then(posArg().executes(css -> runTab(css.getSource(),
                         BlockPosArgument.getLoadedBlockPos(css, "pos"), "doors"))));
-        inspect.then(Commands.literal("chicken")
-                .then(posArg().executes(css -> runChicken(css.getSource(),
-                        BlockPosArgument.getLoadedBlockPos(css, "pos")))));
+        // TODO: `_qtdev inspect chicken` showed the helper chicken's lesson. For its implementation see #409, #410, #411 and #412.
         src.register(Commands.literal("_qtdev").then(inspect));
     }
 
@@ -72,7 +67,6 @@ public class QtDevInspectCommand {
             QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
             return 1;
         }
-        ChickenArcUiObservations.markFlagUiOpened(source.getLevel(), flag.getTownFlagBasePos());
         FlagTabsEmbedding.FlagInfo info = flag.getInfo();
         QT.FLAG_LOGGER.info("[_qtdev inspect] flag {} - the menu a player would see:",
                 pos.toShortString());
@@ -99,11 +93,7 @@ public class QtDevInspectCommand {
             return 0;
         }
         switch (tab) {
-            case "villagers" -> {
-                ChickenArcUiObservations.markVillagerUiOpened(
-                        source.getLevel(), flag.getTownFlagBasePos());
-                printVillagers(flag);
-            }
+            case "villagers" -> printVillagers(flag);
             case "quests" -> printQuests(flag);
             case "economy" -> printEconomy(flag);
             case "blocks" -> printBlocks(flag);
@@ -111,113 +101,6 @@ public class QtDevInspectCommand {
             default -> QT.FLAG_LOGGER.warn("[_qtdev inspect] unknown tab {}", tab);
         }
         return 0;
-    }
-
-    /** The chicken's lesson as a player sees it, plus what is in the player's hand. */
-    private static int runChicken(CommandSourceStack source, BlockPos pos) {
-        TownFlagBlockEntity flag = flagAt(pos);
-        if (flag == null) {
-            QT.FLAG_LOGGER.warn("[_qtdev inspect] no town flag at {}", pos);
-            return 1;
-        }
-        if (!flag.getChickenEverSpawned()) {
-            QT.FLAG_LOGGER.warn("[_qtdev inspect] no helper chicken is spawned for flag {} "
-                    + "(the onboarding arc is inert; start it with _qtdev spawn_chicken {})",
-                    flag.getTownFlagBasePos(), flag.getTownFlagBasePos());
-            return 1;
-        }
-        ChickenBeatState state = flag.getChickenBeatState();
-        if (state == ChickenBeatState.COMPLETE) {
-            QT.FLAG_LOGGER.info("[_qtdev inspect] the chicken has finished guiding you; the flag is "
-                    + "onboarding complete.");
-            return 0;
-        }
-        if (state == ChickenBeatState.FORFEIT) {
-            QT.FLAG_LOGGER.info("[_qtdev inspect] the chicken has stopped guiding you.");
-            return 0;
-        }
-        QT.FLAG_LOGGER.info("[_qtdev inspect] {}", chickenBehavior(flag, state));
-        // A clickheld that does nothing usually means the wrong item, so show what is held.
-        printHeld(source, flag);
-        return 0;
-    }
-
-    private static void printHeld(CommandSourceStack source, TownFlagBlockEntity flag) {
-        Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
-        if (player == null) {
-            QT.FLAG_LOGGER.info("[_qtdev inspect] held: (no player near the flag)");
-            return;
-        }
-        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
-        QT.FLAG_LOGGER.info("[_qtdev inspect] held: {}",
-                held.isEmpty() ? "(empty)" : held.getHoverName().getString());
-    }
-
-    /** The chicken's behaviour as a player sees it, which changes with the item the player holds. */
-    private static String chickenBehavior(TownFlagBlockEntity flag, ChickenBeatState state) {
-        Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
-        boolean holdsWand = ChickenArcConditions.hasWandInInventory(player);
-        return switch (state) {
-            case WAITING_FOR_STICK -> holdsWand
-                    ? "The chicken looks at your town wand, then back to the flag base. "
-                            + "[Use the town wand on the flag base]"
-                    : "The chicken looks at where you are holding your hand, then back to the "
-                            + "flag base. [Get the town wand - right-click the flag with a stick]";
-            case WAITING_FOR_WAND_ON_CAMPFIRE -> {
-                boolean campfireLit = ChickenArcConditions.isCampfireLit(
-                        flag.getServerLevel(), flag.getTownFlagBasePos()
-                );
-                if (campfireLit) {
-                    yield holdsWand
-                            ? "The chicken looks at the lit campfire near the flag. [Use the town wand on the campfire]"
-                            : "The chicken looks at the lit campfire near the flag, then at your empty hand. "
-                                    + "[Hold the town wand and use it on the campfire]";
-                }
-                yield holdsWand
-                        ? "The chicken looks at an empty spot near the flag, then at your town wand. "
-                                + "[Place and light a campfire near the flag]"
-                        : "The chicken looks at an empty spot near the flag, then at your empty hand. "
-                                + "[Place and light a campfire near the flag, then hold the town wand]";
-            }
-            case SUNSET_AND_MAP -> "The chicken looks at the dark sky, then at the campfire. "
-                    + "[Come back at night and sleep on the campfire with the wand]";
-            case WAITING_FOR_WALL_BLOCK -> "The chicken pecks at a gap in the wall. [Put a solid "
-                    + "block in the gap the chicken pecks at]";
-            case WAITING_FOR_DOOR -> "The chicken points at a spot near the flag. [Put a door "
-                    + "near the flag - _qtdev place_door with no coordinate drops it in the "
-                    + "right spot]";
-            case WAITING_FOR_WAND_ON_DOOR -> holdsWand
-                    ? "The chicken looks at the door, then at your town wand. [Use the town wand "
-                            + "on the door]"
-                    : "The chicken looks at the door, then at your empty hand. [Hold the town wand "
-                            + "and use it on the door]";
-            case WAITING_FOR_SIGN -> signInRoomLine(flag);
-            case WAITING_FOR_CHEST -> "The chicken brings a chest into the room. "
-                    + "[Stand in the room and watch the chicken drop a chest]";
-            case WAITING_FOR_ROOM_BUILD -> "The chicken pecks at the door and lays blocks "
-                    + "around it. [The chicken builds a room around the door — watch it]";
-            case WAITING_FOR_PRESSURE_PLATE -> "The chicken looks at the gate, then at your hand. "
-                    + "[Make a welcome mat and put it on the gate]";
-            case WAITING_FOR_FREE_FOOD -> "The chicken looks at your hand, then at the flag. "
-                    + "[Feed the flag free food]";
-            case WAITING_FOR_VILLAGER_UI -> "The chicken looks at a villager in the town. [Look at "
-                    + "a villager]";
-            case WAITING_FOR_FLAG_UI -> "The chicken looks at the flag. [Look at the flag]";
-            case AWAITING_WORLDLY_SEEDS_DELIVERY -> "The chicken looks back at the flag. [A room "
-                    + "quest is still open - look at the quests for which room it needs]";
-            case COMPLETE, FORFEIT -> "";
-        };
-    }
-
-    /** Where the sign can go: the first empty cell inside a registered room. */
-    private static String signInRoomLine(TownFlagBlockEntity flag) {
-        BlockPos cell = flag.interiorCells().stream().findFirst().orElse(null);
-        if (cell == null) {
-            return "The chicken looks into the room and pecks. [Put a sign in the room - "
-                    + "register the door and build a room first]";
-        }
-        return "The chicken looks into the room and pecks. [Put a sign in the room - at "
-                + cell.getX() + ", " + cell.getY() + ", " + cell.getZ() + "]";
     }
 
     private static void listTabs(FlagTabsEmbedding.FlagInfo info, TownFlagBlockEntity flag) {
@@ -369,8 +252,8 @@ public class QtDevInspectCommand {
                 if (q.status == Quest.QuestStatus.ACTIVE) {
                     QT.FLAG_LOGGER.info(
                             "[_qtdev inspect]     create the room with _qtdev build_room <door pos>: "
-                                + "register a door and lay a room shell around it, the way the "
-                                + "helper chicken builds one, then put this quest's recipe block "
+                                + "register a door and lay a room shell around it, "
+                                + "then put this quest's recipe block "
                                 + "inside.");
                 }
             }

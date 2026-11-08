@@ -176,10 +176,7 @@ public class ItemsInit {
             () -> new HospitalBedItem(BlocksInit.HOSPITAL_BED.get(), Questown.DEFAULT_ITEM_PROPS.stacksTo(1))
     );
 
-    public static final Holder<Item> STONE_CHICKEN_STATUE = ITEMS.register(
-            StoneChickenStatue.ITEM_ID,
-            () -> new BlockItem(BlocksInit.STONE_CHICKEN_STATUE.get(), Questown.DEFAULT_ITEM_PROPS)
-    );
+    // TODO: The helper chicken is not in this line yet. For its implementation see #409, #410, #411 and #412.
 
     public static final Holder<Item> WORLDLY_SEEDS = ITEMS.register(
             WorldlySeeds.ITEM_ID,

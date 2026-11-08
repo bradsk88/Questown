@@ -2,7 +2,6 @@ package ca.bradj.questown.commands;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcConditions;
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
 import ca.bradj.roomrecipes.logic.InclusiveSpaces;
@@ -11,6 +10,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
@@ -37,7 +37,7 @@ public class FlagPlacePlayerCommand {
             QT.FLAG_LOGGER.warn("[place_player] no flag to place the player for");
             return 1;
         }
-        Player player = ChickenArcConditions.findNearestPlayerForFlag(flag);
+        Player player = nearestPlayer(flag);
         if (player == null) {
             QT.FLAG_LOGGER.warn("[place_player] no player near flag {}", flag.getUUID());
             return 1;
@@ -105,5 +105,16 @@ public class FlagPlacePlayerCommand {
             }
         }
         return null;
+    }
+
+    private static final double PLAYER_SEARCH_RADIUS = 16.0D;
+
+    private static @Nullable Player nearestPlayer(TownFlagBlockEntity flag) {
+        ServerLevel level = flag.getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        BlockPos p = flag.getTownFlagBasePos();
+        return level.getNearestPlayer(p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, PLAYER_SEARCH_RADIUS, false);
     }
 }

@@ -1,4 +1,4 @@
-package ca.bradj.questown.mobs.helperchicken;
+package ca.bradj.questown.town;
 
 import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
@@ -10,10 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/** Plans the room the helper chicken builds around a registered door: a {@value #ROOM_SIZE} by {@value #ROOM_SIZE} ring of two-high walls, with no roof or floor. */
-public final class ChickenRoomShellPlan {
+/** Plans a room shell around a registered door: a {@value #ROOM_SIZE} by {@value #ROOM_SIZE} ring of two-high walls, with no roof or floor. */
+public final class RoomShellPlan {
 
-    /** 4x4 with walls leaves a 2x2 inside, room for the chicken and the player at once. */
+    /** 4x4 with walls leaves a 2x2 inside, room for two to stand at once. */
     static final int ROOM_SIZE = 4;
     static final int INTERIOR_DEPTH = ROOM_SIZE - 1;
 
@@ -24,7 +24,7 @@ public final class ChickenRoomShellPlan {
     public record Plan(List<BlockStep> steps, BlockPos chestCell) {
     }
 
-    private ChickenRoomShellPlan() {
+    private RoomShellPlan() {
     }
 
     /** Which way the doorway faces. */

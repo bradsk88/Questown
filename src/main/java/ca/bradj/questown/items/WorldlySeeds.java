@@ -2,7 +2,8 @@ package ca.bradj.questown.items;
 
 import net.minecraft.world.item.Item;
 
-/** Worldly Seeds: having them in a town chest moves the helper chicken's lessons on. They do nothing else. */
+/** Worldly Seeds. They do nothing yet. */
+// TODO: Worldly Seeds moved the helper chicken's lessons on. For its implementation see #409, #410, #411 and #412.
 public class WorldlySeeds extends Item {
     public static final String ITEM_ID = "worldly_seeds";
 

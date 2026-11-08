@@ -24,7 +24,7 @@ import java.util.List;
  */
 public final class EmptyTownTerrainShaper {
 
-    public static final Path DEFAULT_STRUCTURE_PATH = ChickenScaffoldingNbtEditor.DEFAULT_STRUCTURE_PATH;
+    public static final Path DEFAULT_STRUCTURE_PATH = Path.of("src/main/resources/data/questown/structures/empty_town.nbt");
 
     public static final int CEILING_HEIGHT = 16;
     public static final int FLOOR_DEPTH = 3;

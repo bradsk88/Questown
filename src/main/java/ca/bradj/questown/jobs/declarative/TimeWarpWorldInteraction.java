@@ -128,19 +128,9 @@ public class TimeWarpWorldInteraction extends
 
     @Override
     protected int getWorkSpeedOf10(Inputs inputs) {
-        TownState.VillagerData<MCHeldItem> villager = inputs.town().getVillager(villagerIndex);
-        Collection<Effect> effects = villager.getEffectsAndClearExpired(Util.getTick(inputs.level()));
-        int base = TownVillagerMoods.compute(effects) / 10;
-        float mult = proficiencyMultiplier(
-                getProficiencyId(),
-                villager::getProficiencyLevel
-        );
-        return applyProficiencyToWorkSpeed(base, mult);
-    }
-
-    @Override
-    protected @Nullable String getProficiencyId() {
-        return ServerJobsRegistry.getProficiencyId(getJobId());
+        Collection<Effect> effects = inputs.town().getVillager(villagerIndex)
+                                           .getEffectsAndClearExpired(Util.getTick(inputs.level()));
+        return Math.max(TownVillagerMoods.compute(effects) / 10, 1);
     }
 
     @Override
@@ -149,22 +139,6 @@ public class TimeWarpWorldInteraction extends
             Integer nextStepTime
     ) {
         return (int) (getTimeFactor(inputs) * nextStepTime);
-    }
-
-    @Override
-    protected MCTownState onWorkActionCompleted(
-            Inputs inputs,
-            MCTownState town
-    ) {
-        String profId = getProficiencyId();
-        if (profId == null || town == null) {
-            return town;
-        }
-        TownState.VillagerData<MCHeldItem> villager = town.getVillager(villagerIndex);
-        return town.withVillagerData(
-                villagerIndex,
-                villager.withProficiencies(levelProficiencies(villager.getProficiencies(), profId))
-        );
     }
 
     private float getTimeFactor(Inputs inputs) {

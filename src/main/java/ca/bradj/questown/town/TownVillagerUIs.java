@@ -569,11 +569,7 @@ public class TownVillagerUIs {
                         showInventoryTab ? JobChangeConfirmMenu.FlagBop.NONE : flagBop(sender, e)
                 )
         );
-        if (e.getFlagPos() != null) {
-            ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations.markVillagerUiOpened(
-                    sender.serverLevel(), e.getFlagPos()
-            );
-        }
+        // TODO: Opening a villager's menu counted for the helper chicken's lesson. For its implementation see #409, #410, #411 and #412.
     }
 
 }

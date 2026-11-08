@@ -1,4 +1,4 @@
-package ca.bradj.questown.mobs.helperchicken;
+package ca.bradj.questown.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-/** The helper chicken's bubble icons, drawn through walls: no depth test or depth write, translucent, both faces. */
+/** Bubble icons over an entity, drawn through walls: no depth test or depth write, translucent, both faces. */
 @OnlyIn(Dist.CLIENT)
 public final class BubbleRenderType extends RenderStateShard {
 

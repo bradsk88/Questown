@@ -1,8 +1,6 @@
 package ca.bradj.questown.commands.test;
 
-import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.HelperChickenRotationDetector;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -15,41 +13,28 @@ import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Arena setup shared by the jobs track and the chicken-arc track: the same destroy-and-flatten
+ * Arena setup shared by the jobs track and the village scenarios: the same destroy-and-flatten
  * loop against one record of options.
- *
- * <p>The chicken track opts into a wider arena, a {@link HelperChickenEntity} kill-sweep, a
- * fake-player inventory clear and a {@link HelperChickenRotationDetector} retry-counter clear;
- * the jobs track ({@link PreparerOptions#jobsTrackDefaults()}) uses none of them.
  */
 public final class TestArenaPreparer {
 
     /**
      * Knobs for one preparer invocation. Jobs track uses
-     * {@link #jobsTrackDefaults()}; chicken track builds a custom value with
-     * opt-ins enabled.
+     * {@link #jobsTrackDefaults()}; the village scenarios build a wider one.
      *
      * @param halfWidth                         half-width of the square arena in
      *                                          blocks (so a value of 7 produces
      *                                          a 15x15 area)
-     * @param killHelperChickens                when true, kill every
-     *                                          {@link HelperChickenEntity} inside
-     *                                          the arena bounds
      * @param clearFakePlayerInventory          when true, clear the fake player's
      *                                          inventory (only has effect if
      *                                          {@code fakePlayer} is non-null)
-     * @param clearRotationDetectorRetryCounters when true, clear
-     *                                          {@link HelperChickenRotationDetector}'s
-     *                                          static retry counter map
      */
     public record PreparerOptions(
             int halfWidth,
-            boolean killHelperChickens,
-            boolean clearFakePlayerInventory,
-            boolean clearRotationDetectorRetryCounters
+            boolean clearFakePlayerInventory
     ) {
         public static PreparerOptions jobsTrackDefaults() {
-            return new PreparerOptions(7, false, false, false);
+            return new PreparerOptions(7, false);
         }
     }
 
@@ -61,7 +46,6 @@ public final class TestArenaPreparer {
     public record PreparerResult(
             int flagsDestroyed,
             int strayVisitorsKilled,
-            int helperChickensKilled,
             @Nullable BlockPos newOrigin
     ) {}
 
@@ -69,9 +53,8 @@ public final class TestArenaPreparer {
     }
 
     /**
-     * Destroy nearby flags, kill stray visitors, optionally kill helper chickens,
-     * optionally clear the fake player's inventory, optionally clear the
-     * rotation-detector retry counters.
+     * Destroy nearby flags, kill stray visitors, optionally clear the fake
+     * player's inventory.
      *
      * <p>This mirrors {@link TestExecutor}'s {@code destroyNearbyFlags} phase
      * with opt-in extensions. Does <em>not</em> flatten — see {@link #flatten}.
@@ -108,25 +91,10 @@ public final class TestArenaPreparer {
             e.kill();
             stray++;
         }
-        int chickens = 0;
-        if (options.killHelperChickens()) {
-            // Chickens wander; prior-scenario survivors routinely drift 20+ blocks
-            // from origin. Use a wide sweep so later scenarios start clean, and
-            // additionally discard any entity bound to this origin via ownerFlagPos
-            // so wanderers outside the bounds still get cleaned up.
-            AABB wide = new AABB(origin.offset(-128, -16, -128)).minmax(new AABB(origin.offset(128, 32, 128)));
-            for (HelperChickenEntity e : level.getEntitiesOfClass(HelperChickenEntity.class, wide)) {
-                e.discard();
-                chickens++;
-            }
-        }
         if (options.clearFakePlayerInventory() && fakePlayer != null) {
             fakePlayer.getInventory().clearContent();
         }
-        if (options.clearRotationDetectorRetryCounters()) {
-            HelperChickenRotationDetector.clearRetryCounters();
-        }
-        return new PreparerResult(destroyed, stray, chickens, firstFlagPos);
+        return new PreparerResult(destroyed, stray, firstFlagPos);
     }
 
     /**

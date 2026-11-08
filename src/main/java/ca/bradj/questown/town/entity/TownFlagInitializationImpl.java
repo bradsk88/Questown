@@ -200,13 +200,6 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
 
-    @Override
-    public CompoundTag serializeChickenEverSpawned() {
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("value", flag.getChickenEverSpawned());
-        return t;
-    }
-
     public CompoundTag serializeBoardAutoRequest() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.isBoardAutoRequest());
@@ -237,51 +230,9 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     }
 
     @Override
-    public CompoundTag serializeChickenBeatState() {
-        CompoundTag t = new CompoundTag();
-        t.putString("value", flag.getChickenBeatState().name());
-        return t;
-    }
-
-    @Override
-    public CompoundTag serializeChickenFirstGatherWorldlySeedsFired() {
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("value", flag.getChickenFirstGatherWorldlySeedsFired());
-        return t;
-    }
-
-    @Override
     public CompoundTag serializeFirstHunterLootGuaranteeFired() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());
-        return t;
-    }
-
-    @Override
-    public CompoundTag serializeChickenArcForfeit() {
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("value", flag.getChickenArcForfeit());
-        return t;
-    }
-
-    @Override
-    public CompoundTag serializeChickenStructureRotation() {
-        CompoundTag t = new CompoundTag();
-        t.putString("value", flag.getChickenStructureRotation().name());
-        return t;
-    }
-
-    @Override
-    public CompoundTag serializeChickenRotationDetected() {
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("value", flag.getChickenRotationDetected());
-        return t;
-    }
-
-    @Override
-    public CompoundTag serializeChickenSunsetChestSpawned() {
-        CompoundTag t = new CompoundTag();
-        t.putBoolean("value", flag.getChickenSunsetChestSpawned());
         return t;
     }
 }

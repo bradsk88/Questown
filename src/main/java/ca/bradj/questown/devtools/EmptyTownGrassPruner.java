@@ -14,12 +14,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Removes grass from {@code empty_town.nbt} except within a block of the flag and of the helper
- * chicken's room. Run the disabled test entry point, commit the NBT, and disable it again.
+ * Removes grass from {@code empty_town.nbt} except within a block of the flag and of the first
+ * room. Run the disabled test entry point, commit the NBT, and disable it again.
  */
 public final class EmptyTownGrassPruner {
 
-    public static final Path DEFAULT_STRUCTURE_PATH = ChickenScaffoldingNbtEditor.DEFAULT_STRUCTURE_PATH;
+    public static final Path DEFAULT_STRUCTURE_PATH = Path.of("src/main/resources/data/questown/structures/empty_town.nbt");
 
     private static final String PALETTE_KEY = "palette";
     private static final String BLOCKS_KEY = "blocks";
