@@ -454,6 +454,7 @@ public class DeclarativeJobs {
             Predicate<POS> isJobBlock,
             Predicate<POS> hasCorrectState
     ) {
+        boolean matched = false;
         for (POS pos : room.getContainedBlocks().keySet()) {
             if (isJobBlock.test(pos) && hasCorrectState.test(pos)) {
                 matched = true;

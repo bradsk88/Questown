@@ -76,6 +76,9 @@ public class DeclarativeJob extends
     private final WorkLocation location;
     private final @NotNull Integer maxState;
     private final JobID jobId;
+
+    // Counts supply takes, for the [PROBE:supplies] log line.
+    private static final java.util.concurrent.atomic.AtomicLong SUPPLY_TOOK_CNT = new java.util.concurrent.atomic.AtomicLong();
     private final ExpirationRules expiration;
     private boolean finishedProductNeedsStorage = true;
     private final long totalDuration;
@@ -246,6 +249,7 @@ public class DeclarativeJob extends
     ) {
         boolean r = location.isJobBlock().test(ctx.withBlockAlreadyUsed(ticker.hasWorkedRecently() || hasInserted(0))
                                              .withJobAlreadyStarted(true));
+        return r;
     }
 
     @NotNull
@@ -423,6 +427,7 @@ public class DeclarativeJob extends
                 checks::getToolsForStep,
                 MCHeldItem::fromTown
         );
+        return r;
     }
 
 //    private @NotNull JobTownProvider<MCRoom> makeTownProviderForTick(
@@ -670,6 +675,8 @@ public class DeclarativeJob extends
                 recipe::getRecipe,
                 journal.getItems(),
                 (item) -> {
+                    SUPPLY_TOOK_CNT.incrementAndGet();
+                    QT.JOB_LOGGER.dev("[PROBE:supplies] job={} TOOK item={} (totalTakes={})", jobId, item, SUPPLY_TOOK_CNT.get());
                     this.journal.addItem(MCHeldItem.fromTown(item));
                     this.clearJobSite();
                 },
@@ -1027,7 +1034,89 @@ public class DeclarativeJob extends
             BlockPos entityBlockPos,
             long currentTick
     ) {
+        Long before = this.lastSupplyTick;
         this.tryGetSupplies(town, roomsNeedingInput, entityBlockPos, currentTick);
+        collectingStall.observe(
+                journal.getStatus().isCollectingSupplies(),
+                !java.util.Objects.equals(this.lastSupplyTick, before),
+                currentTick,
+                () -> describeCollectingStall(town, roomsNeedingInput, entityBlockPos),
+                msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg)
+        );
+    }
+
+    private final CollectingStallTrace collectingStall = new CollectingStallTrace();
+
+    private String describeCollectingStall(
+            TownInterface town,
+            RoomsNeedingVillagerInput<MCRoom, ResourceLocation, BlockPos> roomsNeedingInput,
+            BlockPos entityBlockPos
+    ) {
+        StringBuilder b = new StringBuilder();
+        b.append("status=").append(journal.getStatus())
+         .append(" held=").append(journal.getItems().stream().filter(i -> !i.isEmpty()).map(MCHeldItem::getShortName).toList())
+         .append(" suppliesTarget=").append(suppliesTarget == null ? "none" : suppliesTarget.toShortString(false))
+         .append(" statesNeedingInput=").append(roomsNeedingInput.getNonEmptyStates());
+        appendSupplyWalk(b, entityBlockPos);
+        appendNavigation(b, town);
+        appendSpots(b, "own", town.getWorkStatusHandle(ownerUUID));
+        appendSpots(b, "town", town.getWorkStatusHandle(null));
+        return b.toString();
+    }
+
+    /** Where the villager stands, where it is walking for the supply chest, the distance, and the chest's room. */
+    private void appendSupplyWalk(StringBuilder b, BlockPos entityBlockPos) {
+        b.append(" pos=").append(entityBlockPos.toShortString());
+        if (suppliesTarget == null) {
+            return;
+        }
+        BlockPos walk = navTargetForContainer(suppliesTarget);
+        b.append(" walkTarget=").append(walk.toShortString())
+         .append(" dist=").append(String.format("%.1f", Math.sqrt(entityBlockPos.distSqr(walk))))
+         .append(" chestRoom=").append(suppliesTarget.getRoom());
+    }
+
+    private void appendNavigation(StringBuilder b, TownInterface town) {
+        net.minecraft.world.entity.Mob mob = town.getVillagerHandle().entities().stream()
+                .filter(e -> e.getUUID().equals(ownerUUID))
+                .filter(e -> e instanceof net.minecraft.world.entity.Mob)
+                .map(e -> (net.minecraft.world.entity.Mob) e)
+                .findFirst().orElse(null);
+        if (mob == null) {
+            b.append(" entity=none");
+            return;
+        }
+        b.append(" brainWalkTarget=").append(mob.getBrain()
+                .getMemory(net.minecraft.world.entity.ai.memory.MemoryModuleType.WALK_TARGET)
+                .map(w -> w.getTarget().currentBlockPosition().toShortString())
+                .orElse("none"));
+        net.minecraft.world.level.pathfinder.Path path = mob.getNavigation().getPath();
+        b.append(" navDone=").append(mob.getNavigation().isDone());
+        if (path == null || path.getEndNode() == null) {
+            b.append(" pathEnd=none");
+            return;
+        }
+        b.append(" pathEnd=").append(path.getEndNode().asBlockPos().toShortString())
+         .append(" pathReaches=").append(path.canReach());
+    }
+
+    private void appendSpots(StringBuilder b, String label, Object handle) {
+        if (!(handle instanceof ca.bradj.questown.town.AbstractWorkStatusStore<?, ?, ?, ?> store)) {
+            b.append(" ").append(label).append("=?");
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?> s = (ca.bradj.questown.town.AbstractWorkStatusStore<BlockPos, ?, ?, ?>) store;
+        b.append(" ").append(label).append("=[");
+        s.getAll().forEach((pos, st) -> {
+            if (st == null || st.processingState() == 0) {
+                return;
+            }
+            b.append(pos.toShortString()).append(":").append(st.processingState())
+             .append(" timer=").append(s.getTimeToNextState(pos))
+             .append(" claimable=").append(s.canClaim(pos, () -> makeClaim(ownerUUID))).append("; ");
+        });
+        b.append("]");
     }
 
     boolean isValidWalkTargetForDeps(TownInterface town, BlockPos bp) {
