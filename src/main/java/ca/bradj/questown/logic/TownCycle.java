@@ -16,10 +16,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public class TownCycle {
 
@@ -68,13 +70,36 @@ public class TownCycle {
     public static Optional<BlockPos> findCampfire(
             BlockPos pos, Level level
     ) {
+        return findCampfire(pos, level, bs -> true);
+    }
+
+    /** As above, with an extra check on the campfire's state (for example, that it is lit). */
+    public static Optional<BlockPos> findCampfire(
+            BlockPos pos, Level level, Predicate<BlockState> match
+    ) {
         // TODO: Move to RoomRecipes?
 
         int radius = Compat.configGet(Config.CAMPFIRE_SEARCH_RADIUS).get();
+        for (int y : CampfireRange.Y_OFFSETS) {
+            Optional<BlockPos> found = findCampfireAtOffset(pos, level, match, radius, y);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<BlockPos> findCampfireAtOffset(
+            BlockPos pos, Level level, Predicate<BlockState> match, int radius, int y
+    ) {
         for(int z = -radius; z < radius; ++z) {
             for(int x = -radius; x < radius; ++x) {
-                BlockPos cfPos = pos.offset(x, 0, z);
-                if (level.getBlockState(cfPos).getBlock().equals(Blocks.CAMPFIRE)) {
+                BlockPos cfPos = pos.offset(x, y, z);
+                BlockState bs = level.getBlockState(cfPos);
+                if (!bs.is(Blocks.CAMPFIRE)) {
+                    continue;
+                }
+                if (match.test(bs)) {
                     return Optional.of(cfPos);
                 }
             }

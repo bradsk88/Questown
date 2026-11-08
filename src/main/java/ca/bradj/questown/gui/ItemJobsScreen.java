@@ -12,8 +12,6 @@ import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
-import mezz.jei.common.util.ImmutableRect2i;
-import mezz.jei.common.util.MathUtil;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -223,7 +221,7 @@ public class ItemJobsScreen extends CompatScreen {
             ctx.renderItemAndDecorations(bop, flagBopIconX(), flagBopIconY());
         }
         String renderString = skillVillager == null ? "Jobs:" : title.getString() + ":";
-        ImmutableRect2i textArea = getTitleArea();
+        GuiRect textArea = getTitleArea();
         ctx.lightText(renderString, textArea.getX(), textArea.getY());
         Ingredients.render(
                 ctx,
@@ -234,7 +232,7 @@ public class ItemJobsScreen extends CompatScreen {
         List<Component> cardTooltip = this.delegate.afterRender(ctx, mouseX, mouseY, partialTicks, jobs, false);
         if (jobs.isEmpty()) {
             // Under the page buttons, so it never covers "Page 1 / 1".
-            ImmutableRect2i nav = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
+            GuiRect nav = GuiRect.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
             ctx.darkTextWrap(
                     new Coordinate(nav.getX(), nav.getY() + nav.getHeight() + 6),
                     nav.getWidth(),
@@ -256,7 +254,7 @@ public class ItemJobsScreen extends CompatScreen {
             double y,
             int p_94697_
     ) {
-        @NotNull ImmutableRect2i ta = getTitleArea();
+        @NotNull GuiRect ta = getTitleArea();
         Supplier<Boolean> in = () -> UtilClean.isCoordInBox(x, y, ta.getX(), ta.getY(), ta.getWidth(), ta.getHeight());
         if (in.get() && !requestedItem.isEmpty()) {
             AddWorkFromUIMessage m = new AddWorkFromUIMessage(requestedItem, flagPos, REJECTED);
@@ -265,11 +263,11 @@ public class ItemJobsScreen extends CompatScreen {
         return super.mouseClicked(x, y, p_94697_);
     }
 
-    private @NotNull ImmutableRect2i getTitleArea() {
+    private @NotNull GuiRect getTitleArea() {
         String sizeString = "Jobs:XXX";
-        ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
+        GuiRect pageArea = GuiRect.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
         pageArea = pageArea.moveUp(16);
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, sizeString);
+        GuiRect textArea = GuiRect.centerTextArea(pageArea, font, sizeString);
         return textArea;
     }
 
@@ -277,7 +275,7 @@ public class ItemJobsScreen extends CompatScreen {
             RenderContext ctx,
             int mouseX,
             int mouseY,
-            ImmutableRect2i textArea
+            GuiRect textArea
     ) {
         if (UtilClean.isCoordInBox(
                 mouseX,
@@ -410,14 +408,14 @@ public class ItemJobsScreen extends CompatScreen {
             RenderContext rc,
             UIJob d
     ) {
-        ImmutableRect2i pageArea = MathUtil.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
+        GuiRect pageArea = GuiRect.union(delegate.previousPage.getArea(), delegate.nextPage.getArea());
         pageArea = pageArea.moveDown(20);
         Component jobName = Compat.translatable(
                 "menu.common.job_name",
                 Jobs.getRootNameComponent(d.jobId()),
                 Jobs.getVariantNameComponent(d.jobId())
         );
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, font, jobName);
+        GuiRect textArea = GuiRect.centerTextArea(pageArea, font, jobName);
         rc.darkText(jobName, textArea.getX(), textArea.getY());
     }
 

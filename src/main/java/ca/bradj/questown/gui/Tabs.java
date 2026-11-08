@@ -1,24 +1,22 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.UtilClean;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
 
 import java.util.function.Consumer;
 
 public class Tabs {
     private final ImmutableList<Tab> tabs;
-    private final IDrawableStatic tab;
-    private final IDrawableStatic unTab;
+    private final GuiSprite tab;
+    private final GuiSprite unTab;
 
     private final int X_OFFSET = 6;
     private final int Y_OFFSET = 3;
 
     public Tabs(ImmutableList<Tab> tabs) {
         this.tabs = tabs;
-        this.tab = JEI.getTabSelected();
-        this.unTab = JEI.getTabUnselected();
+        this.tab = GuiArt.getTabSelected();
+        this.unTab = GuiArt.getTabUnselected();
     }
 
     public boolean renderTooltip(
@@ -45,13 +43,13 @@ public class Tabs {
             int bgY
     ) {
         for (int i = 0; i < tabs.size(); i++) {
-            IDrawableStatic tab = unTab;
+            GuiSprite tab = unTab;
             if (tabs.get(i).selected()) {
                 tab = this.tab;
             }
             int tabX = bgX + (tab.getWidth() * i);
             int tabY = bgY - tab.getHeight();
-            tab.draw(rc.gui(), tabX + X_OFFSET, tabY + Y_OFFSET);
+            tab.draw(rc, tabX + X_OFFSET, tabY + Y_OFFSET);
             tabs.get(i).renderFunc().accept(rc, tabX, tabY);
             if (tabs.get(i).hasNotification()) {
                 rc.fill(tabX + tab.getWidth() - 2, tabY + Y_OFFSET + 2, tabX + tab.getWidth() + 2, tabY + Y_OFFSET + 6, 0xFFFF3333);

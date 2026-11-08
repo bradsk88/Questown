@@ -17,6 +17,7 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.gui.FlagTabs;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.mc.MapC;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
@@ -48,12 +49,10 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraft.world.level.material.Material;
-import net.minecraft.world.level.material.MaterialColor;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -71,6 +70,7 @@ public class TownFlagBlock extends BaseEntityBlock {
     public static final String ITEM_ID = "flag_base";
     public static final Item.Properties ITEM_PROPS = new Item.Properties();
     public static final Property<Boolean> INACTIVE = BooleanProperty.create("inactive");
+    public static final EnumProperty<FlagPhase> PHASE = EnumProperty.create("phase", FlagPhase.class);
     // A relocation deed waits above this flag.
     public static final Property<Boolean> DEED_AVAILABLE = BooleanProperty.create("deed_available");
     // The flag holds as many Blocks of Progress as it can; more would be lost.
@@ -79,15 +79,19 @@ public class TownFlagBlock extends BaseEntityBlock {
 
     public TownFlagBlock() {
         super(
-                BlockBehaviour.Properties.of(Material.STONE, MaterialColor.COLOR_GRAY)
+                Compat.P.of().mapColor(MapC.COLOR_GRAY)
                                          .strength(10.0F, 1200.0F)
-                                         .noOcclusion()
+                                         .noOcclusion().impl()
         );
-        this.registerDefaultState(this.stateDefinition.any().setValue(INACTIVE, false));
+        this.registerDefaultState(this.stateDefinition.any()
+                                                       .setValue(INACTIVE, false)
+                                                       .setValue(PHASE, FlagPhase.ACTIVE)
+                                                       .setValue(DEED_AVAILABLE, false)
+                                                       .setValue(BOP_FULL, false));
     }
 
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51385_) {
-        p_51385_.add(INACTIVE);
+        p_51385_.add(INACTIVE, PHASE, DEED_AVAILABLE, BOP_FULL);
     }
 
     public static String itemId(WallType wallType) {
@@ -109,7 +113,8 @@ public class TownFlagBlock extends BaseEntityBlock {
     }
 
     public static @Nullable BlockPos GetParentPosFromNBT(ItemStack itemInHand) {
-        if (itemInHand.getTag() == null) {
+        net.minecraft.nbt.CompoundTag data = Compat.itemDataTag(itemInHand);
+        if (data.isEmpty()) {
             QT.ITEM_LOGGER.error("Missing NBT tag on {}", itemInHand);
             return null;
         }
@@ -259,6 +264,17 @@ public class TownFlagBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
+    @Override
+    public float getDestroyProgress(
+            BlockState state,
+            Player player,
+            BlockGetter level,
+            BlockPos pos
+    ) {
+        // The town flag can't be mined: that would destroy the town. Moving it goes through the shutdown ritual.
+        return 0.0F;
+    }
+
     @Nullable
     @Override
     public BlockEntity newBlockEntity(
@@ -372,8 +388,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     info.showEconTab() && info.bonusFoodAvailable()
             );
             entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
-            // Any flag tab counts for the chicken's "look at the flag" lesson.
-            ChickenArcUiObservations.markFlagUiOpened(level, pos);
+            // TODO: Opening a flag tab counted for the helper chicken's "look at the flag" lesson. For its implementation see #409, #410, #411 and #412.
         } else {
             if (!entity.isInitializing()) {
                 entity.initializeFreshFlag(true);

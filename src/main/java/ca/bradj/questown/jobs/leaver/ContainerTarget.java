@@ -105,6 +105,37 @@ public class ContainerTarget<C extends ContainerTarget.Container<I>, I extends I
         return this.toShortString(true);
     }
 
+    /** Puts one item in the first empty slot, or returns null when the container is full. */
+    public @Nullable ContainerTarget<C, I> withItemAdded(I item) {
+        for (int i = 0; i < container.size(); i++) {
+            if (!container.getItem(i).isEmpty()) {
+                continue;
+            }
+            container.setItem(i, item);
+            return new ContainerTarget<>(
+                    position,
+                    yPosition,
+                    interactPosition,
+                    container,
+                    check,
+                    associate,
+                    canAccept,
+                    rankingBoost
+            );
+        }
+        return null;
+    }
+
+    public int countEmptySlots() {
+        int empty = 0;
+        for (int i = 0; i < container.size(); i++) {
+            if (container.getItem(i).isEmpty()) {
+                empty++;
+            }
+        }
+        return empty;
+    }
+
     public @Nullable Map.Entry<ContainerTarget<C, I>, I> withItemRemoved(Predicate<I> itemCheck) {
         for (int i = 0; i < container.size(); i++) {
             if (itemCheck.test(container.getItem(i))) {

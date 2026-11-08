@@ -1,8 +1,11 @@
 package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown._vanilla.TreeFeatureResolver;
+import ca.bradj.questown._vanilla.VoidLevel;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.integration.minecraft.DisplaySlots;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -29,8 +32,10 @@ import ca.bradj.questown.loader.Loader;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.OptionalInt;
 
@@ -104,21 +109,78 @@ public class MinecraftWorldAccess implements QTWorldAccess {
 
     @Override
     public List<ItemStack> chopTree(BlockPos trunkPos) {
-        Block trunkBlock = level.getBlockState(trunkPos).getBlock();
+        BlockState trunkState = level.getBlockState(trunkPos);
+        // Only logs.
+        if (!trunkState.is(BlockTags.LOGS)) {
+            return List.of();
+        }
+        Block trunkBlock = trunkState.getBlock();
         List<ItemStack> drops = new ArrayList<>();
         chopTreeRecursive(trunkPos, trunkBlock, drops);
         return drops;
     }
 
     private void chopTreeRecursive(BlockPos center, Block matchBlock, List<ItemStack> drops) {
-        for (BlockPos adjacent : BlockPos.betweenClosed(center.offset(-1, 0, -1), center.offset(1, 1, 1))) {
-            if (!level.getBlockState(adjacent).is(matchBlock)) {
+        // Iterative, so a large log region doesn't overflow the stack.
+        Deque<BlockPos> work = new ArrayDeque<>();
+        work.push(center);
+        while (!work.isEmpty()) {
+            BlockPos cur = work.pop();
+            if (!level.getBlockState(cur).is(matchBlock)) {
                 continue;
             }
-            level.removeBlock(adjacent, true);
+            level.removeBlock(cur, true);
             drops.add(matchBlock.asItem().getDefaultInstance());
-            chopTreeRecursive(adjacent.immutable(), matchBlock, drops);
+            for (BlockPos adjacent : BlockPos.betweenClosed(
+                    cur.offset(-1, 0, -1), cur.offset(1, 1, 1)
+            )) {
+                if (level.getBlockState(adjacent).is(matchBlock)) {
+                    work.push(adjacent.immutable());
+                }
+            }
         }
+    }
+
+    @Override
+    public boolean canTreeGrowAt(BlockPos pos, ItemStack sapling) {
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // A dry run: only whether it would grow.
+        return r.feature().place(
+                r.config(), new VoidLevel(level),
+                level.getChunkSource().getGenerator(), TreeFeatureResolver.seededFor(pos), pos
+        );
+    }
+
+    @Override
+    public boolean growTreeAt(BlockPos pos, ItemStack sapling) {
+        TreeFeatureResolver.Resolved r = TreeFeatureResolver.resolve(sapling, level.registryAccess());
+        if (r == null) {
+            return false;
+        }
+        // Clear the sapling first, as vanilla does; restore it if growth fails.
+        BlockState previous = level.getBlockState(pos);
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        boolean placed = r.feature().place(
+                r.config(), level, level.getChunkSource().getGenerator(),
+                TreeFeatureResolver.seededFor(pos), pos
+        );
+        if (!placed) {
+            level.setBlock(pos, previous, 3);
+        }
+        return placed;
+    }
+
+    @Override
+    public Collection<PlantedSapling> getPlantedSaplings() {
+        // In real time, vanilla grows saplings.
+        return List.of();
+    }
+
+    @Override
+    public void clearPlantedSapling(BlockPos pos) {
     }
 
     @Override
@@ -140,15 +202,6 @@ public class MinecraftWorldAccess implements QTWorldAccess {
         };
     }
 
-    private static ToolAction forgeToolAction(QTToolAction toolAction) {
-        return switch (toolAction) {
-            case HOE_TILL -> ToolActions.HOE_TILL;
-            case AXE_STRIP -> ToolActions.AXE_STRIP;
-            case AXE_SCRAPE -> ToolActions.AXE_SCRAPE;
-            case SHOVEL_FLATTEN -> ToolActions.SHOVEL_FLATTEN;
-        };
-    }
-
     private UseOnContext toolContext(BlockPos pos, QTToolAction toolAction) {
         BlockHitResult bhr = new BlockHitResult(
                 Vec3.atCenterOf(pos), Direction.UP, pos, false
@@ -162,8 +215,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public boolean canToolTransformBlock(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         return modified != null;
     }
@@ -171,8 +224,8 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     @Override
     public void applyToolTransformation(BlockPos pos, QTToolAction toolAction) {
         BlockState bs = level.getBlockState(pos);
-        BlockState modified = bs.getToolModifiedState(
-                toolContext(pos, toolAction), forgeToolAction(toolAction), false
+        BlockState modified = Compat.toolModifiedState(
+                bs, toolContext(pos, toolAction), toolAction
         );
         if (modified == null) {
             return;
@@ -215,7 +268,7 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Nullable
-    private IItemHandler resolveItemHandler(BlockPos pos) {
+    private ItemHandler resolveItemHandler(BlockPos pos) {
         BlockEntity be = level.getBlockEntity(pos);
         if (be == null) {
             return null;

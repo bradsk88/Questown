@@ -92,6 +92,7 @@ public final class QuestownSpecialRules {
                         () -> ca.bradj.questown.core.Config.MOOD_EFFECT_DURATION_ATE_UNCOMFORTABLY.get()
                 )
         );
+        // TODO: The explorer's scouting rule (SCOUT_LOOT) is not in this line yet. For its implementation see #403.
 
         SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation("switch_to_organizer_fetcher"),
@@ -163,6 +164,16 @@ public final class QuestownSpecialRules {
                         SpecialRules.FURNACE_SMELT_WARP
                 ),
                 new SmeltFurnaceWarpRule()
+        );
+
+        // TODO: The arborist and organizer jobs are in questown_job_archive until they have been played; this
+        //  rule and the tree-growing warp rule serve them. For their implementation see #407.
+        // Moves a requested item into the stock request's chest during a warp.
+        SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(
+                        SpecialRules.RELOCATE_REQUESTED_ITEM_WARP
+                ),
+                new RelocateRequestedItemWarpRule()
         );
 
         VanillaSpecialRules.register();

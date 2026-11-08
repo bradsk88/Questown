@@ -47,7 +47,7 @@ import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
+import ca.bradj.questown.town.RoomShellPlan;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
@@ -322,13 +322,16 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     boolean givenBonusFood;
 
-    @Override
-    public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap) {
-        if (!ForgeCapabilities.ITEM_HANDLER.equals(cap)) {
-            return super.getCapability(cap);
-        }
-        return this.itemHandler.cast();
-    }
+    // The board's auto-request setting, on by default.
+    boolean boardAutoRequest = true;
+    // Whether a player has opened the villagers tab; until then it has a red dot. True for towns saved before it existed.
+    boolean villagersTabSeen = true;
+    final SeenQuests seenQuests = new SeenQuests();
+    // Whether a player has ever taken a Block of Progress out; until then that tab has a red dot.
+    boolean bopWithdrawn = false;
+    /** Saved: true once the first hunter's raw meat has closed the raw-food quest. */
+    boolean firstHunterLootGuaranteeFired = false;
+
 
     public static void logStoredData(
             TownFlagBlockEntity entity,
@@ -559,6 +562,13 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             TownFlagBlockEntity e
     ) {
         e.ticker.tick(level, blockEntityPos, state, e);
+        if (level instanceof ServerLevel sl && e.isInitialized() && sl.getGameTime() % 20L == 0) {
+            e.syncAttentionState();
+        }
+        if (level instanceof ServerLevel sl) {
+            ca.bradj.questown.integration.minecraft.ChestTouches.tick(sl);
+        }
+        // TODO: The helper chicken ticked here: its spawn, its rotation check and its lessons. For its implementation see #409, #410, #411 and #412.
     }
 
 
@@ -952,7 +962,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         BlockPos flag = getBlockPos();
         int placed = 0;
-        // Eight fallen logs, clear of the arrival ring and the chicken's room.
+        // Eight fallen logs, clear of the arrival ring and the first room.
         BlockState log = Blocks.OAK_LOG.defaultBlockState()
                                        .setValue(BlockStateProperties.AXIS, Direction.Axis.X);
         for (int i = 0; i < 8; i++) {
@@ -1609,7 +1619,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             return isOccupied.test(p);
         };
-        ChickenRoomShellPlan.Outcome feasible = ChickenRoomShellPlan.feasibility(
+        RoomShellPlan.Outcome feasible = RoomShellPlan.feasibility(
                 doorPos, baseY, isOccupiedIgnoringDoorCell
         );
         if (!feasible.clear()) {
@@ -1619,10 +1629,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
             return;
         }
-        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(doorPos, baseY, isOccupied);
-        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
+        RoomShellPlan.DoorFrame frame = RoomShellPlan.frameFor(doorPos, baseY, isOccupied);
+        RoomShellPlan.Plan plan = RoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
         int laid = 0;
-        for (ChickenRoomShellPlan.BlockStep step : plan.steps()) {
+        for (RoomShellPlan.BlockStep step : plan.steps()) {
             if (level.getBlockState(step.pos()).isAir()) {
                 level.setBlockAndUpdate(step.pos(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
                 laid++;
@@ -2018,14 +2028,230 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged(sl, blockEntityPos, state);
     }
 
-    public boolean giveBonusFood(ServerPlayer sp) {
-        if (givenBonusFood) {
-            Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
+    /** Puts a player's Block of Progress back on the flag. False when it isn't one or the flag is full. */
+    public boolean returnBopFromPlayer(ServerPlayer player, ItemStack held) {
+        if (!held.is(ItemsInit.BLOCK_OF_PROGRESS.get()) || getBopCount() >= TownFlagBOPItemHandler.CAP) {
             return false;
         }
-        BlockPos pos = getBlockPos();
-        ItemStack stack = new ItemStack(Items.CARROT, 10);
-        level.addFreshEntity(new ItemEntity(level, pos.getX(), pos.getY(), pos.getZ(), stack));
+        TownFlagBOPItemHandler.depositOne(held, false, bopStacks::add);
+        setChanged();
+        syncBopFull();
+        player.sendSystemMessage(Compat.translatable("message.questown.bop.returned", getBopCount()));
+        return true;
+    }
+
+    public void grantBlockOfProgress(int amount) {
+        for (int i = 0; i < amount; i++) {
+            bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+        }
+        setChanged();
+        syncBopFull();
+    }
+
+    public boolean isBoardAutoRequest() {
+        return boardAutoRequest;
+    }
+
+    /** Unlocks a skill for the villager and posts its first board request. */
+    public void unlockSkillFromPlayer(UUID villagerUUID, JobID id) {
+        getVillagerHandle().unlockJob(villagerUUID, id);
+        quests.markSkillUnlocked(id);
+        postStarterRequests(List.of(id));
+    }
+
+    /** Open skill quests no villager is levelled for yet, with the level each needs. */
+    public Map<ResourceLocation, Integer> lockedSkillQuestLevels() {
+        Map<ResourceLocation, JobID> named = new HashMap<>();
+        for (MCQuest q : quests.questBatches.getAll()) {
+            if (q.getType() != Quest.QuestType.SKILL_UNLOCK || q.isComplete()) {
+                continue;
+            }
+            MCQuest.namedSkill(q.getWantedId()).ifPresent(skill -> named.put(q.getWantedId(), skill));
+        }
+        if (named.isEmpty()) {
+            return Map.of();
+        }
+        return SkillQuestLocks.lockedLevels(named, this::skillLevelGate, highestLevelByRoot());
+    }
+
+    /** Job root to the highest villager level in it. */
+    public Map<String, Integer> highestLevelByRoot() {
+        Map<String, Integer> highest = new HashMap<>();
+        for (LivingEntity e : getVillagerHandle().entities()) {
+            if (!(e instanceof VisitorMobEntity v) || v.getVUID() == null) {
+                continue;
+            }
+            int level = villagerHandle.getLevel(VillagerUUID.get(v.getVUID()));
+            highest.merge(v.getJobId().rootId(), level, Math::max);
+        }
+        return highest;
+    }
+
+    private int skillLevelGate(JobID skill) {
+        if (!Works.isInitialized() || !Works.ids().contains(skill)) {
+            return 0;
+        }
+        return Works.get(skill).get().getAvailableAtLevel();
+    }
+
+    public void requestWorkFromPlayer(WorkRequest request) {
+        workHandle.requestWork(request);
+        quests.markFirstWorkRequestCompleteIfActive();
+    }
+
+    public void postStarterRequests(JobID root) {
+        postStarterRequests(ServerJobsRegistry.getDefaultWork(root));
+    }
+
+    private void postStarterRequests(Collection<JobID> works) {
+        if (!isBoardAutoRequest()) {
+            return;
+        }
+        List<WorkRequest> declared = new ArrayList<>();
+        for (JobID work : works) {
+            Ingredient request = ServerJobsRegistry.getInitialRequest(getServerLevel(), work);
+            if (request == null || request.isEmpty()) {
+                continue;
+            }
+            declared.add(Ingredients.asWorkRequest(request));
+        }
+        List<WorkRequest> onBoard = workHandle.getRequestedResults();
+        for (WorkRequest r : StarterRequests.toPost(declared, onBoard, WorkRequest::covers)) {
+            QT.FLAG_LOGGER.info("Starter request for {}: {}", works, r);
+            workHandle.requestWork(r);
+        }
+    }
+
+    /** The town's top missing item as a readable name, or null. */
+    public @Nullable String topUnmetNeedName() {
+        economics.update();
+        var items = economics.getAggregatedItems(null);
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        String topKey = null;
+        int topCount = -1;
+        for (ca.bradj.questown.gui.ItemEconomicsData d : items) {
+            if (d.timesNeeded() > topCount) {
+                topCount = d.timesNeeded();
+                topKey = d.ingredientKey();
+            }
+        }
+        if (topKey == null || topKey.isEmpty()) {
+            return null;
+        }
+        try {
+            return ca.bradj.questown.gui.Ingredients
+                    .getName(ca.bradj.questown.gui.Ingredients.fromString(topKey))
+                    .getString();
+        } catch (Exception e) {
+            QT.FLAG_LOGGER.debug("topUnmetNeedName: could not resolve need key {}", topKey, e);
+            return topKey;
+        }
+    }
+
+    public void setBoardAutoRequest(boolean v) {
+        this.boardAutoRequest = v;
+    }
+
+    public boolean isVillagersTabSeen() {
+        return villagersTabSeen;
+    }
+
+    public boolean isBopWithdrawn() {
+        return bopWithdrawn;
+    }
+
+    void markBopWithdrawn() {
+        if (bopWithdrawn) {
+            return;
+        }
+        bopWithdrawn = true;
+        setChanged();
+    }
+
+    /** The quests tab was opened: its open quests count as seen. */
+    public void markQuestsSeen() {
+        seenQuests.markSeen(quests.incompleteQuestKeys());
+        setChanged();
+    }
+
+    public void markVillagersTabSeen() {
+        if (villagersTabSeen) {
+            return;
+        }
+        villagersTabSeen = true;
+        setChanged();
+    }
+
+    public boolean isFirstHunterLootGuaranteeFired() {
+        return firstHunterLootGuaranteeFired;
+    }
+
+    public void setFirstHunterLootGuaranteeFired(boolean v) {
+        this.firstHunterLootGuaranteeFired = v;
+    }
+
+    public static final int BONUS_FOOD_COUNT = 20;
+
+    /** Puts the free food in the first container with room. Returns the carrots placed; 0 with no container. */
+    public int depositBonusCarrots() {
+        ServerLevel sl = getServerLevel();
+        for (ContainerTarget<MCContainer, MCTownItem> target : TownContainers.getAllContainers(this, sl)) {
+            if (sl.getBlockEntity(target.getBlockPos()) instanceof Container c) {
+                ItemStack stack = new ItemStack(Items.CARROT, BONUS_FOOD_COUNT);
+                for (int i = 0; i < c.getContainerSize() && !stack.isEmpty(); i++) {
+                    if (c.getItem(i).isEmpty()) {
+                        c.setItem(i, stack.copy());
+                        stack.setCount(0);
+                    }
+                }
+                c.setChanged();
+                return BONUS_FOOD_COUNT;
+            }
+        }
+        return 0;
+    }
+
+    /** The economics tab's free food: into a container if there is one, else to the player. Counted as given only once placed. */
+    public boolean claimBonusFood(@Nullable ServerPlayer sp) {
+        if (givenBonusFood) {
+            if (sp != null) {
+                Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food_only_once"));
+            }
+            return false;
+        }
+        int deposited = depositBonusCarrots();
+        if (deposited > 0) {
+            givenBonusFood = true;
+            if (sp != null) {
+                Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food.claimed_container"));
+            }
+            QT.FLAG_LOGGER.info("Bonus food claimed: {} carrots deposited into a registered container at flag {}",
+                    deposited, getBlockPos());
+            return true;
+        }
+        if (sp != null) {
+            sp.getInventory().add(new ItemStack(Items.CARROT, BONUS_FOOD_COUNT));
+            givenBonusFood = true;
+            Compat.sendMessage(sp, Component.translatable("message.questown.bonus_food.claimed_inventory"));
+            QT.FLAG_LOGGER.info("Bonus food claimed: {} carrots given to the player (no registered container yet) at flag {}",
+                    BONUS_FOOD_COUNT, getBlockPos());
+            return true;
+        }
+        QT.FLAG_LOGGER.warn("No registered container to deposit bonus food at flag {}", getBlockPos());
+        return false;
+    }
+
+    public boolean getGivenBonusFood() {
+        return givenBonusFood;
+    }
+
+    /** Marks the free food as given. False if it already was. */
+    public boolean markBonusFoodGiven() {
+        if (givenBonusFood) {
+            return false;
+        }
         givenBonusFood = true;
         return true;
     }
@@ -2056,6 +2282,21 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private boolean isDebugLogEnabled(String logId) {
         return logToggles.getOrDefault(logId, false);
+    }
+
+    public boolean isDebugLogConsuming(String logId) {
+        if (isDebugLogEnabled(logId)) {
+            return true;
+        }
+        return "trace".equalsIgnoreCase(System.getenv("INVISIBLE_LOG_LEVEL"));
+    }
+
+    /** Forgets a villager's job-block states. */
+    void resetWorkStatusFor(UUID villagerUUID) {
+        if (jobHandles.remove(villagerUUID) != null) {
+            QT.FLAG_LOGGER.info("Cleared work spot states for {} after a job root change", villagerUUID);
+            setChanged();
+        }
     }
 
     public AbstractWorkStatusStore<BlockPos, MCHeldItem, MCRoom, ServerLevel> getRealWorkStatusHandle(UUID ownerIDOrNullForGlobal) {

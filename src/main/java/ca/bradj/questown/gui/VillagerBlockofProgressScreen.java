@@ -4,7 +4,6 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.init.items.ItemsInit;
 import ca.bradj.questown.core.network.EconomicsUpdate;
-import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Compat;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.renderer.Rect2i;
@@ -20,7 +19,7 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
     private final VillagerTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
-    private final JEI.NineNine background;
+    private final NineSlice background;
 
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
 
@@ -33,7 +32,7 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.background = JEI.getRecipeBackground();
+        this.background = GuiArt.getRecipeBackground();
         this.tabs = VillagerTabs.forMenu(menu);
     }
 
@@ -90,7 +89,7 @@ public class VillagerBlockofProgressScreen extends CompatContainerScreen<Village
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, backgroundHeight);
         this.tabs.draw(ctx, bgX, bgY);
     }
 

@@ -10,7 +10,7 @@ import java.util.Set;
 class AutoTestShardTest {
 
     private static final List<String> JOBS = List.of("a", "b", "c", "d", "e");
-    private static final List<String> CHICKEN = List.of("x", "y");
+    private static final List<String> OTHER = List.of("x", "y");
 
     @Test
     void everyScenarioRunsInExactlyOneShard() {
@@ -18,17 +18,17 @@ class AutoTestShardTest {
         for (int i = 1; i <= 3; i++) {
             AutoTestShard s = new AutoTestShard(i, 3);
             seen.addAll(s.select(JOBS, 0));
-            seen.addAll(s.select(CHICKEN, JOBS.size()));
+            seen.addAll(s.select(OTHER, JOBS.size()));
         }
         Assertions.assertEquals(7, seen.size());
-        Assertions.assertTrue(seen.containsAll(JOBS) && seen.containsAll(CHICKEN));
+        Assertions.assertTrue(seen.containsAll(JOBS) && seen.containsAll(OTHER));
     }
 
     @Test
     void shardsInterleaveAcrossBothLists() {
         AutoTestShard first = new AutoTestShard(1, 3);
         Assertions.assertEquals(List.of("a", "d"), first.select(JOBS, 0));
-        Assertions.assertEquals(List.of("y"), first.select(CHICKEN, JOBS.size()));
+        Assertions.assertEquals(List.of("y"), first.select(OTHER, JOBS.size()));
     }
 
     @Test

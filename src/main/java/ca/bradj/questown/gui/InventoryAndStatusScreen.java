@@ -4,8 +4,6 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.network.OpenJobMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
@@ -20,8 +18,8 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
 
-    private final JEI.NineNine background;
-    private final IDrawableStatic slot;
+    private final NineSlice background;
+    private final GuiSprite slot;
     private final ResourceLocation lockTex;
     private final Tabs tabs;
     private final StatusGraphic status;
@@ -34,8 +32,8 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
             Component title
     ) {
         super(menu, playerInv, title);
-        this.background = JEI.getRecipeGuiBackground();
-        this.slot = JEI.getSlotDrawable();
+        this.background = GuiArt.getRecipeGuiBackground();
+        this.slot = GuiArt.getSlotDrawable();
         this.lockTex = new ResourceLocation("questown", "textures/menu/gatherer/locked.png");
         this.tabs = VillagerTabs.forMenu(menu);
         this.status = new StatusGraphic(
@@ -79,7 +77,7 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
     ) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, backgroundHeight);
         this.tabs.draw(ctx, bgX, bgY);
         renderInventory(ctx);
         status.render(ctx);
@@ -93,7 +91,7 @@ public class InventoryAndStatusScreen extends CompatContainerScreen<InventoryAnd
             Slot s = menu.slots.get(i);
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
-            this.slot.draw(rc.gui(), xCoord, yCoord);
+            this.slot.draw(rc, xCoord, yCoord);
         }
         int iconX = x - 8;
         for (Ingredient i : ClientJobWantedResources.wantedIngredients) {

@@ -4,7 +4,6 @@ import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.network.DormantFlagChoiceMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
@@ -20,7 +19,7 @@ public class DormantFlagScreen extends CompatScreen {
     private static final int PAGE_PADDING = 10;
     private static final int BUTTON_GAP = 4;
 
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final BlockPos flagPos;
 
     private int panelHeight;
@@ -30,7 +29,7 @@ public class DormantFlagScreen extends CompatScreen {
 
     public DormantFlagScreen(BlockPos flagPos) {
         super(Compat.translatable("menu.dormant_flag.title"));
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.flagPos = flagPos;
     }
 
@@ -83,7 +82,7 @@ public class DormantFlagScreen extends CompatScreen {
     @Override
     protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int y = (this.height - panelHeight) / 2;
-        ctx.drawNineNine(this.background, pageLeftX, y, backgroundWidth, panelHeight);
+        this.background.draw(ctx, pageLeftX, y, backgroundWidth, panelHeight);
     }
 
     @Override

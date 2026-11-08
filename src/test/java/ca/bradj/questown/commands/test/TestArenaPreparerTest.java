@@ -1,6 +1,5 @@
 package ca.bradj.questown.commands.test;
 
-import ca.bradj.questown.town.HelperChickenRotationDetector;
 import net.minecraft.SharedConstants;
 import net.minecraft.server.Bootstrap;
 import org.junit.jupiter.api.Assertions;
@@ -26,39 +25,22 @@ class TestArenaPreparerTest {
         TestArenaPreparer.PreparerOptions opts = TestArenaPreparer.PreparerOptions.jobsTrackDefaults();
         Assertions.assertEquals(7, opts.halfWidth(),
                 "jobs track's original area was a 15x15 square = halfWidth 7");
-        Assertions.assertFalse(opts.killHelperChickens(),
-                "jobs track must not sweep chickens (no chickens in jobs scenarios)");
         Assertions.assertFalse(opts.clearFakePlayerInventory(),
                 "jobs track must not touch the fake player's inventory");
-        Assertions.assertFalse(opts.clearRotationDetectorRetryCounters(),
-                "jobs track must not poke chicken-arc singletons");
     }
 
     @Test
     void preparerOptions_allowsCustomHalfWidth() {
-        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(
-                25, true, true, true
-        );
+        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(25, true);
         Assertions.assertEquals(25, opts.halfWidth());
-        Assertions.assertTrue(opts.killHelperChickens());
         Assertions.assertTrue(opts.clearFakePlayerInventory());
-        Assertions.assertTrue(opts.clearRotationDetectorRetryCounters());
     }
 
     @Test
     void preparerOptions_recordEqualityWorks() {
-        TestArenaPreparer.PreparerOptions a = new TestArenaPreparer.PreparerOptions(10, true, false, true);
-        TestArenaPreparer.PreparerOptions b = new TestArenaPreparer.PreparerOptions(10, true, false, true);
+        TestArenaPreparer.PreparerOptions a = new TestArenaPreparer.PreparerOptions(10, false);
+        TestArenaPreparer.PreparerOptions b = new TestArenaPreparer.PreparerOptions(10, false);
         Assertions.assertEquals(a, b);
-    }
-
-    @Test
-    void clearRetryCounters_isReachableFromTestHarness() {
-        // Exercise the new public clear method; verifies the hook exists and does
-        // not throw when invoked on an empty map.
-        Assertions.assertDoesNotThrow(
-                HelperChickenRotationDetector::clearRetryCounters
-        );
     }
 
     /**
@@ -72,7 +54,7 @@ class TestArenaPreparerTest {
     void halfWidthOverride_roundTripsThroughPreparerOptions() {
         for (int width : new int[]{5, 7, 10, 15, 25, 50}) {
             TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(
-                    width, false, false, false
+                    width, false
             );
             Assertions.assertEquals(width, opts.halfWidth(),
                     "half-width must round-trip for " + width);
@@ -80,20 +62,9 @@ class TestArenaPreparerTest {
     }
 
     /**
-     * Kill-sweep behavior requires a ServerLevel to stand up HelperChickenEntity instances.
-     */
-    @Test
-    @Disabled("Testability gap: requires a real ServerLevel to spawn HelperChickenEntity "
-            + "instances and read them back via level.getEntitiesOfClass. Covered end-to-end "
-            + "by the in-game autotest run (AutoTestRunner). Per CLAUDE.md we do not simulate.")
-    void killHelperChickens_requiresServerLevel() {
-        Assertions.fail("see @Disabled reason");
-    }
-
-    /**
      * Fake-player inventory clear requires a live ServerPlayer constructed via
      * FakePlayerFactory, which in turn needs a ServerLevel. Same testability
-     * gap as above — the contract is verified end-to-end in the in-game run.
+     * gap — the contract is verified end-to-end in the in-game run.
      */
     @Test
     @Disabled("Testability gap: needs a FakePlayer which requires a live ServerLevel. "

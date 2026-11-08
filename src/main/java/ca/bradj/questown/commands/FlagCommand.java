@@ -34,7 +34,8 @@ public class FlagCommand {
                             .executes(css -> setBlock(
                                 css.getSource(),
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")
-                            )))
+                            ))
+                        )
                 )
             )
         );
@@ -50,7 +51,8 @@ public class FlagCommand {
             return 0;
         }
 
-        source.getLevel().setBlockAndUpdate(target.above(), BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
+        BlockPos flagPos = target.above();
+        source.getLevel().setBlockAndUpdate(flagPos, BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
 
         AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
                 source.getPlayer(), ApproachTownTrigger.Triggers.FirstVisit

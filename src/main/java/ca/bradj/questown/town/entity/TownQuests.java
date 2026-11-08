@@ -94,6 +94,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     };
     final MCQuestBatches questBatches = new MCQuestBatches(MCQuestBatch::new);
+
     /** Whether any quest is still incomplete, for the "!" over the flag. */
     public boolean hasIncompleteQuests() {
         return questBatches.getAll().stream().anyMatch(q -> !q.isComplete());

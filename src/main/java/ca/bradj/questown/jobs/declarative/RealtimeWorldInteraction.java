@@ -97,20 +97,6 @@ public class RealtimeWorldInteraction extends
         this.townFlagPos = townFlagPos;
     }
 
-    private static ImmutableMap<Integer, Function<MCTownItem, Boolean>> stripMC2(
-            ImmutableMap<Integer, Ingredient> toolsRequiredAtStates
-    ) {
-        ImmutableMap.Builder<Integer, Function<MCTownItem, Boolean>> b = ImmutableMap.builder();
-        toolsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.toQTItemStack())));
-        return b.build();
-    }
-
-    private static ImmutableMap<Integer, Function<MCHeldItem, Boolean>> stripMC(ImmutableMap<Integer, Ingredient> ingredientsRequiredAtStates) {
-        ImmutableMap.Builder<Integer, Function<MCHeldItem, Boolean>> b = ImmutableMap.builder();
-        ingredientsRequiredAtStates.forEach((k, v) -> b.put(k, z -> v.test(z.get().toQTItemStack())));
-        return b.build();
-    }
-
     @Override
     protected int getWorkSpeedOf10(MCExtra mcExtra) {
         return Math.max(mcExtra.town().getVillagerHandle().getWorkSpeed(mcExtra.entity().getUUID()), 1);
@@ -162,11 +148,32 @@ public class RealtimeWorldInteraction extends
 
     /** A display job tries the fullest display first. */
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            MCExtra mcExtra,
+    protected ArrayList<WorkPosition<BlockPos>> orderSpots(
+            MCExtra extra,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), mcExtra.town().getServerLevel()));
+        ArrayList<WorkPosition<BlockPos>> spots = super.orderSpots(extra, workSpots);
+        ServerLevel level = getServerLevel(extra);
+        if (level == null || spots.size() < 2 || !dressesDisplays()) {
+            return spots;
+        }
+        Map<BlockPos, Integer> filled = new HashMap<>();
+        spots.sort(Comparator.comparingInt((WorkPosition<BlockPos> s) ->
+                filled.computeIfAbsent(s.jobBlock(), p -> DisplaySlots.filledAt(level, p))).reversed());
+        return spots;
+    }
+
+    @Override
+    protected @Nullable ServerLevel getServerLevel(MCExtra extra) {
+        return extra.town().getServerLevel();
+    }
+
+    @Override
+    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
+            MCExtra mcExtra,
+            WorkOutput<Boolean, WorkPosition<BlockPos>> v
+    ) {
+        return Util.workWithSurfaceInteractionPos(getServerLevel(mcExtra), v);
     }
 
     @Override
@@ -189,37 +196,6 @@ public class RealtimeWorldInteraction extends
     }
 
     @Override
-    protected Boolean withEffectApplied(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack stack = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(stack);
-        Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
-        inputs.town().getVillagerHandle().applyEffect(effect, effectExpiry, inputs.entity().getUUID());
-        return null;
-    }
-
-    @Override
-    protected Boolean withKnowledge(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(newItem));
-        return null;
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get());
-    }
-
-    @Override
     protected boolean isMulti(MCTownItem mcTownItem) {
         return mcTownItem.toQTItemStack().getCount() > 1;
     }
@@ -234,7 +210,26 @@ public class RealtimeWorldInteraction extends
             MCExtra inputs,
             Collection<MCHeldItem> mcHeldItems
     ) {
-        return resultGenerator.apply(inputs.town().getServerLevel(), mcHeldItems);
+        ca.bradj.questown.town.entity.TownFlagBlockEntity flag = resolveFlagFromTown(inputs);
+        ServerLevel level = inputs.town().getServerLevel();
+        return withLootGuarantees(
+                flag,
+                withRequestedLootPreference(
+                        flag, level,
+                        resultGenerator.apply(level, mcHeldItems),
+                        () -> resultGenerator.apply(level, mcHeldItems)
+                )
+        );
+    }
+
+    private static ca.bradj.questown.town.entity.TownFlagBlockEntity resolveFlagFromTown(MCExtra inputs) {
+        if (inputs.town() instanceof ca.bradj.questown.town.entity.TownFlagBlockEntity flag) {
+            return flag;
+        }
+        return flagBlockEntityAt(
+                inputs.town().getServerLevel(),
+                inputs.town().getTownFlagBasePos()
+        );
     }
 
     @Override
@@ -428,6 +423,10 @@ public class RealtimeWorldInteraction extends
                     long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
                     inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
                     return in;
+                },
+                extractedItem,
+                (in, foundLoot) -> {
+                    inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(foundLoot));
                     return in;
                 }
         );

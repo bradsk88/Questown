@@ -556,9 +556,17 @@ public class TownVillagerUIs {
                         stats,
                         new VillagerEconomicsData(ImmutableList.of()),
                         e.hasBlockOfProgress(),
-                        isJobChangePending
+                        showSkillsTab,
+                        showInventoryTab,
+                        isJobChangePending,
+                        villagerDisplayName,
+                        wantsJobChange(sender, e),
+                        promisedRoot(sender, e),
+                        !hidesJobChange(sender, e),
+                        showInventoryTab ? JobChangeConfirmMenu.FlagBop.NONE : flagBop(sender, e)
                 )
         );
+        // TODO: Opening a villager's menu counted for the helper chicken's lesson. For its implementation see #409, #410, #411 and #412.
     }
 
 }

@@ -177,7 +177,7 @@ public class ResourceJobLoader {
                     if (slotPrecondition.isPresent()) {
                         cookWork = cookWork.withSlotPrecondition(slotPrecondition.get());
                     }
-                    cookWork = cookWork.withProficiencyId(proficiencyId(obj)).withExperience(experience(obj));
+                    cookWork = cookWork.withExperience(experience(obj));
                     cookWork = cookWork.withUnlockedWithRootJob(
                             unlockedWithRootJob(obj) || starter
                     );

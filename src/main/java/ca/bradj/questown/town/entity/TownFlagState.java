@@ -210,14 +210,19 @@ public class TownFlagState {
         ImmutableSet<String> rules = collectGlobalRulesForAllVillagerRoots(storedState);
 
         WarpWorldAccess warpWorld = new WarpWorldAccess(sl, roomPositions);
+        warpWorld.seedFarmSaplings(collectFarmPositions(e));
 
         MCAdvanceTime.WarpTickCallback<MCTownState> warpCb =
-                (town, tick, delta) -> WarpTickHook.run(
-                        rules,
-                        warpWorld,
-                        town, tick, delta,
-                        () -> roomPositions
-                );
+                (town, tick, delta) -> {
+                    // Saplings planted in the coming steps record this tick.
+                    warpWorld.setCurrentWarpTick(tick);
+                    return WarpTickHook.run(
+                            rules,
+                            warpWorld,
+                            town, tick, delta,
+                            () -> roomPositions
+                    );
+                };
 
         // Delegate to MCAdvanceTime (the testable implementation)
         MCAdvanceTime advancer =
@@ -243,6 +248,20 @@ public class TownFlagState {
         }
 
         return result.state();
+    }
+
+    private static ImmutableList<BlockPos> collectFarmPositions(TownFlagBlockEntity e) {
+        ImmutableList.Builder<BlockPos> farmPosBuilder = ImmutableList.builder();
+        for (MCRoom room : e.roomsHandle.getFarms()) {
+            room.getSpaces().stream()
+                    .flatMap(space -> InclusiveSpaces.getPositions(space, InclusiveSpaces.PositionType.INTERIOR_ONLY).stream())
+                    .forEach(v -> {
+                        BlockPos pos = Positions.ToBlock(v, room.yCoord);
+                        farmPosBuilder.add(pos);
+                        farmPosBuilder.add(pos.above());
+                    });
+        }
+        return farmPosBuilder.build();
     }
 
     private static ImmutableSet<String> collectGlobalRulesForAllVillagerRoots(

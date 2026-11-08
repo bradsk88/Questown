@@ -46,6 +46,7 @@ public interface TownFlagInitialization {
     void initEconomicsForNewFlag();
 
     CompoundTag serializeEconomics();
+
     CompoundTag serializeBoardAutoRequest();
 
     CompoundTag serializeVillagersTabSeen();

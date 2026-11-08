@@ -1,6 +1,7 @@
 package ca.bradj.questown._vanilla;
 
 import ca.bradj.questown.integration.SpecialRulesRegistry;
+import ca.bradj.questown.jobs.special.GrowTreesWarpRule;
 
 public class VanillaSpecialRules {
     public static void register() {
@@ -17,6 +18,10 @@ public class VanillaSpecialRules {
         SpecialRulesRegistry.registerSpecialRule(
                 Vanilla.ResourceLocation("chop_down_tree"),
                 new ChopDownTree()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
+                Vanilla.ResourceLocation("grow_trees_warp"),
+                new GrowTreesWarpRule()
         );
     }
 }
