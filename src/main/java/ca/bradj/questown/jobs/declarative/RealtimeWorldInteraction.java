@@ -162,11 +162,32 @@ public class RealtimeWorldInteraction extends
 
     /** A display job tries the fullest display first. */
     @Override
-    protected ArrayList<WorkPosition<BlockPos>> shuffle(
-            MCExtra mcExtra,
+    protected ArrayList<WorkPosition<BlockPos>> orderSpots(
+            MCExtra extra,
             Collection<WorkPosition<BlockPos>> workSpots
     ) {
-        return new ArrayList<>(Compat.shuffle(ImmutableList.copyOf(workSpots), mcExtra.town().getServerLevel()));
+        ArrayList<WorkPosition<BlockPos>> spots = super.orderSpots(extra, workSpots);
+        ServerLevel level = getServerLevel(extra);
+        if (level == null || spots.size() < 2 || !dressesDisplays()) {
+            return spots;
+        }
+        Map<BlockPos, Integer> filled = new HashMap<>();
+        spots.sort(Comparator.comparingInt((WorkPosition<BlockPos> s) ->
+                filled.computeIfAbsent(s.jobBlock(), p -> DisplaySlots.filledAt(level, p))).reversed());
+        return spots;
+    }
+
+    @Override
+    protected @Nullable ServerLevel getServerLevel(MCExtra extra) {
+        return extra.town().getServerLevel();
+    }
+
+    @Override
+    protected WorkOutput<Boolean, WorkPosition<BlockPos>> getWithSurfaceInteractionPos(
+            MCExtra mcExtra,
+            WorkOutput<Boolean, WorkPosition<BlockPos>> v
+    ) {
+        return Util.workWithSurfaceInteractionPos(getServerLevel(mcExtra), v);
     }
 
     @Override
@@ -186,37 +207,6 @@ public class RealtimeWorldInteraction extends
     ) {
         inputs.work().setJobBlockState(position, state);
         return true;
-    }
-
-    @Override
-    protected Boolean withEffectApplied(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        ItemStack stack = newItem.get().toQTItemStack();
-        ResourceLocation effect = EffectMetaItem.getEffect(stack);
-        Long effectExpiry = EffectMetaItem.getEffectExpiry(stack, Util.getTick(inputs.town().getServerLevel()));
-        inputs.town().getVillagerHandle().applyEffect(effect, effectExpiry, inputs.entity().getUUID());
-        return null;
-    }
-
-    @Override
-    protected Boolean withKnowledge(
-            @NotNull MCExtra inputs,
-            Boolean ts,
-            MCHeldItem newItem
-    ) {
-        inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(newItem));
-        return null;
-    }
-
-    @Override
-    protected boolean isInstanze(
-            MCTownItem mcTownItem,
-            Class<?> clazz
-    ) {
-        return clazz.isInstance(mcTownItem.get());
     }
 
     @Override
@@ -447,6 +437,10 @@ public class RealtimeWorldInteraction extends
                     long expiry = Util.getTick(inputs.town().getServerLevel()) + durationTicks;
                     inputs.town().getVillagerHandle().applyEffect(effect, expiry, inputs.entity().getUUID());
                     return in;
+                },
+                extractedItem,
+                (in, foundLoot) -> {
+                    inputs.town().getKnowledgeHandle().registerFoundLoots(ImmutableList.of(foundLoot));
                     return in;
                 }
         );
