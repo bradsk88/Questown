@@ -91,26 +91,6 @@ public interface VillagerHolder {
 
     int getWorkSpeed(UUID uuid);
 
-    /** The villager's level in {@code proficiencyId}, 0 to 1; 0 when it has none. */
-    float getProficiency(
-            UUID uuid,
-            String proficiencyId
-    );
-
-    ImmutableMap<String, Float> getProficiencies(UUID uuid);
-
-    /** Sets one proficiency level. */
-    void setProficiency(
-            UUID uuid,
-            String proficiencyId,
-            float level
-    );
-
-    void setProficiencies(
-            UUID uuid,
-            java.util.Map<String, Float> levels
-    );
-
     VillagerStatsData getStats(UUID uuid);
 
     Collection<JobID> getJobs();

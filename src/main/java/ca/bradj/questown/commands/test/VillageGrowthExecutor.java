@@ -11,7 +11,6 @@ import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
 import ca.bradj.questown.mobs.visitor.TownieNeed;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
-import ca.bradj.questown.town.HelperChickenSpawnController;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.entity.TownFlags;
@@ -197,7 +196,7 @@ public final class VillageGrowthExecutor {
         // slow.
         int farthestRow = Arrays.stream(rowZs()).map(Math::abs).max().orElse(0);
         int halfWidth = Math.max(28, farthestRow + BUILDING_SIZE + 3);
-        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(halfWidth, true, true, true);
+        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(halfWidth, true);
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, player);
         TestArenaPreparer.flatten(level, origin, opts);
         msg("Arena reset around " + origin.toShortString());
@@ -274,16 +273,7 @@ public final class VillageGrowthExecutor {
     private void waitForFlag() {
         flag = TownFlagBlockEntity.getFromPos(level, flagPos);
         if (flag != null) {
-            // The scenario plants a hand-placed flag (not an empty_town structure),
-            // so its chicken rotation was never detected and the onboarding arc is
-            // inert. In a held run onboarding is driven via the chicken's guidance, so the
-            // chicken is a precondition - force it
-            // to spawn here so the arc is live every time, deterministically.
-            if (System.getProperty("questown.village.agentDrive") != null) {
-                boolean spawned = HelperChickenSpawnController.forceSpawn(flag);
-                msg("Helper chicken " + (spawned ? "spawned" : "NOT spawned (could not)")
-                        + " for the flag at " + flagPos.toShortString());
-            }
+            // TODO: A held run spawned the helper chicken here to guide onboarding. For its implementation see #409, #410, #411 and #412.
             msg("Flag block entity live; entering PLAY loop (target: " + TARGET_VILLAGERS + " villagers)");
             phase = Phase.PLAY;
             return;

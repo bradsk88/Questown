@@ -30,7 +30,7 @@ public class CampfireSleepHandler {
     private static final Map<UUID, BlockPos> tempBedPositions = new ConcurrentHashMap<>();
     private static final Map<UUID, Direction> tempBedFacings = new ConcurrentHashMap<>();
     private static final Map<UUID, BlockPos> campfirePositions = new ConcurrentHashMap<>();
-    // The flag each sleeper's campfire belongs to, so waking counts for that flag's helper chicken.
+    // The flag each sleeper's campfire belongs to.
     private static final Map<UUID, BlockPos> sleepingFlagPositions = new ConcurrentHashMap<>();
 
     public static void beginCampfireSleep(
@@ -201,11 +201,8 @@ public class CampfireSleepHandler {
         }
         // The campfire stays lit: it guides the player back, and sleeping needs it lit.
         campfirePositions.remove(uuid);
-        BlockPos flagPos = sleepingFlagPositions.remove(uuid);
-        if (flagPos != null
-                && player.level().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
-            flag.setChickenObservedSleepSinceSunset(true);
-        }
+        sleepingFlagPositions.remove(uuid);
+        // TODO: Waking counted for the helper chicken's sleep lesson at this flag. For its implementation see #409, #410, #411 and #412.
     }
 
 }

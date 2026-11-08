@@ -47,8 +47,6 @@ public interface TownFlagInitialization {
 
     CompoundTag serializeEconomics();
 
-    CompoundTag serializeChickenEverSpawned();
-
     CompoundTag serializeBoardAutoRequest();
 
     CompoundTag serializeVillagersTabSeen();
@@ -57,17 +55,6 @@ public interface TownFlagInitialization {
 
     CompoundTag serializeBopWithdrawn();
 
-    CompoundTag serializeChickenBeatState();
-
-    CompoundTag serializeChickenFirstGatherWorldlySeedsFired();
-
     CompoundTag serializeFirstHunterLootGuaranteeFired();
 
-    CompoundTag serializeChickenArcForfeit();
-
-    CompoundTag serializeChickenStructureRotation();
-
-    CompoundTag serializeChickenRotationDetected();
-
-    CompoundTag serializeChickenSunsetChestSpawned();
 }

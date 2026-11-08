@@ -1,6 +1,5 @@
 package ca.bradj.questown.devtools;
 
-import ca.bradj.questown.mobs.helperchicken.HelperChickenBeatOffsets;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -18,7 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Checks the committed {@code empty_town.nbt} itself, including the campfire's place relative to the flag. */
+/** Checks the committed {@code empty_town.nbt} itself. */
 class EmptyTownStructureIntegrityTest {
 
     private static final Path STRUCTURE = Path.of(
@@ -61,36 +60,7 @@ class EmptyTownStructureIntegrityTest {
                 "expected >100 grass_block entries (cascade tops + plane surface), found " + grassBlockCount);
     }
 
-    @Test
-    void emptyTownHasExactlyOneCampfireAtFlagPlusCampfireOffset() throws IOException {
-        CompoundTag root = NbtIo.readCompressed(Files.newInputStream(STRUCTURE), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
-        ListTag palette = root.getList("palette", Tag.TAG_COMPOUND);
-        ListTag blocks = root.getList("blocks", Tag.TAG_COMPOUND);
-
-        List<Integer> flagIndices = paletteIndicesMatching(palette, name ->
-                name.startsWith("questown:") && name.endsWith("_flag_base"));
-        List<Integer> campfireIndices = paletteIndicesMatching(palette, "minecraft:campfire"::equals);
-
-        BlockPos flagPos = singletonBlockPosForIndices(blocks, flagIndices,
-                "exactly one town flag block must exist in empty_town.nbt");
-        List<BlockPos> campfirePositions = blockPositionsForIndices(blocks, campfireIndices);
-
-        Assertions.assertEquals(
-                1, campfirePositions.size(),
-                "empty_town.nbt must contain exactly one campfire (the chicken-arc anchor); found "
-                        + campfirePositions.size() + " at " + campfirePositions
-        );
-        BlockPos expected = flagPos.offset(HelperChickenBeatOffsets.CAMPFIRE_OFFSET);
-        Assertions.assertEquals(
-                expected,
-                campfirePositions.get(0),
-                "campfire must sit at flag " + flagPos + " + CAMPFIRE_OFFSET "
-                        + HelperChickenBeatOffsets.CAMPFIRE_OFFSET + " = " + expected
-                        + " — the rotation detector scans this position. "
-                        + "If this assertion fails, regenerate empty_town.nbt via "
-                        + "ChickenScaffoldingNbtEditorTest.applyToRealStructure."
-        );
-    }
+    // TODO: A test pinned the campfire at the helper chicken's offset from the flag. For its implementation see #409, #410, #411 and #412.
 
     private static List<Integer> paletteIndicesMatching(ListTag palette, java.util.function.Predicate<String> nameMatch) {
         List<Integer> out = new ArrayList<>();

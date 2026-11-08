@@ -130,8 +130,7 @@ public class TownFlagState {
         Vec3 pos = entity.position();
         ImmutableSnapshot<MCHeldItem, ?> snapshot = entity.getJobJournalSnapshot();
         return new TownState.VillagerData<>(
-                pos.x, pos.y, pos.z, snapshot, entity.getUUID(),
-                town.getVillagerHandle().getProficiencies(entity.getUUID())
+                pos.x, pos.y, pos.z, snapshot, entity.getUUID()
         );
     }
 
@@ -399,10 +398,6 @@ public class TownFlagState {
                 );
                 sl.addFreshEntity(recovered);
                 e.getVillagerHandle().register(recovered);
-                // Saved proficiencies win over the ones a register may have rolled.
-                if (!v.getProficiencies().isEmpty()) {
-                    e.getVillagerHandle().setProficiencies(v.uuid, v.getProficiencies());
-                }
             }
             e.getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TIME_WARP).log("Loaded villager state from NBT: {}", villagers);
         }

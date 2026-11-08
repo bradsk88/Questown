@@ -18,7 +18,6 @@ import ca.bradj.questown.gui.FlagTabs;
 import ca.bradj.questown.gui.FlagTabsEmbedding;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.MapC;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcUiObservations;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
 import ca.bradj.questown.town.quests.Quest;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
@@ -396,8 +395,7 @@ public class TownFlagBlock extends BaseEntityBlock {
                     info.showEconTab() && info.bonusFoodAvailable()
             );
             entity.menus.showUI((ServerPlayer) player, tab, info, entity.getBlocksOfProgress());
-            // Any flag tab counts for the chicken's "look at the flag" lesson.
-            ChickenArcUiObservations.markFlagUiOpened(level, pos);
+            // TODO: Opening a flag tab counted for the helper chicken's "look at the flag" lesson. For its implementation see #409, #410, #411 and #412.
         } else {
             if (!entity.isInitializing()) {
                 entity.initializeFreshFlag(true);

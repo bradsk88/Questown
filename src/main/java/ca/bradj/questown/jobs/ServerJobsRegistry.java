@@ -61,7 +61,6 @@ import static ca.bradj.questown.jobs.declarative.nomc.WorkSeekerJob.isSeekingWor
 
 public class ServerJobsRegistry {
 
-    private static final Map<JobID, String> proficiencyIdOverrides = new HashMap<>();
 
     public static boolean isExcludedFromWarp(JobID jobID) {
         Supplier<Work> w = Works.get(jobID);
@@ -555,43 +554,6 @@ public class ServerJobsRegistry {
         return work.experienceEarned(formula);
     }
 
-    public static @Nullable String getProficiencyId(JobID jobID) {
-        String overridden = proficiencyIdOverrides.get(jobID);
-        if (overridden != null) {
-            return overridden;
-        }
-        Work work = getWork(jobID, true);
-        if (work == null) {
-            return null;
-        }
-        return work.getProficiencyId();
-    }
-
-    /** For autotests: makes the job use {@code proficiencyId}. Not added to {@link #getAllDeclaredProficiencyIds()}. */
-    public static void overrideProficiencyIdForTest(
-            JobID jobID,
-            String proficiencyId
-    ) {
-        proficiencyIdOverrides.put(jobID, proficiencyId);
-    }
-
-    /** Undoes {@link #overrideProficiencyIdForTest}. */
-    public static void clearProficiencyIdOverridesForTest() {
-        proficiencyIdOverrides.clear();
-    }
-
-    /** Every proficiency id any job declares. */
-    public static ImmutableSet<String> getAllDeclaredProficiencyIds() {
-        ImmutableSet.Builder<String> b = ImmutableSet.builder();
-        for (Supplier<Work> value : Works.values()) {
-            String id = value.get().getProficiencyId();
-            if (id != null) {
-                b.add(id);
-            }
-        }
-        return b.build();
-    }
-
     public static ResourceLocation getRoomForJobRootId(
             ServerLevel rand,
             String rootId
@@ -832,6 +794,8 @@ public class ServerJobsRegistry {
     private static @Nullable Supplier<Work> getWorkSupplier(JobID p) {
         Supplier<Work> workSupplier = Works.get(p);
         if (workSupplier == null) {
+            // TODO: Stop an unknown job ID where it enters (quest rewards, Blocks of Progress, saved
+            //  villager data), so this fallback never has to guess.
             QT.JOB_LOGGER.error("No work found for job ID: {}. Falling back to any job in the same root ID.", p, new Throwable("caller"));
             // Prefer a job unlocked with the root; the first one listed may need a stocked room.
             List<Supplier<Work>> sameRoot = Works.entrySet(p.rootId()).stream()

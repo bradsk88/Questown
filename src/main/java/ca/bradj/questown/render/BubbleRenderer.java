@@ -1,8 +1,6 @@
 package ca.bradj.questown.render;
 
-import ca.bradj.questown.mobs.helperchicken.BubbleRenderType;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
@@ -15,7 +13,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Draws the speech bubbles over the helper chicken, villagers and dead doors, facing the camera.
+ * Draws the speech bubbles over villagers and dead doors, facing the camera.
  * Hidden beyond 16 blocks unless drawn through walls; two icons alternate each second; always fully lit.
  */
 public final class BubbleRenderer {
@@ -43,38 +41,6 @@ public final class BubbleRenderer {
             return lift + NAMEPLATE_CLEARANCE_BLOCKS;
         }
         return lift;
-    }
-
-    /** Draws the chicken's bubble at its head. Call after {@code super.render}, with the pose at the entity's feet and +Y up. */
-    public static void renderBubbleFor(
-            HelperChickenEntity helper,
-            PoseStack poseStack,
-            MultiBufferSource bufferSource,
-            float partialTicks,
-            EntityRenderDispatcher dispatcher
-    ) {
-        boolean throughWalls = helper.isThroughWalls();
-        if (!throughWalls && dispatcher.distanceToSqr(helper) > VISIBILITY_RANGE_SQR) {
-            return;
-        }
-        String texturePath = helper.getBubbleTexturePath();
-        if (!texturePath.isEmpty()) {
-            renderTextureBubble(
-                    poseStack, bufferSource, helper,
-                    new net.minecraft.resources.ResourceLocation(texturePath),
-                    throughWalls, dispatcher
-            );
-            return;
-        }
-        ItemStack shown = chooseDisplayedIcon(
-                helper.tickCount,
-                helper.getBubbleIconA(),
-                helper.getBubbleIconB()
-        );
-        if (shown.isEmpty()) {
-            return;
-        }
-        renderBubble(poseStack, bufferSource, helper, shown, throughWalls, dispatcher);
     }
 
     /** Draws a bubble with a given icon over any entity. Same pose rules as {@link #renderBubbleFor}. */

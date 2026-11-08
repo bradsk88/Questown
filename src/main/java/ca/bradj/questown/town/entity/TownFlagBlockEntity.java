@@ -47,7 +47,7 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.jobs.gatherer.Loots;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
+import ca.bradj.questown.town.RoomShellPlan;
 import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
@@ -322,8 +322,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     boolean givenBonusFood;
 
-    // The helper chicken's state; ChickenArcController holds the logic.
-    boolean chickenEverSpawned = false;
     // The board's auto-request setting, on by default.
     boolean boardAutoRequest = true;
     // Whether a player has opened the villagers tab; until then it has a red dot. True for towns saved before it existed.
@@ -331,23 +329,8 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     final SeenQuests seenQuests = new SeenQuests();
     // Whether a player has ever taken a Block of Progress out; until then that tab has a red dot.
     boolean bopWithdrawn = false;
-    ca.bradj.questown.mobs.helperchicken.ChickenBeatState chickenBeatState =
-            ca.bradj.questown.mobs.helperchicken.ChickenBeatState.WAITING_FOR_STICK;
-    boolean chickenFirstGatherWorldlySeedsFired = false;
-    boolean chickenArcForfeit = false;
     /** Saved: true once the first hunter's raw meat has closed the raw-food quest. */
     boolean firstHunterLootGuaranteeFired = false;
-    net.minecraft.world.level.block.Rotation chickenStructureRotation =
-            net.minecraft.world.level.block.Rotation.NONE;
-    boolean chickenRotationDetected = false;
-    /** Saved: whether the chicken has dropped its storeroom chest yet. */
-    boolean chickenSunsetChestSpawned = false;
-
-    // One-time observations for the helper chicken's lessons. Not saved; a player can repeat them.
-    private transient boolean chickenObservedSleepSinceSunset = false;
-    private transient boolean chickenObservedVillagerUiOpen = false;
-    private transient boolean chickenObservedFlagUiOpen = false;
-    private transient boolean chickenObservedSeedsGiven = false;
 
 
     public static void logStoredData(
@@ -585,12 +568,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         if (level instanceof ServerLevel sl) {
             ca.bradj.questown.integration.minecraft.ChestTouches.tick(sl);
         }
-        // Wait until the flag has loaded, or the chicken state is still at its defaults.
-        if (level instanceof ServerLevel && e.isInitialized()) {
-            ca.bradj.questown.town.HelperChickenRotationDetector.detectIfNeeded(e);
-            ca.bradj.questown.town.HelperChickenSpawnController.tick(e);
-            ca.bradj.questown.mobs.helperchicken.ChickenArcController.tick(e);
-        }
+        // TODO: The helper chicken ticked here: its spawn, its rotation check and its lessons. For its implementation see #409, #410, #411 and #412.
     }
 
 
@@ -984,7 +962,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         }
         BlockPos flag = getBlockPos();
         int placed = 0;
-        // Eight fallen logs, clear of the arrival ring and the chicken's room.
+        // Eight fallen logs, clear of the arrival ring and the first room.
         BlockState log = Blocks.OAK_LOG.defaultBlockState()
                                        .setValue(BlockStateProperties.AXIS, Direction.Axis.X);
         for (int i = 0; i < 8; i++) {
@@ -1641,7 +1619,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             }
             return isOccupied.test(p);
         };
-        ChickenRoomShellPlan.Outcome feasible = ChickenRoomShellPlan.feasibility(
+        RoomShellPlan.Outcome feasible = RoomShellPlan.feasibility(
                 doorPos, baseY, isOccupiedIgnoringDoorCell
         );
         if (!feasible.clear()) {
@@ -1651,10 +1629,10 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             );
             return;
         }
-        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(doorPos, baseY, isOccupied);
-        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
+        RoomShellPlan.DoorFrame frame = RoomShellPlan.frameFor(doorPos, baseY, isOccupied);
+        RoomShellPlan.Plan plan = RoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
         int laid = 0;
-        for (ChickenRoomShellPlan.BlockStep step : plan.steps()) {
+        for (RoomShellPlan.BlockStep step : plan.steps()) {
             if (level.getBlockState(step.pos()).isAir()) {
                 level.setBlockAndUpdate(step.pos(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
                 laid++;
@@ -2038,30 +2016,6 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged(sl, blockEntityPos, state);
     }
 
-    public boolean getChickenEverSpawned() {
-        return chickenEverSpawned;
-    }
-
-    public void setChickenEverSpawned(boolean v) {
-        this.chickenEverSpawned = v;
-    }
-
-    /** A command-placed flag gets no helper chicken. */
-    public void markChickenArcIneligible() {
-        applyChickenArcIneligible();
-        initializers.add(t -> {
-            t.applyChickenArcIneligible();
-            return true;
-        });
-    }
-
-    private void applyChickenArcIneligible() {
-        setChickenEverSpawned(true);
-        setChickenRotationDetected(true);
-        writeTownData(Compat.getBlockStoredTagData(this));
-        setChanged();
-    }
-
     /** Puts a player's Block of Progress back on the flag. False when it isn't one or the flag is full. */
     public boolean returnBopFromPlayer(ServerPlayer player, ItemStack held) {
         if (!held.is(ItemsInit.BLOCK_OF_PROGRESS.get()) || getBopCount() >= TownFlagBOPItemHandler.CAP) {
@@ -2218,92 +2172,12 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         setChanged();
     }
 
-    public ca.bradj.questown.mobs.helperchicken.ChickenBeatState getChickenBeatState() {
-        return chickenBeatState;
-    }
-
-    public void setChickenBeatState(ca.bradj.questown.mobs.helperchicken.ChickenBeatState v) {
-        this.chickenBeatState = v;
-    }
-
-    public boolean getChickenFirstGatherWorldlySeedsFired() {
-        return chickenFirstGatherWorldlySeedsFired;
-    }
-
-    public void setChickenFirstGatherWorldlySeedsFired(boolean v) {
-        this.chickenFirstGatherWorldlySeedsFired = v;
-    }
-
     public boolean isFirstHunterLootGuaranteeFired() {
         return firstHunterLootGuaranteeFired;
     }
 
     public void setFirstHunterLootGuaranteeFired(boolean v) {
         this.firstHunterLootGuaranteeFired = v;
-    }
-
-    public boolean getChickenArcForfeit() {
-        return chickenArcForfeit;
-    }
-
-    public void setChickenArcForfeit(boolean v) {
-        this.chickenArcForfeit = v;
-    }
-
-    public net.minecraft.world.level.block.Rotation getChickenStructureRotation() {
-        return chickenStructureRotation;
-    }
-
-    public void setChickenStructureRotation(net.minecraft.world.level.block.Rotation v) {
-        this.chickenStructureRotation = v;
-    }
-
-    public boolean getChickenRotationDetected() {
-        return chickenRotationDetected;
-    }
-
-    public void setChickenRotationDetected(boolean v) {
-        this.chickenRotationDetected = v;
-    }
-
-    public boolean getChickenSunsetChestSpawned() {
-        return chickenSunsetChestSpawned;
-    }
-
-    public void setChickenSunsetChestSpawned(boolean v) {
-        this.chickenSunsetChestSpawned = v;
-    }
-
-    public boolean getChickenObservedSleepSinceSunset() {
-        return chickenObservedSleepSinceSunset;
-    }
-
-    public void setChickenObservedSleepSinceSunset(boolean v) {
-        this.chickenObservedSleepSinceSunset = v;
-    }
-
-    public boolean getChickenObservedVillagerUiOpen() {
-        return chickenObservedVillagerUiOpen;
-    }
-
-    public void setChickenObservedVillagerUiOpen(boolean v) {
-        this.chickenObservedVillagerUiOpen = v;
-    }
-
-    public boolean getChickenObservedFlagUiOpen() {
-        return chickenObservedFlagUiOpen;
-    }
-
-    public void setChickenObservedFlagUiOpen(boolean v) {
-        this.chickenObservedFlagUiOpen = v;
-    }
-
-    public boolean getChickenObservedSeedsGiven() {
-        return chickenObservedSeedsGiven;
-    }
-
-    public void setChickenObservedSeedsGiven(boolean v) {
-        this.chickenObservedSeedsGiven = v;
     }
 
     public static final int BONUS_FOOD_COUNT = 20;

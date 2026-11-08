@@ -33,8 +33,7 @@ import java.util.UUID;
  * <p>The seed is code-built each run (no save snapshot): an arena, a handful of
  * buildings, a flag + lit campfire + job board in a
  * registered store room, ~5 villagers via SpawnVisitorReward, and jobs
- * assigned directly (a hunter for food plus the starting jobs). The chicken
- * arc is skipped entirely.
+ * assigned directly (a hunter for food plus the starting jobs).
  *
  * <p>Villagers survive on raw meat (the raw-food diner work, at a mood penalty), but a hunter or
  * gatherer eats a cooked item from #questown:villager_food to keep working, so the seed stocks
@@ -435,7 +434,7 @@ public final class VillageSelfSufficiencyExecutor {
     // ---- seed ----
 
     private void resetArena() {
-        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(28, true, true, true);
+        TestArenaPreparer.PreparerOptions opts = new TestArenaPreparer.PreparerOptions(28, true);
         TestArenaPreparer.destroyNearbyFlags(level, origin, opts, player);
         TestArenaPreparer.flatten(level, origin, opts);
         msg("Arena reset around " + origin.toShortString());
@@ -449,7 +448,7 @@ public final class VillageSelfSufficiencyExecutor {
         // shells (the growth scenario's building shape, which the wall walk closes
         // cleanly) and their doors are registered with the flag, so they are
         // *registered* rooms whose interior chests are containers the jobs draw
-        // from. (flag.buildRoom's chicken shell leaks at this footprint, so a
+        // from. (flag.buildRoom's room shell leaks at this footprint, so a
         // registered simple room is the reliable seed.)
 
         // Lit campfire two blocks south of the flag spot; the flag auto-detects
@@ -480,7 +479,7 @@ public final class VillageSelfSufficiencyExecutor {
 
     /** One rectangular building: floor, plank walls, flat roof, one oak door
      *  (south). Mirrors the growth scenario's building (which the wall walk
-     *  closes cleanly, unlike flag.buildRoom's chicken shell). */
+     *  closes cleanly, unlike flag.buildRoom's room shell). */
     private void buildOneBuilding(BlockPos corner) {
         int s = BUILDING_SIZE - 1;
         for (int dx = 0; dx <= s; dx++) {

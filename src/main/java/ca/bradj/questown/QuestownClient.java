@@ -23,7 +23,6 @@ import ca.bradj.questown.gui.WorkScreen;
 import ca.bradj.questown.gui.town.status.MultiStatusScreen;
 import ca.bradj.questown.loader.Loader;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mobs.helperchicken.HelperChickenRenderer;
 import ca.bradj.questown.mobs.visitor.VisitorMobRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.client.renderer.entity.EntityRenderers;
@@ -39,14 +38,13 @@ public final class QuestownClient {
         Compat.setCutoutRenderType(BlocksInit.FALSE_WALL_BLOCK.get());
 
         EntityRenderers.register(EntitiesInit.VISITOR.get(), VisitorMobRenderer::new);
-        EntityRenderers.register(EntitiesInit.HELPER_CHICKEN.get(), HelperChickenRenderer::new);
+        // TODO: The helper chicken is not in this line yet. For its implementation see #409, #410, #411 and #412.
 
         BlockEntityRenderers.register(TilesInit.PLATE.get(), PlateBlockEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.FOOD_DISPLAY.get(), FoodDisplayEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.AXE_RACK.get(), AxeRackBlockEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.HOSPITAL_BED.get(), HospitalBedEntityRenderer::new);
         BlockEntityRenderers.register(TilesInit.TOWN_FLAG.get(), ca.bradj.questown.blocks.entity.renderer.TownFlagDeedRenderer::new);
-        BlockEntityRenderers.register(TilesInit.CHICKEN_STATUE.get(), ca.bradj.questown.blocks.entity.renderer.ChickenStatueBlockEntityRenderer::new);
     }
 
     public static void registerScreens() {

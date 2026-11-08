@@ -20,7 +20,7 @@ import java.util.Set;
 /** Turns tall grass in {@code empty_town.nbt} into short grass, then removes about half of it at random (fixed seed). */
 public final class EmptyTownGrassThinner {
 
-    public static final Path DEFAULT_STRUCTURE_PATH = ChickenScaffoldingNbtEditor.DEFAULT_STRUCTURE_PATH;
+    public static final Path DEFAULT_STRUCTURE_PATH = Path.of("src/main/resources/data/questown/structures/empty_town.nbt");
 
     private static final String PALETTE_KEY = "palette";
     private static final String BLOCKS_KEY = "blocks";

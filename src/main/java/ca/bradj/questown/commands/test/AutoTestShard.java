@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * One server's share of the autotest suite when several run in parallel
  * ({@code -Dquestown.autotest.shard=<i>/<n>}, 1-based; tools/autotest-parallel.sh --shard). The
- * filtered scenario list is numbered as one sequence (jobs, then chicken arc) and shard {@code i}
+ * filtered scenario list is numbered as one sequence and shard {@code i}
  * keeps every {@code n}th scenario starting at {@code i - 1}, so long scenarios spread out and
  * every scenario runs in exactly one shard.
  */

@@ -239,13 +239,13 @@ class AbstractAdvanceTimeTest {
     private static final long PRODUCTIVE_DAY = Signals.PRODUCTIVE_DAY_END_TICK;
     private static final long NIGHT = DAY - PRODUCTIVE_DAY;
 
-    static class SeamTown extends TownState<ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown> {
-        SeamTown(List<VillagerData<TestItem>> villagers, long worldTimeAtSleep) {
+    static class StubTown extends TownState<ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, StubTown> {
+        StubTown(List<VillagerData<TestItem>> villagers, long worldTimeAtSleep) {
             super(villagers, List.of(), ImmutableMap.of(), ImmutableMap.of(), List.of(), ImmutableMap.of(), worldTimeAtSleep);
         }
 
         @Override
-        protected SeamTown newTownState(
+        protected StubTown newTownState(
                 ImmutableList<VillagerData<TestItem>> villagers,
                 ImmutableList<ContainerTarget<ContainerTarget.Container<TestItem>, TestItem>> containers,
                 ImmutableMap<Position, State> workStates,
@@ -254,16 +254,15 @@ class AbstractAdvanceTimeTest {
                 ImmutableMap<UUID, Boolean> blocksOfProgress,
                 long worldTimeAtSleep
         ) {
-            return new SeamTown(villagers, worldTimeAtSleep);
+            return new StubTown(villagers, worldTimeAtSleep);
         }
     }
 
-    /** An AbstractAdvanceTime that emits a fixed list of work ticks. */
-    static class SeamAdvanceTime extends AbstractAdvanceTime<
-            ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, SeamTown, Object> {
+    static class PresetTicksAdvanceTime extends AbstractAdvanceTime<
+            ContainerTarget.Container<TestItem>, TestItem, TestItem, Position, StubTown, Object> {
         private final ImmutableList<Warper.Tick> presetTicks;
 
-        SeamAdvanceTime(ImmutableList<Warper.Tick> presetTicks) {
+        PresetTicksAdvanceTime(ImmutableList<Warper.Tick> presetTicks) {
             this.presetTicks = presetTicks;
         }
 
@@ -276,7 +275,7 @@ class AbstractAdvanceTimeTest {
         }
 
         @Override
-        protected SeamTown finalizeState(SeamTown state, long currentTick) {
+        protected StubTown finalizeState(StubTown state, long currentTick) {
             return state;
         }
     }
@@ -315,11 +314,11 @@ class AbstractAdvanceTimeTest {
         };
     }
 
-    private static SeamTown singleVillagerTown() {
+    private static StubTown singleVillagerTown() {
         TownState.VillagerData<TestItem> v = new TownState.VillagerData<>(
                 0, 0, 0, stubJournal(), UUID.randomUUID()
         );
-        return new SeamTown(List.of(v), 0);
+        return new StubTown(List.of(v), 0);
     }
 
     private static ImmutableList<Warper.Tick> laborTicksAt(long windowEnd, long... productiveOffsets) {
@@ -348,16 +347,16 @@ class AbstractAdvanceTimeTest {
         List<Long> passiveCurrentTicks = new ArrayList<>();
         List<Long> laborCurrentTicks = new ArrayList<>();
 
-        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+        AbstractAdvanceTime.WarpTickCallback<StubTown> passive = (town, currentTick, tickDelta) -> {
             passiveCurrentTicks.add(currentTick);
             passiveDeltas.add(tickDelta);
             return town;
         };
 
-        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+        AbstractAdvanceTime.WarperFactory<Object, StubTown> factory =
                 (work, fallbackJobID, villagerIndex) -> new Warper<>() {
                     @Override
-                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                    public StubTown warp(Object level, StubTown liveState, long currentTick, long ticksPassed, int villagerNum) {
                         laborCurrentTicks.add(currentTick);
                         return liveState;
                     }
@@ -368,7 +367,7 @@ class AbstractAdvanceTimeTest {
                     }
                 };
 
-        new SeamAdvanceTime(labor).advanceTime(
+        new PresetTicksAdvanceTime(labor).advanceTime(
                 singleVillagerTown(),
                 productiveTicks,
                 wallClockTicks,
@@ -409,15 +408,15 @@ class AbstractAdvanceTimeTest {
         ImmutableList<Warper.Tick> labor = laborTicksAt(windowEnd, 11000, 12000);
 
         List<Long> passiveCurrentTicks = new ArrayList<>();
-        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+        AbstractAdvanceTime.WarpTickCallback<StubTown> passive = (town, currentTick, tickDelta) -> {
             passiveCurrentTicks.add(currentTick);
             return town;
         };
 
-        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+        AbstractAdvanceTime.WarperFactory<Object, StubTown> factory =
                 (work, fallbackJobID, villagerIndex) -> new Warper<>() {
                     @Override
-                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                    public StubTown warp(Object level, StubTown liveState, long currentTick, long ticksPassed, int villagerNum) {
                         return liveState;
                     }
 
@@ -427,7 +426,7 @@ class AbstractAdvanceTimeTest {
                     }
                 };
 
-        new SeamAdvanceTime(labor).advanceTime(
+        new PresetTicksAdvanceTime(labor).advanceTime(
                 singleVillagerTown(),
                 productiveTicks,
                 wallClockTicks,
@@ -463,14 +462,14 @@ class AbstractAdvanceTimeTest {
         List<Long> passiveDeltas = new ArrayList<>();
         boolean[] laborRan = {false};
 
-        AbstractAdvanceTime.WarpTickCallback<SeamTown> passive = (town, currentTick, tickDelta) -> {
+        AbstractAdvanceTime.WarpTickCallback<StubTown> passive = (town, currentTick, tickDelta) -> {
             passiveDeltas.add(tickDelta);
             return town;
         };
-        AbstractAdvanceTime.WarperFactory<Object, SeamTown> factory =
+        AbstractAdvanceTime.WarperFactory<Object, StubTown> factory =
                 (work, fallbackJobID, villagerIndex) -> new Warper<>() {
                     @Override
-                    public SeamTown warp(Object level, SeamTown liveState, long currentTick, long ticksPassed, int villagerNum) {
+                    public StubTown warp(Object level, StubTown liveState, long currentTick, long ticksPassed, int villagerNum) {
                         laborRan[0] = true;
                         return liveState;
                     }
@@ -481,7 +480,7 @@ class AbstractAdvanceTimeTest {
                     }
                 };
 
-        new SeamAdvanceTime(laborTicksAt(windowEnd, 100)).advanceTime(
+        new PresetTicksAdvanceTime(laborTicksAt(windowEnd, 100)).advanceTime(
                 singleVillagerTown(),
                 productiveTicks,
                 wallClockTicks,

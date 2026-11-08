@@ -77,9 +77,7 @@ public class BlocksInit {
             MineshaftBlock.ITEM_ID, MineshaftBlock::new
     ));
 
-    public static final Holder<Block> STONE_CHICKEN_STATUE = BLOCKS.register(
-            StoneChickenStatue.ITEM_ID, StoneChickenStatue::new
-    );
+    // TODO: The helper chicken is not in this line yet. For its implementation see #409, #410, #411 and #412.
 
     // Vanilla Blocks
 

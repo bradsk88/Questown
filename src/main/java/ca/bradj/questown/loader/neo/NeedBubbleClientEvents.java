@@ -21,7 +21,6 @@ public final class NeedBubbleClientEvents {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         NeedBubbleFocus.tick(Minecraft.getInstance());
-        ca.bradj.questown.mobs.helperchicken.ChickenArcHintFocus.tick(Minecraft.getInstance());
     }
 
     /** The dead-door and "!" bubbles have no entity, so the one that holds the focus is drawn here. */

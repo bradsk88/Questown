@@ -43,8 +43,6 @@ public final class TownVillagerHandle {
     private final TownVillagerSleepModule sleep = new TownVillagerSleepModule();
     private final HealingModule<VisitorMobEntity> healing = new TownVillagerHealingModule();
     private final TownVillagerMoods moods = new TownVillagerMoods();
-    private final ca.bradj.questown.town.TownVillagerProficiencies proficiencies =
-            new ca.bradj.questown.town.TownVillagerProficiencies();
     final TownVillagerLearningHandle learning = new TownVillagerLearningHandle();
     /** Each villager's "Villager N" number: given on arrival, saved, never reused. */
     private final VillagerDisplayNumbers displayNumbers = new VillagerDisplayNumbers();
@@ -294,7 +292,6 @@ public final class TownVillagerHandle {
             ImmutableMap<UUID, Integer> experience,
             ImmutableMap<UUID, Integer> level,
             ImmutableMap<VillagerUUID, Boolean> jobChangesPending,
-            Map<UUID, ? extends Map<String, Float>> proficiencies,
             ImmutableMap<UUID, JobID> guaranteedRoots,
             ImmutableMap<UUID, JobID> preRolls,
             Map<UUID, Integer> displayNumbersIn,
@@ -312,7 +309,6 @@ public final class TownVillagerHandle {
                 preRolls
         );
         moods.initialize(moodEffects);
-        this.proficiencies.initialize(proficiencies);
         this.displayNumbers.restore(displayNumbersIn, highestDisplayNumberIn);
         // Villagers loaded before this got numbers in load order; give them their saved ones.
         delegate.entities().forEach(this::stampNameplate);
@@ -405,40 +401,6 @@ public final class TownVillagerHandle {
 
     public boolean hasMoodEffect(UUID uuid, ResourceLocation effect) {
         return moods.hasEffect(uuid, effect);
-    }
-
-    float getProficiency(
-            UUID uuid,
-            String proficiencyId
-    ) {
-        return proficiencies.getLevel(uuid, proficiencyId);
-    }
-
-    ImmutableMap<String, Float> getProficiencies(UUID uuid) {
-        return proficiencies.getAll(uuid);
-    }
-
-    ImmutableMap<UUID, ImmutableMap<String, Float>> getAllProficiencies() {
-        return proficiencies.getAll();
-    }
-
-    boolean isProficiencySeeded(UUID uuid) {
-        return proficiencies.isSeeded(uuid);
-    }
-
-    void setProficiency(
-            UUID uuid,
-            String proficiencyId,
-            float level
-    ) {
-        proficiencies.setLevel(uuid, proficiencyId, level);
-    }
-
-    void setProficiencies(
-            UUID uuid,
-            Map<String, Float> levels
-    ) {
-        proficiencies.setAll(uuid, levels);
     }
 
     ImmutableMap<UUID, Integer> getDamage() {
@@ -588,26 +550,12 @@ public final class TownVillagerHandle {
         assignDisplayNumber(visitorMobEntity.getUUID());
         stampNameplate(visitorMobEntity);
 
-        seedProficiencies(visitorMobEntity.getUUID());
 
         ImmutableList<JobID> defaultWork = ServerJobsRegistry.getDefaultWork(visitorMobEntity.getJobId());
         for (JobID jobID : defaultWork) {
             learning.unlockJob(visitorMobEntity.getUUID(), jobID);
         }
         learning.requestKnowledge(visitorMobEntity.getUUID(), defaultWork);
-    }
-
-    /** Gives a new villager random proficiencies, unless it already has saved ones. */
-    private void seedProficiencies(UUID uuid) {
-        if (proficiencies.isSeeded(uuid)) {
-            return;
-        }
-        Map<String, Float> seed = ca.bradj.questown.jobs.Proficiency.seed(
-                uuid,
-                ServerJobsRegistry.getAllDeclaredProficiencyIds(),
-                Config.PROFICIENCY_SEED_COUNT.get()
-        );
-        proficiencies.setAll(uuid, seed);
     }
 
     void addHungryListener(Consumer<VisitorMobEntity> o) {

@@ -25,7 +25,6 @@ public class FlagCommand {
         LiteralArgumentBuilder<CommandSourceStack> subSubCmd = Commands.literal("place_above");
 
         // @formatter:off
-        // A flag placed by command never gets the helper chicken.
         src.register(
             Commands.literal("qt").then(
                 subCmd
@@ -36,10 +35,6 @@ public class FlagCommand {
                                 css.getSource(),
                                 BlockPosArgument.getLoadedBlockPos(css, "pos")
                             ))
-                            .then(Commands.literal("skip-chicken").executes(css -> setBlock(
-                                css.getSource(),
-                                BlockPosArgument.getLoadedBlockPos(css, "pos")
-                            )))
                         )
                 )
             )
@@ -58,9 +53,6 @@ public class FlagCommand {
 
         BlockPos flagPos = target.above();
         source.getLevel().setBlockAndUpdate(flagPos, BlocksInit.COBBLESTONE_TOWN_FLAG.get().defaultBlockState());
-        if (source.getLevel().getBlockEntity(flagPos) instanceof TownFlagBlockEntity flag) {
-            flag.markChickenArcIneligible();
-        }
 
         AdvancementsInit.APPROACH_TOWN_TRIGGER.trigger(
                 source.getPlayer(), ApproachTownTrigger.Triggers.FirstVisit
