@@ -64,6 +64,8 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
 
     private final Set<TownPosition> registeredFenceGates = new HashSet<>();
 
+    private static long kitchenDiagN = 0L;
+
     private void updateActiveFarms(
             ServerLevel level,
             int scanLevel,

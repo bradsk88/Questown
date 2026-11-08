@@ -31,6 +31,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
     private final Predicate<POS> isJobBlock;
     private final Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items;
     private final Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools;
+    private final Function<Integer, Boolean> workDeclaredAt;
     private final BiFunction<ROOM, POS, ContainersClean.Block<CONTAINER>> toBlock;
     private Function<TOWN_ITEM, HELD_ITEM> convert;
     private final Supplier<Signals.DayTime> dayTime;
@@ -52,6 +53,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
             Predicate<POS> canClaim,
             Function<Integer, PredicateCollection<HELD_ITEM, HELD_ITEM>> items,
             Function<Integer, PredicateCollection<TOWN_ITEM, TOWN_ITEM>> tools,
+            Function<Integer, Boolean> workDeclaredAt,
             Function<POS, String> stringify,
             int maxState,
             Function<TOWN_ITEM, HELD_ITEM> convert,
@@ -78,6 +80,7 @@ public class TickTownProvider<ROOM extends Room, POS, MATCH extends IRoomRecipeM
         this.isJobBlock = isJobBlock;
         this.items = items;
         this.tools = tools;
+        this.workDeclaredAt = workDeclaredAt;
         this.toBlock = toBlock;
         this.hasSpace = hasSpace;
     }

@@ -31,8 +31,9 @@ class RoomsStatusLogic {
      * @param getIngredients    Function to get required ingredients for a state (null or empty if none required)
      * @param getQuantityForStep Function to get required ingredient quantity for a state (null if none required)
      * @param getTools          Function to get required tools for a state (null or empty if none required)
-     * @param getContainedBlocks Function to get all block positions in a room
-     * @param maxState          The maximum processing state for this job
+     * @param workDeclaredAt     true when the job declares work at the state, even if it rounds to 0
+     * @param getContainedBlocks all block positions in a room
+     * @param maxState           the job's last processing state
      */
     static <
             RL,
@@ -50,6 +51,7 @@ class RoomsStatusLogic {
             Function<Integer, @Nullable PredicateCollection<HELD_ITEM, HELD_ITEM>> getIngredients,
             Function<Integer, @Nullable Integer> getQuantityForStep,
             Function<Integer, @Nullable PredicateCollection<TOWN_ITEM, TOWN_ITEM>> getTools,
+            Function<Integer, Boolean> workDeclaredAt,
             Function<MATCH, Collection<POS>> getContainedBlocks,
             BiFunction<MATCH, Boolean, NVIRoom<ROOM, RL, POS>> maker,
             int maxState
@@ -64,7 +66,7 @@ class RoomsStatusLogic {
                 continue;
             }
             Collection<MATCH> matches = roomsWithState(
-                    jobRooms, getJobBlockState, state, isJobBlock, s -> true
+                    jobRooms, getJobBlockState, state, isJobBlock, (bp, s) -> true
             );
             Integer stateQty = getQuantityForStep.apply(state);
             ArrayList<MATCH> rwwcbd = getRoomsWhereWorkCanBeDone(
@@ -93,18 +95,20 @@ class RoomsStatusLogic {
             // Tools gathered at a state are needed for all remaining states (they carry forward)
             for (int i = toolState; i < maxState; i++) {
                 Collection<MATCH> list = roomsWithState(
-                        jobRooms, getJobBlockState, i, isJobBlock, s -> true
+                        jobRooms, getJobBlockState, i, isJobBlock, (bp, s) -> true
                 );
                 // Key by the room's actual processing state (i), not the tool state
                 UtilClean.addAllOrInitializeList(b, i, list.stream().map(v -> maker.apply(v, false)).toList());
             }
         }
 
-        // If no tools are required, also include rooms where work can be done
+        // With no tools needed, rooms that only need work count too, even on a fresh or finished block.
         if (!requiresTools) {
             for (int i = 0; i < maxState; i++) {
-                Collection<MATCH> workable = roomsWithState(jobRooms, getJobBlockState, i, isJobBlock, State::hasWorkLeft);
-                UtilClean.addAllOrInitializeList(b, i, workable.stream().map(v -> maker.apply(v, true)).toList());
+                Predicate<State> workable = workDeclaredAt.apply(i) ? s -> true : State::hasWorkLeft;
+                Collection<MATCH> workRooms = roomsWithState(jobRooms, getJobBlockState, i, isJobBlock,
+                        (bp, s) -> canClaim.test(bp) && workable.test(s));
+                UtilClean.addAllOrInitializeList(b, i, workRooms.stream().map(v -> maker.apply(v, true)).toList());
             }
         }
         return new RoomsNeedingVillagerInput<>(ImmutableMap.copyOf(b));
@@ -140,6 +144,7 @@ class RoomsStatusLogic {
                 checks::getIngredientsForStep,
                 state -> checks.getQuantityForStep(state, null),
                 checks::getToolsForStep,
+                state -> checks.getWorkForStep(state) != null,
                 getContainedBlocks,
                 NVIRoom::new,
                 maxState
@@ -152,7 +157,7 @@ class RoomsStatusLogic {
             Function<POS, State> getJobBlockState,
             Integer state,
             Predicate<POS> isJobBlock,
-            Predicate<State> extraCheck
+            java.util.function.BiPredicate<POS, State> extraCheck
     ) {
         // Cast needed because DeclarativeJobs.roomsWithState requires ROOM extends Room,
         // but we want this method to work with any ROOM type
@@ -160,11 +165,8 @@ class RoomsStatusLogic {
                 (Collection) rooms,
                 isJobBlock,
                 (bp) -> {
-                    State jbs = getJobBlockState.apply((POS) bp);
-                    if (jbs == null) {
-                        return false;
-                    }
-                    return state.equals(jbs.processingState()) && extraCheck.test(jbs);
+                    State jbs = State.seededOrFresh(getJobBlockState, (POS) bp);
+                    return state.equals(jbs.processingState()) && extraCheck.test((POS) bp, jbs);
                 }
         );
     }
