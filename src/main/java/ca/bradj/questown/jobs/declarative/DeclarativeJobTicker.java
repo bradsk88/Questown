@@ -451,6 +451,10 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             ProductionJournal journal = deps.getJournal();
             ProductionStatus s = deps.getComputeStatusOverrideForSpecialJobs();
             if (s != null) {
+                // The supply pipeline reads the journal's status, so put the override there.
+                if (!s.equals(journal.getStatus())) {
+                    journal.changeStatus(s);
+                }
                 return s;
             }
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());

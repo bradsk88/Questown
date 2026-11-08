@@ -349,7 +349,7 @@ class JobIntegrationTest {
 
     @Test
     void arborist_cut_trees_shouldLoadCorrectly() {
-        JobDefinition definition = TestJobLoader.loadFromFile(ARCHIVE_PATH + "arborist_cut_trees.json");
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "arborist_cut_trees.json");
 
         Assertions.assertEquals(new JobID("arborist", "cut_trees"), definition.jobId());
         Assertions.assertEquals(1, definition.maxState());
@@ -360,7 +360,7 @@ class JobIntegrationTest {
 
     @Test
     void arborist_plant_tree_shouldLoadCorrectly() {
-        JobDefinition definition = TestJobLoader.loadFromFile(ARCHIVE_PATH + "arborist_plant_tree.json");
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "arborist_plant_tree.json");
 
         Assertions.assertEquals(new JobID("arborist", "plant_sapling"), definition.jobId());
         Assertions.assertEquals(3, definition.maxState());
@@ -1049,7 +1049,7 @@ class JobIntegrationTest {
     @Test
     void arborist_shouldWork_whenFarmJobSiteIsFound() {
         // Load arborist job which requires special_quest.farm room
-        JobDefinition definition = TestJobLoader.loadFromFile(ARCHIVE_PATH + "arborist_plant_tree.json");
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "arborist_plant_tree.json");
 
         TestWorkStatusHandle workStatusHandle = new TestWorkStatusHandle();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(6);
@@ -1107,7 +1107,7 @@ class JobIntegrationTest {
     @Test
     void arborist_getsStuck_whenFarmJobSiteNotFound_BUG() {
         // Load arborist job which requires special_quest.farm room
-        JobDefinition definition = TestJobLoader.loadFromFile(ARCHIVE_PATH + "arborist_plant_tree.json");
+        JobDefinition definition = TestJobLoader.loadFromFile(JOBS_PATH + "arborist_plant_tree.json");
 
         TestWorkStatusHandle workStatusHandle = new TestWorkStatusHandle();
         ValidatedInventoryHandle<GathererJournalTest.TestItem> inventory = TestInventory.sized(6);

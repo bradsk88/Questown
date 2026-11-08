@@ -135,6 +135,37 @@ public class FetcherHack {
         return all.get(0);
     }
 
+    /**
+     * The fetcher's status: holding the request and the item, deliver it; holding the request, or one
+     * waits in a chest, collect supplies; otherwise null for the default.
+     */
+    public static @Nullable ProductionStatus computeStatusOverride(
+            TownInterface town,
+            ImmutableList<MCHeldItem> items
+    ) {
+        boolean holdingRequest = false;
+        boolean holdingOther = false;
+        for (MCHeldItem item : items) {
+            if (item.isEmpty()) {
+                continue;
+            }
+            if (item.get().get() instanceof StockRequestItem) {
+                holdingRequest = true;
+            } else {
+                holdingOther = true;
+            }
+        }
+        if (holdingRequest && holdingOther) {
+            return ProductionStatus.DROPPING_LOOT;
+        }
+        if (!holdingRequest && getTarget(town) != null) {
+            // A request waits in a chest but the villager has none yet: go and collect it.
+            return ProductionStatus.COLLECTING_SUPPLIES;
+        }
+        // Carrying the request: the default status takes over.
+        return null;
+    }
+
     public static @Nullable ProductionStatus computeStatus(
             TownInterface town,
             ImmutableList<MCHeldItem> items
