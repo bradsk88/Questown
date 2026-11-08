@@ -53,6 +53,46 @@ class JobDataRootsTest {
         Assertions.assertEquals(List.of(), missing, "crafter jobs without a \"working\" status texture");
     }
 
+    @Test
+    void blacksmithsTableJobs_showTheBlacksmithsTable() throws IOException, URISyntaxException {
+        Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:blacksmiths_table",
+                "questown:textures/blocks/blacksmiths_table_front.png"), "blacksmith's table jobs without its working art");
+    }
+
+    @Test
+    void armorersTableJobs_showTheArmorersTable() throws IOException, URISyntaxException {
+        Assertions.assertEquals(List.of(), jobsAtBlockWithoutArt("questown:armorers_table",
+                "questown:textures/blocks/armorers_table_front.png"), "armorer's table jobs without its working art");
+    }
+
+    private static List<String> jobsAtBlockWithoutArt(String blockId, String texture) throws IOException, URISyntaxException {
+        List<String> wrong = new ArrayList<>();
+        for (JsonObject job : allJobs()) {
+            JsonElement block = job.get("block");
+            boolean atBlock = block != null && block.isJsonPrimitive() && blockId.equals(block.getAsString());
+            if (atBlock && !texture.equals(workingTexture(job))) {
+                wrong.add(job.get("id").getAsString());
+            }
+        }
+        return wrong;
+    }
+
+    private static boolean hasWorkingTexture(JsonObject job) {
+        return workingTexture(job) != null;
+    }
+
+    private static String workingTexture(JsonObject job) {
+        if (!job.has("status_texture_overrides")) {
+            return null;
+        }
+        for (JsonElement row : job.getAsJsonArray("status_texture_overrides")) {
+            JsonObject r = row.getAsJsonObject();
+            if ("working".equals(r.get("type").getAsString())) {
+                return r.get("new_texture").getAsString();
+            }
+        }
+        return null;
+    }
 
     private static List<JsonObject> allJobs() throws IOException, URISyntaxException {
         URL dir = JobDataRootsTest.class.getClassLoader().getResource("data/questown/questown_jobs");

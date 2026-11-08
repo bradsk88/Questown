@@ -16,7 +16,7 @@ import ca.bradj.questown.jobs.declarative.DowntimeWork;
 import ca.bradj.questown.jobs.declarative.FirstHunterLootGuarantee;
 import ca.bradj.questown.jobs.declarative.WarpTickHook;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
-import ca.bradj.questown.jobs.requests.WorkRequest;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.TownContainers;
@@ -281,7 +281,7 @@ public class TownFlagState {
                     Signals.DayTime dayTime,
                     long ticksElapsed
             ) {
-                ImmutableList<WorkRequest> requestedResults = e.getWorkHandle().getRequestedResults();
+                BoardRequests requestedResults = e.getWorkHandle().getBoardRequests();
                 WorksBehaviour.TownData td = e.getTownData();
 
                 Predicate<JobID> canFit = p -> ServerJobsRegistry.canFit(null, p, dayTime);

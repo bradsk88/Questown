@@ -2,6 +2,7 @@ package ca.bradj.questown.world;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.mc.Compat;
+import ca.bradj.questown.integration.minecraft.DisplaySlots;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -276,8 +277,29 @@ public class MinecraftWorldAccess implements QTWorldAccess {
     }
 
     @Override
+    public List<ItemStack> getDisplaySlots(BlockPos pos) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        return d == null ? List.of() : d.items();
+    }
+
+    @Override
+    public void dropItem(BlockPos pos, ItemStack item) {
+        net.minecraft.world.level.block.Block.popResource(level, pos, item);
+    }
+
+    @Override
+    public boolean setDisplaySlot(BlockPos pos, int slot, ItemStack item) {
+        DisplaySlots d = DisplaySlots.at(level, pos);
+        if (d == null || slot < 0 || slot >= d.getContainerSize()) {
+            return false;
+        }
+        d.setItem(slot, item);
+        return true;
+    }
+
+    @Override
     public boolean insertIntoContainer(BlockPos pos, ItemStack item) {
-        IItemHandler handler = resolveItemHandler(pos);
+        ItemHandler handler = resolveItemHandler(pos);
         if (handler == null) {
             return false;
         }

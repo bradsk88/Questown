@@ -18,6 +18,7 @@ import ca.bradj.questown.core.init.TagsInit;
 import ca.bradj.questown.gui.Ingredients;
 import ca.bradj.questown.gui.ItemEconomicsData;
 import ca.bradj.questown.integration.minecraft.MCTownItem;
+import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.logic.RoomRecipes;
@@ -869,6 +870,8 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
     }
 
     Supplier<List<QuestPath>> curatedPaths = QuestPaths::all;
+    // Paths whose finishing advancement fired this session.
+    private final Set<String> announcedPaths = new HashSet<>();
 
     /** True once the onboarding miner batch is done; the paths start here. */
     boolean atTheFork() {
@@ -901,6 +904,19 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         if (postedAny) {
             notifyNewQuests(view);
         }
+    }
+
+    /** Fires a finished path's advancement, once per session. */
+    private void announceIfFinished(TutorialTownView view, QuestPath path, Set<String> posted, Set<String> done) {
+        if (announcedPaths.contains(path.id()) || !QuestPathProgress.taken(path, done)) {
+            return;
+        }
+        if (!QuestPathProgress.finished(path, posted, done)) {
+            return;
+        }
+        announcedPaths.add(path.id());
+        TutorialTrigger.Triggers.forPath(path.id()).ifPresent(view::fireTutorialTrigger);
+        QT.QUESTS_LOGGER.info("Quest path finished: {}", path.id());
     }
 
     /** While a path has batches left, the procedural quests wait. */
@@ -1778,6 +1794,22 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             }
         }
         return out;
+    }
+
+    /** The board requests an open quest still needs, so they never pause. A villager-level quest needs them all. */
+    public Predicate<WorkRequest> requestsOpenQuestsNeed() {
+        List<MCQuest> open = questBatches.getAll().stream().filter(q -> !q.isComplete()).toList();
+        if (open.stream().anyMatch(q -> q.getType() == Quest.QuestType.VILLAGER_LEVEL)) {
+            return r -> true;
+        }
+        List<ItemStack> wanted = open.stream()
+                .filter(q -> q.getType() == Quest.QuestType.ITEM || q.getType() == Quest.QuestType.LOOT)
+                .flatMap(q -> Arrays.stream(Ingredients.asIngredient(q.getWantedId()).getItems()))
+                .toList();
+        return r -> {
+            Ingredient requested = r.asIngredient();
+            return wanted.stream().anyMatch(requested);
+        };
     }
 
     public void processJobChanges(ImmutableMap<VillagerUUID, JobID> villagerJobs) {

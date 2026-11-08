@@ -115,6 +115,10 @@ public final class QuestownSpecialRules {
                 new AddItemToContainerSpecialRule()
         );
         SpecialRulesRegistry.registerSpecialRule(
+                Questown.ResourceLocation(SpecialRules.DRESS_DISPLAY),
+                new DressDisplaySpecialRule()
+        );
+        SpecialRulesRegistry.registerSpecialRule(
                 Questown.ResourceLocation(SpecialRules.CLEAR_BOP_FOR_VILLAGER),
                 new ClearBOPSpecialRule()
         );

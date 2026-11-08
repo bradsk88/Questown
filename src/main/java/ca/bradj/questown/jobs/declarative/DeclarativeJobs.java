@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -517,6 +518,23 @@ public class DeclarativeJobs {
             Predicate<BLOCK> isJobBlock,
             BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot
     ) {
+        return findJobSite(maxState, prioritizeExtraction, statusItems, roomsWithFinishedProduct, getPositionWithin,
+                blocksSrc, work, isJobBlock, findInteractionSpot, b -> 0);
+    }
+
+    /** As above, trying job blocks with a higher {@code preference} first: a display job prefers the fullest display. */
+    public static <ROOM extends Room, RECIPE, BLOCK> @NotNull WithReason<@Nullable BLOCK> findJobSite(
+            int maxState,
+            boolean prioritizeExtraction,
+            Map<Integer, SupplyItemStatus> statusItems,
+            Collection<ROOM> roomsWithFinishedProduct,
+            Function<ROOM, BLOCK> getPositionWithin,
+            RoomsNeedingVillagerInput<ROOM, RECIPE, BLOCK> blocksSrc,
+            Function<BLOCK, State> work,
+            Predicate<BLOCK> isJobBlock,
+            BiFunction<BLOCK, ROOM, BLOCK> findInteractionSpot,
+            ToIntFunction<BLOCK> preference
+    ) {
         if (prioritizeExtraction && !roomsWithFinishedProduct.isEmpty()) {
             return WithReason.always(
                     getPositionWithin.apply(roomsWithFinishedProduct.iterator().next()),
@@ -530,45 +548,51 @@ public class DeclarativeJobs {
         // For now, we use randomization
         Collections.shuffle(rooms);
 
-        boolean roomFoundButNotBlock = true;
-
+        List<JobBlockCandidate<ROOM, RECIPE, BLOCK>> candidates = new ArrayList<>();
         for (NVIRoom<ROOM, RECIPE, BLOCK> match : rooms) {
-            for (Map.Entry<BLOCK, ?> blocks : match.room().getContainedBlocks().entrySet()
-            ) {
-                BLOCK blockPos = blocks.getKey();
-                State blockState = work.apply(blockPos);
-                if (blockState == null) {
-                    blockState = State.freshAtState(0);
-                } else if (blockState.processingState() > maxState) {
-                    // Another job's record at a shared block reads as fresh.
-                    blockState = State.freshAtState(0);
-                }
+            for (BLOCK blockPos : match.room().getContainedBlocks().keySet()) {
                 if (isJobBlock.test(blockPos)) {
-                    roomFoundButNotBlock = false;
-                } else {
-                    continue;
-                }
-
-                Supplier<BLOCK> is = () -> findInteractionSpot.apply(
-                        blockPos,
-                        match.room().getRoom()
-                );
-
-                if (maxState == blockState.processingState()) {
-                    return new WithReason<>(is.get(), "Found extractable product");
-                }
-                SupplyItemStatus sis = statusItems.getOrDefault(blockState.processingState(), SupplyItemStatus.NOT_REQUIRED);
-                if (sis != SupplyItemStatus.NEEDS_ITEM) {
-                    return new WithReason<>(is.get(), "Found a spot where a held item can be used");
+                    candidates.add(new JobBlockCandidate<>(match, blockPos));
                 }
             }
         }
+        if (candidates.isEmpty()) {
+            return new WithReason<>(null, rooms.isEmpty() ? "No job sites" : "Job site found, but no usable job blocks");
+        }
+        if (candidates.size() > 1) {
+            Map<BLOCK, Integer> scores = new HashMap<>();
+            candidates.forEach(c -> scores.computeIfAbsent(c.block(), preference::applyAsInt));
+            candidates.sort(Comparator.comparingInt((JobBlockCandidate<ROOM, RECIPE, BLOCK> c) -> scores.get(c.block())).reversed());
+        }
 
-        if (roomFoundButNotBlock) {
-            return new WithReason<>(null, "Job site found, but no usable job blocks");
+        for (JobBlockCandidate<ROOM, RECIPE, BLOCK> c : candidates) {
+            BLOCK blockPos = c.block();
+            State blockState = work.apply(blockPos);
+            if (blockState == null) {
+                blockState = State.freshAtState(0);
+            } else if (blockState.processingState() > maxState) {
+                // Another job's record at a shared block reads as fresh.
+                blockState = State.freshAtState(0);
+            }
+
+            Supplier<BLOCK> is = () -> findInteractionSpot.apply(
+                    blockPos,
+                    c.match().room().getRoom()
+            );
+
+            if (maxState == blockState.processingState()) {
+                return new WithReason<>(is.get(), "Found extractable product");
+            }
+            SupplyItemStatus sis = statusItems.getOrDefault(blockState.processingState(), SupplyItemStatus.NOT_REQUIRED);
+            if (sis != SupplyItemStatus.NEEDS_ITEM) {
+                return new WithReason<>(is.get(), "Found a spot where a held item can be used");
+            }
         }
 
         return new WithReason<>(null, "No job sites");
+    }
+
+    private record JobBlockCandidate<ROOM extends Room, RECIPE, BLOCK>(NVIRoom<ROOM, RECIPE, BLOCK> match, BLOCK block) {
     }
 
     public static <POS, ROOM extends Room, RECIPE> ImmutableMap<Integer, RoomsWithWorkableStatefulBlocks<POS>> rooms(
@@ -628,6 +652,16 @@ public class DeclarativeJobs {
                         }
                         return false;
                     });
+    }
+
+    /** Whether {@code state} still has work to do: not the final state (a product waiting), and not a state still waiting for an ingredient. */
+    public static boolean declaresUnfinishedWork(
+            int state,
+            int maxState,
+            boolean workDeclared,
+            boolean ingredientRequired
+    ) {
+        return workDeclared && state < maxState && !ingredientRequired;
     }
 
     public static <POS> Collection<Integer> getStatesWithUnfinishedWork(

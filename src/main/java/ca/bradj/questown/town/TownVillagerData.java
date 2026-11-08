@@ -3,9 +3,7 @@ package ca.bradj.questown.town;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.WorksBehaviour;
-import ca.bradj.questown.jobs.requests.WorkRequest;
-import com.google.common.collect.ImmutableList;
-import net.minecraft.world.item.crafting.Ingredient;
+import ca.bradj.questown.jobs.requests.BoardRequests;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -18,7 +16,7 @@ public class TownVillagerData {
     public static @Nullable JobID chooseFromList(
             Predicate<JobID> canFitInDay,
             Predicate<JobID> canAlwaysStart,
-            ImmutableList<WorkRequest> requestedResults,
+            BoardRequests requestedResults,
             WorksBehaviour.TownData td,
             Collection<JobID> preferenceIn
     ) {
