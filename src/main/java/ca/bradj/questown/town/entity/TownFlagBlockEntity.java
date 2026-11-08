@@ -47,6 +47,8 @@ import ca.bradj.questown.core.advancements.TutorialTrigger;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.town.rewards.CampfireReadyReward;
 import ca.bradj.questown.mc.Util;
+import ca.bradj.questown.mobs.helperchicken.ChickenRoomShellPlan;
+import ca.bradj.questown.town.TownContainers;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.*;
 import ca.bradj.questown.town.econ.NoMCEconomics;
@@ -1482,6 +1484,19 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         );
     }
 
+
+    /** Places a welcome mat at {@code pos} and registers it with this flag, as a player placing one does. */
+    public void placeWelcomeMat(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState state =
+                ca.bradj.questown.core.init.BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState();
+        level.setBlockAndUpdate(pos, state);
+        registerWelcomeMat(pos);
+    }
+
     public List<BlockPos> getWelcomeMats() {
         return pois.getWelcomeMats();
     }
@@ -1492,11 +1507,289 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         this.setChanged();
     }
 
+    public void removeJobsBoard(BlockPos matPos) {
+        this.workHandle.removeJobBoard(matPos);
+        this.setChanged();
+    }
+
+    /** Places a job board at {@code pos} and registers it with this flag, as a player placing one does. */
+    public void placeJobBoard(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState state =
+                ca.bradj.questown.core.init.BlocksInit.JOB_BOARD_BLOCK.get().defaultBlockState();
+        level.setBlockAndUpdate(pos, state);
+        registerJobsBoard(pos);
+    }
+
+    // Dev-only: the empty cells inside this flag's registered rooms. A block placed in one is inside the room.
+    public java.util.List<BlockPos> interiorCells() {
+        ServerLevel level = getServerLevel();
+        java.util.List<BlockPos> cells = new java.util.ArrayList<>();
+        if (level == null) {
+            return cells;
+        }
+        for (MCRoom room : roomsHandle.getRegisteredRooms().getAllRooms()) {
+            int y = room.yCoord;
+            for (InclusiveSpace space : room.getSpaces()) {
+                for (int x = space.getWestX(); x <= space.getEastX(); x++) {
+                    for (int z = space.getNorthZ(); z <= space.getSouthZ(); z++) {
+                        BlockPos pos = new BlockPos(x, y, z);
+                        if (level.getBlockState(pos).isAir()) {
+                            cells.add(pos);
+                        }
+                    }
+                }
+            }
+        }
+        return cells;
+    }
+
+    // Dev-only: place a block in the indexed interior cell. Returns where it landed, or null.
+    public @Nullable BlockPos placeBlockInInterior(int index, Block block) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return null;
+        }
+        java.util.List<BlockPos> cells = interiorCells();
+        if (index < 0 || index >= cells.size()) {
+            return null;
+        }
+        BlockPos pos = cells.get(index);
+        level.setBlockAndUpdate(pos, block.defaultBlockState());
+        return pos;
+    }
+
+    public void buildRoom(BlockPos doorPos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        // A registered door already has a room; another room needs another door.
+        int scanLevel = doorPos.getY() - getBlockPos().getY();
+        if (getRoomHandle().getAllRegisteredDoors().contains(
+                new ca.bradj.questown.town.rooms.TownPosition(doorPos.getX(), doorPos.getZ(), scanLevel)
+        )) {
+            QT.FLAG_LOGGER.warn(
+                    "[build_room] door {} already has a room built around it; a quest that needs its "
+                            + "own room needs a new door, not this one",
+                    doorPos
+            );
+            return;
+        }
+
+        // Place a door if there isn't one, or the plan walls the doorway up.
+        if (!(level.getBlockState(doorPos).getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
+            if (!level.getBlockState(doorPos).isAir() || !level.getBlockState(doorPos.above()).isAir()) {
+                QT.FLAG_LOGGER.warn(
+                        "[build_room] door cell at {} is blocked and cannot hold a door",
+                        doorPos
+                );
+                return;
+            }
+            placeDoor(doorPos);
+        }
+
+        int baseY = getBlockPos().getY() + (doorPos.getY() - getBlockPos().getY());
+
+        // Check first, so a room that can't close is never started.
+        java.util.function.Predicate<BlockPos> isOccupied = p -> !level.getBlockState(p).isAir();
+        java.util.function.Predicate<BlockPos> isOccupiedIgnoringDoorCell = p -> {
+            if (p.equals(doorPos) || p.equals(doorPos.above())) {
+                return false;
+            }
+            return isOccupied.test(p);
+        };
+        ChickenRoomShellPlan.Outcome feasible = ChickenRoomShellPlan.feasibility(
+                doorPos, baseY, isOccupiedIgnoringDoorCell
+        );
+        if (!feasible.clear()) {
+            QT.FLAG_LOGGER.warn(
+                    "[build_room] refusing to build a room at {}: {} - pick a clear door spot",
+                    doorPos, feasible.reason()
+            );
+            return;
+        }
+        ChickenRoomShellPlan.DoorFrame frame = ChickenRoomShellPlan.frameFor(doorPos, baseY, isOccupied);
+        ChickenRoomShellPlan.Plan plan = ChickenRoomShellPlan.plan(frame, isOccupied, java.util.Set.of());
+        int laid = 0;
+        for (ChickenRoomShellPlan.BlockStep step : plan.steps()) {
+            if (level.getBlockState(step.pos()).isAir()) {
+                level.setBlockAndUpdate(step.pos(), net.minecraft.world.level.block.Blocks.COBBLESTONE.defaultBlockState());
+                laid++;
+            }
+        }
+        // Register the door after the walls, so the scan sees the finished room.
+        getRoomHandle().registerDoor(doorPos);
+        QT.FLAG_LOGGER.info(
+                "[build_room] laid {} shell blocks around door {} for flag {} (door registered; the room "
+                        + "is detected by the scan on a later tick)",
+                laid, doorPos, getBlockPos()
+        );
+    }
+
+    /**
+     * Builds a 5x5 room with a south door, plank walls, a dirt floor and a roof around {@code doorPos},
+     * registers the door, and places the recipe's blocks inside.
+     *
+     * @param recipeBlocks the recipe's blocks, one per ingredient; a bed takes two
+     * @return the door position, or null when the spot is not clear
+     */
+    public @Nullable BlockPos buildRoomForRecipe(BlockPos doorPos, List<net.minecraft.world.level.block.Block> recipeBlocks) {
+        ServerLevel level = getServerLevel();
+        if (level == null) return null;
+
+        if (!level.getBlockState(doorPos).isAir()
+                || !level.getBlockState(doorPos.above()).isAir()
+                || level.getBlockState(doorPos.below()).isAir()) {
+            return null;
+        }
+
+        int s = 4;
+        int cornerX = doorPos.getX() - s / 2;
+        int cornerZ = doorPos.getZ() - s;
+        BlockPos corner = new BlockPos(cornerX, doorPos.getY(), cornerZ);
+
+        for (int dx = 0; dx <= s; dx++) {
+            for (int dz = 0; dz <= s; dz++) {
+                BlockPos at = corner.offset(dx, 0, dz);
+                level.setBlockAndUpdate(at.below(), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState());
+                boolean edge = dx == 0 || dx == s || dz == 0 || dz == s;
+                if (edge) {
+                    boolean isDoor = dx == s / 2 && dz == s;
+                    for (int dy = 0; dy <= 2; dy++) {
+                        BlockPos wall = at.above(dy);
+                        if (isDoor && dy <= 1) {
+                            var half = dy == 0
+                                    ? net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+                                    : net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+                            level.setBlockAndUpdate(wall, net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState()
+                                    .setValue(net.minecraft.world.level.block.DoorBlock.HALF, half));
+                        } else {
+                            level.setBlockAndUpdate(wall, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+                        }
+                    }
+                }
+                level.setBlockAndUpdate(at.above(3), net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState());
+            }
+        }
+
+        getRoomHandle().registerDoor(doorPos);
+
+        List<net.minecraft.world.level.block.Block> toPlace = ca.bradj.questown.logic.BedHalves.oneEntryPerBed(
+                recipeBlocks,
+                b -> b.defaultBlockState().hasProperty(
+                        net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)
+        );
+
+        // The recipe blocks go in the 3x3 inside, on two levels. A bed takes two cells.
+        int[][] interior = {{2, 2}, {1, 1}, {3, 3}, {1, 3}, {3, 1}, {2, 1}, {1, 2}, {3, 2}, {2, 3}};
+        int levels = 2;
+        java.util.List<BlockPos> cells = new java.util.ArrayList<>();
+        for (int lvl = 0; lvl < levels; lvl++) {
+            for (int[] c : interior) {
+                cells.add(new BlockPos(cornerX + c[0], doorPos.getY() + lvl, cornerZ + c[1]));
+            }
+        }
+        java.util.Set<BlockPos> cellSet = new java.util.HashSet<>(cells);
+        int capacity = cells.size();
+        if (recipeBlocks.size() > capacity) {
+            QT.FLAG_LOGGER.warn(
+                    "[buildRoomForRecipe] recipe needs {} blocks but the room holds {} "
+                            + "({} cells x {} levels); the room will NOT match the recipe",
+                    recipeBlocks.size(), capacity, interior.length, levels
+            );
+        }
+        java.util.Set<BlockPos> used = new java.util.HashSet<>();
+        int placed = 0;
+        for (net.minecraft.world.level.block.Block block : toPlace) {
+            net.minecraft.world.level.block.state.BlockState st = block.defaultBlockState();
+            if (!st.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART)) {
+                for (BlockPos at : cells) {
+                    if (used.contains(at)) {
+                        continue;
+                    }
+                    level.setBlockAndUpdate(at, st);
+                    used.add(at);
+                    placed++;
+                    break;
+                }
+                continue;
+            }
+            // A bed needs a free cell and a free cell in front of it; without both, it is skipped.
+            int placedBefore = placed;
+            placedBed:
+            for (BlockPos at : cells) {
+                if (used.contains(at)) {
+                    continue;
+                }
+                for (net.minecraft.core.Direction facing : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                    BlockPos head = at.relative(facing);
+                    if (!cellSet.contains(head) || used.contains(head)) {
+                        continue;
+                    }
+                    net.minecraft.world.level.block.state.BlockState footState = st.setValue(
+                            net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART,
+                            net.minecraft.world.level.block.state.properties.BedPart.FOOT)
+                            .setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING, facing);
+                    level.setBlockAndUpdate(at, footState);
+                    level.setBlockAndUpdate(head, footState.setValue(
+                            net.minecraft.world.level.block.state.properties.BlockStateProperties.BED_PART,
+                            net.minecraft.world.level.block.state.properties.BedPart.HEAD));
+                    used.add(at);
+                    used.add(head);
+                    placed++;
+                    break placedBed;
+                }
+            }
+            if (placed == placedBefore) {
+                QT.FLAG_LOGGER.warn(
+                        "[buildRoomForRecipe] no free adjacent cell pair left for a bed of {} "
+                                + "({} of {} interior cells used); bed left unplaced",
+                        block, used.size(), cells.size()
+                );
+            }
+        }
+
+        QT.FLAG_LOGGER.info(
+                "[buildRoomForRecipe] built 5x5 room at corner {} for door {}, placed {} of {} inside, door registered",
+                corner.toShortString(), doorPos.toShortString(), placed, toPlace.size(), toPlace
+        );
+        return doorPos;
+    }
+
+    /** Places a whole oak door at {@code pos}. Register it with {@code _qtdev registerroom}. */
+    public void placeDoor(BlockPos pos) {
+        ServerLevel level = getServerLevel();
+        if (level == null) {
+            return;
+        }
+        net.minecraft.world.level.block.state.BlockState door =
+                net.minecraft.world.level.block.Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(pos, door.setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER
+        ));
+        level.setBlockAndUpdate(pos.above(), door.setValue(
+                net.minecraft.world.level.block.DoorBlock.HALF,
+                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
+        ));
+    }
+
     public void openJobsMenu(
             ServerPlayer sender,
             boolean skipStraightToAdd
     ) {
         workHandle.openMenuRequested(sender, skipStraightToAdd);
+    }
+
+    /** For tests: saves the live town state now, so a warp runs on current data. */
+    public void publishStateToTileForTest() {
+        CompoundTag tag = Compat.getBlockStoredTagData(this);
+        writeTownData(tag);
+        state.putStateOnTile(tag, getUUID(), getDebugLogger(QT.FLAG_LOGGER, DebugLogArgument.TOWN_STATE_CHANGES));
     }
 
     public MCTownState warpTime(int ticks) {

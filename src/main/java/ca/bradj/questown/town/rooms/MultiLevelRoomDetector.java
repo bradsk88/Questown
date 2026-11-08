@@ -1,11 +1,14 @@
 package ca.bradj.questown.town.rooms;
 
 import ca.bradj.questown.core.Config;
+import ca.bradj.questown.town.WallDetection;
 import ca.bradj.questown.town.entity.TownRooms;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatch;
 import ca.bradj.roomrecipes.adapter.RoomRecipeMatches;
 import ca.bradj.roomrecipes.core.Room;
+import ca.bradj.roomrecipes.core.space.InclusiveSpace;
 import ca.bradj.roomrecipes.core.space.Position;
+import ca.bradj.roomrecipes.logic.InclusiveSpaces;
 import ca.bradj.roomrecipes.logic.LevelRoomDetector;
 import ca.bradj.roomrecipes.recipes.ActiveRecipes;
 import ca.bradj.roomrecipes.recipes.RecipeDetection;
@@ -139,11 +142,44 @@ public class MultiLevelRoomDetector {
                         flagY + scanLevel
                 );
                 return mcRoom;
-            });
+            }).filter(r -> hasWalkableInterior(r, scanLevel));
             b.put(k, value);
             value.ifPresent(r -> roomsToScan.add(new RoomWithlevel(r, scanLevel)));
         });
         ImmutableMap<Position, Optional<MCRoom>> build = b.build();
         return build;
+    }
+
+    /** Rejects a room most of whose open floor a villager can't stand in (a low roof). A cell filled by furniture doesn't count either way. */
+    private boolean hasWalkableInterior(
+            MCRoom room,
+            int scanLevel
+    ) {
+        double fraction = Config.MIN_ROOM_WALKABLE_FRACTION.get();
+        if (fraction <= 0.0) {
+            return true;
+        }
+        int y = flagY + scanLevel;
+        int floorCells = 0;
+        int walkable = 0;
+        for (InclusiveSpace space : room.getSpaces()) {
+            for (Position p : InclusiveSpaces.getPositions(
+                    space,
+                    InclusiveSpaces.PositionType.INTERIOR_ONLY
+            )) {
+                if (!WallDetection.IsFloorOpen(level, p, y)) {
+                    continue;
+                }
+                floorCells++;
+                if (WallDetection.IsWalkable(level, p, y)) {
+                    walkable++;
+                }
+            }
+        }
+        if (floorCells == 0) {
+            return true;
+        }
+        int required = Math.max(1, (int) Math.ceil(floorCells * fraction));
+        return walkable >= required;
     }
 }

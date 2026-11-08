@@ -125,6 +125,14 @@ public class Config {
         MAX_ROOM_SCAN_ITERATIONS = BUILDER.comment(
                 "The maximum number of ticks that will be spent searching for town rooms"
         ).defineInRange("MaxRoomScanIterations", 1000, 1, 24000);
+        MIN_ROOM_WALKABLE_FRACTION = BUILDER.comment(
+                "The minimum fraction of a detected room's interior floor cells that a two-block-tall " +
+                        "villager can actually stand in (air at both feet and head) for the room to count. " +
+                        "A room whose roof is only one block above its floor has 0 walkable cells and is " +
+                        "rejected, so villagers are never assigned a room they cannot enter. A room with a " +
+                        "low overhang over only part of its floor still counts. 1.0 requires every interior " +
+                        "cell standable; 0.0 disables the check."
+        ).defineInRange("MinRoomWalkableFraction", 0.5, 0.0, 1.0);
         BUILDER.pop();
 
         // Quests Config

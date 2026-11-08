@@ -50,6 +50,7 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
     private @Nullable TownFlagBlockEntity town;
     private final Map<TownPosition, Integer> doorsToDrop = new HashMap<>();
     private final Map<TownPosition, DoorTrouble> deadDoors = new HashMap<>();
+    private final Map<Integer, Map<Position, String>> lastLoggedRoomShapes = new HashMap<>();
 
     Set<TownPosition> getRegisteredDoors() {
         return registeredDoors;
@@ -254,8 +255,9 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 },
                 activeRecipes::get,
                 ImmutableMap.copyOf(doorsAtLevel),
-                false
+                true
         );
+        pendingRooms.setArtSink(this::logRoomShapes);
 
         long start = System.currentTimeMillis();
 
@@ -320,6 +322,33 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
             }
             times.clear();
         }
+    }
+
+    /** Logs a room's shape as text when it changed since the last scan. */
+    private void logRoomShapes(
+            int scanLevel,
+            ImmutableMap<Position, String> shapes
+    ) {
+        Map<Position, String> prev = lastLoggedRoomShapes
+                .computeIfAbsent(scanLevel, k -> new HashMap<>());
+        boolean changed = shapes.entrySet()
+                                .stream()
+                                .anyMatch(e -> !Objects.equals(prev.get(e.getKey()), e.getValue()));
+        if (!changed) {
+            return;
+        }
+        shapes.forEach((door, art) -> {
+            if (!Objects.equals(prev.get(door), art)) {
+                QT.FLAG_LOGGER.debug(
+                        "Room shape at {} (scan level {}):\n{}",
+                        door.getUIString(),
+                        scanLevel,
+                        art
+                );
+                prev.put(door, art);
+            }
+        });
+        prev.keySet().retainAll(shapes.keySet());
     }
 
     public void initializeNew(
@@ -524,7 +553,36 @@ public class TownRoomsMap implements TownRooms.RecipeRoomChangeListener {
                 }
             }
         }
-        return b.build();
+        Collection<RoomRecipeMatch<MCRoom>> out = b.build();
+        // Dev diagnostics: why few kitchens match. Sampled.
+        if (QT.DEV_LOGS && recipeId.toString().contains("kitchen")) {
+            if (out.isEmpty() || (kitchenDiagN++ % 300) == 0) {
+                int doors = registeredDoors.size() + registeredFenceGates.size();
+                int doorsWithRoom = 0;
+                for (TownPosition p : all) {
+                    Position pz = new Position(p.x, p.z);
+                    if (getOrCreateRooms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))
+                            || getOrCreateFarms(p.scanLevel).getAll().stream().anyMatch(v -> v.getDoorPos().equals(pz))) {
+                        doorsWithRoom++;
+                    }
+                }
+                int totalRooms = 0;
+                for (TownRooms tr : activeRooms.values()) {
+                    totalRooms += tr.getAll().size();
+                }
+                int roomsMatchingRecipe = 0;
+                for (var lvl : activeRecipes.values()) {
+                    for (Map.Entry<MCRoom, RoomRecipeMatch<MCRoom>> m : lvl.entrySet()) {
+                        if (m.getValue().getRecipeIDs().contains(recipeId)) {
+                            roomsMatchingRecipe++;
+                        }
+                    }
+                }
+                QT.FLAG_LOGGER.dev("[kitchen-rooms] recipe={} matches={} doors={} doorsWithRoom={} totalRooms={} roomsMatchingRecipe={}",
+                        recipeId, out.size(), doors, doorsWithRoom, totalRooms, roomsMatchingRecipe);
+            }
+        }
+        return out;
     }
 
     public Collection<MCRoom> getFarms() {
