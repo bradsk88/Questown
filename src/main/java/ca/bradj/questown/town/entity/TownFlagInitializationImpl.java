@@ -277,4 +277,11 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         t.putBoolean("value", flag.getChickenRotationDetected());
         return t;
     }
+
+    @Override
+    public CompoundTag serializeChickenSunsetChestSpawned() {
+        CompoundTag t = new CompoundTag();
+        t.putBoolean("value", flag.getChickenSunsetChestSpawned());
+        return t;
+    }
 }

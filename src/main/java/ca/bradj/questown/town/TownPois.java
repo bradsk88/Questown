@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import org.jetbrains.annotations.NotNull;
@@ -159,6 +160,10 @@ public class TownPois {
 
     public ImmutableList<BlockPos> getWelcomeMats() {
         return ImmutableList.copyOf(this.welcomeMats);
+    }
+
+    private static boolean isCampfireLit(net.minecraft.world.level.block.state.BlockState bs) {
+        return bs.hasProperty(CampfireBlock.LIT) && bs.getValue(CampfireBlock.LIT);
     }
 
     public interface Listener {
