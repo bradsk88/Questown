@@ -6,7 +6,6 @@ import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.GiveBOPMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.Rect2i;
@@ -27,7 +26,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
     private final FlagTabs tabs;
 
     public static EconomicsUpdate lastUpdate = new EconomicsUpdate(ImmutableList.of());
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private Button unlockButton;
 
     IngredientRenderer ingredientRenderer = new IngredientRenderer();
@@ -43,7 +42,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.background = JEI.getRecipeBackground();
+        this.background = GuiArt.getRecipeBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.blocks_of_progress");
     }
 
@@ -157,7 +156,7 @@ public class TownBlockofProgressScreen extends CompatContainerScreen<TownBlockof
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, backgroundHeight);
         this.tabs.draw(ctx, bgX, bgY);
     }
 

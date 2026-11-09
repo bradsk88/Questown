@@ -1,10 +1,7 @@
 package ca.bradj.questown.gui;
 
 import ca.bradj.questown.core.Coordinate;
-import ca.bradj.questown.mc.JEI;
 import com.mojang.blaze3d.vertex.PoseStack;
-import mezz.jei.api.gui.drawable.IDrawable;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -111,23 +108,6 @@ public record RenderContext(
     public void renderItemAndDecorations(ItemStack stack, int x, int y) {
         gui.renderItem(stack, x, y);
         gui.renderItemDecorations(font, stack, x, y);
-    }
-
-    // -- JEI drawables and widgets
-    public void drawNineNine(JEI.NineNine drawable, int x, int y, int width, int height) {
-        drawable.draw(gui, x, y, width, height);
-    }
-
-    public void drawJei(IDrawable drawable, int x, int y) {
-        drawable.draw(gui, x, y);
-    }
-
-    public void drawJei(IDrawable drawable) {
-        drawable.draw(gui);
-    }
-
-    public void drawJeiStatic(IDrawableStatic drawable, int x, int y, int width, int height, int maxU, int maxV) {
-        drawable.draw(gui, x, y, width, height, maxU, maxV);
     }
 
     // Vanilla's own checkbox art (1.20.6 sprite atlas), so a toggle looks like a vanilla control

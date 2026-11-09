@@ -10,7 +10,6 @@ import ca.bradj.questown.gui.PagedCardScreen.CardCoordinates;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.logic.RoomRecipes;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.Quest;
@@ -48,7 +47,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
     private static final int FOOTER_PADDING = 6;
 
     private final List<UIQuest> quests;
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final Map<Position, Runnable> removes = new HashMap<>();
     /** This frame's clickable item icons on ITEM and LOOT cards. */
     private final Map<Position, Ingredient> itemIconClicks = new HashMap<>();
@@ -72,7 +71,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         this.quests = ImmutableList.copyOf(container.GetQuests());
         this.allComplete = container.isAllComplete();
         this.morningRewardPending = container.isMorningRewardPending();
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.tabs = tabs;
     }
 
@@ -590,7 +589,7 @@ public class QuestsScreen<C extends AbstractQuestsContainer> extends AbstractPag
         super.renderBgContent(ctx, partialTicks, mouseX, mouseY);
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, panelHeight());
+        this.background.draw(ctx, x, y, backgroundWidth, panelHeight());
     }
 
     /** The panel grows to hold the "View completed quests" button while it shows. */
