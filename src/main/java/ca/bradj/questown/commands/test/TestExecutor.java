@@ -6,6 +6,7 @@ import ca.bradj.questown.integration.minecraft.MCHeldItem;
 import ca.bradj.questown.integration.minecraft.MCTownState;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
+import ca.bradj.questown.jobs.Works;
 import ca.bradj.questown.jobs.declarative.AbstractWorldInteraction;
 import ca.bradj.questown.town.VillagerStatsData;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -390,6 +391,12 @@ public class TestExecutor {
     }
 
     private void assignJob() {
+        if (Works.ids().stream().noneMatch(id -> id.sameRoot(jobId))) {
+            // Otherwise the villager falls back to another job and the scenario fails on unrelated checks.
+            error("No " + jobId.rootId() + " jobs are loaded (is the job file in questown_job_archive?)");
+            phase = Phase.DONE;
+            return;
+        }
         assignmentTownies = new HashSet<>(tfbe.getVillagerHandle().getVillagerJobs().keySet());
         for (VillagerUUID vuid : tfbe.getVillagerHandle().getVillagerJobs().keySet()) {
             tfbe.getVillagerHandle().changeJobForVillager(vuid, jobId, false);

@@ -153,6 +153,15 @@ chicken-arc `flag bit …` / `final beat state` lines). Count scenarios, not
 lines: `grep -cE '\[FAIL\] scenario:'` (2026-10-10 run: 29 `[FAIL]` lines =
 14 scenarios).
 
+Before comparing a red against another version or commit, read the failing scenario's own
+block (from its `=== Test k/n: <name> ===` line to the next) for `ERROR` lines. A comparison
+says whether a red is new, not why. `No work found for job ID: X. Falling back to any job in the
+same root ID.` means the scenario's job isn't loaded. The organizer, arborist and explorer reds
+of 2026-11-07..09 were jobs left out of the line with their scenarios still in the suite; a
+scenario whose job root has no loaded jobs now fails at assignment with `No <root> jobs are
+loaded`. One fallback is expected: `cook/simple_furnace_food` is a template that
+`ResourceJobLoader` expands into per-recipe cook jobs, so its scenario runs on the root fallback.
+
 The same discipline applies to the `[village] KNOWN` dumps: in logs
 predating the xN collapse the `KNOWN quests open=` line is a raw wall
 (one entry per handle instance; 200+ entries ≈ a 100KB line), and reading
