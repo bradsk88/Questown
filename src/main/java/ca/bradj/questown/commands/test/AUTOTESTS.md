@@ -120,6 +120,13 @@ chunk outside the boot 3×3 (idempotent) — a future layout that outgrows the
 naming the chunks). If the run still stalls despite `OK` / `EXTENDED`, it is
 not a tick-range issue — stop suspecting chunks.
 
+**The force-load takes effect late.** The chunks start ticking some time
+after `setChunkForced`, and on a loaded box (two suites at once) that took
+~3 s: at 1000 t/s the first scenarios' 200-tick "Town flag failed to
+initialize" wait ran out before the flag's chunk ticked. The suite now waits
+first: `[autotest] Force-loaded chunks ticking after N ticks (M ms)`, or after
+60 s of wall clock an ERROR `... still not ticking ...; starting anyway`.
+
 ## Post-spawn rooms live outside the arena flatten (seed hazard)
 
 The jobs-track arena flatten clears `TestArenaPreparer.buildVolume(...)` — the

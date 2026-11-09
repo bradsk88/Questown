@@ -1054,7 +1054,9 @@ downtime record of 6 or 8); `jobs/COMPLEX.md` "Foreign work-state records" and
 handed an unlatched Block of Progress and a cobblestone after spawn. PASS = the flag holds a BOP and
 no town chest does. Before the fix: flag 0, chest 1 (the farmer's loot drop stored it). Run alone
 as the only scenario of a server it once failed "Town flag failed to initialize (timeout after 200
-ticks)" at the first tick; inside `--shard 2 'flag/bop_'` it ran normally (not chased).
+ticks)" at the first tick; inside `--shard 2 'flag/bop_'` it ran normally. Likely the boot
+force-load not having taken effect yet, as in a 2026-11-09 1.20.6 suite where the first three
+scenarios of a shard failed this way (AUTOTESTS.md, "Headless tick range"); the suite now waits for it.
 
 ## Blocked kitchen door (2026-10-30)
 

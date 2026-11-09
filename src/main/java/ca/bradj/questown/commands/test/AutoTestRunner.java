@@ -84,6 +84,7 @@ public class AutoTestRunner {
             }
         }
         QT.FLAG_LOGGER.info("[autotest] Force-loaded 3x3 chunks around {}", chunkPos);
+        // AutoTestTickListener holds the first scenario until these chunks tick.
 
         int warpAmount = parseWarpAmount();
         String category = parseCategory();
@@ -566,6 +567,10 @@ public class AutoTestRunner {
         private final @Nullable TestAllExecutor jobsExecutor;
         private final @Nullable VillageGrowthExecutor villageExecutor;
         private final @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor;
+        /** Wall clock, not ticks: at the autotest tick rate, a tick budget passes before chunk loading can finish. */
+        private static final long CHUNK_TICKING_TIMEOUT_MS = 60_000;
+
+        private final AutoTestChunkWait chunkWait = new AutoTestChunkWait(CHUNK_TICKING_TIMEOUT_MS);
         private boolean jobsSuiteStartAnnounced;
         private boolean jobsDone;
         private boolean villageDone;
@@ -585,6 +590,17 @@ public class AutoTestRunner {
 
         @SubscribeEvent
         public void onTick(ServerTickEvent.Post event) {
+            if (!chunkWait.isDone()) {
+                boolean ready = chunkWait.poll(
+                        forcedChunksTicking(server.overworld()),
+                        System.currentTimeMillis(),
+                        msg -> QT.FLAG_LOGGER.info("[autotest] {}", msg),
+                        msg -> QT.FLAG_LOGGER.error("[autotest] {}", msg)
+                );
+                if (!ready) {
+                    return;
+                }
+            }
             if (!jobsDone) {
                 if (jobsExecutor == null) {
                     jobsDone = true;
@@ -621,6 +637,18 @@ public class AutoTestRunner {
             }
             NeoForge.EVENT_BUS.unregister(this);
             reportAndShutdown();
+        }
+
+        /** The flag's ticker and the villagers only run in entity-ticking chunks; a force-load takes effect asynchronously. */
+        private static boolean forcedChunksTicking(ServerLevel level) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (!level.isPositionEntityTicking(ORIGIN.offset(dx * 16, 0, dz * 16))) {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
         private void reportAndShutdown() {
