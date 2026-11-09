@@ -162,6 +162,13 @@ scenario whose job root has no loaded jobs now fails at assignment with `No <roo
 loaded`. One fallback is expected: `cook/simple_furnace_food` is a template that
 `ResourceJobLoader` expands into per-recipe cook jobs, so its scenario runs on the root fallback.
 
+When one fixture fails and a sibling fixture for the same job passes, compare their blueprints
+(blocks, setup and post-spawn hooks) before bisecting the failing one. `nav/roof_gatherer` sat at
+`NO_JOBSITE` for want of the welcome mat block that `welcomeMatBlueprint` places. A villager stuck
+at `NO_JOBSITE` logs which check fails, sampled: `NO_JOBSITE job=… hasSupplies=… hasSpace=…
+workable=…` (a missing job-site block shows as `workable=false because No rooms found with
+workable blocks`).
+
 The same discipline applies to the `[village] KNOWN` dumps: in logs
 predating the xN collapse the `KNOWN quests open=` line is a raw wall
 (one entry per handle instance; 200+ entries ≈ a 100KB line), and reading
