@@ -17,6 +17,8 @@ import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import ca.bradj.questown.town.econ.NoMCEconomics;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
+import ca.bradj.questown.town.quests.MCQuest;
+import ca.bradj.questown.town.quests.QuestOrdinals;
 import ca.bradj.questown.town.special.SpecialQuests;
 import ca.bradj.roomrecipes.recipes.RecipesInit;
 import ca.bradj.roomrecipes.recipes.RoomRecipe;
@@ -265,8 +267,10 @@ public class TownVillagerUIs {
 
         TownFlagBlockEntity flag = TownFlagBlockEntity.getFromPos(sender.level(), e.getFlagPos());
 
+        Map<MCQuest, Integer> ordinals = QuestOrdinals.of(flag.getQuestHandle().getAllQuestsWithRewards().stream()
+                                                              .map(AbstractMap.SimpleEntry::getKey).toList());
         List<UIQuest> quests = flag.getQuestHandle().getAllBatchesForVillager(e.getUUID()).stream()
-                                   .map(v -> UIQuest.fromLevel(sender.serverLevel(), v)).flatMap(List::stream).toList();
+                                   .map(v -> UIQuest.fromLevel(sender.serverLevel(), v, ordinals)).flatMap(List::stream).toList();
 
         VillagerStatsData stats = flag.getVillagerHandle().getStats(e.getUUID());
         VillagerEconomicsData econ = new VillagerEconomicsData(ImmutableList.of());

@@ -733,7 +733,8 @@ public class ServerJobsRegistry {
         return requests.paused().stream().anyMatch(r -> canSatisfy(town, p, r.asIngredient()));
     }
 
-    private static boolean isSpecialJob(JobID p) {
+    /** Dining, resting, depositing, downtime and work seeking are not work. */
+    public static boolean isSpecialJob(JobID p) {
         return specialJobs.stream().anyMatch(sj -> sj.idTest().test(p));
     }
 

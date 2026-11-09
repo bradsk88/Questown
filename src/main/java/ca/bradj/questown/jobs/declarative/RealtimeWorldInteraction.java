@@ -507,6 +507,9 @@ public class RealtimeWorldInteraction extends
     protected void triggerCompletionAdvancement(MCExtra inputs,
                                                 BlockPos position
     ) {
+        if (ServerJobsRegistry.isSpecialJob(getJobId())) {
+            return;
+        }
         AdvancementsInit.VISITOR_TRIGGER.triggerForNearestPlayer(
                 inputs.town().getServerLevel(),
                 VisitorTrigger.Triggers.FirstJobDone,

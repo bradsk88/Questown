@@ -72,6 +72,8 @@ public class UIQuest implements Comparable<UIQuest> {
     /** The villager level a skill quest's card needs before it shows the skill, or null. */
     @Nullable
     private final Integer lockedUntilLevel;
+    /** Position among identical quests, in the order they were added; shown as "#2" and up. */
+    private final int ordinal;
     public final boolean isBroken;
 
     public UIQuest(
@@ -103,7 +105,26 @@ public class UIQuest implements Comparable<UIQuest> {
             @Nullable Integer deposited,
             @Nullable Integer lockedUntilLevel
     ) {
+        this(batchUUID, wantedId, type, ingredients, status, fromRecipe, jobRecipientUUID, jobName, flavorText,
+                deposited, lockedUntilLevel, 1);
+    }
+
+    public UIQuest(
+            UUID batchUUID,
+            ResourceLocation wantedId,
+            Quest.QuestType type,
+            @Nullable Collection<Ingredient> ingredients,
+            Quest.QuestStatus status,
+            @Nullable ResourceLocation fromRecipe,
+            @Nullable VillagerUUID jobRecipientUUID,
+            @Nullable String jobName,
+            @Nullable String flavorText,
+            @Nullable Integer deposited,
+            @Nullable Integer lockedUntilLevel,
+            int ordinal
+    ) {
         this.lockedUntilLevel = lockedUntilLevel;
+        this.ordinal = ordinal;
         this.isBroken = SpecialQuests.BROKEN.equals(wantedId) || ingredients == null;
         this.wantedId = wantedId;
         this.type = type;
@@ -124,6 +145,17 @@ public class UIQuest implements Comparable<UIQuest> {
         ImmutableMap.Builder<Quest<ResourceLocation, MCRoom>, MCReward> b = ImmutableMap.builder();
         batch.getAll().forEach(v -> b.put(v, batch.getReward()));
         return fromLevel(level, b.build().entrySet());
+    }
+
+    /** As above, numbering identical quests by {@code ordinals} taken from the whole town. */
+    public static List<UIQuest> fromLevel(
+            ServerLevel level,
+            QuestBatch<ResourceLocation, MCRoom, MCQuest, MCReward> batch,
+            Map<? extends Quest<ResourceLocation, MCRoom>, Integer> ordinals
+    ) {
+        ImmutableMap.Builder<Quest<ResourceLocation, MCRoom>, MCReward> b = ImmutableMap.builder();
+        batch.getAll().forEach(v -> b.put(v, batch.getReward()));
+        return fromLevel(level, b.build().entrySet(), java.util.Map.of(), java.util.Map.of(), ordinals);
     }
 
     public static List<UIQuest> fromLevel(
@@ -148,6 +180,18 @@ public class UIQuest implements Comparable<UIQuest> {
             Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
             Map<ResourceLocation, Integer> questProgress,
             Map<ResourceLocation, Integer> lockedSkillLevels
+    ) {
+        return fromLevel(level, aQ, questProgress, lockedSkillLevels,
+                QuestOrdinals.of(aQ.stream().map(Map.Entry::getKey).toList()));
+    }
+
+    /** As above, numbering identical quests by {@code ordinals} (see {@link QuestOrdinals}). */
+    public static List<UIQuest> fromLevel(
+            Level level,
+            Collection<? extends Map.Entry<? extends Quest<ResourceLocation, MCRoom>, MCReward>> aQ,
+            Map<ResourceLocation, Integer> questProgress,
+            Map<ResourceLocation, Integer> lockedSkillLevels,
+            Map<? extends Quest<ResourceLocation, MCRoom>, Integer> ordinals
     ) {
         java.util.Map<ResourceLocation, RoomRecipe> rMapB = new java.util.LinkedHashMap<>();
         SpecialQuests.SPECIAL_QUESTS.forEach(rMapB::put);
@@ -191,7 +235,8 @@ public class UIQuest implements Comparable<UIQuest> {
                     job,
                     v.getFlavorText(),
                     QuestCardProgress.shown(v.getType(), v.getStatus(), v.getCountNeeded(), questProgress.get(v.getWantedId())),
-                    v.isComplete() ? null : lockedSkillLevels.get(v.getWantedId())
+                    v.isComplete() ? null : lockedSkillLevels.get(v.getWantedId()),
+                    ordinals.containsKey(v) ? ordinals.get(v) : 1
             );
         }).toList();
     }
@@ -207,7 +252,7 @@ public class UIQuest implements Comparable<UIQuest> {
             case JOB_CHANGE -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case JOB_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case CONCURRENT_JOBS -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
-            case FIRST_WORK_REQUEST -> ImmutableList.of();
+            case FIRST_WORK_REQUEST -> ImmutableList.of(Ingredient.of(ItemsInit.JOB_BOARD_BLOCK.get()));
             case SKILL_UNLOCK -> ImmutableList.of(Ingredient.of(ItemsInit.BLOCK_OF_PROGRESS.get()));
             case VILLAGER_LEVEL -> ImmutableList.of();
             case UNKNOWN -> ImmutableList.of();
@@ -267,23 +312,23 @@ public class UIQuest implements Comparable<UIQuest> {
 
     public Component getName() {
         return switch (type) {
-            case ROOM -> RoomRecipes.getName(wantedId);
+            case ROOM -> numbered(RoomRecipes.getName(wantedId));
             case ITEM -> {
-                MutableComponent name = Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size());
+                MutableComponent name = numbered(Compat.translatable("menu.common.quantity", Compat.getItemName(wantedId), ingredients.size()));
                 if (deposited != null) {
                     name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }
                 yield name;
             }
             case LOOT -> {
-                MutableComponent name = lootName(wantedId);
+                MutableComponent name = numbered(lootName(wantedId));
                 if (deposited != null) {
                     name.append(Compat.literal(" (" + Math.min(deposited, ingredients.size()) + "/" + ingredients.size() + ")"));
                 }
                 yield name;
             }
-            case JOB_CHANGE -> Compat.translatable("questown.menu.quests.job_change", extractRootJobName());
-            case JOB_UNLOCK -> Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName());
+            case JOB_CHANGE -> numbered(Compat.translatable("questown.menu.quests.job_change", extractRootJobName()));
+            case JOB_UNLOCK -> numbered(Compat.translatable("questown.menu.quests.job_unlock", extractRootJobName()));
             case CONCURRENT_JOBS -> Compat.literal("Multiple Jobs Active");
             case FIRST_WORK_REQUEST -> Compat.translatable("menu.quests.first_work_request");
             case SKILL_UNLOCK -> lockedUntilLevel != null
@@ -295,6 +340,14 @@ public class UIQuest implements Comparable<UIQuest> {
             case VILLAGER_LEVEL -> villagerLevelName(wantedId, deposited);
             case UNKNOWN -> Compat.literal("ERROR");
         };
+    }
+
+    private MutableComponent numbered(Component name) {
+        MutableComponent out = name.copy();
+        if (ordinal > 1) {
+            out.append(Compat.literal(" #" + ordinal));
+        }
+        return out;
     }
 
     /** "Train a Crafter to level 3 (1/3)": the progress is the job's highest villager level. */
@@ -375,6 +428,7 @@ public class UIQuest implements Comparable<UIQuest> {
             buf.writeUtf(p_44102_.flavorText == null ? "" : p_44102_.flavorText);
             buf.writeInt(p_44102_.deposited == null ? -1 : p_44102_.deposited);
             buf.writeInt(p_44102_.lockedUntilLevel == null ? -1 : p_44102_.lockedUntilLevel);
+            buf.writeInt(p_44102_.ordinal);
         }
 
         @Nullable
@@ -404,8 +458,9 @@ public class UIQuest implements Comparable<UIQuest> {
             }
             int deposited = buf.readInt();
             int locked = buf.readInt();
+            int ordinal = buf.readInt();
             return new UIQuest(batchUUID, wanteId, type, ingrs, status, from, villagerUUID, jobName, flavorText,
-                    deposited < 0 ? null : deposited, locked < 0 ? null : locked);
+                    deposited < 0 ? null : deposited, locked < 0 ? null : locked, ordinal);
         }
     }
 }
