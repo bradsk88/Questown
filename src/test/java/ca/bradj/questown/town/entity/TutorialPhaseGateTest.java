@@ -251,7 +251,7 @@ class TutorialPhaseGateTest {
     }
 
     @Test
-    void whenHunterGathererDone_newcomerBedroomBatchAdded_notTheCookBatch() {
+    void whenHunterGathererDone_newcomerBedroomBatchAddedFirst() {
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
 
@@ -265,7 +265,7 @@ class TutorialPhaseGateTest {
         assertTrue(all.stream().noneMatch(q ->
                 q.getType() == Quest.QuestType.JOB_CHANGE
                         && q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
-        ), "the cook batch waits for the bedroom");
+        ), "one batch per tick: the bedroom first");
     }
 
     @Test
@@ -282,20 +282,38 @@ class TutorialPhaseGateTest {
                 "one new, open bedroom quest");
         assertTrue(quests.questBatches.getAll().stream().noneMatch(q ->
                 q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
-        ), "the cook batch waits for the new room");
+        ), "one batch per tick: the new room first");
     }
 
     @Test
-    void whenEmptyRoomsOpen_cookBatchWaits() {
+    void whenBedroomOpen_cookBatchIsPostedAlongsideIt() {
         TownQuests quests = questsAfterHunterGathererDone();
         TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
         quests.addTutorialBatches(view);
 
         TownQuests.Tutorial result = quests.addTutorialBatches(view);
 
-        assertEquals(TownQuests.Tutorial.SKIPPED, result);
-        assertTrue(quests.questBatches.getAll().stream().noneMatch(q ->
+        assertEquals(TownQuests.Tutorial.APPLIED, result);
+        List<MCQuest> all = quests.questBatches.getAll();
+        assertTrue(all.stream().anyMatch(q ->
                 q.getWantedId().equals(JobID.toRL(TownQuests.ONBOARDING_COOK_JOB))
+        ), "the cook batch doesn't wait for the bedroom");
+        assertEquals(1, all.stream().filter(q -> SpecialQuests.BEDROOM.equals(q.getWantedId()) && !q.isComplete()).count(),
+                "the bedroom stays open beside it");
+    }
+
+    @Test
+    void cookBatchPosted_startsTheFeedingPath() {
+        TownQuests quests = questsAfterHunterGathererDone();
+        TestTutorialTownView view = TestTutorialTownView.builder().villagerCount(2).build();
+        quests.addTutorialBatches(view);
+        assertFalse(view.getTriggersFired().contains(TutorialTrigger.Triggers.Chapter2));
+
+        quests.addTutorialBatches(view);
+
+        assertTrue(view.getTriggersFired().contains(TutorialTrigger.Triggers.Chapter2));
+        assertTrue(view.getMessagesSent().contains(
+                "path_started:" + TownQuests.FEEDING_THE_VILLAGE_KEY + ":" + Compat.getItemId(Items.COOKED_MUTTON)
         ));
     }
 
@@ -461,6 +479,11 @@ class TutorialPhaseGateTest {
                 q.getType() == Quest.QuestType.SKILL_UNLOCK
                         && "cook".equals(MCQuest.skillTreeRoot(q.getWantedId()))
         ), "follow-up must carry the cook skill-unlock quest");
+        assertTrue(all.stream().anyMatch(q ->
+                q.getType() == Quest.QuestType.ITEM
+                        && q.getWantedId().equals(Compat.getItemId(Items.COAL))
+                        && q.getCountNeeded() == TownQuests.COOK_COAL_COUNT
+        ), "follow-up must carry the 4 coal item quest");
         // The follow-up brings villager 3, so the bedroom becomes a big bedroom.
         ResourceLocation bedroom = new ResourceLocation("questown", "bedroom");
         ResourceLocation bigBedroom = new ResourceLocation("questown", "big_bedroom");

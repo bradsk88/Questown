@@ -112,6 +112,10 @@ public class ClientAccess {
         mc.getToasts().addToast(toast);
     }
 
+    public static void showPathStartedToast(Component name, net.minecraft.world.item.ItemStack icon) {
+        Minecraft.getInstance().getToasts().addToast(new ca.bradj.questown.mc.PathStartedToast(name, icon));
+    }
+
     /** Hides the camp-ready toast once the player is asleep. */
     public static void tickTutorialToasts() {
         Minecraft mc = Minecraft.getInstance();

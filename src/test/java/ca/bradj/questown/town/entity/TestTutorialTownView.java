@@ -81,6 +81,11 @@ class TestTutorialTownView implements TutorialTownView {
     }
 
     @Override
+    public void broadcastPathStartedToast(String nameKey, ResourceLocation iconItem) {
+        messagesSent.add("path_started:" + nameKey + ":" + iconItem);
+    }
+
+    @Override
     public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
         triggersFired.add(trigger);
     }

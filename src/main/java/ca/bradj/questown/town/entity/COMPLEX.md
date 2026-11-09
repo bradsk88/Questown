@@ -1564,6 +1564,19 @@ world's two-quest batch. Pins: `TutorialPhaseGateTest.whenHunterGathererDone_one
 and `dayOneEmptyRoomBatch_isNotMistakenForThePostHunterOne` (with the day-1 batch in the fixture,
 shape matching made the phase skip straight to the cook batch).
 
+**The cook batch no longer waits for the bedroom (2026-11-09).** Dev playtest: the cook path was
+blocked until the second bed was built. `tryPhase2_4_emptyRooms` still posts the bedroom batch
+first, then returns null, so phase 2.5 posts the cook batch on the next tick (once villager 2 is
+here) and both are open together. Posting the cook batch fires `Chapter2` ("Feeding the Village")
+and a "Path started" toast (`TutorialTownView.broadcastPathStartedToast` ->
+`ShowPathStartedToastMessage` -> `mc/PathStartedToast`, cooked mutton icon). The advancement's
+own toast and chat line are off, since vanilla's "goal" header reads "Goal Reached!". Bread is
+kept for the baker fork. Pins: `TutorialPhaseGateTest.whenBedroomOpen_cookBatchIsPostedAlongsideIt`,
+`cookBatchPosted_startsTheFeedingPath`.
+
+The cook follow-up batch (`addCookFollowUpBatch`) also asks for 4 coal as an ITEM quest
+(`COOK_COAL_COUNT`), beside the cooked-food LOOT quest, the cook skill and the big-bedroom upgrade.
+
 ## Phase 7 (exotic wood / flagpole) cut (2026-10-19)
 
 Dev: "I've never made it that far, and we already have a bunch of reasons for a person to leave

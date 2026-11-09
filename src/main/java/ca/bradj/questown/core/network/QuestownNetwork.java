@@ -43,6 +43,7 @@ public final class QuestownNetwork {
         register(Channel.Direction.TO_CLIENT, ShowItemJobsMessage.class, ShowItemJobsMessage::encode, ShowItemJobsMessage::decode, ShowItemJobsMessage::handle);
         register(Channel.Direction.TO_CLIENT, ShowSkillDetailsMessage.class, ShowSkillDetailsMessage::encode, ShowSkillDetailsMessage::decode, ShowSkillDetailsMessage::handle);
         register(Channel.Direction.TO_CLIENT, ShowTutorialToastMessage.class, ShowTutorialToastMessage::encode, ShowTutorialToastMessage::decode, ShowTutorialToastMessage::handle);
+        register(Channel.Direction.TO_CLIENT, ShowPathStartedToastMessage.class, ShowPathStartedToastMessage::encode, ShowPathStartedToastMessage::decode, ShowPathStartedToastMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncBlockItemMessage.class, SyncBlockItemMessage::encode, SyncBlockItemMessage::decode, SyncBlockItemMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncStatusArtMessage.class, SyncStatusArtMessage::encode, SyncStatusArtMessage::decode, SyncStatusArtMessage::handle);
         register(Channel.Direction.TO_CLIENT, SyncStatusTextMessage.class, SyncStatusTextMessage::encode, SyncStatusTextMessage::decode, SyncStatusTextMessage::handle);

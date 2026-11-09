@@ -39,6 +39,8 @@ public interface TutorialTownView {
 
     void broadcastTutorialToast(String titleKey, String descriptionKey);
 
+    void broadcastPathStartedToast(String nameKey, ResourceLocation iconItem);
+
     void fireTutorialTrigger(TutorialTrigger.Triggers trigger);
 
 
