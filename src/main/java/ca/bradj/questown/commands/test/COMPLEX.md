@@ -100,6 +100,8 @@ Two door traps hit while building it: townies cannot open wooden doors (no `Inte
 
 Before/after evidence lives in the scenario's RESULT line (`[nav/roof_gatherer] RESULT: roofVisited=…, roomEntered=…`) plus the per-position tracker lines: before = `roofVisited=true, roomEntered=false` (stairs, roof, drop onto the ledge), after = `roofVisited=false, roomEntered=true` (west door, interior floor).
 
+**2026-11-09: it had stopped testing the route.** The fixture placed no welcome mat block (the gatherer sat at `NO_JOBSITE`) and a new villager starts starving, so it ate and rested through the window and passed or failed on where it wandered. It now places the mat, feeds the villager, runs 2400 ticks, samples positions every server tick (`TestBlueprint.withRealtimeTickAction`; the old 250 ms wall-clock thread got ~10 samples at 1000 t/s), and also requires `axeTaken` (the axe leaving the chest, seen per tick, since the gatherer returns it). Checked both ways on 1.20.1: passes with the pin; `roofVisited=true` with `navTargetForContainer` reverted to chest height.
+
 ## Why a room-detection *gate* lives in `CrawlPerfTest`, not the perf autotest
 
 A perf autotest scenario cannot gate the wall-walk crawl. The crawl runs inside

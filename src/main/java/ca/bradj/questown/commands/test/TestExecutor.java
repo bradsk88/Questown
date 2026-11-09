@@ -626,6 +626,9 @@ public class TestExecutor {
 
     private void monitor() {
         long currentTick = level.getGameTime();
+        if (blueprint.realtimeTickAction() != null) {
+            blueprint.realtimeTickAction().tick(level, flagPos, tfbe);
+        }
         if (currentTick >= monitorEndTick) {
             msg("Monitoring complete");
             phase = Phase.CHECK_REALTIME_RESULTS;
