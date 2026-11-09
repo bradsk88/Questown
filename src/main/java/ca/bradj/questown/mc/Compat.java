@@ -765,15 +765,12 @@ public class Compat {
     }
 
     /**
-     * The 1.20.5+ {@code spawnChunkRadius} gamerule (spawn chunks always loaded otherwise; the
-     * autotest origin sits in them). village/day1 sets it to 0 so the flag's chunk can unload.
+     * Stops the spawn chunks keeping the area around the world spawn loaded (the autotest origin sits
+     * in them), so village/day1's flag chunk can unload. Spawn chunks can't be turned off before
+     * 1.20.5, so this moves the world spawn, and the spawn chunks with it, to {@code elsewhere}.
      */
-    public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
-        // No spawnChunkRadius gamerule before 1.20.5: spawn chunks stay loaded.
-        // TODO: A town at world spawn then never unloads, so village/day1's overnight reload fails when the world spawns at
-        //  the scenario origin. Move the world spawn away from the town here, or start the scenario outside spawn chunks.
-        ca.bradj.questown.QT.LOGGER.warn(
-                "The spawn chunk radius can't be changed before Minecraft 1.20.5 (asked for {}); spawn chunks stay loaded", radius);
+    public static void releaseSpawnChunks(MinecraftServer server, ServerLevel level, BlockPos elsewhere) {
+        level.setDefaultSpawnPos(elsewhere, 0);
     }
 
     /**

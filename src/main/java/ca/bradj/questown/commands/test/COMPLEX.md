@@ -686,8 +686,9 @@ and the GUI (red dot, fonts, click targets).
 #### village/day1 reload step (2026-10-17)
 
 Once, on the day after villager 1 arrives (raw food still open), the driver releases every
-forced chunk (`level.getForcedChunks()`), sets `spawnChunkRadius` to 0
-(`Compat.setSpawnChunkRadius` — the origin sits in the spawn chunks), moves the fake player
+forced chunk (`level.getForcedChunks()`), releases the spawn chunks
+(`Compat.releaseSpawnChunks` — the origin sits in them; 1.20.6 sets `spawnChunkRadius` to 0, 1.20.1
+moves the world spawn to where the player goes), moves the fake player
 4000 blocks away, waits until `!level.isLoaded(flagPos)`, then returns and re-forces the
 same chunks and waits for the flag and its villagers. Checks:
 `reload-flag-chunk-unloaded`, `reload-villagers-restored`; `Day1BeatChecks` pauses arrival
