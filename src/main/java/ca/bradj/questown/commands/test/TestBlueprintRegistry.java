@@ -198,7 +198,8 @@ public class TestBlueprintRegistry {
         jobs.add(entry(new JobID("smelter", "process_ore"), smelterBlueprint()));
         jobs.add(entry(new JobID("soup_cook", "one_mushroom_stew"), soupCookBlueprint()));
         jobs.add(entry(new JobID("gatherer", "axe"), gathererBlueprint()));
-        jobs.add(entry(new JobID("explorer", "explore"), explorerBlueprint()));
+        // TODO: The explorer job is not in this line yet, so its scenario is left out of the suite. For its
+        //  implementation see #403.
         jobs.add(entry(new JobID("hunter", "sword"), hunterBlueprint()));
         // One warp day must not out-produce realtime: OneDayYieldCaps.HUNTER is the most generous
         // trip tier across a day's productive ticks.
@@ -249,19 +250,15 @@ public class TestBlueprintRegistry {
         jobs.add(edgeCaseEntry("crafter", "display_weapons", "full_frame", displayWeaponsFullFrameBlueprint()));
         jobs.add(edgeCaseEntry("crafter", "display_weapons", "corner_frames", displayWeaponsCornerFramesBlueprint()));
         jobs.add(edgeCaseEntry("crafter", "display_armor", "fullest_stand", displayArmorFullestStandBlueprint()));
-        jobs.add(entry(new JobID("arborist", "cut_trees"), arboristCutTreesBlueprint()));
-        jobs.add(entry(new JobID("arborist", "plant_sapling"), arboristPlantSaplingBlueprint()));
-        jobs.add(edgeCaseEntry("arborist", "cut_trees", "full_cycle", arboristFullCycleBlueprint()));
+        // TODO: The arborist and organizer jobs are in questown_job_archive until they have been played, so
+        //  their scenarios (arborist cut_trees, plant_sapling, cut_trees [full_cycle]; organizer fetch and
+        //  fetch [warp]) are left out of the suite. For their implementation see #407.
 
-        // Organizer/fetch: realtime, then the warp fetch-relocation model
-        // (RelocateRequestedItemWarpRule), both with source->target conservation.
-        jobs.add(entry(new JobID("organizer", "fetch"), organizerFetchBlueprint()));
         // nav/roof_gatherer drives the REAL gatherer job (which walks gate <-> supply chests, so
         // its container nav target is actually exercised) in a supply room whose roof is
         // reachable, with the supplies chest at yCoord+1 under a head-height grass ledge. The
         // entry name (not the JobID) selects it via only=nav/roof_gatherer.
         jobs.add(new TestEntry("nav/roof_gatherer", new JobID("gatherer", "axe"), navGathererBlueprint(), "nav"));
-        jobs.add(edgeCaseEntry("organizer", "fetch", "warp", organizerFetchWarpBlueprint()));
 
         // Edge case tests
         jobs.add(edgeCaseEntry("farmer", "harvest_wheat", "night_start", farmerNightStartBlueprint()));
