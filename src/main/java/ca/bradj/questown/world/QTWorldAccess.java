@@ -28,6 +28,21 @@ public interface QTWorldAccess {
     // Tree chopping — removes all connected blocks of the same type and returns drops
     List<ItemStack> chopTree(BlockPos trunkPos);
 
+    /** Whether a tree from {@code sapling} would grow at {@code pos}. Writes nothing. */
+    boolean canTreeGrowAt(BlockPos pos, ItemStack sapling);
+
+    /** Grows the tree from {@code sapling} at {@code pos}. Returns whether it grew. */
+    boolean growTreeAt(BlockPos pos, ItemStack sapling);
+
+    /** A sapling planted during a warp, waiting to grow. */
+    record PlantedSapling(BlockPos pos, ItemStack sapling, long plantTick) {}
+
+    /** Saplings waiting to grow during a warp. Empty in real time. */
+    Collection<PlantedSapling> getPlantedSaplings();
+
+    /** Forgets a planted sapling once it has grown or been skipped. */
+    void clearPlantedSapling(BlockPos pos);
+
     // Item use on block (planting, bone meal)
     boolean useItemOnBlock(ItemStack item, BlockPos pos);
 

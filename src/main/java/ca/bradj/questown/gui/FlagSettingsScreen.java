@@ -7,7 +7,6 @@ import ca.bradj.questown.core.network.BeginTownRelocationMessage;
 import ca.bradj.questown.core.network.CancelTownShutdownMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
@@ -30,7 +29,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
     private static final int TOOLTIP_WIDTH = 200;
 
     private final FlagTabs tabs;
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final BlockPos flagPos;
     private final boolean showMove;
     private final boolean shuttingDown;
@@ -49,7 +48,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
         super(menu, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.settings");
         this.flagPos = menu.getFlagInfo().flagPos();
         // Moving needs at least one villager. While the town is packing, offer to cancel.
@@ -151,7 +150,7 @@ public class FlagSettingsScreen extends CompatContainerScreen<FlagSettingsMenu> 
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, panelHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, panelHeight);
         this.tabs.draw(ctx, bgX, bgY);
     }
 

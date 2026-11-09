@@ -1,14 +1,13 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.IconButton;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.AddWorkFromUIMessage;
 import ca.bradj.questown.core.network.ClaimFreeFoodMessage;
 import ca.bradj.questown.core.network.EconomicsUpdate;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -50,11 +49,11 @@ public class TownEconomicsScreen extends AbstractPagedCardScreen<TownEconomicsMe
         return EconomicsCardOrder.order(showRecent ? lastUpdate.recent() : lastUpdate.data(), bonusFoodAvailable(), FOOD_NEED_KEY);
     }
 
-    private final GuiIconButtonSmall previousView = JEI.guiIconButtonSmall(
-            0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> showRecent = !showRecent
+    private final IconButton previousView = GuiArt.iconButton(
+            0, 0, buttonWidth, buttonHeight, GuiArt.getArrowPrevious(), b -> showRecent = !showRecent
     );
-    private final GuiIconButtonSmall nextView = JEI.guiIconButtonSmall(
-            0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> showRecent = !showRecent
+    private final IconButton nextView = GuiArt.iconButton(
+            0, 0, buttonWidth, buttonHeight, GuiArt.getArrowNext(), b -> showRecent = !showRecent
     );
 
     @Override

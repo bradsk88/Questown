@@ -5,8 +5,6 @@ import ca.bradj.questown.core.network.JobRootChangeMessage;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.core.init.items.ItemsInit;
-import ca.bradj.questown.mc.JEI;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
@@ -23,8 +21,8 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
     private static final int backgroundHeight = 166;
     private final VillagerTabs tabs;
 
-    private final JEI.NineNine background;
-    private final IDrawableStatic slot;
+    private final NineSlice background;
+    private final GuiSprite slot;
     private int textX;
     private int gathererSlotY;
     private Button unlockButton;
@@ -35,8 +33,8 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
             Component title
     ) {
         super(menu, playerInv, title);
-        this.background = JEI.getRecipeGuiBackground();
-        this.slot = JEI.getSlotDrawable();
+        this.background = GuiArt.getRecipeGuiBackground();
+        this.slot = GuiArt.getSlotDrawable();
         tabs = VillagerTabs.forMenu(menu);
     }
 
@@ -159,7 +157,7 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, backgroundHeight);
         this.tabs.draw(ctx, bgX, bgY);
         renderInventory(ctx);
     }
@@ -178,7 +176,7 @@ public class JobChangeConfirmScreen extends CompatContainerScreen<JobChangeConfi
             int xCoord = x - 1 + s.x;
             yCoord = y - 1 + s.y;
             this.gathererSlotY = Math.min(yCoord, gathererSlotY);
-            ctx.drawJei(this.slot, xCoord, yCoord);
+            this.slot.draw(ctx, xCoord, yCoord);
         }
     }
 

@@ -7,6 +7,7 @@ import ca.bradj.questown.jobs.declarative.DinerNoTableWork;
 import ca.bradj.questown.jobs.declarative.DinerWork;
 import ca.bradj.questown.mc.Util;
 import ca.bradj.questown.town.*;
+import net.minecraft.world.level.block.Rotation;
 import ca.bradj.questown.town.quests.MCQuestBatches;
 import ca.bradj.questown.town.rooms.TownRoomsMap;
 import ca.bradj.questown.town.rooms.TownRoomsMapSerializer;
@@ -126,6 +127,17 @@ public class TownFlagTileData {
                 },
                 flag -> flag.firstHunterLootGuaranteeFired = false
         );
+    }
+
+    public static Rotation safeRotation(String name) {
+        if (name == null) {
+            return Rotation.NONE;
+        }
+        try {
+            return Rotation.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            return Rotation.NONE;
+        }
     }
 
     private static InitPair initEconomics() {

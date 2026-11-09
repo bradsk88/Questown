@@ -43,7 +43,6 @@ public class AutoTestRunner {
     /** Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). */
     private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of("perf/town_large");
     private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
-    private static final String CATEGORY_CHICKEN = ChickenArcBlueprintRegistry.CATEGORY;
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
 
@@ -91,12 +90,10 @@ public class AutoTestRunner {
         String scope = describeScope(category, only);
 
         // The held, agent-driven village/growth run has exactly one real player: the
-        // runClient observer ("Dev"). Both the chicken arc's findNearestPlayer and
-        // the flag's active gate read the nearest player, and the agent drives the
-        // Dev via console (give / clickwand). A fake player added at the flag would be
-        // the nearest player and steal both gates from the Dev (the Dev gets the wand,
-        // but the arc reads the fake player's empty hand, so the run is stuck at
-        // WAITING_FOR_STICK). In that path we create the fake player (the executor's
+        // runClient observer ("Dev"). The flag's active gate reads the nearest player, and the
+        // agent drives the Dev via console (give / clickwand). A fake player added at the flag
+        // would be the nearest player and steal the gate from the Dev. In that path we create the
+        // fake player (the executor's
         // player field may reference it) but do NOT add it to the level, so
         // getNearestPlayer returns the Dev. The forced chunk above keeps the flag's
         // chunk loaded regardless.
@@ -118,11 +115,10 @@ public class AutoTestRunner {
 
         LogTestOutput output = new LogTestOutput("autotest");
 
-        boolean runChicken = shouldRunChickenTrack(category);
-        boolean runJobs = shouldRunJobsTrack(category);
+        // TODO: The helper chicken's arc had its own autotest track here. For its implementation see #409, #410, #411 and #412.
+        boolean runJobs = true;
 
         List<AnyTestEntry> jobsList = runJobs ? TestBlueprintRegistry.resolveJobs(category) : List.of();
-        List<ChickenArcBlueprint> chickenList = runChicken ? ChickenArcBlueprintRegistry.all() : List.of();
 
         boolean runDay1 = only != null && nameMatches("village/day1", only);
         // paths/at_fork: growth's driver, stopped (and, held, kept) at the curated-path fork.
@@ -135,7 +131,6 @@ public class AutoTestRunner {
         boolean runSelfSuff = only != null && nameMatches("village/self_sufficiency", only);
         if (runVillage || runSelfSuff) {
             runJobs = false;
-            runChicken = false;
             // The village scenarios test the quest and economy flow, not survival.
             server.setDifficulty(net.minecraft.world.Difficulty.PEACEFUL, true);
             QT.FLAG_LOGGER.info("[village] difficulty set to peaceful");
@@ -149,10 +144,8 @@ public class AutoTestRunner {
 
         if (only != null) {
             jobsList = jobsList.stream().filter(e -> nameMatches(e.name(), only)).toList();
-            chickenList = chickenList.stream().filter(b -> nameMatches(b.name(), only)).toList();
             runJobs = !jobsList.isEmpty();
-            runChicken = !chickenList.isEmpty();
-            if (!runJobs && !runChicken && !runVillage && !runSelfSuff) {
+            if (!runJobs && !runVillage && !runSelfSuff) {
                 reportNoMatchAndShutdown(server, only, category);
                 return;
             }
@@ -163,15 +156,12 @@ public class AutoTestRunner {
         if (!shard.isWholeSuite() && !runVillage && !runSelfSuff) {
             List<String> names = new ArrayList<>();
             jobsList.forEach(e -> names.add(e.name()));
-            chickenList.forEach(b -> names.add(b.name()));
             java.util.Set<String> mine = shard.selectNames(names, SOLO_SCENARIOS);
             jobsList = jobsList.stream().filter(e -> mine.contains(e.name())).toList();
-            chickenList = chickenList.stream().filter(b -> mine.contains(b.name())).toList();
             runJobs = !jobsList.isEmpty();
-            runChicken = !chickenList.isEmpty();
             QT.FLAG_LOGGER.info("[autotest] shard {}/{}: {} scenarios", shard.index(), shard.count(),
-                    jobsList.size() + chickenList.size());
-            if (!runJobs && !runChicken) {
+                    jobsList.size());
+            if (!runJobs) {
                 QT.FLAG_LOGGER.info("[autotest] RESULT: 0/0 passed (ALL PASS)");
                 server.halt(false);
                 return;
@@ -181,9 +171,6 @@ public class AutoTestRunner {
         TestAllExecutor jobsExecutor = runJobs
                 ? new TestAllExecutor(overworld, output, ORIGIN, warpAmount, jobsList)
                 : null;
-        ChickenArcAllExecutor chickenExecutor = runChicken
-                ? new ChickenArcAllExecutor(overworld, server, fakePlayer, ORIGIN, output, chickenList)
-                : null;
         VillageGrowthExecutor villageExecutor = runVillage
                 ? new VillageGrowthExecutor(overworld, server, fakePlayer, ORIGIN, runDay1, villageGoal)
                 : null;
@@ -192,7 +179,7 @@ public class AutoTestRunner {
                 : null;
 
         AutoTestTickListener listener = new AutoTestTickListener(
-                server, jobsExecutor, chickenExecutor, villageExecutor, selfSuffExecutor
+                server, jobsExecutor, villageExecutor, selfSuffExecutor
         );
         MinecraftForge.EVENT_BUS.register(listener);
     }
@@ -220,20 +207,6 @@ public class AutoTestRunner {
             QT.FLAG_LOGGER.warn("[autotest] tickrate '{}' not a number; using default {}", val, DEFAULT_TICK_RATE);
         }
         return DEFAULT_TICK_RATE;
-    }
-
-    private static boolean shouldRunChickenTrack(@Nullable String category) {
-        if (category == null) {
-            return true;
-        }
-        return CATEGORY_CHICKEN.equals(category);
-    }
-
-    private static boolean shouldRunJobsTrack(@Nullable String category) {
-        if (category == null) {
-            return true;
-        }
-        return !CATEGORY_CHICKEN.equals(category);
     }
 
     private static int parseWarpAmount() {
@@ -290,12 +263,7 @@ public class AutoTestRunner {
             @Nullable String category
     ) {
         List<String> available = new ArrayList<>();
-        if (shouldRunJobsTrack(category)) {
-            TestBlueprintRegistry.resolveJobs(category).forEach(e -> available.add(e.name()));
-        }
-        if (shouldRunChickenTrack(category)) {
-            ChickenArcBlueprintRegistry.all().forEach(b -> available.add(b.name()));
-        }
+        TestBlueprintRegistry.resolveJobs(category).forEach(e -> available.add(e.name()));
         QT.FLAG_LOGGER.error("[autotest] only='{}' matched 0 of {} scenarios", only, available.size());
         QT.FLAG_LOGGER.error("[autotest] available scenarios: {}", available);
         QT.FLAG_LOGGER.info("[autotest] RESULT: 0/0 passed (FAILURES)");
@@ -476,8 +444,7 @@ public class AutoTestRunner {
                 return;
             }
             // Peaceful world + survival player: a dead player silently stalls every interaction beat
-            // (the chicken-arc gates on a live nearest player's inventory, and tp/give do not reach a
-            // dead player). Peaceful removes the whole class of dead-player stalls.
+            // (tp/give do not reach a dead player). Peaceful removes the whole class of dead-player stalls.
             sp.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
             net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
@@ -583,26 +550,21 @@ public class AutoTestRunner {
     static class AutoTestTickListener {
         private final MinecraftServer server;
         private final @Nullable TestAllExecutor jobsExecutor;
-        private final @Nullable ChickenArcAllExecutor chickenExecutor;
         private final @Nullable VillageGrowthExecutor villageExecutor;
         private final @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor;
         private boolean jobsSuiteStartAnnounced;
         private boolean jobsDone;
-        private boolean chickenSuiteStartAnnounced;
-        private boolean chickenDone;
         private boolean villageDone;
         private boolean selfSuffDone;
 
         AutoTestTickListener(
                 MinecraftServer server,
                 @Nullable TestAllExecutor jobsExecutor,
-                @Nullable ChickenArcAllExecutor chickenExecutor,
                 @Nullable VillageGrowthExecutor villageExecutor,
                 @Nullable VillageSelfSufficiencyExecutor selfSuffExecutor
         ) {
             this.server = server;
             this.jobsExecutor = jobsExecutor;
-            this.chickenExecutor = chickenExecutor;
             this.villageExecutor = villageExecutor;
             this.selfSuffExecutor = selfSuffExecutor;
         }
@@ -621,20 +583,6 @@ public class AutoTestRunner {
                         return;
                     }
                     jobsDone = true;
-                }
-            }
-            if (!chickenDone) {
-                if (chickenExecutor == null) {
-                    chickenDone = true;
-                } else {
-                    if (!chickenSuiteStartAnnounced) {
-                        QT.FLAG_LOGGER.info("[autotest] chicken-arc:SUITE_START");
-                        chickenSuiteStartAnnounced = true;
-                    }
-                    if (!chickenExecutor.tick()) {
-                        return;
-                    }
-                    chickenDone = true;
                 }
             }
             if (!villageDone) {
@@ -667,10 +615,6 @@ public class AutoTestRunner {
             if (jobsExecutor != null) {
                 passed += jobsExecutor.getPassed();
                 total += jobsExecutor.getTotal();
-            }
-            if (chickenExecutor != null) {
-                passed += chickenExecutor.getPassed();
-                total += chickenExecutor.getTotal();
             }
             if (villageExecutor != null) {
                 passed += villageExecutor.getPassedAssertions();

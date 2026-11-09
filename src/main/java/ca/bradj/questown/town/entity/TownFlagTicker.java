@@ -328,6 +328,7 @@ public class TownFlagTicker extends AbstractTownFlagTicker<TownFlagTicker.TickDa
         double z = pos.getZ() + 0.5 + sl.getRandom().nextGaussian() * 0.25;
         sl.sendParticles(ParticleTypes.PORTAL, x, y, z, 2, 0, 0.15, 0, 0.02);
     }
+
     // The flag sparkles cyan while it holds Blocks of Progress.
     private static final DustParticleOptions CYAN_SPARKLE =
             new DustParticleOptions(new Vector3f(0.0f, 1.0f, 1.0f), 1.0f);

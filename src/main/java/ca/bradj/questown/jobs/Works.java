@@ -38,7 +38,7 @@ public class Works {
     ) {
         ImmutableMap.Builder<JobID, Supplier<Work>> b = ImmutableMap.builder();
         dataPackJobs.forEach((k, v) -> b.put(k, () -> v));
-        b.put(ExplorerWork.ID, builtOnce(ExplorerWork::asWork));
+        // TODO: The explorer job is not in this line yet. For its implementation see #403.
         b.put(GathererMappedAxeWork.ID, builtOnce(GathererMappedAxeWork::asWork));
         b.put(GathererUnmappedShovelWorkQtrDay.ID, builtOnce(GathererUnmappedShovelWorkQtrDay::asWork));
         b.put(GathererUnmappedShovelWorkHalfDay.ID, builtOnce(GathererUnmappedShovelWorkHalfDay::asWork));

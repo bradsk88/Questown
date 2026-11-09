@@ -139,6 +139,40 @@ public class TownContainerChecksTest {
     }
 
     @Test
+    void townHasSupplies_ShouldReturnFalse_WhenOneItemFound_AndTwoRequired_AndDifferentAllowed() {
+        // One left in town, but the job needs two.
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(APPLE).stream().filter(predicate).toList(),
+                isFruit,
+                2,
+                false
+        );
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    void townHasSupplies_ShouldReturnFalse_WhenStackOfTwoFound_AndThreeRequired_AndDifferentAllowed() {
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(new TestItem("apple", 2)).stream().filter(predicate).toList(),
+                isFruit,
+                3,
+                false
+        );
+        Assertions.assertFalse(result);
+    }
+
+    @Test
+    void townHasSupplies_ShouldReturnTrue_WhenStackOfTwoFound_AndTwoRequired_AndDifferentAllowed() {
+        boolean result = TownContainerChecks.townHasSuppliesForStage(
+                (predicate) -> ImmutableList.of(new TestItem("apple", 2)).stream().filter(predicate).toList(),
+                isFruit,
+                2,
+                false
+        );
+        Assertions.assertTrue(result);
+    }
+
+    @Test
     void townHasSupplies_ShouldReturnFalse_WhenNoItemsFound_AndOneRequired() {
         boolean result = TownContainerChecks.townHasSuppliesForStage(
                 (predicate) -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(),
@@ -306,6 +340,27 @@ public class TownContainerChecksTest {
                 (i) -> false
         );
         Assertions.assertTrue(result);
+    }
+
+    @Test
+    void hasSupplies_ShouldReturnFalse_If_2_IngredientsRequiredAtState0_AndOnlyOneLeftInTown() {
+        // The job needs two and only one is left.
+        boolean result = TownContainerChecks.hasSupplies(
+                () -> ImmutableSet.of(0),
+                ImmutableMap.of(
+                        0, required.apply("ingredient")
+                ),
+                ImmutableMap.of(
+                        0, 2
+                ),
+                ImmutableMap.of(
+                ),
+                predicate -> ImmutableList.of(new TestItem("ingredient", 1)).stream().filter(predicate).toList(),
+                predicate -> ImmutableList.<TestItem>of().stream().filter(predicate).toList(),
+                (state) -> ImmutableList.of(),
+                (i) -> false
+        );
+        Assertions.assertFalse(result);
     }
 
     @Test

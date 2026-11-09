@@ -80,6 +80,9 @@ public class SpecialRules {
     public static final String APPLY_UNCOMFORTABLE_EATING = "apply_uncomfortable_eating";
     public static final String APPLY_ATE_RAW_FOOD = "apply_ate_raw_food";
 
+    // Applied at extraction of a gatherer map: the town learns one item from that map's biome.
+    public static final String SCOUT_LOOT = "scout_loot";
+
     // If this rule is active during the extraction stage of a job, the
     // villager will attempt to use their workspot as a container, adding
     // the last item that was inserted as part of the job.
@@ -135,8 +138,12 @@ public class SpecialRules {
             "furnace_smelt_warp";
 
     public static final String EXCLUDE_FROM_WARP = "exclude_from_warp";
+
     // With dev logs on, the villager's status decisions for this job are logged with the reasons
     // behind them.
     public static final String LOG_STATUS_REASONS = "log_status_reasons";
 
+    // During a warp, moves a requested item from another chest into the chest that holds its stock request.
+    public static final String RELOCATE_REQUESTED_ITEM_WARP =
+            "relocate_requested_item_warp";
 }

@@ -102,12 +102,21 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
 
     @Override
     public void initializeBOP(CompoundTag tag) {
-        flag.bopCount = tag.getInt("count");
+        flag.bopStacks.clear();
+        if (tag.contains("stacks")) {
+            ListTag stacks = tag.getList("stacks", Tag.TAG_COMPOUND);
+            for (Tag s : stacks) {
+                flag.bopStacks.add(ca.bradj.questown.mc.Compat.loadItem(flag.getLevel(), (CompoundTag) s));
+            }
+        } else if (tag.contains("count")) {
+            // Older saves stored a count: load that many plain Blocks of Progress.
+            int count = tag.getInt("count");
+            for (int i = 0; i < count; i++) {
+                flag.bopStacks.add(new ItemStack(ItemsInit.BLOCK_OF_PROGRESS.get()));
+            }
+        }
         if (tag.contains("tutorial_bop_granted")) {
             flag.tutorialBopGranted = tag.getBoolean("tutorial_bop_granted");
-        }
-        if (tag.contains("flagpole_built")) {
-            flag.setFlagpoleBuilt(tag.getBoolean("flagpole_built"));
         }
         if (tag.contains("completed_procedural_batches")) {
             flag.completedProceduralBatches = tag.getInt("completed_procedural_batches");
@@ -190,6 +199,7 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
     public CompoundTag serializeEconomics() {
         return TownEconomicsSerializer.INSTANCE.serialize(flag.getEconomicsHandle());
     }
+
     public CompoundTag serializeBoardAutoRequest() {
         CompoundTag t = new CompoundTag();
         t.putBoolean("value", flag.isBoardAutoRequest());
@@ -225,5 +235,4 @@ public class TownFlagInitializationImpl implements TownFlagInitialization {
         t.putBoolean("value", flag.isFirstHunterLootGuaranteeFired());
         return t;
     }
-
 }

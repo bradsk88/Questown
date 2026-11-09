@@ -1,5 +1,6 @@
 package ca.bradj.questown.world;
 
+import net.minecraft.tags.BlockTags;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.Bootstrap;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,6 +25,7 @@ class WarpWorldAccessTest {
     static void bootstrap() {
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
+        Blocks.OAK_LOG.builtInRegistryHolder().bindTags(Set.of(BlockTags.LOGS));
     }
 
     // -------------------------------------------------------------------------
@@ -339,6 +342,20 @@ class WarpWorldAccessTest {
         assertFalse(world.dirtyBlocks.contains(stone));
     }
 
+    /** The warp arborist chops logs, not deepslate or other pillar blocks. */
+    @Test
+    void chopTree_returnsEmpty_forAPillarThatIsNotALog() {
+        BlockPos base = new BlockPos(0, 64, 0);
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, Blocks.DEEPSLATE.defaultBlockState());
+        blocks.put(base.above(), Blocks.DEEPSLATE.defaultBlockState());
+
+        WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
+
+        assertTrue(world.chopTree(base).isEmpty());
+        assertFalse(world.isAir(base));
+    }
+
     @Test
     void chopTree_returnsEmpty_whenTrunkPosIsAir() {
         Map<BlockPos, BlockState> blocks = new HashMap<>();
@@ -360,6 +377,28 @@ class WarpWorldAccessTest {
         assertTrue(drops.isEmpty());
     }
 
+    /** A log region far bigger than the stack is still cut. */
+    @Test
+    void chopTree_cutsLargeConnectedRegion_withoutStackOverflow() {
+        final int N = 5000;
+        final int Y = 64;
+        BlockState log = Blocks.OAK_LOG.defaultBlockState();
+        Function<BlockPos, BlockState> fallback = pos ->
+                (pos.getZ() == 0 && pos.getY() == Y && pos.getX() >= 0 && pos.getX() < N)
+                        ? log : Blocks.AIR.defaultBlockState();
+        WarpWorldAccess world = new WarpWorldAccess(
+                new HashMap<>(), new HashMap<>(), i -> Optional.empty(), i -> 0, fallback);
+
+        List<ItemStack> drops = world.chopTree(new BlockPos(0, Y, 0));
+
+        assertEquals(N, drops.size());
+        assertTrue(drops.stream().allMatch(s -> s.is(Items.OAK_LOG)));
+        for (int x = 0; x < N; x++) {
+            assertTrue(world.isAir(new BlockPos(x, Y, 0)));
+        }
+        assertFalse(world.dirtyBlocks.contains(new BlockPos(N, Y, 0)));
+    }
+
     @Test
     void chopTree_doesNotLoopInfinitely_onDenseCluster() {
         // 2x2x2 cube of oak logs — all connected to each other
@@ -375,6 +414,30 @@ class WarpWorldAccessTest {
         WarpWorldAccess world = new WarpWorldAccess(blocks, new HashMap<>(), i -> Optional.empty(), i -> 0);
         List<ItemStack> drops = world.chopTree(new BlockPos(0, 64, 0));
         assertEquals(8, drops.size());
+    }
+
+    @Test
+    void chopTree_terminates_whenLogIsOutsideTheSnapshot() {
+        // Two adjacent logs missing from the snapshot: cutting must still finish.
+        BlockPos base = new BlockPos(0, 64, 0);
+        BlockPos mid = new BlockPos(0, 65, 0);
+        BlockPos side = new BlockPos(1, 64, 0);
+        Map<BlockPos, BlockState> blocks = new HashMap<>();
+        blocks.put(base, Blocks.OAK_LOG.defaultBlockState());
+        WarpWorldAccess world = new WarpWorldAccess(
+                blocks,
+                new HashMap<>(),
+                i -> Optional.empty(),
+                i -> 0,
+                pos -> pos.equals(mid) || pos.equals(side)
+                        ? Blocks.OAK_LOG.defaultBlockState()
+                        : null
+        );
+        List<ItemStack> drops = world.chopTree(base);
+        assertEquals(3, drops.size());
+        assertTrue(world.isAir(base));
+        assertTrue(world.isAir(mid));
+        assertTrue(world.isAir(side));
     }
 
     private static WarpWorldAccess worldWith(BlockPos pos, BlockState state) {

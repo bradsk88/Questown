@@ -1,12 +1,11 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.IconButton;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.core.network.FlagCraftMessage;
 import ca.bradj.questown.core.network.FlagCraftRecipes;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.mc.Compat;
-import mezz.jei.gui.elements.GuiIconButtonSmall;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -40,7 +39,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     static final int ROWS_PER_PAGE = 5;
 
     private final FlagTabs tabs;
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final BlockPos flagPos;
     // One button per visible recipe; visibleRecipes maps a row to its recipe index.
     private final List<Button> craftButtons = new ArrayList<>();
@@ -48,10 +47,10 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     private int page = 0;
     private int pageCount = 1;
     private int navY;
-    private final GuiIconButtonSmall previousPage = JEI.guiIconButtonSmall(
-            0, 0, buttonWidth, buttonHeight, JEI.getArrowPrevious(), b -> turnPage(-1));
-    private final GuiIconButtonSmall nextPage = JEI.guiIconButtonSmall(
-            0, 0, buttonWidth, buttonHeight, JEI.getArrowNext(), b -> turnPage(1));
+    private final IconButton previousPage = GuiArt.iconButton(
+            0, 0, buttonWidth, buttonHeight, GuiArt.getArrowPrevious(), b -> turnPage(-1));
+    private final IconButton nextPage = GuiArt.iconButton(
+            0, 0, buttonWidth, buttonHeight, GuiArt.getArrowNext(), b -> turnPage(1));
     // A Block of Progress recipe asks for a second click to confirm.
     private int armedRecipe = -1;
 
@@ -68,7 +67,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
         super(menu, playerInv, title);
         super.imageWidth = 256;
         super.imageHeight = 220;
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.tabs = FlagTabs.forMenu(menu, "tooltips.crafting");
         this.flagPos = menu.getFlagInfo().flagPos();
     }
@@ -266,7 +265,7 @@ public class FlagCraftingScreen extends CompatContainerScreen<FlagCraftingMenu> 
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int bgX = (this.width - backgroundWidth) / 2;
         int bgY = (this.height - panelHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, panelHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, panelHeight);
         this.tabs.draw(ctx, bgX, bgY);
     }
 

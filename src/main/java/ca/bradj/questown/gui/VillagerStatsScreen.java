@@ -3,10 +3,8 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.Questown;
 import ca.bradj.questown.core.Config;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import ca.bradj.questown.mc.Util;
 import com.google.common.collect.ImmutableList;
-import mezz.jei.common.util.ImmutableRect2i;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,14 +19,14 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
     private static final int backgroundWidth = 176;
     private static final int backgroundHeight = 166;
     private static final ResourceLocation icons = Questown.ResourceLocation("textures/gui/bars.png");
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final VillagerTabs tabs;
-    private ImmutableRect2i expBar = new ImmutableRect2i(0, 0, 0, 0);
-    private ImmutableRect2i hngBar = new ImmutableRect2i(0, 0, 0, 0);
-    private ImmutableRect2i moodBar = new ImmutableRect2i(0, 0, 0, 0);
-    private ImmutableRect2i dmgBar = new ImmutableRect2i(0, 0, 0, 0);
+    private GuiRect expBar = new GuiRect(0, 0, 0, 0);
+    private GuiRect hngBar = new GuiRect(0, 0, 0, 0);
+    private GuiRect moodBar = new GuiRect(0, 0, 0, 0);
+    private GuiRect dmgBar = new GuiRect(0, 0, 0, 0);
     // The effects line's box and names while it is cut short, so a hover can list them all.
-    private ImmutableRect2i effectsLine = new ImmutableRect2i(0, 0, 0, 0);
+    private GuiRect effectsLine = new GuiRect(0, 0, 0, 0);
     private List<String> truncatedEffects = List.of();
 
     public VillagerStatsScreen(
@@ -40,7 +38,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         super.imageWidth = 256;
         super.imageHeight = 220;
 
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.tabs = VillagerTabs.forMenu(menu);
     }
 
@@ -80,12 +78,12 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             return;
         }
 
-        if (!truncatedEffects.isEmpty() && JEI.isCoordInBox(mouseX, mouseY, effectsLine)) {
+        if (!truncatedEffects.isEmpty() && effectsLine.contains(mouseX, mouseY)) {
             this.showTooltip(truncatedEffects.stream().map(n -> Compat.visualOrder(Compat.literal(n))).toList());
             return;
         }
 
-        if (JEI.isCoordInBox(mouseX, mouseY, expBar)) {
+        if (expBar.contains(mouseX, mouseY)) {
             this.showTooltip(
                     Compat.translatable(
                             "menu.common.stat_tooltip",
@@ -97,7 +95,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             return;
         }
 
-        if (JEI.isCoordInBox(mouseX, mouseY, hngBar)) {
+        if (hngBar.contains(mouseX, mouseY)) {
             this.showTooltip(
                     Compat.translatable(
                             "menu.common.stat_tooltip",
@@ -109,7 +107,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             return;
         }
 
-        if (JEI.isCoordInBox(mouseX, mouseY, moodBar)) {
+        if (moodBar.contains(mouseX, mouseY)) {
             this.showTooltip(
                     Compat.translatable(
                             "menu.common.stat_tooltip",
@@ -120,7 +118,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
             );
             return;
         }
-        if (JEI.isCoordInBox(mouseX, mouseY, dmgBar)) {
+        if (dmgBar.contains(mouseX, mouseY)) {
             this.showTooltip(
                     Compat.translatable(
                             "menu.common.stat_tooltip",
@@ -152,12 +150,12 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         renderCustomTooltip(rc, mouseX, mouseY);
     }
 
-    private ImmutableRect2i renderExperience(
+    private GuiRect renderExperience(
             RenderContext rc,
             int position
     ) {
         Component title = Compat.translatable("menu.villager_stats.experience");
-        ImmutableRect2i bar = renderBar(
+        GuiRect bar = renderBar(
                 rc,
                 position,
                 title,
@@ -192,7 +190,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         String line = Compat.translatable("menu.villager_stats.mood_effects", String.join(", ", names)).getString();
         String shown = Compat.fitToWidth(this.font, line, backgroundWidth - 16);
         rc.darkText(Compat.literal(shown), bgX + 8, y);
-        effectsLine = new ImmutableRect2i(bgX + 8, y, this.font.width(shown), this.font.lineHeight);
+        effectsLine = new GuiRect(bgX + 8, y, this.font.width(shown), this.font.lineHeight);
         if (!shown.equals(line)) {
             truncatedEffects = List.copyOf(names);
         }
@@ -206,7 +204,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         renderBar(rc, position, title, menu.getMoodPercent());
     }
 
-    private ImmutableRect2i renderHunger(
+    private GuiRect renderHunger(
             RenderContext rc,
             int position
     ) {
@@ -215,7 +213,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         return renderBar(rc, position, title, fullnessPercent);
     }
 
-    private ImmutableRect2i renderDamage(
+    private GuiRect renderDamage(
             RenderContext rc,
             int position
     ) {
@@ -224,7 +222,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         return renderBar(rc, position, title, damageLevel);
     }
 
-    private ImmutableRect2i renderBar(
+    private GuiRect renderBar(
             RenderContext rc,
             int index,
             Component title,
@@ -247,7 +245,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
         int rightWidth = (int) (HALF_WIDTH * (2 * (Math.min(0.5, (fP) - 0.5))));
         Util.blit(rc.gui(), icons, barLeftX, y, 1, 69, leftWidth, height);
         Util.blit(rc.gui(), icons, x + 78, y, 100, 69, rightWidth, height);
-        return new ImmutableRect2i(barLeftX, y, HALF_WIDTH * 2, height);
+        return new GuiRect(barLeftX, y, HALF_WIDTH * 2, height);
     }
 
     @Override
@@ -259,7 +257,7 @@ public class VillagerStatsScreen extends CompatContainerScreen<VillagerStatsMenu
     ) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, x, y, backgroundWidth, backgroundHeight);
         this.tabs.draw(ctx, x, y);
     }
 

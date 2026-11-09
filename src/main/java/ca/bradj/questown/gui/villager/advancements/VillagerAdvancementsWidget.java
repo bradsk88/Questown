@@ -208,6 +208,7 @@ public class VillagerAdvancementsWidget {
     }
 
     private int getFrameType() {
+        // widgets.png: 26-px frames at u 0 (task), 26 (challenge), 52 (goal).
         int ft = -1;
         if (unlocked) {
             ft = 0;

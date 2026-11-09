@@ -9,7 +9,6 @@ import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.logic.PredicateCollection;
 import ca.bradj.questown.mc.Compat;
 import ca.bradj.questown.mc.Util;
-import ca.bradj.questown.mobs.helperchicken.ChickenArcLootGuarantee;
 import ca.bradj.questown.town.AbstractWorkStatusStore;
 import ca.bradj.questown.town.Claim;
 import ca.bradj.questown.town.entity.TownFlagBlockEntity;
@@ -264,16 +263,10 @@ public abstract class AbstractWorldInteraction<
                 QT.JOB_LOGGER.debug("[tryGiveItems] Pushing shrunk item qty={}", shrunk.get().quantity());
                 stack.push(shrunk);
             }
-            if (isInstanze(newItem.get(), KnowledgeMetaItem.class)) {
-                ts = withKnowledge(inputs, ts, newItem);
-            } else if (isInstanze(newItem.get(), EffectMetaItem.class)) {
-                ts = withEffectApplied(inputs, ts, newItem);
-            } else {
-                HELD_ITEM unit = newItem.unit();
-                TOWN hooked = postExtractHook(inputs, ts, unit);
-                ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
-                QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
-            }
+            HELD_ITEM unit = newItem.unit();
+            TOWN hooked = postExtractHook(inputs, ts, unit);
+            ts = setHeldItem(inputs, hooked != null ? hooked : ts, villagerIndex, i, unit);
+            QT.VILLAGER_LOGGER.debug("Villager took {}", unit.toShortString());
 
             if (stack.isEmpty()) {
                 gotAll = true;
@@ -311,6 +304,7 @@ public abstract class AbstractWorldInteraction<
         return jobId;
     }
 
+    // TODO: Job proficiency (a villager gets faster at a job with practice) scaled this speed. For its implementation see #405.
     protected abstract int getWorkSpeedOf10(EXTRA extra);
 
     protected abstract int getAffectedTime(
@@ -638,14 +632,14 @@ public abstract class AbstractWorldInteraction<
         return rules != null && !rules.isEmpty();
     }
 
-    /** Applies the once-per-town loot guarantees: the helper chicken's Worldly Seeds, and the first hunter's raw food. */
+    /** Applies the once-per-town loot guarantees: the first hunter's raw food. */
     // TODO: Have each guarantee's path declare it as a special rule that is processed here, so this class
     //  names no particular path.
     protected Iterable<MCHeldItem> withLootGuarantees(
             @Nullable TownFlagBlockEntity flag,
             Iterable<MCHeldItem> results
     ) {
-        results = ChickenArcLootGuarantee.maybePrepend(flag, results);
+        // TODO: The helper chicken guaranteed Worldly Seeds from the first gather here. For its implementation see #409, #410, #411 and #412.
         results = FirstHunterLootGuarantee.maybePrepend(flag, getJobId(), results);
         return results;
     }
@@ -723,23 +717,6 @@ public abstract class AbstractWorldInteraction<
             TOWN ts,
             POS position,
             State fresh
-    );
-
-    protected abstract TOWN withEffectApplied(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
-    );
-
-    protected abstract TOWN withKnowledge(
-            @NotNull EXTRA inputs,
-            TOWN ts,
-            HELD_ITEM newItem
-    );
-
-    protected abstract boolean isInstanze(
-            INNER_ITEM innerItem,
-            Class<?> clazz
     );
 
     protected abstract boolean isMulti(INNER_ITEM innerItem);

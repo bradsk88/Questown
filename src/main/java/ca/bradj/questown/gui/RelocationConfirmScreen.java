@@ -3,7 +3,6 @@ package ca.bradj.questown.gui;
 import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.core.network.RelocationChoiceMessage;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -17,7 +16,7 @@ public class RelocationConfirmScreen extends CompatScreen {
     private static final int backgroundHeight = 166;
     private static final int PAGE_PADDING = 10;
 
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final BlockPos targetPos;
     private final int farFixtureCount;
 
@@ -30,7 +29,7 @@ public class RelocationConfirmScreen extends CompatScreen {
             int farFixtureCount
     ) {
         super(Compat.translatable("menu.relocation_confirm.title"));
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.targetPos = targetPos;
         this.farFixtureCount = farFixtureCount;
     }
@@ -77,7 +76,7 @@ public class RelocationConfirmScreen extends CompatScreen {
     protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, x, y, backgroundWidth, backgroundHeight);
     }
 
     @Override

@@ -54,6 +54,17 @@ import net.minecraftforge.common.ToolActions;
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
 
+    /** The mouse position in gui-scaled screen coordinates. */
+    public static double guiMouseX() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
+    }
+
+    public static double guiMouseY() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
+    }
+
     public static void playNeutralSound(
             ServerLevel serverLevel,
             BlockPos pos,
@@ -769,6 +780,8 @@ public class Compat {
      */
     public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
         // No spawnChunkRadius gamerule before 1.20.5: spawn chunks stay loaded.
+        // TODO: A town at world spawn then never unloads, so village/day1's overnight reload fails when the world spawns at
+        //  the scenario origin. Move the world spawn away from the town here, or start the scenario outside spawn chunks.
         ca.bradj.questown.QT.LOGGER.warn(
                 "The spawn chunk radius can't be changed before Minecraft 1.20.5 (asked for {}); spawn chunks stay loaded", radius);
     }

@@ -5,7 +5,6 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import ca.bradj.questown.mobs.visitor.VisitorMobEntity;
 import net.minecraft.client.Minecraft;
@@ -25,7 +24,7 @@ public class SwitchJobConfirmScreen extends CompatScreen {
     private static final int backgroundHeight = 166;
     private static final int PAGE_PADDING = 10;
 
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final BlockPos flagPos;
     private final UUID villagerUUID;
     private final JobID job;
@@ -43,7 +42,7 @@ public class SwitchJobConfirmScreen extends CompatScreen {
             boolean awayOnTrip
     ) {
         super(Compat.translatable("menu.switch_job.title"));
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.flagPos = flagPos;
         this.villagerUUID = villagerUUID;
         this.job = job;
@@ -103,7 +102,7 @@ public class SwitchJobConfirmScreen extends CompatScreen {
     protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, x, y, backgroundWidth, backgroundHeight);
     }
 
     @Override
