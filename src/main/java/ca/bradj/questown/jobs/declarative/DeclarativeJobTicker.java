@@ -439,7 +439,7 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
     }
 
 
-    private static long cookNoJoBSiteN = 0L;
+    private static long noJobSiteN = 0L;
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected <RECIPE, TOWN_ITEM extends Item<TOWN_ITEM>> @NotNull Supplier<ProductionStatus> getStateComputer(
@@ -459,17 +459,16 @@ class DeclarativeJobTicker<POS, HELD_ITEM extends Item<HELD_ITEM>, ROOM extends 
             }
             journal.tryUpdateStatus(jtp, elp, defaultEntityInvProvider(deps), DeclarativeJobs.STATUS_FACTORY, deps.prioritizesExtraction());
             ProductionStatus now = journal.getStatus();
-            // Dev diagnostics: a cook stuck at NO_JOBSITE logs why. Sampled.
+            // Dev diagnostics: a villager stuck at NO_JOBSITE logs why. Sampled.
             if (QT.DEV_LOGS
-                    && deps.getJobId().rootId().contains("cook")
                     && now == ProductionStatus.NO_JOBSITE
-                    && (cookNoJoBSiteN++ % 200) < 1L) {
+                    && (noJobSiteN++ % 200) < 1L) {
                 ca.bradj.questown.jobs.TownStateProvider tps = ca.bradj.questown.jobs.JobTownStates.forTown(jtp);
-                QT.JOB_LOGGER.dev("[cook] NO_JOBSITE job={} hasSupplies={!} hasSpace={!} workable={!} invFull={} hasItems={}",
+                QT.JOB_LOGGER.dev("NO_JOBSITE job={} hasSupplies={} hasSpace={} workable={} invFull={} hasItems={}",
                         deps.getJobId(),
-                        tps.hasSupplies().describe(),
-                        tps.hasSpace().describe(),
-                        tps.containsWorkableBlocksAtAnyState().describe(),
+                        tps.hasSupplies().apply(() -> null),
+                        tps.hasSpace().apply(() -> null),
+                        tps.containsWorkableBlocksAtAnyState().apply(() -> null),
                         journal.isInventoryFull(),
                         journal.hasAnyLootToDrop());
             }
