@@ -257,6 +257,14 @@ scrolled ("Paged menus no longer scroll between pages", 2026-10-11 playtest). It
 the quests tab's "Page 1 / 2" went to "Page 2 / 2" on one wheel step, injected through the real
 `onScroll` by the diag client's `scroll <x> <y> <delta>` command.
 
+**1.20.1 has no dispatcher.** Forge 1.20.1 still calls `Screen.mouseScrolled(x, y, delta)` after
+`ScreenEvent.MouseScrolled.Pre`, so the screens' overrides get the wheel directly. The 1.20.1 port
+carried a `ForgeMouseScrollDispatch` that called `ScrollableScreen.mouseScrolled`; in the
+reobfuscated jar the screens' override is renamed to vanilla's SRG name and the interface method is
+not, so every scroll on a Questown screen threw `AbstractMethodError` and crashed the client. Dev
+runs use official names, so only a built jar shows it. Don't call a vanilla-named method through a
+Questown interface on Forge.
+
 ## Campfire sleep: the player is told about the grogginess (r17, dev 2026-10-25)
 
 Waking from a campfire sleep, `CampfireSleepForgeEvents.applyGrogginess` gives Mining Fatigue and
