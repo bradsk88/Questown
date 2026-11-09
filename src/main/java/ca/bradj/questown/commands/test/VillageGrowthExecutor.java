@@ -410,8 +410,9 @@ public final class VillageGrowthExecutor {
             net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(packed);
             level.setChunkForced(cp.x, cp.z, false);
         }
-        ca.bradj.questown.mc.Compat.setSpawnChunkRadius(server, level, 0);
-        movePlayer(origin.getX() + 4000, origin.getY() + 40, origin.getZ() + 4000);
+        BlockPos away = origin.offset(4000, 40, 4000);
+        ca.bradj.questown.mc.Compat.releaseSpawnChunks(server, level, away);
+        movePlayer(away.getX(), away.getY(), away.getZ());
         day1.pauseArrivals();
         msg("Reload: released " + releasedChunks.size() + " forced chunks, player moved away (roster=" + rosterBeforeReload + ")");
         reloadWait = 0;

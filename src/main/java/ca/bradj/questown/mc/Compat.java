@@ -787,11 +787,12 @@ public class Compat {
     }
 
     /**
-     * The 1.20.5+ {@code spawnChunkRadius} gamerule (spawn chunks always loaded otherwise; the
-     * autotest origin sits in them). village/day1 sets it to 0 so the flag's chunk can unload.
+     * Stops the spawn chunks keeping the area around the world spawn loaded (the autotest origin sits
+     * in them), so village/day1's flag chunk can unload. Sets the {@code spawnChunkRadius} gamerule to 0;
+     * {@code elsewhere} is where 1.20.1, which has no such gamerule, moves the world spawn instead.
      */
-    public static void setSpawnChunkRadius(MinecraftServer server, ServerLevel level, int radius) {
-        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SPAWN_CHUNK_RADIUS).set(radius, server);
+    public static void releaseSpawnChunks(MinecraftServer server, ServerLevel level, BlockPos elsewhere) {
+        level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SPAWN_CHUNK_RADIUS).set(0, server);
     }
 
     /**
