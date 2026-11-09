@@ -843,6 +843,10 @@ shards, and an empty shard reports `RESULT: 0/0`. Village scenarios are never sp
 19 others), 299 s with the solo rule (town_large alone 259 s under 4x load; other shards
 2–3 min) against 335–500 s serial. Unit: `AutoTestShardTest`.
 
+`SOLO_SCENARIOS` is empty since 2026-11-09: the suite outgrew town_large. On 4 shards it took
+2.6 min alone against 6–7 min for the other shards on 1.20.6, and 5 min against 46+ min on
+1.20.1, so its shard sat idle for most of the run.
+
 ## The arena is cleared up to the natural surface (2026-10-20)
 
 `TestArenaPreparer.flatten` cleared from the origin (y=64) up to a fixed height (tallest
