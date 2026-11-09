@@ -65,6 +65,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
@@ -2194,6 +2195,15 @@ public class TestBlueprintRegistry {
         };
     }
 
+    private static boolean holds(Container container, Item item) {
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            if (container.getItem(i).is(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean putInChest(ServerLevel level, BlockPos pos, ItemStack stack) {
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof Container container)) {
@@ -2208,11 +2218,14 @@ public class TestBlueprintRegistry {
     private static final BlockPos NAV_MAT_OFFSET = new BlockPos(3, 0, 0);
     private static final BlockPos NAV_RAISED_CHEST = new BlockPos(6, 1, -1);
     private static final BlockPos NAV_WEST_DOOR = new BlockPos(4, 0, 0);
+    private static final int NAV_GATHERER_TICKS = 2400;
 
     private static volatile boolean navRoofVisited;
     private static volatile boolean navRoomEntered;
     private static volatile int navMinY;
     private static volatile int navMaxY;
+    private static volatile @Nullable BlockPos navLastPos;
+    private static volatile boolean navAxeTaken;
 
     /**
      * Roof navigation, on the vehicle that actually walks: the gatherer (gate &lt;-&gt; supply
@@ -2226,14 +2239,16 @@ public class TestBlueprintRegistry {
      * interior floor spot one block lower, whose Manhattan-1 neighbours are standable interior floor,
      * so the path goes through the door.
      * <p>
-     * The assertion: the townie must enter the room (feet y == flagY inside the room footprint) and
-     * never visit the roof/ledge (feet y &gt;= flagY+2). The axe readout is informational: the
-     * gatherer's first container leg is DROPPING_LOOT (the vehicle under test), so the supplies walk
-     * may not run within the window.
+     * The assertion, from positions sampled every tick: the townie takes the axe from the chest,
+     * enters the room (feet y == flagY inside the room footprint) and never visits the roof/ledge
+     * (feet y &gt;= flagY+2). It is fed first, or it eats and rests through the window and the
+     * supplies walk never happens.
      */
     private static TestBlueprint navGathererBlueprint() {
         SupplyRoom sr = buildSupplyRoom(4, -2);
         List<BlockPlacement> blocks = new ArrayList<>(sr.blocks);
+        // The gatherer's job site; registering the position alone leaves it at NO_JOBSITE.
+        blocks.add(new BlockPlacement(NAV_MAT_OFFSET, BlocksInit.WELCOME_MAT_BLOCK.get().defaultBlockState()));
         // Move the door from the south wall (sr.doorOffset) to the WEST wall, facing EAST, open,
         // hinge LEFT. Townies cannot open wooden doors (no InteractWithDoor brain behavior;
         // useNearbyGates handles only fence gates), and an open door on the south wall leaves its
@@ -2274,7 +2289,7 @@ public class TestBlueprintRegistry {
                 new TestExpectation(List.of(), 0, 0),
                 NAV_WEST_DOOR,
                 null, null, null,
-                true, 600, false,
+                true, NAV_GATHERER_TICKS, false,
                 true, null, null, null, null, null, false
         );
         return base.withPostSpawnAction((level, flagPos, town, output) -> {
@@ -2283,59 +2298,52 @@ public class TestBlueprintRegistry {
                     navRoomEntered = false;
                     navMinY = flagY;
                     navMaxY = flagY;
-                    Thread t = new Thread(() -> {
-                        long end = System.currentTimeMillis() + 35000;
-                        BlockPos last = null;
-                        while (System.currentTimeMillis() < end) {
-                            for (LivingEntity e : town.getVillagerHandle().entities()) {
-                                if (!(e instanceof VisitorMobEntity vme)) {
-                                    continue;
-                                }
-                                BlockPos bp = vme.blockPosition();
-                                int y = bp.getY();
-                                navMinY = Math.min(navMinY, y);
-                                navMaxY = Math.max(navMaxY, y);
-                                // Roof or ledge: feet at least two above the flag (roof surface
-                                // feet is flagY+3, the ledge top flagY+2; the interior floor is
-                                // flagY).
-                                if (y >= flagY + 2) {
-                                    navRoofVisited = true;
-                                }
-                                // Inside the supply room at floor level: entered through the door.
-                                int rx = bp.getX() - flagPos.getX();
-                                int rz = bp.getZ() - flagPos.getZ();
-                                if (y == flagY && rx >= 5 && rx <= 7 && rz >= -1 && rz <= 1) {
-                                    navRoomEntered = true;
-                                }
-                                if (!bp.equals(last)) {
-                                    last = bp;
-                                    output.msg("[nav/roof_gatherer] townie at " + bp.toShortString());
-                                }
-                            }
-                            try {
-                                Thread.sleep(250);
-                            } catch (InterruptedException ex) {
-                                return;
-                            }
-                        }
-                    }, "nav-roof-gatherer");
-                    t.setDaemon(true);
-                    t.start();
-                    output.msg("[nav/roof_gatherer] started position tracker over the realtime phase");
+                    navLastPos = null;
+                    navAxeTaken = false;
+                    // A new villager is starving: fed, it starts with the supplies walk instead of
+                    // eating and then resting through the window.
+                    for (VillagerUUID vuid : town.getVillagerHandle().getVillagerJobs().keySet()) {
+                        town.getVillagerHandle().fillHunger(VillagerUUID.get(vuid), 1.0f);
+                    }
+                    output.msg("[nav/roof_gatherer] fed the townie; tracking its position every tick");
                     return true;
+                })
+                .withRealtimeTickAction((level, flagPos, town) -> {
+                    int flagY = flagPos.getY();
+                    // The gatherer returns the axe after its trip, so watch for it leaving the chest.
+                    if (!navAxeTaken && level.getBlockEntity(flagPos.offset(NAV_RAISED_CHEST)) instanceof Container chest
+                            && !holds(chest, Items.STONE_AXE)) {
+                        navAxeTaken = true;
+                    }
+                    for (LivingEntity e : town.getVillagerHandle().entities()) {
+                        if (!(e instanceof VisitorMobEntity vme)) {
+                            continue;
+                        }
+                        BlockPos bp = vme.blockPosition();
+                        int y = bp.getY();
+                        navMinY = Math.min(navMinY, y);
+                        navMaxY = Math.max(navMaxY, y);
+                        // Roof or ledge: feet at least two above the flag (roof surface feet is
+                        // flagY+3, the ledge top flagY+2; the interior floor is flagY).
+                        if (y >= flagY + 2) {
+                            navRoofVisited = true;
+                        }
+                        // Inside the supply room at floor level: entered through the door.
+                        int rx = bp.getX() - flagPos.getX();
+                        int rz = bp.getZ() - flagPos.getZ();
+                        if (y == flagY && rx >= 5 && rx <= 7 && rz >= -1 && rz <= 1) {
+                            navRoomEntered = true;
+                        }
+                        if (!bp.equals(navLastPos)) {
+                            navLastPos = bp;
+                            QT.FLAG_LOGGER.info("[autotest] [nav/roof_gatherer] townie at {}", bp.toShortString());
+                        }
+                    }
                 })
                 .withCustomAssertion((level, flagPos, town, output) -> {
                     // The axe proves the supplies walk completed (or didn't). Result line is the
                     // before/after signal: roof visited (bug) vs room entered via the door (fix).
-                    boolean axeTaken = true;
-                    BlockEntity be = level.getBlockEntity(flagPos.offset(NAV_RAISED_CHEST));
-                    if (be instanceof Container container) {
-                        for (int i = 0; i < container.getContainerSize(); i++) {
-                            if (container.getItem(i).is(Items.STONE_AXE)) {
-                                axeTaken = false;
-                            }
-                        }
-                    }
+                    boolean axeTaken = navAxeTaken;
                     output.msg(String.format(
                             "[nav/roof_gatherer] RESULT: axeTaken=%s, roofVisited=%s, roomEntered=%s, y-range %d..%d (flagY=%d)",
                             axeTaken, navRoofVisited, navRoomEntered, navMinY, navMaxY, flagPos.getY()));
@@ -2348,6 +2356,11 @@ public class TestBlueprintRegistry {
                     }
                     if (!navRoomEntered) {
                         output.error("[nav/roof_gatherer] townie never entered the supply room through the door");
+                        return false;
+                    }
+                    // Without the supplies walk, being in the room proves nothing about the route.
+                    if (!axeTaken) {
+                        output.error("[nav/roof_gatherer] townie never took the axe from the raised chest");
                         return false;
                     }
                     return true;

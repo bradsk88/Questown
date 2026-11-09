@@ -48,7 +48,10 @@ public record TestBlueprint(
         // Optional custom assertion: runs in the realtime result-check with live level + town access,
         // so a scenario can assert on blockstate / entity-count outcomes the item/fullness/knowledge
         // expectations cannot express (e.g. the flag is DORMANT and all townies are gone).
-        @Nullable CustomAssertion customAssertion
+        @Nullable CustomAssertion customAssertion,
+        // Optional per-tick hook over the monitored realtime ticks, for scenarios that track
+        // something every tick (a villager's path) rather than only at the end.
+        @Nullable RealtimeTickAction realtimeTickAction
 ) {
 
     /**
@@ -86,6 +89,11 @@ public record TestBlueprint(
         boolean check(ServerLevel level, BlockPos flagPos, TownFlagBlockEntity town, TestOutput output);
     }
 
+    @FunctionalInterface
+    public interface RealtimeTickAction {
+        void tick(ServerLevel level, BlockPos flagPos, TownFlagBlockEntity town);
+    }
+
     public TestBlueprint(
             RoomType roomType,
             Collection<BlockPlacement> blocks,
@@ -97,7 +105,7 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, null, null, null, null, false, null,
-             false, false, null, null, null, null, null, false, null, false, null, null, null);
+             false, false, null, null, null, null, null, false, null, false, null, null, null, null);
     }
 
     public TestBlueprint(
@@ -112,7 +120,7 @@ public record TestBlueprint(
     ) {
         this(roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
              roomId, expectation, supplyDoorOffset, null, null, null, false, null,
-             false, false, null, null, null, null, null, false, null, false, null, null, null);
+             false, false, null, null, null, null, null, false, null, false, null, null, null, null);
     }
 
     // Compatibility constructor: old canonical signature (without minKnowledgeGrowth).
@@ -143,7 +151,7 @@ public record TestBlueprint(
              roomId, expectation, supplyDoorOffset, warpAmountOverride, startTimeTick,
              villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
              realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
-             extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, null, false, null, null, null);
+             extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, null, false, null, null, null, null);
     }
 
     public TestBlueprint withMinKnowledgeGrowth(int n) {
@@ -153,7 +161,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, n, expectedFailure, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withExpectation(TestExpectation e) {
@@ -163,7 +171,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withRealtimeExpectation(TestExpectation e) {
@@ -173,7 +181,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 e, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withRealtimeTicks(int ticks) {
@@ -183,7 +191,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, ticks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withWarpAmountOverride(int n) {
@@ -193,7 +201,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withExpectedFailure(boolean v) {
@@ -203,7 +211,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, v, setupHook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withSetupHook(PostPlacementSetup hook) {
@@ -213,7 +221,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, hook,
-                postSpawnAction, customAssertion);
+                postSpawnAction, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withPostSpawnAction(PostSpawnAction action) {
@@ -223,7 +231,7 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                action, customAssertion);
+                action, customAssertion, realtimeTickAction);
     }
 
     public TestBlueprint withCustomAssertion(CustomAssertion assertion) {
@@ -233,7 +241,17 @@ public record TestBlueprint(
                 villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
                 realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
                 extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
-                postSpawnAction, assertion);
+                postSpawnAction, assertion, realtimeTickAction);
+    }
+
+    public TestBlueprint withRealtimeTickAction(RealtimeTickAction action) {
+        return new TestBlueprint(
+                roomType, blocks, supplyItems, doorOrGateOffset, chestOffset,
+                roomId, expectation, supplyDoorOffset, warpAmountOverride, startTimeTick,
+                villagerCount, realtimePhase, realtimeTicks, drainHungerBeforeTest, skipWarp,
+                realtimeExpectation, minExpectedFullnessAfter, extraBlockRoomOffset,
+                extraBlockRoomId, expectedVillagerHeld, useNaturalWarp, minKnowledgeGrowth, expectedFailure, setupHook,
+                postSpawnAction, customAssertion, action);
     }
 
     public int effectiveVillagerCount() {
