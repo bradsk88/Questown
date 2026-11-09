@@ -1101,12 +1101,33 @@ public class DeclarativeJob extends
                 .orElse("none"));
         net.minecraft.world.level.pathfinder.Path path = mob.getNavigation().getPath();
         b.append(" navDone=").append(mob.getNavigation().isDone());
+        net.minecraft.world.entity.ai.control.MoveControl move = mob.getMoveControl();
+        b.append(" moveTo=").append(move.hasWanted()
+                ? String.format(java.util.Locale.ROOT, "%.2f,%.2f,%.2f", move.getWantedX(), move.getWantedY(), move.getWantedZ())
+                : "none");
         if (path == null || path.getEndNode() == null) {
             b.append(" pathEnd=none");
             return;
         }
         b.append(" pathEnd=").append(path.getEndNode().asBlockPos().toShortString())
          .append(" pathReaches=").append(path.canReach());
+        appendPathNodes(b, path);
+    }
+
+    /** Every node as {@code x,y,z:TYPE}; the one the mob is walking to is marked {@code *}. */
+    private static void appendPathNodes(StringBuilder b, net.minecraft.world.level.pathfinder.Path path) {
+        b.append(" pathNodes=[");
+        for (int i = 0; i < path.getNodeCount(); i++) {
+            net.minecraft.world.level.pathfinder.Node n = path.getNode(i);
+            if (i > 0) {
+                b.append(' ');
+            }
+            if (i == path.getNextNodeIndex()) {
+                b.append('*');
+            }
+            b.append(n.x).append(',').append(n.y).append(',').append(n.z).append(':').append(n.type);
+        }
+        b.append(']');
     }
 
     private void appendSpots(StringBuilder b, String label, Object handle) {
