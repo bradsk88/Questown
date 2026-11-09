@@ -97,6 +97,14 @@ kill "$CAP_PID"
 wait 2>/dev/null || true
 restore_world
 
+# A new worktree has no run/server.properties or eula.txt: the capture is stopped before the
+# server writes them. Seed the lines each run rewrites below.
+if [ ! -f "$REPO/run/server.properties" ]; then
+    printf 'server-port=25565\nenable-rcon=false\nonline-mode=false\nlevel-seed=\n' > "$REPO/run/server.properties"
+    echo "Seeded run/server.properties"
+fi
+[ -f "$REPO/run/eula.txt" ] || echo 'eula=true' > "$REPO/run/eula.txt"
+
 # 2. Launch N copies.
 PIDS=""
 i=1
