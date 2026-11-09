@@ -150,6 +150,12 @@ stuck tick, the last 1200 (`PositionTrail`), as runs that did not move, e.g.
 outside the kitchen for 1200 ticks with `pathReaches=true navDone=false`: the trail shows whether
 it never moved, walked there and stopped, or jittered against a block.
 
+The trails showed the third: villagers paced and jumped along the kitchen's west wall (x=3,
+z=-1..2) for the whole window, aiming at a chest spot inside while the door is on the south side.
+So the report also prints `moveTo` (where the move control is steering) and `pathNodes` (every
+node as `x,y,z:TYPE`, the next one marked `*`): a path through the wall, or a `moveTo` that is
+not the `*` node, is what to read.
+
 
 ## A job sound that isn't registered is skipped, not played (2026-10-26)
 
