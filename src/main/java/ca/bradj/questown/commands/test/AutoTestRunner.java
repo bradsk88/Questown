@@ -40,8 +40,11 @@ public class AutoTestRunner {
     // (e.g. visual verification of need bubbles via screenshot).
     private static final String SYSPROP_HOLD = "questown.autotest.hold";
     private static final String SYSPROP_SHARD = "questown.autotest.shard";
-    /** Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). */
-    private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of("perf/town_large");
+    /**
+     * Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). Only worth it
+     * for a scenario that takes about as long as a whole shard of the others.
+     */
+    private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of();
     private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
