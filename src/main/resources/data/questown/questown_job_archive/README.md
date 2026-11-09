@@ -6,3 +6,6 @@ might eventually be restored.
 
 Often, the reason for jobs to be in this folder is because they have insufficient support for the "time warp" mechanic, 
 which allows players to leave the villager and return later finding productivity has continued - via simulation.
+
+When you move a job here, also take its scenarios out of `TestBlueprintRegistry.getTestableJobs` (leave a
+TODO where they plug back in). Otherwise each one fails at assignment with "No <root> jobs are loaded".
