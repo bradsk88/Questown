@@ -18,6 +18,15 @@ java {
 // Load .env file if present (gitignored — store secrets like MODRINTH_TOKEN here)
 def dotEnv = new Properties()
 def dotEnvFile = file('.env')
+if (!dotEnvFile.exists()) {
+    // A git worktree has no .env of its own: use the main checkout's.
+    def common = "git rev-parse --git-common-dir".execute(null, projectDir).text.trim()
+    if (common) {
+        def commonDir = new File(common)
+        if (!commonDir.absolute) commonDir = new File(projectDir, common)
+        dotEnvFile = new File(commonDir.canonicalFile.parentFile, '.env')
+    }
+}
 if (dotEnvFile.exists()) {
     dotEnvFile.withInputStream { dotEnv.load(it) }
     dotEnv.each { k, v -> ext.set(k as String, v as String) }
@@ -205,6 +214,9 @@ task publishModrinth(dependsOn: 'reobfJar') {
     mustRunAfter('publishToMavenLocal', 'publishMavenJavaPublicationToMavenRepository')
     doLast {
         def token = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN") ?: ""
+        if (token.isBlank()) {
+            throw new GradleException("MODRINTH_TOKEN is empty. Put it in .env at the root of the main checkout.")
+        }
         def changelog = (project.findProperty("CHANGELOG") ?: System.getenv("CHANGELOG") ?: "").replace('"', '\\"').replace('\n', '\\n')
         def jarPath = jar.archivePath.absolutePath
         def cleanVersion = "git rev-parse --abbrev-ref HEAD".execute().text.trim()
@@ -217,7 +229,7 @@ task publishModrinth(dependsOn: 'reobfJar') {
         def dataFile = new File(buildDir, 'modrinth-data.json')
         dataFile.text = data
         exec {
-            commandLine 'curl', '--fail', '-s', '-X', 'POST',
+            commandLine 'curl', '--fail-with-body', '-s', '-X', 'POST',
                     'https://api.modrinth.com/v2/version',
                     '-H', "Authorization: ${token}",
                     '-F', "data=@${dataFile}",
