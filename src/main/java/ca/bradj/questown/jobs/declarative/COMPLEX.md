@@ -143,6 +143,13 @@ live by dropping the first-report threshold to 20 for one `hunter/sword` run (5/
 navDone=false pathEnd=6, 64, 0 pathReaches=true`. A mismatch between `walkTarget`,
 `brainWalkTarget` and `pathEnd`, or `pathReaches=false`, is what to read next time.
 
+Each report is followed by a `[STALL:collecting:trail]` line: the entity's exact position on every
+stuck tick, the last 1200 (`PositionTrail`), as runs that did not move, e.g.
+`from tick 100: +0..+37 (0.50,64.00,0.50); +38 (0.62,64.00,0.61)`. Added for
+`cook_extract_food` (2026-11-09), where a hungry cook in `dining_raw_food` stood at 3, 64, 3
+outside the kitchen for 1200 ticks with `pathReaches=true navDone=false`: the trail shows whether
+it never moved, walked there and stopped, or jittered against a block.
+
 
 ## A job sound that isn't registered is skipped, not played (2026-10-26)
 
