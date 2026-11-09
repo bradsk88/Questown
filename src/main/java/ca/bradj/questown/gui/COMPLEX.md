@@ -1768,3 +1768,22 @@ flowchart LR
 - JEI is now used only by the `@JeiPlugin` class (`integration/jei/QuestownJei`), through its
   public API.
 
+
+## Identical quest cards are numbered: "Bedroom #2" (2026-11-09)
+
+```mermaid
+flowchart LR
+    all[town getAllQuestsWithRewards] --> QO[QuestOrdinals.of]
+    QO -->|quest -> n| FL[UIQuest.fromLevel]
+    FL --> UI[UIQuest.ordinal]
+    UI -->|wire writeInt| name[UIQuest.getName: numbered]
+```
+
+- Quests count as identical when type, wanted id and count match, so "3x Bread" and "5x Bread"
+  stay unnumbered. The first keeps its plain name; later ones get " #n", placed before any
+  "(n/target)" progress. Completed quests still count.
+- The numbering always comes from the whole town's list, in the order it was added. The flag
+  QUESTS tab passes that list directly; the villager tab (`TownVillagerUIs`) and the remove
+  confirm (`TownQuestsHandle.showConfirmUI`) show one batch but pass town-wide ordinals, so a
+  card has the same number on every screen.
+- VILLAGER_LEVEL cards are not numbered; their name already carries the level.

@@ -18,6 +18,7 @@ import ca.bradj.questown.town.interfaces.QuestsHolder;
 import ca.bradj.questown.town.interfaces.TownInterface;
 import ca.bradj.questown.town.quests.MCQuest;
 import ca.bradj.questown.town.quests.MCQuestBatch;
+import ca.bradj.questown.town.quests.QuestOrdinals;
 import ca.bradj.questown.town.quests.MCReward;
 import ca.bradj.questown.town.rewards.AddBatchOfQuestsForVisitorReward;
 import ca.bradj.questown.town.rewards.AddRandomUpgradeQuest;
@@ -239,7 +240,9 @@ public class TownQuestsHandle implements QuestsHolder {
             MCQuestBatch batch
     ) {
         final TownInterface t = unsafeGetTown();
-        List<UIQuest> quests = UIQuest.fromLevel(sp.serverLevel(), batch);
+        Map<MCQuest, Integer> ordinals = QuestOrdinals.of(getAllQuestsWithRewards().stream()
+                                                              .map(AbstractMap.SimpleEntry::getKey).toList());
+        List<UIQuest> quests = UIQuest.fromLevel(sp.serverLevel(), batch, ordinals);
         Compat.openScreen(
                 sp, new MenuProvider() {
                     @Override
