@@ -5,14 +5,14 @@
       "color": "white"
     },
     "description": {
-      "text": "Complete 5 procedural quest batches after the tutorial"
+      "text": "Start the path to a cooked meal"
     },
     "icon": {
-      "item": "minecraft:bread"
+      "item": "minecraft:cooked_mutton"
     },
     "frame": "goal",
-    "show_toast": true,
-    "announce_to_chat": true,
+    "show_toast": false,
+    "announce_to_chat": false,
     "hidden": false,
     "background": "minecraft:textures/gui/advancements/backgrounds/stone.png"
   },

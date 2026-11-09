@@ -759,7 +759,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return Tutorial.APPLIED;
     }
 
-    /** A bedroom quest between the hunter-gatherer and cook batches, while villager 2 is on the way. */
+    /** A bedroom quest after the hunter-gatherer batch, while villager 2 is on the way. The cook batch doesn't wait for it. */
     private @Nullable Tutorial tryPhase2_4_emptyRooms(TutorialTownView view) {
         if (cookBatchPosted()) {
             return null;
@@ -771,9 +771,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             addNewcomerBedroomBatch(view);
             notifyNewQuests(view);
             return Tutorial.APPLIED;
-        }
-        if (!emptyRoomsBatchComplete()) {
-            return Tutorial.SKIPPED;
         }
         return null;
     }
@@ -810,11 +807,6 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         return emptyRoomsBatch() != null;
     }
 
-    private boolean emptyRoomsBatchComplete() {
-        MCQuestBatch b = emptyRoomsBatch();
-        return b != null && b.getAll().stream().allMatch(Quest::isComplete);
-    }
-
     private static final Set<ResourceLocation> POST_HUNTER_ROOMS = Set.of(SpecialQuests.BEDROOM, SpecialQuests.EMPTY_ROOM);
 
     void addNewcomerBedroomBatch(TutorialTownView view) {
@@ -841,6 +833,9 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
             // This batch has the first room upgrade, so open the upgrades lesson.
             view.fireTutorialTrigger(TutorialTrigger.Triggers.FirstRoomUpgrade);
             notifyNewQuests(view);
+            // The cook batch starts the work of feeding the village.
+            view.fireTutorialTrigger(TutorialTrigger.Triggers.Chapter2);
+            view.broadcastPathStartedToast(FEEDING_THE_VILLAGE_KEY, Compat.getItemId(Items.COOKED_MUTTON));
             return Tutorial.APPLIED;
         }
         if (questBatches.getAll().stream().filter(q -> q.getType() == Quest.QuestType.JOB_CHANGE && q.isComplete()).count() < 2) {
@@ -1309,6 +1304,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     /** The onboarding cook's job: a registered cook job, the root of the cook's progression. */
     public static final JobID ONBOARDING_COOK_JOB = new JobID("cook", "extract");
+    static final String FEEDING_THE_VILLAGE_KEY = "questown.path.feeding_the_village";
 
     static final JobID ONBOARDING_MINER_JOB = new JobID("miner", "coal");
 
@@ -1403,6 +1399,7 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
 
     /** Five meals at 200 XP each reach level 1, so the quest ends on a Block of Progress. */
     static final int COOKED_FOOD_COUNT = 5;
+    static final int COOK_COAL_COUNT = 4;
 
     private void addCookFollowUpBatch(TutorialTownView view) {
         UUID batchUUID = UUID.randomUUID();
@@ -1418,13 +1415,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         // A skill on the cook's tree: a second recipe for the other meat the hunter brings.
         q.addNewQuest(MCQuest.skillUnlock(batchUUID, null, ONBOARDING_COOK_JOB.rootId()));
 
+        MCQuest coalQuest = MCQuest.item(batchUUID, null, Compat.getItemId(Items.COAL), COOK_COAL_COUNT);
+        coalQuest.setFlavorText("The cook's furnace needs fuel. Place 4 coal in your store room chest.");
+        q.addNewQuest(coalQuest);
+
         // This batch brings villager 3, so the bedroom becomes a big bedroom.
         q.addNewQuest(MCQuest.upgrade(batchUUID, null, SpecialQuests.BEDROOM, BIG_BEDROOM));
 
         MCQuestBatch qq = q.withRewardUponCompletion(view.makeReward(TutorialTownView.PHASE_JOB_CHANGE_FOOD));
         markOnboarding(qq);
         questBatches.add(qq);
-        QT.QUESTS_LOGGER.info("Cook follow-up batch posted (cooked food + cook skill) on cook unlock");
+        QT.QUESTS_LOGGER.info("Cook follow-up batch posted (cooked food + cook skill + coal) on cook unlock");
     }
 
     private void addQuestForNewJobRoom(
@@ -1535,13 +1536,11 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
-    /** Chapter advancements at 5, 10 and 20 completed procedural batches. */
+    /** Chapter advancements at 10 and 20 completed procedural batches. Chapter 2 fires when the cook batch is posted. */
     private void fireChapterMilestonesIfNeeded() {
         TownFlagBlockEntity t = town.getUnsafe();
         t.completedProceduralBatches++;
-        if (t.completedProceduralBatches == 5) {
-            fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter2);
-        } else if (t.completedProceduralBatches == 10) {
+        if (t.completedProceduralBatches == 10) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter3);
         } else if (t.completedProceduralBatches == 20) {
             fireChapterTrigger(t, TutorialTrigger.Triggers.Chapter4);

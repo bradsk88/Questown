@@ -79,6 +79,11 @@ class TownFlagTutorialAdapter implements TutorialTownView {
     }
 
     @Override
+    public void broadcastPathStartedToast(String nameKey, ResourceLocation iconItem) {
+        flag.messages.broadcastPathStartedToast(nameKey, iconItem);
+    }
+
+    @Override
     public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
         if (!(flag.getLevel() instanceof ServerLevel sl)) {
             return;

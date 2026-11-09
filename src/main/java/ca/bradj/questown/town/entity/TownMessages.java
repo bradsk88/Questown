@@ -3,6 +3,7 @@ package ca.bradj.questown.town.entity;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.UtilClean;
 import ca.bradj.questown.core.network.QuestownNetwork;
+import ca.bradj.questown.core.network.ShowPathStartedToastMessage;
 import ca.bradj.questown.core.network.ShowTutorialToastMessage;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
@@ -78,6 +79,17 @@ public class TownMessages {
         for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
             QuestownNetwork.sendToPlayer(p,
                     new ShowTutorialToastMessage(titleKey, descriptionKey));
+        }
+    }
+
+    void broadcastPathStartedToast(String nameKey, ResourceLocation iconItem) {
+        if (level == null) {
+            QT.FLAG_LOGGER.debug("Skipping path started toast before TownMessages was initialized: {}", nameKey);
+            return;
+        }
+        QT.FLAG_LOGGER.info("Broadcasting path started toast: {}", nameKey);
+        for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
+            QuestownNetwork.sendToPlayer(p, new ShowPathStartedToastMessage(nameKey, iconItem));
         }
     }
 

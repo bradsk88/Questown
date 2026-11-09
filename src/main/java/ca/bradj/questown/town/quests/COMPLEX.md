@@ -384,14 +384,16 @@ complete without claiming) + recommendation: ticket
 (HOLDING on the decision; drive-by: `filterOutDuplicateCompletion`'s
 `eqb` builder is vestigial, never read).
 
-## Procedural-batch milestone ladder (1/5/10/20)
+## Procedural-batch milestone ladder (1/10/20; chapter 2 moved to the cook batch)
 
 `TownQuests.questBatchCompleted` counts completed **procedural** batches on the
 flag (`TownFlagBlockEntity.completedProceduralBatches`; a batch is procedural
 when any member quest's wanted id is not a special-quest id — `isProceduralBatch`
 in `TownQuests`; campfire/gate-type special batches never count, pinned by
 `TutorialPhaseGateTest.campfireBatch_isNotProceduralBatch`). At 5/10/20 it
-fires the chapter advancement triggers (`TutorialTrigger.Chapter2..4`). The
+fired the chapter advancement triggers (`TutorialTrigger.Chapter2..4`); since 2026-11-09 only 10
+and 20 do (`Chapter3`, `Chapter4`), and `Chapter2` fires when the onboarding cook batch is posted
+(see `town/entity/COMPLEX.md`). The
 **first** batch posts no broadcast: the "Your village is thriving!" line
 (`messages.tutorial.complete`) was dropped 2026-10-15 on the user's playtest
 ruling — it carried no information the per-quest "Quest completed: …"

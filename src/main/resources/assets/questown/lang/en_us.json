@@ -607,6 +607,8 @@
   "tutorial.visitor_arrived.description": "Right-click to say hi",
   "tutorial.campfire_ready.title": "Your camp is ready",
   "tutorial.campfire_ready.description": "Use wand on campfire",
+  "toast.questown.path_started": "Path started",
+  "questown.path.feeding_the_village": "Feeding the Village",
   "gui.status.villager_arriving_morning": "...and one more in the morning",
   "gui.status.villager_arriving_morning.first": "A reward will be granted in the morning",
   "gui.status.villager_arriving_morning.tooltip": "For completing your quests, a new villager will join your town in the morning",

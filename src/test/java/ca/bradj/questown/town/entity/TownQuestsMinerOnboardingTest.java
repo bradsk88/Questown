@@ -113,6 +113,10 @@ class TownQuestsMinerOnboardingTest {
             }
 
             @Override
+            public void broadcastPathStartedToast(String nameKey, ResourceLocation iconItem) {
+            }
+
+            @Override
             public void fireTutorialTrigger(TutorialTrigger.Triggers trigger) {
             }
 
