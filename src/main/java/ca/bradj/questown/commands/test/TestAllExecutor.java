@@ -19,6 +19,7 @@ public class TestAllExecutor {
 
     private final List<AnyTestEntry> jobs;
     private int currentIndex = 0;
+    private long currentStartedMs;
     private TestExecutor currentExecutor;
     private final List<String> results = new ArrayList<>();
     private int passed = 0;
@@ -73,6 +74,7 @@ public class TestAllExecutor {
         while (currentIndex < jobs.size()) {
             AnyTestEntry entry = jobs.get(currentIndex);
             msg("=== Test " + (currentIndex + 1) + "/" + jobs.size() + ": " + entry.name() + " ===");
+            currentStartedMs = System.currentTimeMillis();
 
             if (entry instanceof LevelCheck wc) {
                 recordResult(entry.name(), wc.check().apply(level));
@@ -104,6 +106,8 @@ public class TestAllExecutor {
                 expectedFailure
         );
         results.add(line);
+        // Read by tools/autotest-parallel.sh to balance the next sharded run.
+        msg("DURATION " + (System.currentTimeMillis() - currentStartedMs) + " " + name);
         if (passed) {
             this.passed++;
         }
