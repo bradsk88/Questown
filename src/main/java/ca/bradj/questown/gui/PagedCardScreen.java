@@ -1,15 +1,11 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.IconButton;
 import ca.bradj.questown.QT;
 import ca.bradj.questown.core.Coordinate;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.util.ImmutableRect2i;
-import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -52,10 +48,10 @@ public final class PagedCardScreen<D> {
     public static final int buttonHeight = 13;
     private final Supplier<Integer> height;
     private final Supplier<Integer> width;
-    private final JEI.NineNine background;
-    final GuiIconButtonSmall nextPage;
-    final GuiIconButtonSmall previousPage;
-    private final JEI.NineNine cardBackground;
+    private final NineSlice background;
+    final IconButton nextPage;
+    final IconButton previousPage;
+    private final NineSlice cardBackground;
     private final Consumer<D> setRenderColorForCard;
     private final CardRenderer<D> renderCardContent;
     private final Supplier<List<D>> cardsData;
@@ -79,17 +75,17 @@ public final class PagedCardScreen<D> {
 
         this.backgroundHeight = 166 + extraHeight;
 
-        this.background = JEI.getRecipeBackground();
-        IDrawableStatic arrowNext = JEI.getArrowNext();
-        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
+        this.background = GuiArt.getRecipeBackground();
+        GuiSprite arrowNext = GuiArt.getArrowNext();
+        GuiSprite arrowPrevious = GuiArt.getArrowPrevious();
 
-        this.nextPage = JEI.guiIconButtonSmall(
+        this.nextPage = GuiArt.iconButton(
                 0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = JEI.guiIconButtonSmall(
+        this.previousPage = GuiArt.iconButton(
                 0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
-        this.cardBackground = JEI.getRecipeBackground();
+        this.cardBackground = GuiArt.getRecipeBackground();
 
         this.cardsData = cardsData;
         this.setRenderColorForCard = setRenderColorForCard;
@@ -150,7 +146,7 @@ public final class PagedCardScreen<D> {
     }
 
     protected void afterInit(
-            Consumer<GuiIconButtonSmall> addRenderableWidget
+            Consumer<IconButton> addRenderableWidget
     ) {
         int y = (this.height.get() - backgroundHeight) / 2;
         int pageStringY = y + borderPadding;
@@ -171,7 +167,7 @@ public final class PagedCardScreen<D> {
     ) {
         int bgX = (this.width.get() - backgroundWidth) / 2;
         int bgY = (this.height.get() - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, bgX, bgY, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, bgX, bgY, backgroundWidth, backgroundHeight);
     }
 
     public @Nullable List<Component> afterRender(
@@ -217,7 +213,7 @@ public final class PagedCardScreen<D> {
                 setRenderColorForCard.accept(card.data());
                 int x2 = card.coords().leftX();
                 int y2 = card.coords.topY();
-                ctx.drawNineNine(this.cardBackground, x2, y2, CARD_WIDTH, cardHeight);
+                this.cardBackground.draw(ctx, x2, y2, CARD_WIDTH, cardHeight);
                 RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
             }
             List<Component> tt = renderCardContent.renderAndReturnTooltip(ctx, card, mousePosition);
@@ -247,15 +243,15 @@ public final class PagedCardScreen<D> {
     /** The page selector's dark strip, with the text centred between the arrow buttons. Also used for the economics view toggle. */
     static void drawSelectorStrip(
             RenderContext ctx,
-            GuiIconButtonSmall previous,
-            GuiIconButtonSmall next,
+            IconButton previous,
+            IconButton next,
             int rightX,
             String text
     ) {
         int y = next.getY();
         ctx.fill(previous.getX() + buttonWidth, y, rightX, y + buttonHeight, 0x30000000);
-        ImmutableRect2i area = MathUtil.union(previous.getArea(), next.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(area, ctx.font(), text);
+        GuiRect area = GuiRect.union(previous.getArea(), next.getArea());
+        GuiRect textArea = GuiRect.centerTextArea(area, ctx.font(), text);
         ctx.lightText(text, textArea.getX(), textArea.getY());
     }
 
@@ -284,8 +280,8 @@ public final class PagedCardScreen<D> {
             BiPredicate<Double, Double> isMouseOver,
             TriPredicate<Double, Double, Double> mouseScrolled
     ) {
-        final double x = JEI.getX();
-        final double y = JEI.getY();
+        final double x = Compat.guiMouseX();
+        final double y = Compat.guiMouseY();
         if (isMouseOver.test(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();

@@ -7,7 +7,6 @@ import ca.bradj.questown.core.network.QuestownNetwork;
 import ca.bradj.questown.jobs.JobID;
 import ca.bradj.questown.jobs.Jobs;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.core.BlockPos;
@@ -28,7 +27,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
 
     private static final int PAGE_PADDING = 10;
 
-    private final JEI.NineNine background;
+    private final NineSlice background;
     private final ImmutableList<Map.Entry<JobID, ResourceLocation>> iconsForJobsWhichProduceResult;
     private final Ingredient itemRequested;
     private final Runnable requestWork;
@@ -53,7 +52,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
     ) {
         super(Compat.translatable("menu.work_add_confirm.title", Ingredients.getName(requested)));
 
-        this.background = JEI.getRecipeGuiBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
         this.itemRequested = requested;
         this.iconsForJobsWhichProduceResult = ImmutableList.copyOf(iconsForJobsWhichProduceResult.entrySet());
         this.requestWork = () -> send(flagPos, CONFIRMED);
@@ -123,7 +122,7 @@ public class WorkRequestConfirmScreen extends CompatScreen {
     protected void renderScreenSurface(RenderContext ctx, int mouseX, int mouseY, float partialTicks) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, x, y, backgroundWidth, backgroundHeight);
     }
 
     @Override

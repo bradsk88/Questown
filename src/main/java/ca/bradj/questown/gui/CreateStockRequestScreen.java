@@ -1,13 +1,9 @@
 package ca.bradj.questown.gui;
 
+import ca.bradj.questown.mc.IconButton;
 import ca.bradj.questown.jobs.requests.WorkRequest;
 import ca.bradj.questown.mc.Compat;
-import ca.bradj.questown.mc.JEI;
 import com.google.common.collect.ImmutableList;
-import mezz.jei.api.gui.drawable.IDrawableStatic;
-import mezz.jei.common.util.ImmutableRect2i;
-import mezz.jei.common.util.MathUtil;
-import mezz.jei.gui.elements.GuiIconButtonSmall;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -41,10 +37,10 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
     private static final int MAX_CARDS_PER_PAGE = ((backgroundHeight - PAGE_PADDING) / (CARD_HEIGHT + CARD_PADDING)) * (backgroundWidth / CARD_WIDTH);
 
     private final List<Ingredient> work;
-    private final JEI.NineNine background;
-    private final JEI.NineNine cardBackground;
-    private final GuiIconButtonSmall nextPage;
-    private final GuiIconButtonSmall previousPage;
+    private final NineSlice background;
+    private final NineSlice cardBackground;
+    private final IconButton nextPage;
+    private final IconButton previousPage;
 
     private int currentPage = 0;
 
@@ -58,16 +54,16 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
         super.imageHeight = 220;
 
         this.work = ImmutableList.copyOf(container.getAddableWork());
-        this.background = JEI.getRecipeGuiBackground();
-        this.cardBackground = JEI.getRecipeBackground();
+        this.background = GuiArt.getRecipeGuiBackground();
+        this.cardBackground = GuiArt.getRecipeBackground();
 
-        IDrawableStatic arrowNext = JEI.getArrowNext();
-        IDrawableStatic arrowPrevious = JEI.getArrowPrevious();
+        GuiSprite arrowNext = GuiArt.getArrowNext();
+        GuiSprite arrowPrevious = GuiArt.getArrowPrevious();
 
-        this.nextPage = JEI.guiIconButtonSmall(
+        this.nextPage = GuiArt.iconButton(
                 0, 0, buttonWidth, buttonHeight, arrowNext, b -> nextPage()
         );
-        this.previousPage = JEI.guiIconButtonSmall(
+        this.previousPage = GuiArt.iconButton(
                 0, 0, buttonWidth, buttonHeight, arrowPrevious, b -> previousPage()
         );
     }
@@ -218,8 +214,8 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
         int totalPages = Pages.count(work.size(), MAX_CARDS_PER_PAGE);
         String pageString = "Page " + (currentPage + 1) + " / " + totalPages;
 
-        ImmutableRect2i pageArea = MathUtil.union(previousPage.getArea(), nextPage.getArea());
-        ImmutableRect2i textArea = MathUtil.centerTextArea(pageArea, this.font, pageString);
+        GuiRect pageArea = GuiRect.union(previousPage.getArea(), nextPage.getArea());
+        GuiRect textArea = GuiRect.centerTextArea(pageArea, this.font, pageString);
         ctx.lightText(pageString, textArea.getX(), textArea.getY());
     }
 
@@ -227,7 +223,7 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
     protected void renderBgContent(RenderContext ctx, float partialTicks, int mouseX, int mouseY) {
         int x = (this.width - backgroundWidth) / 2;
         int y = (this.height - backgroundHeight) / 2;
-        ctx.drawNineNine(this.background, x, y, backgroundWidth, backgroundHeight);
+        this.background.draw(ctx, x, y, backgroundWidth, backgroundHeight);
     }
 
     private void nextPage() {
@@ -272,8 +268,8 @@ public class CreateStockRequestScreen extends CompatContainerScreen<CreateStockR
             double scrollY,
             double scrollDelta
     ) {
-        final double x = JEI.getX();
-        final double y = JEI.getY();
+        final double x = Compat.guiMouseX();
+        final double y = Compat.guiMouseY();
         if (isMouseOver(x, y)) {
             if (scrollDelta < 0) {
                 this.nextPage();

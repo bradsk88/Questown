@@ -219,9 +219,9 @@ named the render-argument type. Two base classes now own those version-bound ove
 and the leaves express the draw order through version-neutral hooks over `RenderContext`.
 
 `RenderContext` (record: `font`, `itemRenderer`, `gui`) is the faithful pass-through handle: each
-method invokes the exact 1.20.6 `GuiGraphics`/JEI/widget method with the same arguments, so
-rendering is preserved by construction (`ctx.fill` → `gui.fill`, `ctx.drawNineNine` →
-`NineNine.draw(gui, ...)`, `ctx.renderWidget(button)` → `button.render(gui, ...)`, `ctx.centered` →
+method invokes the exact 1.20.6 `GuiGraphics`/widget method with the same arguments, so
+rendering is preserved by construction (`ctx.fill` → `gui.fill`, `ctx.blit` → `gui.blit`,
+`ctx.renderWidget(button)` → `button.render(gui, ...)`, `ctx.centered` →
 `gui.drawCenteredString`). A two-arg constructor fills `font` from the running client so the eleven
 pre-existing `new RenderContext(itemRenderer, gui)` call sites keep compiling unchanged.
 
@@ -652,7 +652,7 @@ empty multi-status overview.
   which refuses a registry Neo has not marked synced (vanilla `BuiltInRegistries.ITEM`
   is never synced outside a running mod-load).
 - **Flag-crafting tab: shared border + item tooltips.** `FlagCraftingScreen.background`
-  switched to `JEI.getRecipeGuiBackground()` (the darker `getRecipeBackground()`
+  switched to `GuiArt.getRecipeGuiBackground()` (the darker `getRecipeBackground()`
   was crafting-tab-only and read as a faded border mismatch); 1.20.6 gives free
   tooltips only to container slots, so `renderRecipeRow` now calls
   `showTooltip(Compat.getItemName(stack))` when the cursor is inside the 16x16 input
@@ -1734,3 +1734,37 @@ thinner quest data, and its client message `OpenMultiVillagerMenuMessage` had no
 are gone. The second path held the `FirstOpenFlagMenu` advancement back until the town had a
 villager, so the VILLAGERS branch of `TownFlagMenus` now checks `entities` before triggering it.
 `BopTabAttentionTest.nothingToSee_villagersOverview`.
+
+## Panel, tab and button art without JEI's internals (2026-11-08)
+
+The screens draw JEI-styled art (panel backgrounds, tabs, slots, the small arrow buttons) but no
+longer through JEI. JEI's `Internal.getTextures()`, `GuiIconButtonSmall`, `MouseUtil`,
+`ImmutableRect2i` and `MathUtil` are not API and move between JEI versions: with JEI 15.74 on
+1.20.1 `GuiIconButtonSmall` is gone, so every flag screen threw `NoClassDefFoundError` while it was
+being built on the client. Forge runs that open-screen work in a future that drops the exception, so
+the flag menu silently didn't open.
+
+```mermaid
+flowchart LR
+    screens[gui screens] --> GuiArt
+    GuiArt -->|sprites| GuiSprite
+    GuiArt -->|panels, button faces| NineSlice
+    GuiArt -->|iconButton| IconButton[mc/IconButton]
+    IconButton --> NineSlice
+    GuiSprite --> blit[RenderContext.blit]
+    NineSlice --> blit
+    screens -->|hit areas| GuiRect
+    screens -->|mouse| Compat[Compat.guiMouseX/Y]
+```
+
+- `GuiArt` holds the textures, copied from JEI 11.5 (1.19.2) into
+  `assets/questown/textures/gui/jei/` with JEI's MIT notice. Each is a standalone PNG at 1:1 (the
+  sizes, the arrows' 1px top/bottom trim and the nine-slice borders are JEI's `Textures` values).
+- `NineSlice` matches `DrawableNineSliceTexture`'s tiling: rows stack up from the bottom edge, so a
+  cut-short row is the top one and shows its tile's lower part.
+- `IconButton` is the only version-specific piece (the `Button` render override), so it lives in
+  `mc/`. It copies `GuiIconButtonSmall`'s look: the button face by state and the icon tinted
+  grey/light/white for disabled/idle/hovered.
+- JEI is now used only by the `@JeiPlugin` class (`integration/jei/QuestownJei`), through its
+  public API.
+

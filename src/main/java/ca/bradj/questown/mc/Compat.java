@@ -54,6 +54,17 @@ import net.minecraftforge.common.ToolActions;
 public class Compat {
     public static final RandomSource RANDOM = RandomSource.create();
 
+    /** The mouse position in gui-scaled screen coordinates. */
+    public static double guiMouseX() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth();
+    }
+
+    public static double guiMouseY() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight();
+    }
+
     public static void playNeutralSound(
             ServerLevel serverLevel,
             BlockPos pos,
