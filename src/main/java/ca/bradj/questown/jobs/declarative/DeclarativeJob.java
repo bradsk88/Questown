@@ -1040,12 +1040,25 @@ public class DeclarativeJob extends
                 journal.getStatus().isCollectingSupplies(),
                 !java.util.Objects.equals(this.lastSupplyTick, before),
                 currentTick,
+                () -> {
+                    net.minecraft.world.entity.Mob mob = findOwnMob(town);
+                    return mob == null ? null : new double[]{mob.getX(), mob.getY(), mob.getZ()};
+                },
                 () -> describeCollectingStall(town, roomsNeedingInput, entityBlockPos),
-                msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg)
+                msg -> QT.JOB_LOGGER.warn("[STALL:collecting] job={} villager={} {}", jobId, ownerUUID, msg),
+                trail -> QT.JOB_LOGGER.warn("[STALL:collecting:trail] job={} villager={} {}", jobId, ownerUUID, trail)
         );
     }
 
     private final CollectingStallTrace collectingStall = new CollectingStallTrace();
+
+    private @Nullable net.minecraft.world.entity.Mob findOwnMob(TownInterface town) {
+        return town.getVillagerHandle().entities().stream()
+                .filter(e -> e.getUUID().equals(ownerUUID))
+                .filter(e -> e instanceof net.minecraft.world.entity.Mob)
+                .map(e -> (net.minecraft.world.entity.Mob) e)
+                .findFirst().orElse(null);
+    }
 
     private String describeCollectingStall(
             TownInterface town,
@@ -1077,11 +1090,7 @@ public class DeclarativeJob extends
     }
 
     private void appendNavigation(StringBuilder b, TownInterface town) {
-        net.minecraft.world.entity.Mob mob = town.getVillagerHandle().entities().stream()
-                .filter(e -> e.getUUID().equals(ownerUUID))
-                .filter(e -> e instanceof net.minecraft.world.entity.Mob)
-                .map(e -> (net.minecraft.world.entity.Mob) e)
-                .findFirst().orElse(null);
+        net.minecraft.world.entity.Mob mob = findOwnMob(town);
         if (mob == null) {
             b.append(" entity=none");
             return;
