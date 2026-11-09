@@ -835,17 +835,18 @@ bypassed: 32 items (the 2026-10-17 playtest saw 29); green: 4.
 ## Sharded full suite: AutoTestShard + autotest-parallel.sh --shard (2026-10-20)
 
 `-Dquestown.autotest.shard=<i>/<n>` makes a server run its share of the filtered suite
-(`AutoTestShard.selectNames`, applied after `only` in `AutoTestRunner`): `SOLO_SCENARIOS`
-(`perf/town_large`) each get a shard to themselves, the rest round-robin over the remaining
-shards, and an empty shard reports `RESULT: 0/0`. Village scenarios are never split.
-`tools/autotest-parallel.sh --shard 4` launches the shards and prints `TOTAL: p/t`. Measured:
-79/79 scenarios accounted for; 360 s wall with plain round-robin (town_large's shard also took
-19 others), 299 s with the solo rule (town_large alone 259 s under 4x load; other shards
-2–3 min) against 335–500 s serial. Unit: `AutoTestShardTest`.
+(`AutoTestShard.selectNames`, applied after `only` in `AutoTestRunner`); an empty shard reports
+`RESULT: 0/0`. Village scenarios are never split. `tools/autotest-parallel.sh --shard 4` launches
+the shards and prints `TOTAL: p/t`. Unit: `AutoTestShardTest`.
 
-`SOLO_SCENARIOS` is empty since 2026-11-09: the suite outgrew town_large. On 4 shards it took
-2.6 min alone against 6–7 min for the other shards on 1.20.6, and 5 min against 46+ min on
-1.20.1, so its shard sat idle for most of the run.
+- Balancing: every scenario logs `[autotest] DURATION <ms> <name>`; after each run the launcher
+  merges them into `build/autotest-durations.tsv` (per worktree, so per MC version) and passes it
+  to the next sharded run. Shards take scenarios longest-first onto the least-loaded shard; an
+  unrecorded scenario counts as the median, and with no file it is plain round-robin.
+- Why not a fixed list of long scenarios: `perf/town_large` once had a shard to itself (a third
+  of the 79-scenario suite). The suite outgrew it, and that shard idled most of the run (5 min
+  against 46+ min on 1.20.1), while round-robin stacked 3 of the 4 longest scenarios on one
+  1.20.6 shard (440 s against ~286 s even).
 
 ## The arena is cleared up to the natural surface (2026-10-20)
 

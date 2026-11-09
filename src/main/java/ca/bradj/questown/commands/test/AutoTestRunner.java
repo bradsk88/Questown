@@ -41,11 +41,8 @@ public class AutoTestRunner {
     // (e.g. visual verification of need bubbles via screenshot).
     private static final String SYSPROP_HOLD = "questown.autotest.hold";
     private static final String SYSPROP_SHARD = "questown.autotest.shard";
-    /**
-     * Scenarios long enough to get a shard to themselves (see AutoTestShard.selectNames). Only worth it
-     * for a scenario that takes about as long as a whole shard of the others.
-     */
-    private static final java.util.Set<String> SOLO_SCENARIOS = java.util.Set.of();
+    /** Scenario durations from an earlier run, for balancing shards (tools/autotest-parallel.sh). */
+    private static final String SYSPROP_DURATIONS = "questown.autotest.durations";
     private static final String SYSPROP_TICKRATE = "questown.autotest.tickrate";
     private static final int DEFAULT_WARP = 24000;
     private static final BlockPos ORIGIN = new BlockPos(0, 64, 0);
@@ -160,7 +157,7 @@ public class AutoTestRunner {
         if (!shard.isWholeSuite() && !runVillage && !runSelfSuff) {
             List<String> names = new ArrayList<>();
             jobsList.forEach(e -> names.add(e.name()));
-            java.util.Set<String> mine = shard.selectNames(names, SOLO_SCENARIOS);
+            java.util.Set<String> mine = shard.selectNames(names, readDurations());
             jobsList = jobsList.stream().filter(e -> mine.contains(e.name())).toList();
             runJobs = !jobsList.isEmpty();
             QT.FLAG_LOGGER.info("[autotest] shard {}/{}: {} scenarios", shard.index(), shard.count(),
@@ -186,6 +183,19 @@ public class AutoTestRunner {
                 server, jobsExecutor, villageExecutor, selfSuffExecutor
         );
         NeoForge.EVENT_BUS.register(listener);
+    }
+
+    private static java.util.Map<String, Long> readDurations() {
+        String path = System.getProperty(SYSPROP_DURATIONS);
+        if (path == null || path.isBlank()) {
+            return java.util.Map.of();
+        }
+        try {
+            return AutoTestShard.parseDurations(java.nio.file.Files.readAllLines(java.nio.file.Path.of(path)));
+        } catch (java.io.IOException e) {
+            QT.FLAG_LOGGER.warn("[autotest] could not read scenario durations from {}; sharding round-robin", path, e);
+            return java.util.Map.of();
+        }
     }
 
     /**

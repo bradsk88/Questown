@@ -8,8 +8,9 @@
 #   tools/autotest-parallel.sh --shard 4 farmer          # one filter, split across 4
 #
 # Default mode repeats the same filter N times (a confirmation sweep). --shard splits it instead:
-# run i gets -Dquestown.autotest.shard=i/N (AutoTestShard: every Nth scenario), and the per-run
-# tallies are summed into one TOTAL line. Village scenarios (growth/day1/self_sufficiency) are
+# run i gets -Dquestown.autotest.shard=i/N and the per-run tallies are summed into one TOTAL line.
+# Shards are balanced by the scenario durations every run records in build/autotest-durations.tsv
+# (AutoTestShard.selectNames); without that file they are round-robin. Village scenarios (growth/day1/self_sufficiency) are
 # single runs and are not split.
 #
 # Captures the exact server JVM command `./gradlew runServer` launches (the module-path /
@@ -33,6 +34,7 @@ fi
 shift $(( $# < 2 ? $# : 2 ))
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 OUT=$REPO/build/autotest-par
+DURATIONS=$REPO/build/autotest-durations.tsv
 mkdir -p "$OUT"
 
 # Only a Minecraft JVM in this checkout's own run dirs is stopped (same world). Another
@@ -119,6 +121,7 @@ while [ "$i" -le "$N" ]; do
         "$REPO/run/server.properties" > "$D/server.properties"
     RUN_EXTRA=""
     [ "$SHARD" = 1 ] && RUN_EXTRA="-Dquestown.autotest.shard=$i/$N"
+    [ "$SHARD" = 1 ] && [ -f "$DURATIONS" ] && RUN_EXTRA="$RUN_EXTRA -Dquestown.autotest.durations=$DURATIONS"
     python3 - "$OUT/cmd" "$D" "$FILTER" "$@" $RUN_EXTRA > "$D/argv" <<'EOF'
 import sys
 cmd, game_dir, flt, extra = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
@@ -153,6 +156,35 @@ for P in $PIDS; do
     i=$((i + 1))
 done
 wait 2>/dev/null || true
+
+# Keep each scenario's latest duration (the longest, when one ran on several servers) for the next
+# sharded run. Scenarios this run filtered out keep their old entries.
+LOGS=""
+i=1
+while [ "$i" -le "$N" ]; do LOGS="$LOGS $OUT/run-$i.log"; i=$((i + 1)); done
+python3 - "$DURATIONS" $LOGS <<'EOF'
+import re, sys
+path, logs = sys.argv[1], sys.argv[2:]
+durations = {}
+try:
+    for line in open(path):
+        ms, _, name = line.rstrip("\n").partition("\t")
+        if name and ms.isdigit():
+            durations[name] = int(ms)
+except FileNotFoundError:
+    pass
+latest = {}
+for log in logs:
+    for line in open(log, errors="replace"):
+        m = re.search(r"\[autotest\] DURATION (\d+) (.+)$", line.rstrip("\n"))
+        if m:
+            latest[m.group(2)] = max(latest.get(m.group(2), 0), int(m.group(1)))
+durations.update(latest)
+with open(path, "w") as f:
+    for name in sorted(durations):
+        f.write(f"{durations[name]}\t{name}\n")
+print(f"Recorded {len(latest)} scenario durations in {path}")
+EOF
 
 if [ "$SHARD" = 1 ]; then
     i=1

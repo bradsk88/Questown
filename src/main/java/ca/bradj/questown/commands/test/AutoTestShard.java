@@ -3,16 +3,19 @@ package ca.bradj.questown.commands.test;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * One server's share of the autotest suite when several run in parallel
  * ({@code -Dquestown.autotest.shard=<i>/<n>}, 1-based; tools/autotest-parallel.sh --shard). The
  * filtered scenario list is numbered as one sequence and shard {@code i}
- * keeps every {@code n}th scenario starting at {@code i - 1}, so long scenarios spread out and
- * every scenario runs in exactly one shard.
+ * keeps every {@code n}th scenario starting at {@code i - 1}; {@link #selectNames} balances by
+ * recorded durations instead. Either way every scenario runs in exactly one shard.
  */
 public record AutoTestShard(int index, int count) {
 
@@ -50,29 +53,64 @@ public record AutoTestShard(int index, int count) {
     }
 
     /**
-     * This shard's scenario names, with each {@code solo} scenario on a shard of its own (shards
-     * 1..S) and the rest round-robin over the remaining shards. A scenario far longer than the
-     * rest sets the wall time of whichever shard holds it, so it should hold nothing else. With as
-     * many solos as shards, it is plain round-robin.
+     * This shard's scenario names, in suite order. Longest first, each scenario goes to the shard
+     * with the least time so far (ties to the lowest shard), using {@code durations} in ms from an
+     * earlier run; a scenario with no recorded duration counts as the median. Every shard computes
+     * the same split, and with no durations it is plain round-robin.
      */
-    public Set<String> selectNames(List<String> names, Set<String> solo) {
-        List<String> solos = names.stream().filter(solo::contains).toList();
-        if (solos.size() >= count) {
-            return new LinkedHashSet<>(select(names, 0));
+    public Set<String> selectNames(List<String> names, Map<String, Long> durations) {
+        long unknown = median(names, durations);
+        long[] cost = new long[names.size()];
+        List<Integer> longestFirst = new ArrayList<>();
+        for (int k = 0; k < names.size(); k++) {
+            cost[k] = durations.getOrDefault(names.get(k), unknown);
+            longestFirst.add(k);
         }
-        Set<String> mine = new LinkedHashSet<>();
-        if (index <= solos.size()) {
-            mine.add(solos.get(index - 1));
-            return mine;
+        longestFirst.sort(Comparator.comparingLong(k -> -cost[k]));
+        long[] load = new long[count];
+        boolean[] mine = new boolean[names.size()];
+        for (int k : longestFirst) {
+            int least = 0;
+            for (int s = 1; s < count; s++) {
+                if (load[s] < load[least]) {
+                    least = s;
+                }
+            }
+            load[least] += cost[k];
+            mine[k] = least == index - 1;
         }
-        List<String> rest = names.stream().filter(n -> !solo.contains(n)).toList();
-        int restShards = count - solos.size();
-        for (int k = 0; k < rest.size(); k++) {
-            if (k % restShards == index - 1 - solos.size()) {
-                mine.add(rest.get(k));
+        Set<String> out = new LinkedHashSet<>();
+        for (int k = 0; k < names.size(); k++) {
+            if (mine[k]) {
+                out.add(names.get(k));
             }
         }
-        return mine;
+        return out;
+    }
+
+    private static long median(List<String> names, Map<String, Long> durations) {
+        List<Long> known = names.stream().filter(durations::containsKey).map(durations::get).sorted().toList();
+        return known.isEmpty() ? 1 : known.get(known.size() / 2);
+    }
+
+    /**
+     * Reads the durations file tools/autotest-parallel.sh keeps ({@code <ms>\t<name>} per line).
+     * Lines that don't parse are skipped.
+     */
+    public static Map<String, Long> parseDurations(List<String> lines) {
+        Map<String, Long> out = new HashMap<>();
+        for (String line : lines) {
+            String[] parts = line.split("\t", 2);
+            if (parts.length != 2) {
+                continue;
+            }
+            try {
+                out.put(parts[1], Long.parseLong(parts[0].trim()));
+            } catch (NumberFormatException ignored) {
+                // A hand-edited or truncated line: balance without it.
+            }
+        }
+        return out;
     }
 
     public boolean isWholeSuite() {
