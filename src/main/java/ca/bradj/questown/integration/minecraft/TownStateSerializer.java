@@ -2,6 +2,7 @@ package ca.bradj.questown.integration.minecraft;
 
 import ca.bradj.questown.QT;
 import ca.bradj.questown.Questown;
+import ca.bradj.questown.items.StockRequestItem;
 import ca.bradj.questown.jobs.ImmutableSnapshot;
 import ca.bradj.questown.jobs.ServerJobsRegistry;
 import ca.bradj.questown.jobs.leaver.ContainerTarget;
@@ -224,13 +225,28 @@ public class TownStateSerializer {
         for (int i = 0; i < cSize; i++) {
             MCTownItem cItem = containerItems.get(i);
             MCTownItem sItem = stateItems.get(i);
-            if (!cItem.equals(sItem)) {
+            if (!sameApartFromWorkSpot(cItem, sItem)) {
                 Questown.LOGGER.error(
                         "In slot {}, expected {} but state had {}. This is a bug and may cause items to be lost.",
                         i, cItem, sItem
                 );
             }
         }
+    }
+
+    /**
+     * The town adds a stock request's room and workspot to its own copy of the item, not to the item in
+     * the chest, so the two can differ by that data alone.
+     */
+    static boolean sameApartFromWorkSpot(
+            MCTownItem containerItem,
+            MCTownItem stateItem
+    ) {
+        if (containerItem.equals(stateItem)) {
+            return true;
+        }
+        return containerItem.isSameIgnoringNBT(stateItem) && StockRequestItem.withoutWorkSpot(containerItem.getItemNBT())
+                                                                              .equals(StockRequestItem.withoutWorkSpot(stateItem.getItemNBT()));
     }
 
 }

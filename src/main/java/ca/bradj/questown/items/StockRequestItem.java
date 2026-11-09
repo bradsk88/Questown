@@ -57,6 +57,15 @@ public class StockRequestItem extends Item {
         QTNBT.putInt(tag, "workspot_room_y", room.yCoord);
     }
 
+    /** A copy of the tag without the room and workspot that {@link #writeToNBT(CompoundTag, MCRoom, BlockPos)} adds. */
+    public static CompoundTag withoutWorkSpot(CompoundTag tag) {
+        CompoundTag copy = tag.copy();
+        for (String key : List.of("workspot_x", "workspot_y", "workspot_z", "workspot_room", "workspot_room_y")) {
+            copy.remove(QTNBT.keyify(key));
+        }
+        return copy;
+    }
+
     public static boolean hasRoom(CompoundTag tag) {
         boolean x = QTNBT.contains(tag, "workspot_x");
         boolean y = QTNBT.contains(tag, "workspot_y");

@@ -61,3 +61,10 @@ in a 0.6 s screenshot burst, diffing the chest's top face). The sound was not ch
 `MCTownItem.isBlockOfProgress` (`instanceof BlockOfProgressItem`, no registry lookup, so unit
 JVMs stay safe) and `MCHeldItem`'s delegate feed `HeldItem.staysWithVillager`, which keeps a BOP
 out of every loot drop: `jobs/COMPLEX.md` "A Block of Progress never goes into a chest".
+
+## Stock request workspot data and the load-time item check
+
+- `ContainerTarget.getItems()` runs `TownContainers.setWorkSpot` on a *copy* of each slot, so a stock
+  request in the town's state carries `workspot_*` data that the item in the chest doesn't.
+- `TownStateSerializer.checkItems` rebuilds containers with no room (nothing stamps them), so it
+  compares with `sameApartFromWorkSpot`; any other difference is still logged as possible item loss.
