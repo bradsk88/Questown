@@ -105,7 +105,7 @@ public final class TestArenaPreparer {
 
     /**
      * Flatten a square arena around {@code origin}. Matches {@link TestExecutor}'s
-     * existing flatten semantics: destroy all non-ground blocks above ground level,
+     * existing flatten semantics: clear all non-ground blocks (and fluids) above ground level,
      * set the ground layer to cobblestone. {@link PreparerOptions#halfWidth()}
      * controls the arena size; the vertical clear matches the legacy 5-high box.
      */
@@ -128,20 +128,63 @@ public final class TestArenaPreparer {
             BlockPos origin,
             ClearRegion region
     ) {
+        sealFluidsAround(level, origin, region);
         for (int x = region.minX(); x <= region.maxX(); x++) {
             for (int z = region.minZ(); z <= region.maxZ(); z++) {
-                // Clear up to the natural surface too: where the ground stands above the fixed
-                // clear height (a plains hill), the leftover terrain roofs the arena and the
-                // fixture sits in a dark cave - crops placed there pop off at once (raw light 0,
-                // no sky).
-                int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, origin.getX() + x, origin.getZ() + z) - origin.getY();
-                int top = Math.max(region.topY(), surface);
+                int top = clearTop(level, origin, region, x, z);
+                // Set air rather than destroyBlock: destroying a water or lava block (or a
+                // waterlogged one) leaves its fluid behind, and a pond on the arena floor
+                // turns a door approach into a swim the villager's path never finishes.
                 for (int y = top; y >= 0; y--) {
-                    level.destroyBlock(origin.offset(x, y, z), false);
+                    level.setBlockAndUpdate(origin.offset(x, y, z), Blocks.AIR.defaultBlockState());
                 }
                 level.setBlockAndUpdate(origin.offset(x, -1, z), Blocks.COBBLESTONE.defaultBlockState());
             }
         }
+    }
+
+    /**
+     * Replaces every fluid block in the one-block ring just outside {@code region} with cobblestone,
+     * so a lake or river beside the arena can't flow back in once the arena is cleared. Dry ring
+     * cells are left alone, so nothing walls the arena off from its surroundings.
+     */
+    private static void sealFluidsAround(
+            ServerLevel level,
+            BlockPos origin,
+            ClearRegion region
+    ) {
+        for (int x = region.minX() - 1; x <= region.maxX() + 1; x++) {
+            for (int z = region.minZ() - 1; z <= region.maxZ() + 1; z++) {
+                boolean inside = x >= region.minX() && x <= region.maxX()
+                        && z >= region.minZ() && z <= region.maxZ();
+                if (inside) {
+                    continue;
+                }
+                int top = clearTop(level, origin, region, x, z);
+                for (int y = 0; y <= top; y++) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    if (!level.getFluidState(pos).isEmpty()) {
+                        level.setBlockAndUpdate(pos, Blocks.COBBLESTONE.defaultBlockState());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clear up to the natural surface too: where the ground stands above the fixed clear height
+     * (a plains hill), the leftover terrain roofs the arena and the fixture sits in a dark cave -
+     * crops placed there pop off at once (raw light 0, no sky).
+     */
+    private static int clearTop(
+            ServerLevel level,
+            BlockPos origin,
+            ClearRegion region,
+            int x,
+            int z
+    ) {
+        int surface = level.getHeight(Heightmap.Types.WORLD_SURFACE, origin.getX() + x, origin.getZ() + z) - origin.getY();
+        return Math.max(region.topY(), surface);
     }
 
     /**

@@ -1083,3 +1083,21 @@ villager on a trip with a carrot as trip food: the same bug, by day.
 The assertion checks the cook didn't take the meal out of the furnace. It required exactly the
 seeded 5 cooked beef; one run of 3 saw 6 (the furnace finished another beef before the check)
 with the NO_STORAGE need and the flag bubble both correct. Now `>= 5`.
+
+## The arena flatten removes fluids (2026-11-09)
+
+`TestArenaPreparer.flatten` used `level.destroyBlock` on every cleared cell. Destroying a water
+or lava block (or a waterlogged one) puts its fluid back, so on a random world with a pond or river
+near the origin the arena floor stayed flooded, and the water carried over into later scenarios.
+A 1.20.6 suite showed it: the `[STALL:collecting]` path nodes for `crafter/display_weapons` ran
+`WATER_BORDER`, `WATER`, `WATER` to the kitchen door, with the villager stopped at the water's edge
+and no move target. Only one of 8 servers' worlds across two side-by-side suites did this. The
+flatten now sets each cleared cell to air, and first replaces any fluid in the one-block ring just
+outside the region with cobblestone so outside water can't flow back in. Dry ring cells stay as they
+are, so the arena is not walled in.
+
+## Launcher pins `max-tick-time` (2026-11-09)
+
+`tools/autotest-parallel.sh` writes `max-tick-time=600000` into each server's properties, adding the
+line when the source file has none. The file the launcher seeds in a new worktree had no such line,
+so the 60 s default watchdog killed all four servers mid-suite when two suites shared the box.
