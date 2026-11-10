@@ -150,6 +150,14 @@ in 3). Both builders now call `flattenAroundPostSpawnRoom` (the footprint plus a
 `filled_storeroom_alive`) pass under either terrain — the same escape hatch
 accepts them — so they are not seed-fragile for pass/fail.
 
+## Fluids near the origin
+
+Every run gets a random world, so the arena can sit on a pond or river. `TestArenaPreparer.flatten`
+sets cleared cells to air (destroying a fluid block would put the fluid back) and turns fluid in the
+ring just outside the cleared region into cobblestone. A villager stalled at a `WATER_BORDER` path
+node in a `[STALL:collecting]` report means water got into the arena anyway. See COMPLEX.md "The
+arena flatten removes fluids".
+
 ## Reading the tally
 
 The log carries two granularities of `[PASS]`/`[FAIL]` lines: **scenario-level**
