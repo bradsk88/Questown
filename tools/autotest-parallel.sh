@@ -118,7 +118,11 @@ while [ "$i" -le "$N" ]; do
         -e "s/^enable-rcon=.*/enable-rcon=false/" \
         -e "s/^online-mode=.*/online-mode=false/" \
         -e "s/^level-seed=.*/level-seed=/" \
+        -e "s/^max-tick-time=.*/max-tick-time=600000/" \
         "$REPO/run/server.properties" > "$D/server.properties"
+    # Several servers on one box can stall a tick past the 60 s default watchdog, which kills
+    # the server mid-suite; seeded or hand-made properties files may not set it at all.
+    grep -q '^max-tick-time=' "$D/server.properties" || echo 'max-tick-time=600000' >> "$D/server.properties"
     RUN_EXTRA=""
     [ "$SHARD" = 1 ] && RUN_EXTRA="-Dquestown.autotest.shard=$i/$N"
     [ "$SHARD" = 1 ] && [ -f "$DURATIONS" ] && RUN_EXTRA="$RUN_EXTRA -Dquestown.autotest.durations=$DURATIONS"
