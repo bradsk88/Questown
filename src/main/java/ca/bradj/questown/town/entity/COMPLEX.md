@@ -941,7 +941,10 @@ state rides the flag's **block-entity update tag**, exactly like `deadDoors`:
   many quest/request mutation sites): a one-second lag is imperceptible for a
   diegetic indicator. The cached fields (`attention*`) exist only for change
   detection; they are never persisted.
-- Client: `handleUpdateTag` → `readAttention`; the flag registers itself in
+- Client: `handleUpdateTag` (chunk load) and `onDataPacket` (each `sendBlockUpdated`) →
+  `readAttention`. The loader's default `onDataPacket` hands the tag to `load`, which ignores it,
+  so without the override a client kept the state it saw at chunk load (a "!" for quests that
+  were long complete); the flag registers itself in
   `AttentionBubbles` (town/rooms) in `onLoad`/`setRemoved` just like
   `DeadDoorBubbles`. The candidates then join the one-bubble crosshair contest in
   `NeedBubbleFocus` (mobs/visitor) and draw via

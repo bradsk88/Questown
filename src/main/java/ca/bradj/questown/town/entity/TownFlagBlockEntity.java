@@ -227,6 +227,18 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         readAttention(tag);
     }
 
+    /** A block update carries {@link #getUpdateTag}; the default would hand it to the saved-data load, which ignores it. */
+    @Override
+    public void onDataPacket(
+            net.minecraft.network.Connection net,
+            ClientboundBlockEntityDataPacket pkt,
+            net.minecraft.core.HolderLookup.Provider provider
+    ) {
+        CompoundTag tag = pkt.getTag();
+        readDeadDoors(tag);
+        readAttention(tag);
+    }
+
     private void writeAttention(CompoundTag tag) {
         tag.putBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS, hasIncompleteQuests());
         tag.putBoolean(NBT_ATTENTION_NO_WORK_REQUESTS, showsNoRequestsBubble());
