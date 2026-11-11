@@ -1123,6 +1123,9 @@ public class VisitorMobEntity extends PathfinderMob implements VillagerStats {
 
     @Override
     public void startSleeping(BlockPos p_21141_) {
+        if (doorGoal != null && !getLevel().isClientSide()) {
+            doorGoal.closeHeldDoor();
+        }
         getInBed(p_21141_);
         this.setSleepingPos(p_21141_);
         this.brain.setMemory(MemoryModuleType.LAST_SLEPT, this.getLevel().getGameTime());

@@ -36,6 +36,17 @@ public class LingeringDoorGoal extends OpenDoorGoal {
         lingering = null;
     }
 
+    /** Closes any door this villager is holding open: a sleeping villager no longer ticks to close it. */
+    public void closeHeldDoor() {
+        if (lingering != null) {
+            close(mob.getLevel(), lingering);
+            lingering = null;
+        }
+        if (hasDoor) {
+            close(mob.getLevel(), doorPos);
+        }
+    }
+
     private boolean stillNear(BlockPos door) {
         return keepsOpen(mob.distanceToSqr(door.getX() + 0.5, mob.getY(), door.getZ() + 0.5));
     }
