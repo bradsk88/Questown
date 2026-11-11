@@ -229,7 +229,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
 
     private void writeAttention(CompoundTag tag) {
         tag.putBoolean(NBT_ATTENTION_INCOMPLETE_QUESTS, hasIncompleteQuests());
-        tag.putBoolean(NBT_ATTENTION_NO_WORK_REQUESTS, workHandle.getRequestedResults().isEmpty());
+        tag.putBoolean(NBT_ATTENTION_NO_WORK_REQUESTS, showsNoRequestsBubble());
         ListTag boards = new ListTag();
         for (BlockPos pos : workHandle.jobBoards) {
             CompoundTag entry = new CompoundTag();
@@ -263,7 +263,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
             return;
         }
         boolean incomplete = hasIncompleteQuests();
-        boolean noRequests = workHandle.getRequestedResults().isEmpty();
+        boolean noRequests = showsNoRequestsBubble();
         ImmutableList<BlockPos> boards = ImmutableList.copyOf(workHandle.jobBoards);
         storageTally.observe(countStorageBlockedVillagers(), ca.bradj.questown.jobs.Jobs.townHasSpace(this), 20);
         boolean storageFull = storageTally.isBlocker();
@@ -279,6 +279,17 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
         attentionStorageFull = storageFull;
         setChanged();
         level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+    }
+
+    /**
+     * The job board's "no requests" bubble only teaches the board: once a player has posted a request
+     * it never returns, even when the board empties. A completed first-work-request quest counts, for
+     * towns saved before the player's posts were recorded.
+     */
+    private boolean showsNoRequestsBubble() {
+        return workHandle.getRequestedResults().isEmpty()
+                && !workHandle.playerHasPosted()
+                && !quests.hasCompletedFirstWorkRequest();
     }
 
     /** Villagers stopped because there is no free storage. */
@@ -2095,7 +2106,7 @@ public class TownFlagBlockEntity extends BlockEntity implements TownInterface,
     }
 
     public void requestWorkFromPlayer(WorkRequest request) {
-        workHandle.requestWork(request);
+        workHandle.requestWorkFromPlayer(request);
         quests.markFirstWorkRequestCompleteIfActive();
     }
 

@@ -64,6 +64,8 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
     private ImmutableMap<WorkRequest, Integer> stock = ImmutableMap.of();
     // Saved: each request's pause limit.
     final RequestLimits<WorkRequest> limits = new RequestLimits<>();
+    // Saved: whether a player has ever posted a request (starter requests don't count).
+    boolean playerHasPosted;
 
     private final Stack<Consumer<ServerLevel>> nextTick = new Stack<>();
 
@@ -253,6 +255,16 @@ public class TownWorkHandle implements WorkHandle, OpenMenuListener {
         requestedResults.add(0, e);
         this.listeners.forEach(l -> l.accept(new Change(null)));
         QT.FLAG_LOGGER.debug("Request added to job board: {}", e);
+    }
+
+    /** A request posted by a player, as opposed to a starter request the town posts itself. */
+    public void requestWorkFromPlayer(WorkRequest e) {
+        playerHasPosted = true;
+        requestWork(e);
+    }
+
+    public boolean playerHasPosted() {
+        return playerHasPosted;
     }
 
     /** A saved request, added below the ones already restored. */

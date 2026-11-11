@@ -20,6 +20,7 @@ public class TownWorkHandleSerializer {
         QTNBT.put(tag, "boards", serializeBoards(workHandle));
         QTNBT.put(tag, "requests", serializeRequests(workHandle));
         QTNBT.put(tag, "limits", serializeLimits(workHandle));
+        QTNBT.putBoolean(tag, "player_has_posted", workHandle.playerHasPosted);
         return tag;
     }
 
@@ -34,6 +35,7 @@ public class TownWorkHandleSerializer {
         deserializeRequests(QTNBT.getList(compound, "requests")).forEach(
                 workHandle::restoreRequest
         );
+        workHandle.playerHasPosted = QTNBT.getBoolean(compound, "player_has_posted", false);
         // Older towns have no limits.
         if (QTNBT.contains(compound, "limits")) {
             QTNBT.getList(compound, "limits").forEach(v -> {
