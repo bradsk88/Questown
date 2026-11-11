@@ -25,7 +25,6 @@ public final class ForgeLoaderClient {
         }
         forge.pendingScreens().clear();
         ca.bradj.questown.QT.LOGGER.info("[questown] registered {} menu screens on the client", count);
-        Loader.api().registerCommonHandlers(new ForgeMouseScrollDispatch());
     }
 
     @SuppressWarnings("unchecked")
