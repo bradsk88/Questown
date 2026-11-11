@@ -156,7 +156,8 @@ public final class BubbleRenderer {
         poseStack.popPose();
     }
 
-    /** Draws a bubble with a texture icon over a block: the "!" bubbles over the flag and the job board. */
+    /** Draws a bubble with a texture icon over a block: the "!" bubbles over the flag and the job board.
+     * Drawn through walls, since the block above the target may be solid. */
     public static void renderTextureBubbleAtBlock(
             net.minecraft.core.BlockPos pos,
             net.minecraft.resources.ResourceLocation texture,
@@ -181,11 +182,11 @@ public final class BubbleRenderer {
 
         poseStack.pushPose();
         poseStack.translate(0.0, ICON_CENTRE_Y_INNER, 0.0);
-        renderBubbleBackground(poseStack, bufferSource, false);
+        renderBubbleBackground(poseStack, bufferSource, true);
         poseStack.popPose();
 
         VertexConsumer consumer = bufferSource.getBuffer(
-                BubbleRenderType.texturedIcon(texture, false)
+                BubbleRenderType.texturedIcon(texture, true)
         );
         Matrix4f matrix = poseStack.last().pose();
         // A little in front of the bubble, so they don't z-fight.
