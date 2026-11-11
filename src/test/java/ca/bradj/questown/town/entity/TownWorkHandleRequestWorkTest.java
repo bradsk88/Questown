@@ -19,6 +19,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** {@link TownWorkHandle#requestWork(WorkRequest)} doesn't add a request twice, and {@link MCQuest#firstWorkRequest} has the right shape. */
 class TownWorkHandleRequestWorkTest {
@@ -60,6 +61,32 @@ class TownWorkHandleRequestWorkTest {
         h.restoreRequest(WorkRequest.of(Items.BREAD));
         h.restoreRequest(WorkRequest.of(Items.APPLE));
         assertEquals(List.of(WorkRequest.of(Items.BREAD), WorkRequest.of(Items.APPLE)), h.getRequestedResults());
+    }
+
+    @Test
+    void playerHasPosted_onlyAfterAPlayerRequest() {
+        TownWorkHandle h = newHandle();
+        h.requestWork(WorkRequest.of(Items.APPLE));
+        h.restoreRequest(WorkRequest.of(Items.BREAD));
+        assertFalse(h.playerHasPosted(), "starter and restored requests are not a player's");
+
+        h.requestWorkFromPlayer(WorkRequest.of(Items.STICK));
+        h.removeWorkRequest(WorkRequest.of(Items.STICK));
+        assertTrue(h.playerHasPosted(), "an emptied board still remembers the player posted");
+    }
+
+    @Test
+    void playerHasPosted_survivesSaveAndLoad() {
+        TownWorkHandle h = newHandle();
+        h.requestWorkFromPlayer(WorkRequest.of(Items.STICK));
+
+        TownWorkHandle loaded = newHandle();
+        TownWorkHandleSerializer.INSTANCE.deserializeNBT(TownWorkHandleSerializer.INSTANCE.serializeNBT(h), loaded);
+        assertTrue(loaded.playerHasPosted());
+
+        TownWorkHandle fresh = newHandle();
+        TownWorkHandleSerializer.INSTANCE.deserializeNBT(TownWorkHandleSerializer.INSTANCE.serializeNBT(newHandle()), fresh);
+        assertFalse(fresh.playerHasPosted());
     }
 
     @Test

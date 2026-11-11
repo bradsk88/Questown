@@ -210,6 +210,17 @@ public class TownQuests implements QuestBatch.ChangeListener<MCQuest>,
         }
     }
 
+    public boolean hasCompletedFirstWorkRequest() {
+        for (MCQuestBatch batch : questBatches.getAllBatches()) {
+            for (MCQuest q : batch.getAll()) {
+                if (q.getType() == Quest.QuestType.FIRST_WORK_REQUEST && q.isComplete()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /** Completes the open skill-unlock quests on this skill's tree; one that names a skill completes only for that skill. */
     public void markSkillUnlocked(JobID unlocked) {
         for (MCQuestBatch batch : questBatches.getAllBatches()) {
