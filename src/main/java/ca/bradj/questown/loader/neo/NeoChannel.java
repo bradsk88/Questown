@@ -1,6 +1,7 @@
 package ca.bradj.questown.loader.neo;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -8,6 +9,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.extensions.ICommonPacketListener;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadHandler;
@@ -95,7 +97,12 @@ public final class NeoChannel implements Channel {
                         + " (encoder/decoder/handler all required before RegisterPayloadHandlersEvent)");
             }
         }
-        PayloadRegistrar reg = event.registrar(channelId);
+        // Message ids follow registration order, so the channel is versioned by the mod version:
+        // a mismatched client is refused at connect instead of decoding with the wrong decoders.
+        String version = ModList.get().getModContainerById(Questown.MODID)
+                .map(c -> c.getModInfo().getVersion().toString())
+                .orElse("unknown");
+        PayloadRegistrar reg = event.registrar(channelId).versioned(version);
         // One registration for both directions; registering each direction separately throws.
         reg.playBidirectional(NeoEnvelope.TYPE, wireCodec(), payloadHandler());
         QT.LOGGER.info("[questown] registered {} message types on the Neo payload channel '{}'", entries.size(), channelId);

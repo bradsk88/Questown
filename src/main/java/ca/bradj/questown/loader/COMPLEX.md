@@ -291,3 +291,11 @@ differences: `text` (joml, distmarker, NeoForge->Forge packages, tick events, bl
 `errors` (renames javac reports missing: `level()`, widget x/y, `copyWithCount`, ...), `data`
 (`c:`->`forge:` tags, recipe result `id`->`item`, armor tags). Re-running it changes nothing. Plan:
 `docs/plans/2026-10-31-001-beta-and-1.19-merge-plan.md`; tracker `.scratch/merge-119/`.
+
+## The network protocol is the mod version
+
+Message ids follow registration order, so adding a message anywhere but the end renumbers every
+later one. With a constant protocol string a beta.3 client joined a beta server and crashed on
+connect (`Invalid ResourceLocation for JobID: minecraft:gatherer`: a JobID decoder reading another
+message's bytes). `ForgeChannel` (and `NeoChannel`'s `versioned`) now use the mod version, so any
+mismatch is refused at the handshake. Server and clients must run the same Questown version.
