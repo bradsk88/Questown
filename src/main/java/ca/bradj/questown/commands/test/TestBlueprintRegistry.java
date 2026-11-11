@@ -310,6 +310,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("glass_wall_room", glassWallRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
         jobs.add(flagEntry("bed_is_two_blocks", bedIsTwoBlocksBlueprint()));
+        jobs.add(flagEntry("essential_cabin", essentialCabinBlueprint()));
         jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
         jobs.add(flagEntry("filled_storeroom_alive", filledStoreroomBlueprint()));
         // BOP cap (report): pre-fill the flag and drive one deposit across the 64-slot boundary.
@@ -1025,6 +1026,29 @@ public class TestBlueprintRegistry {
         level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
         level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
         output.msg("Built a room with " + beds + " bed(s) at " + base.toShortString());
+    }
+
+    /** A one-bed room with a chest, crafting table and furnace is an Essential Cabin; the bed alone isn't. */
+    private static TestBlueprint essentialCabinBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction((level, flagPos, town, output) -> {
+                    BlockPos cabin = flagPos.offset(ONE_BED_ROOM_OFFSET);
+                    buildBedRoom(level, cabin, 1, output);
+                    level.setBlockAndUpdate(cabin.offset(1, 0, 3), Blocks.CHEST.defaultBlockState());
+                    level.setBlockAndUpdate(cabin.offset(2, 0, 3), Blocks.CRAFTING_TABLE.defaultBlockState());
+                    level.setBlockAndUpdate(cabin.offset(3, 0, 3), Blocks.FURNACE.defaultBlockState());
+                    buildBedRoom(level, flagPos.offset(TWO_BED_ROOM_OFFSET), 1, output);
+                    return true;
+                })
+                .withCustomAssertion((level, flagPos, town, output) -> {
+                    Collection<ResourceLocation> cabin = detectRecipes(level, flagPos.offset(ONE_BED_ROOM_OFFSET));
+                    Collection<ResourceLocation> bedOnly = detectRecipes(level, flagPos.offset(TWO_BED_ROOM_OFFSET));
+                    output.msg("essential-cabin: furnished -> " + cabin + "; bed only -> " + bedOnly);
+                    ResourceLocation essentialCabin = Questown.ResourceLocation("essential_cabin");
+                    boolean ok = report(output, "1 furnished-room-is-a-cabin", cabin.contains(essentialCabin));
+                    ok &= report(output, "2 bed-only-room-is-not", !bedOnly.contains(essentialCabin));
+                    return ok;
+                });
     }
 
     /** Both halves, the way vanilla places a bed item: the head at foot.relative(facing). */
