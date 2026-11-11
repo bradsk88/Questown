@@ -928,8 +928,13 @@ state rides the flag's **block-entity update tag**, exactly like `deadDoors`:
 - `getUpdateTag` writes it **live** (`writeAttention`): `hasIncompleteQuests()`
   (via `TownQuests.hasIncompleteQuests()` — per-quest `!isComplete()` over
   `questBatches.getAll()`, because completed quests stay in their batch until the
-  batch is declined) + `workHandle.getRequestedResults().isEmpty()` + the
-  `workHandle.jobBoards` positions. So a client chunk-loading the flag always
+  batch is declined) + `showsNoRequestsBubble()` + the
+  `workHandle.jobBoards` positions.
+- The board bubble only teaches the board (dev ruling): it shows while the board is
+  empty **and** no player has ever posted a request. `TownWorkHandle.playerHasPosted`
+  (saved as `player_has_posted`) is set only by `requestWorkFromPlayer`, not by
+  starter requests the town posts itself. A completed `FIRST_WORK_REQUEST` quest also
+  counts, for towns saved before the latch existed. So a client chunk-loading the flag always
   sees current state.
 - `syncAttentionState()` pushes a `sendBlockUpdated` when the state changes. It is
   **polled every 20 ticks** from the flag's static block ticker (not wired to the
