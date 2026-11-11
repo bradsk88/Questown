@@ -34,3 +34,10 @@ HEAD transform already turned it; on this path it doesn't.)
 Open: water behind a bubble draws over its background (seen against the ocean), flip or not;
 ticket `.scratch/dev-playtest-2026-10-30/bubble-background-under-water.md`.
 
+
+## The "!" bubbles over a flag or job board draw through walls
+
+`renderTextureBubbleAtBlock` anchors inside the block above its target, so a solid block there
+(a cobblestone wall on top of the flag) hid the bubble. Dev ruling: draw these bubbles through
+walls rather than lift them, so they also show from behind a house within the 16-block range.
+Villager and dead-door bubbles stay depth-tested.
