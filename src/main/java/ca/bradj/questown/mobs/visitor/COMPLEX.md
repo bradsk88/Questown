@@ -410,3 +410,10 @@ no flicker. `TripVisibilityTest` (6).
 skins on this branch, Steve and Alex (`textures/entity/`) on 1.19.2, which has no others; with the
 1.20.6 list a 1.19.2 villager rendered the missing texture (`player/slim/noor.png`, seen in the
 first 1.19.2 client run). `TownieSkinsTest` compares against `Compat` so it holds on both.
+
+## A villager closes its door when it gets into bed
+
+`LingeringDoorGoal` keeps a door open while the villager is within 2.5 blocks and closes it from
+`tickLingeringDoor` once it walks off. A sleeping villager's `tick` returns early and its goals stop,
+so in a small bedroom the door it came through stayed open all night. `startSleeping` now calls
+`closeHeldDoor` first (server side only).
