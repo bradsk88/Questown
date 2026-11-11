@@ -1,0 +1,19 @@
+{
+  "type": "roomrecipes:room",
+  "recipe_strength": 1,
+  "farm": false,
+  "ingredients": [
+    {
+      "tag": "minecraft:beds"
+    },
+    {
+      "tag": "c:chests"
+    },
+    {
+      "item": "minecraft:crafting_table"
+    },
+    {
+      "item": "minecraft:furnace"
+    }
+  ]
+}
