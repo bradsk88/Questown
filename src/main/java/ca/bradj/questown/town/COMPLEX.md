@@ -936,3 +936,11 @@ tick's status sync); before that, the working cook held a stale mutton/porkchop 
   (porkchop + beef open, beef + coal: zero ticks with an item/room need while on a cook job that
   isn't stuck). Done is for seeking work only: in the full suite a downtime villager keeps
   downtime's own status lines (downtime already hides needs).
+
+## Glass walls come from the loader's glass tag
+
+`WallDetection.isSolid` fails glass on shape alone (it lets skylight through), so glass is let in
+by tag. The tag must be one the loader fills: Forge (1.19.2, 1.20.1) fills `forge:glass` and
+`forge:glass_panes`, NeoForge (1.20.6) fills `c:glass_blocks` and `c:glass_panes`. A `c:` tag on
+Forge is empty, which made every glass-walled room's door `NOT_ENCLOSED`. Panes also pass as
+`IronBarsBlock`. Pinned by the `flag/glass_wall_room` autotest.
