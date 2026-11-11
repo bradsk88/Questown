@@ -307,6 +307,7 @@ public class TestBlueprintRegistry {
         jobs.add(flagEntry("dead_door_bubbled", deadDoorBubbledBlueprint()));
         jobs.add(flagEntry("too_short_room_dead", tooShortRoomBlueprint()));
         jobs.add(flagEntry("floating_chest_room", floatingChestRoomBlueprint()));
+        jobs.add(flagEntry("glass_wall_room", glassWallRoomBlueprint()));
         jobs.add(flagEntry("floating_furniture_over_half", floatingFurnitureOverHalfBlueprint()));
         jobs.add(flagEntry("bed_is_two_blocks", bedIsTwoBlocksBlueprint()));
         jobs.add(flagEntry("unlinked_placement_no_dupe", unlinkedPlacementNoDupeBlueprint()));
@@ -855,6 +856,68 @@ public class TestBlueprintRegistry {
             TestOutput output
     ) {
         BlockPos doorPos = flagPos.offset(FLOATING_CHEST_ROOM_OFFSET).offset(4, 0, 2);
+        Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
+        int rooms = town.getRoomHandle().getMatches(x -> true).size();
+        output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);
+        boolean ok = report(output, "1 room-detected", rooms >= 1);
+        ok &= report(output, "2 door-not-dead", !dead.containsKey(doorPos));
+        return ok;
+    }
+
+    // The floating-chest room's spot: each scenario has its own flag.
+    private static final BlockPos GLASS_ROOM_OFFSET = new BlockPos(-9, 0, 6);
+
+    /** A room whose walls are glass blocks encloses like a cobblestone one. */
+    private static TestBlueprint glassWallRoomBlueprint() {
+        return relocationRitualBase()
+                .withPostSpawnAction(TestBlueprintRegistry::buildGlassWallRoomAndRegister)
+                .withCustomAssertion(TestBlueprintRegistry::assertGlassWallRoomAlive);
+    }
+
+    private static boolean buildGlassWallRoomAndRegister(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos base = flagPos.offset(GLASS_ROOM_OFFSET);
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < 5; z++) {
+                boolean isEdge = x == 0 || x == 4 || z == 0 || z == 4;
+                BlockPos p = base.offset(x, 0, z);
+                level.setBlockAndUpdate(p.below(), Blocks.COBBLESTONE.defaultBlockState());
+                if (isEdge) {
+                    level.setBlockAndUpdate(p, Blocks.GLASS.defaultBlockState());
+                    level.setBlockAndUpdate(p.above(), Blocks.GLASS.defaultBlockState());
+                }
+            }
+        }
+
+        BlockPos doorPos = base.offset(4, 0, 2);
+        BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+        level.setBlockAndUpdate(doorPos, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
+        level.setBlockAndUpdate(doorPos.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+
+        // Register the door via the real wand path (same idiom as registerLoneDoorViaWand).
+        FakePlayer player = FakePlayerFactory.getMinecraft(level);
+        player.getInventory().clearContent();
+        ItemStack wand = new ItemStack(ItemsInit.TOWN_WAND.get());
+        TownFlagBlock.StoreParentOnNBT(wand, flagPos);
+        player.setItemInHand(InteractionHand.MAIN_HAND, wand);
+        ((TownWand) wand.getItem()).onRightClicked(() -> player, level, doorPos, wand);
+
+        output.msg("Built glass-walled room and registered its door at " + doorPos.toShortString()
+                + "; deadDoors=" + town.getDeadDoors());
+        return true;
+    }
+
+    private static boolean assertGlassWallRoomAlive(
+            ServerLevel level,
+            BlockPos flagPos,
+            TownFlagBlockEntity town,
+            TestOutput output
+    ) {
+        BlockPos doorPos = flagPos.offset(GLASS_ROOM_OFFSET).offset(4, 0, 2);
         Map<BlockPos, DoorTrouble> dead = town.getDeadDoors();
         int rooms = town.getRoomHandle().getMatches(x -> true).size();
         output.msg("deadDoors after monitor = " + dead + "; rooms=" + rooms);

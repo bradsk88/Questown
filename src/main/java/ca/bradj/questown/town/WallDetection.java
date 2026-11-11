@@ -90,17 +90,17 @@ public class WallDetection {
         return bs.getBlock() instanceof DoorBlock && DoubleBlockHalf.LOWER.equals(bs.getOptionalValue(DoorBlock.HALF).orElse(null));
     }
 
-    private static final TagKey<Block> C_GLASS_BLOCKS =
-            Compat.blockTag(new ResourceLocation("c", "glass_blocks"));
-    private static final TagKey<Block> C_GLASS_PANES =
-            Compat.blockTag(new ResourceLocation("c", "glass_panes"));
+    private static final TagKey<Block> GLASS_BLOCKS =
+            Compat.blockTag(new ResourceLocation("forge", "glass"));
+    private static final TagKey<Block> GLASS_PANES =
+            Compat.blockTag(new ResourceLocation("forge", "glass_panes"));
 
     public static boolean isSolid(
             BlockPos bp,
             Level level,
             BlockState blockState
     ) {
-        if (blockState.is(C_GLASS_BLOCKS) || blockState.is(C_GLASS_PANES)
+        if (blockState.is(GLASS_BLOCKS) || blockState.is(GLASS_PANES)
                 || blockState.getBlock() instanceof IronBarsBlock) {
             return true;
         }
