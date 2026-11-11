@@ -1,6 +1,7 @@
 package ca.bradj.questown.loader.forge;
 
 import ca.bradj.questown.QT;
+import ca.bradj.questown.Questown;
 import ca.bradj.questown.loader.Channel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -9,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
@@ -23,18 +25,20 @@ import java.util.function.Supplier;
 /**
  * Forge 1.19.2 {@link Channel}: one {@link SimpleChannel}. A message registers with Forge when its
  * builder's last call ({@code handler}) arrives; ids follow registration order, so both sides
- * must run the same Questown version (the protocol string guards the handshake).
+ * must run the same Questown version. The protocol string is the mod version, so the handshake
+ * refuses a mismatched client instead of letting it decode packets with the wrong decoders.
  */
 public final class ForgeChannel implements Channel {
-
-    private static final String PROTOCOL = "1";
 
     private final SimpleChannel channel;
     private final AtomicInteger nextId = new AtomicInteger(0);
 
     ForgeChannel(String channelId) {
+        String protocol = ModList.get().getModContainerById(Questown.MODID)
+                .map(c -> c.getModInfo().getVersion().toString())
+                .orElse("unknown");
         this.channel = NetworkRegistry.newSimpleChannel(
-                new ResourceLocation(channelId), () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
+                new ResourceLocation(channelId), () -> protocol, protocol::equals, protocol::equals);
     }
 
     @Override
